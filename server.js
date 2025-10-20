@@ -1,61 +1,64 @@
+// =========================
+// 🤖 Quanton3D IA - Servidor Oficial
+// =========================
+
 import express from "express";
 import cors from "cors";
-import fetch from "node-fetch";
 import dotenv from "dotenv";
+import OpenAI from "openai";
 
 dotenv.config();
+
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Porta padrão do Render (ou 3001 localmente)
-const PORT = process.env.PORT || 3001;
-
-// ===== ROTA PRINCIPAL =====
-app.get("/", (req, res) => {
-  res.send("🤖 Quanton3D Bot backend está rodando!");
+// Conexão com a OpenAI
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-// ===== ROTA DE PERGUNTAS =====
+// Rota principal de teste
+app.get("/", (req, res) => {
+  res.send("🚀 Quanton3D IA Online! Backend ativo e operacional.");
+});
+
+// Rota de comunicação com o robô
 app.post("/ask", async (req, res) => {
   try {
     const { message } = req.body;
 
-    // se não houver chave da OpenAI ainda:
-    if (!process.env.OPENAI_API_KEY) {
-      return res.json({
-        reply: "⚙️ O servidor está ativo, mas a IA ainda não foi conectada à OpenAI.",
-      });
-    }
+    // Modelos e configurações vindos das variáveis do Render
+    const model = process.env.OPENAI_MODEL || "gpt-4o";
+    const temperature = parseFloat(process.env.OPENAI_TEMPERATURE) || 0.3;
 
-    // chama a API da OpenAI
-    const r = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: "Você é o QuantonBot3D, especialista em impressão 3D com resina. Responda de forma simpática e técnica.",
-          },
-          { role: "user", content: message },
-        ],
-      }),
+    console.log(`🧠 Modelo: ${model} | Temperatura: ${temperature}`);
+
+    const completion = await openai.chat.completions.create({
+      model,
+      temperature,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Você é o QuantonBot3D, um assistente técnico e comercial especializado em impressão 3D por resina (SLA/DLP). Responda de forma técnica, educada e clara, ajudando profissionais e clientes da Quanton3D.",
+        },
+        { role: "user", content: message },
+      ],
     });
 
-    const data = await r.json();
-    const reply = data?.choices?.[0]?.message?.content || "Desculpe, não consegui entender.";
-
+    const reply = completion.choices[0].message.content;
     res.json({ reply });
   } catch (err) {
-    console.error("Erro ao processar /ask:", err);
-    res.status(500).json({ reply: "⚠️ Ocorreu um erro interno." });
+    console.error("❌ Erro na comunicação com a OpenAI:", err);
+    res.status(500).json({
+      reply: "⚠️ Erro ao processar a IA. Tente novamente em instantes.",
+    });
   }
 });
 
-// ===== INICIA O SERVIDOR =====
-app.listen(PORT, () => console.log(`✅ Quanton3D Bot backend rodando na porta ${PORT}`));
+// Configuração da porta Render
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () =>
+  console.log(`✅ Servidor Quanton3D IA rodando na porta ${PORT}`)
+);
