@@ -1,0 +1,16 @@
+{
+  "name": "quanton3d-bot",
+  "version": "1.0.0",
+  "description": "Backend do Quanton3D Bot (IA com OpenAI)",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-fetch": "^3.3.2"
+  }
+}
