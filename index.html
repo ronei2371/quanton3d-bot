@@ -5,75 +5,43 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>QuantonBot3D IA</title>
   <link rel="stylesheet" href="styles.css" />
-  <!-- Spline viewer (robô 3D no navegador) -->
-  <script type="module" src="https://unpkg.com/@splinetool/viewer@1.9.54/build/spline-viewer.js"></script>
 </head>
-<body class="theme">
+<body>
 
-  <div class="layout">
-    <!-- COLUNA ESQUERDA: CHAT -->
-    <section class="chat-card">
-      <header class="brand">
-        <div class="logo">Q</div>
-        <div class="brand-text">
-          <h1>QuantonBot3D <span>IA</span></h1>
-          <p>Assistente técnico para impressão 3D (SLA/DLP)</p>
-        </div>
-      </header>
+  <div id="chat-container">
+    <div class="brand">
+      <div class="logo">Q</div>
+      <div class="brand-text">
+        <h1>QuantonBot3D <span>IA</span></h1>
+        <p>Assistente técnico para impressão 3D (SLA/DLP)</p>
+      </div>
+    </div>
 
-      <div id="chat" class="chat">
-        <div class="msg bot">
-          <div class="avatar">🤖</div>
-          <div class="bubble">
-            Olá! Sou o <b>QuantonBot3D IA</b>. Diga o que está acontecendo com sua impressão
-            (ex.: “minha peça não adere na plataforma”, “as peças estão rachando”).
-          </div>
+    <div id="chat">
+      <div class="msg bot">
+        <div class="avatar">🤖</div>
+        <div class="bubble">
+          Olá! Sou o <b>QuantonBot3D IA</b>. Diga o que está acontecendo com sua impressão
+          (ex.: “minha peça não adere na plataforma”, “as peças estão rachando”).
         </div>
       </div>
+    </div>
 
-      <form id="composer" class="composer">
-        <input id="input" type="text" placeholder="Digite sua dúvida…" autocomplete="off" />
-        <button id="send" type="submit">Enviar</button>
-      </form>
-
-      <div class="tips">
-        <button class="tip">Peça não adere</button>
-        <button class="tip">Peça rachando</button>
-        <button class="tip">Suportes caindo</button>
-        <button class="tip">Parâmetros de cura</button>
-        <button class="tip">Configuração de base</button>
-      </div>
-
-      <footer class="footer">
-        <button id="resetBtn" class="ghost">↺ Reiniciar conversa</button>
-        <span>© Quanton3D • QuantonBot3D IA</span>
-      </footer>
-    </section>
-
-    <!-- COLUNA DIREITA: ROBÔ 3D -->
-    <section class="bot-stage">
-      <!-- Estado visual -->
-      <div id="botState" class="bot-state neutral" title="Estado do bot">
-        <span class="dot dot-1"></span>
-        <span class="dot dot-2"></span>
-        <span class="dot dot-3"></span>
-      </div>
-
-      <!-- Botão de som -->
-      <button id="soundBtn" class="sound muted" title="Ativar som">🔇</button>
-
-      <!-- Spline 3D (TROQUE A URL) -->
-      <spline-viewer id="quantonbot3d" loading="eager"
-        url="https://prod.spline.design/PLACEHOLDER-SPLINE_SCENE_URL/scene.splinecode">
-      </spline-viewer>
-
-      <!-- Fallback 2D -->
-      <div class="bot-fallback">
-        <div class="bot-fallback-robot"></div>
-        <small>Carregando robô 3D…</small>
-      </div>
-    </section>
+    <form id="composer">
+      <input id="input" type="text" placeholder="Digite sua dúvida…" autocomplete="off" />
+      <button id="send" type="submit">Enviar</button>
+    </form>
   </div>
+
+  <!-- Robô flutuante -->
+  <img
+    id="robot"
+    src="robot-neutral.png"
+    alt="QuantonBot"
+    data-neutral="robot-neutral.png"
+    data-thinking="robot-thinking.png"
+    data-speaking="robot-speaking.png"
+  />
 
   <script src="bot.js"></script>
 </body>
