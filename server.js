@@ -200,7 +200,8 @@ app.get("/suggestions", (req, res) => {
   const { auth } = req.query;
   
   // Verificação simples - em produção, usar autenticação adequada
-  if (auth !== process.env.ADMIN_SECRET) {
+  const adminSecret = process.env.ADMIN_SECRET || "quanton3d_admin_secret";
+  if (auth !== adminSecret) {
     return res.status(403).json({ error: "Não autorizado" });
   }
 
