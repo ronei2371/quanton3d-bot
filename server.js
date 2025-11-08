@@ -8,6 +8,7 @@ import dotenv from "dotenv";
 import OpenAI from "openai";
 import multer from "multer";
 import { SYSTEM_PROMPT, RESINS_DATABASE } from "./knowledge-base.js";
+import { SLICER_KNOWLEDGE } from "./technical-knowledge.js";
 
 dotenv.config();
 
