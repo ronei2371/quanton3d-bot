@@ -1,7 +1,7 @@
 import fs from "fs";
 
 // Lê o arquivo
-const content = fs.readFileSync("conhecimento-geminimanus.txt", "utf-8");
+const content = fs.readFileSync("conhecimento.txt", "utf-8");
 
 // Divide em blocos de ~800 palavras (ajuste se quiser)
 const chunks = content.match(/(.|\n){1,4000}/g);
@@ -11,3 +11,4 @@ chunks.forEach((chunk, index) => {
 });
 
 console.log(`✅ Gerado ${chunks.length} arquivos em /chunks`);
+
