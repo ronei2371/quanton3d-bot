@@ -1,7 +1,7 @@
 import fs from "fs";
 
 // Caminho do seu arquivo de conhecimento
-const inputFile = "conhecimento geminimanus";
+const inputFile = "conhecimento.txt";
 
 // Cria a pasta "chunks" se ela não existir
 if (!fs.existsSync("chunks")) {
@@ -12,7 +12,7 @@ if (!fs.existsSync("chunks")) {
 const content = fs.readFileSync(inputFile, "utf8");
 
 // Divide em blocos de aproximadamente 10.000 caracteres
-const parts = content.match(/[\s\S]{1,10000}/g);
+const parts = content.match(/(.|\n){1,10000}/g);
 
 parts.forEach((chunk, i) => {
   const fileName = `chunks/chunk_${i + 1}.txt`;
