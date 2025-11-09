@@ -226,3 +226,10 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () =>
   console.log(`✅ Servidor Quanton3D IA rodando na porta ${PORT}`)
 );
+import { consultarComRAG } from "./rag-helper.js";
+
+app.post("/ask", async (req, res) => {
+  const pergunta = req.body.question;
+  const resposta = await consultarComRAG(pergunta);
+  res.json({ answer: resposta });
+});
