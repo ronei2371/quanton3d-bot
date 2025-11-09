@@ -7,7 +7,7 @@ const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const chroma = new ChromaClient({ path: "./quanton3d-db" });
 
 async function gerarEmbeddings() {
-  const texto = fs.readFileSync("/.src/conhecimento.txt", "utf8");
+  const texto = fs.readFileSync(".src/conhecimento.txt", "utf8");
 
   // divide em blocos de 800 tokens
   const splitter = new recursiveCharacterTextSplitter({ chunkSize: 3000, chunkOverlap: 300 });
@@ -23,7 +23,7 @@ async function gerarEmbeddings() {
     await chroma.add({
       ids: [`doc-${i}`],
       embeddings: [emb.data[0].embedding],
-      metadatas: [{ source: "conhecimento", index: i }],
+      metadatas: [{ source: "conhecimento.txt", index: i }],
       documents: [content]
     });
 
@@ -34,4 +34,5 @@ async function gerarEmbeddings() {
 }
 
 gerarEmbeddings();
+
 
