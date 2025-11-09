@@ -2,29 +2,24 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Pega o caminho da pasta atual (a pasta /src)
-const baseDir = path.dirname(fileURLToPath(import.meta.url));
-
-// 1. O arquivo de entrada está na MESMA pasta
+const baseDir   = path.dirname(fileURLToPath(import.meta.url));
 const inputFile = path.join(baseDir, "conhecimento.txt");
+const outDir    = path.join(baseDir, "chunks");
 
-// A pasta de saída (chunks) também será criada dentro de /src
-const chunksDir = path.join(baseDir, "chunks");
-if (!fs.existsSync(chunksDir)) {
-  fs.mkdirSync(chunksDir, { recursive: true });
+// 👉 ajuste aqui o tamanho do pedaço (ex.: 20k chars = bem menos arquivos)
+const CHUNK_SIZE = 20000;
+
+if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+
+const content = fs.readFileSync(inputFile, "utf8");
+
+// split determinístico por caracteres (sem regex)
+let count = 0;
+for (let i = 0; i < content.length; i += CHUNK_SIZE) {
+  const chunk = content.slice(i, i + CHUNK_SIZE);
+  const file  = path.join(outDir, `chunk_${++count}.txt`);
+  fs.writeFileSync(file, chunk);
+  console.log(`✅ Gerado: ${file}`);
 }
 
-console.log(`Lendo arquivo: ${inputFile}`);
-const content = fs.readFileSync(inputFile, "utf8");
-console.log("Arquivo lido, iniciando divisão...");
-
-// 2. MUDANÇA: Dividir a cada 8.000 caracteres
-const parts = content.match(/(.|\n){1,8000}/g) || []; // Divide a cada 8k chars
-
-parts.forEach((chunk, i) => {
-  const fileName = path.join(chunksDir, `chunk_${i + 1}.txt`);
-  fs.writeFileSync(fileName, chunk);
-  console.log(`✅ Gerado: ${fileName}`);
-});
-
-console.log(`✨ Total de ${parts.length} partes criadas com sucesso.`);
+console.log(`✨ Total de ${count} partes criadas com sucesso.`);
