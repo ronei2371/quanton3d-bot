@@ -1,0 +1,38 @@
+ológico é o mais rigoroso devido à interação das peças com o corpo humano (bio-interação).
+
+
+
+
+Normas de Segurança: O uso de resinas biocompatíveis é obrigatório. Essas resinas devem atender a regulamentações rigorosas de segurança biológica, passando por testes de citotoxicidade, sensibilização e irritação conforme a norma ISO 10993.
+
+
+
+
+
+
+Composição Química: A formulação exclui componentes tóxicos como metacrilatos livres, metais pesados e fotoiniciadores de alta toxicidade. Sistemas de iniciação de baixa migração são usados para garantir que produtos de degradação não sejam liberados em contato com tecidos biológicos.
+
+
+
+
+
+
+Aplicações: Incluem guias cirúrgicos, modelos anatômicos para planejamento, dispositivos médicos temporários e próteses dentárias.
+
+
+
+
+Etapa,Foco da Ação Master Quanton3D,Detalhe Técnico
+Lavagem,,Contaminação: Evitar a reintrodução de contaminantes.,Utilizar solventes com pureza farmacêutica e equipamentos exclusivos/dedicados para evitar contaminação cruzada.
+Cura,,Conversão Total: Garantir o grau máximo de polimerização.,Pós-cura completa para elevar o grau de conversão para 90%−95%.
+Documentação,,Rastreabilidade: Manter o histórico do produto.,Manter registros detalhados de todos os procedimentos (incluindo parâmetros de pós-processamento) para rastreabilidade.
+Setup da Impressora,,Precisão: Nivelamento e calibração perfeitos.,"Exigência de Calibração Rigorosa (""por toque"") para o Z-offset e Homogeneização da resina por 1 a 2 minutos antes de cada impressão,
+devido à viscosidade das resinas."
+Falhas Críticas e Soluções AvançadasEm odontologia, a falha está frequentemente ligada a problemas de contração e limpeza.Rachaduras na Peça (Pós-Cura Cracking):Diagnóstico
+: Contração extrema durante o pós-processamento, devido à cura muito rápida ou lavagem incompleta14.Solução Master: Utilizar Cura Lenta e Controlada (câmara que permite temperatura controlada)15. 
+Remoção Completa de $100\%$ dos monômeros residuais com IPA novo16.Peças Não Encaixam (Precisão Dimensional):Diagnóstico: Falha de precisão dimensional (tolerâncias apertadas).Solução Master: 
+A precisão dimensional é avaliada através de modelos de teste específicos17. O bot deve recomendar que as peças sejam medidas com Micrômetros internos para furos e Calibradores
+ passa/não-passa para tolerâncias críticas18.Problemas de Suporte: Suportes devem ser posicionados em áreas não críticas, evitando superfícies oclusais e margens de preparos19. 
+ A rugosidade superficial introduzida deve ser inferior a $Ra=0.1\mu m$20.4. Investimento e Infraestrutura (Nível Profissional)Para o seu cliente que atua em odontologia, o
+ investimento segue um caminho claro:Impressora: Impressoras odontológicas certificadas (como Formlabs Form 3B, NextDent)21.Setup Inicial: Software de planejamento odontológico e
+ um sistema de pós-processamento validado (limpeza e cura)22.Expansão: Investimento em equipamentos de medição dimensional de precisão e sistema de esterilização adequado23.Nível Indus

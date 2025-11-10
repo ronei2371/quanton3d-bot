@@ -1,0 +1,113 @@
+tes: 2-4 horas/semana - Reimpressões devido
+a falhas: 20-40% do tempo de produção - Troubleshooting e manutenção: 1-2
+horas/dia - Busca por soluções e suporte: tempo significativo sem produção
+
+
+Custos Materiais: - Desperdício de resina em impressões falhadas: 15-30% -
+Substituição prematura de componentes: 2-3x mais frequente - Uso excessivo de
+solventes para limpeza de falhas - Necessidade de materiais de backup devido à
+inconsistência
+Impacto na Qualidade: - Inconsistência dimensional que requer retrabalho -
+Acabamento superficial inadequado - Falhas estruturais que comprometem
+funcionalidade - Necessidade de processos adicionais de correção
+
+
+
+
+15.6.2 Análise de Custo-Benefício
+
+
+Comparação de TCO (Total Cost of Ownership) - 3 anos:
+
+
+Impressora Problemática (ex: M5s): - Custo inicial: US$ 400 - Manutenção e peças:
+US$ 800 - Tempo perdido (valorado): US$ 2.000 - Materiais desperdiçados: US$ 600 -
+Total: US$ 3.800
+
+
+Impressora Confiável (ex: Elegoo Saturn 3): - Custo inicial: US$ 600 - Manutenção e
+peças: US$ 300 - Tempo perdido (valorado): US$ 400 - Materiais desperdiçados: US$
+150 - Total: US$ 1.450
+
+
+Economia com escolha adequada: US$ 2.350 (62%)
+
+
+
+
+
+
+
+
+MÓDULO 16: COMO FAZER CÁLCULO SOBRE CUSTO
+PARA CADA IMPRESSÃO
+
+
+16.1 Fundamentos da Análise de Custos
+
+
+O cálculo preciso dos custos de impressão 3D é fundamental para viabilidade
+econômica de projetos, seja para uso pessoal, comercial ou industrial. Uma análise
+completa deve considerar todos os componentes de custo, desde materiais diretos até
+custos indiretos e overhead operacional.
+
+
+
+
+16.1.1 Estrutura de Custos
+
+
+Custos Diretos: - Materiais (resina, solventes, consumíveis) - Energia elétrica - Mão de
+obra direta - Desgaste de componentes
+
+
+Custos Indiretos: - Depreciação de equipamentos - Manutenção preventiva -
+Overhead de instalações - Custos de falhas e retrabalho
+
+
+Custos de Oportunidade: - Tempo de máquina parada - Investimento de capital -
+Custos de aprendizado - Desenvolvimento de processos
+16.1.2 Metodologia de Cálculo
+
+
+A metodologia de cálculo baseia-se na decomposição sistemática de todos os
+elementos de custo, permitindo análise detalhada e otimização de cada componente.
+
+
+Fórmula    Geral:    Custo    Total   =   Custo_Materiais   +   Custo_Energia   +
+Custo_Mão_de_Obra + Custo_Equipamento + Custo_Overhead + Custo_Falhas
+
+
+
+
+16.2 Cálculo de Custos de Materiais
+
+
+16.2.1 Consumo de Resina
+
+
+O cálculo do consumo de resina requer determinação precisa do volume da peça e
+estruturas de suporte.
+
+
+Volume da Peça: Obtido diretamente do software de fatiamento ou calculado através
+de: V_peça = ∫∫∫ dV (integração sobre o volume da geometria)
+
+
+Volume de Suportes: Tipicamente 10-20% do volume da peça, dependendo da
+complexidade: V_suportes = V_peça × F_suporte
+
+
+Onde F_suporte varia entre 0,10 e 0,25.
+
+
+Massa Total de Resina: M_total = (V_peça + V_suportes) × ρ_resina
+
+
+Onde ρ_resina é tipicamente 1,05-1,15 g/cm³.
+
+
+Custo de Resina: C_resina = M_total × P_resina
+
+
+Onde P_resina é o pre

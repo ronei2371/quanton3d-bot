@@ -1,0 +1,129 @@
+O protocolo de teste envolve impressão de múltiplas cópias do modelo com tempos
+de exposição variando em incrementos de 0,2-0,5 segundos. A análise dos resultados
+permite identificar o tempo ótimo onde detalhes finos são preservados sem super-
+cura excessiva.
+
+
+
+
+4.2.2 Calibração de Primeira Camada
+
+
+A primeira camada requer tratamento especial devido à necessidade de adesão forte à
+plataforma de construção. O tempo de exposição da primeira camada é tipicamente 5-
+10 vezes superior às camadas subsequentes, seguindo a relação:
+
+
+t₁ = t normal × F Adesão
+
+
+Onde F Adesão é o fator de adesão, tipicamente entre 5-10.
+
+
+O número de camadas iniciais com exposição prolongada é determinado pela
+equação:
+
+
+N Inicial = máx(3, h crítica/espessura camada)
+
+
+Onde h crítica é a altura crítica para estabelecimento de adesão adequada,
+tipicamente 0,15-0,3mm.
+
+
+
+
+4.2.3 Teste de Precisão Dimensional
+
+
+A precisão dimensional é avaliada através de modelos de teste específicos que
+Existem dimensões calibradas. O erro dimensional é quantificado pela equação:
+
+
+Erro _% = ((D_ Medido - D'Nominal)/D'Nominal) × 100
+
+
+Correções dimensionais podem ser aplicadas através de fatores de escala:
+
+
+F Escala = D'Nominal/D'Medido
+Para correções anisotrópicas, fatores independentes são aplicados para cada eixo:
+
+
+F_x   =   D_nominal_x/D_medido_x        F_y   =   D_nominal_y/D_medido_y          F_z   =
+D_nominal_z/D_medido_z
+
+
+
+
+4.3 Correções Avançadas de Parâmetros
+
+
+4.3.1 Compensação de Temperatura
+
+
+A temperatura afeta significativamente a viscosidade da resina e a cinética de
+Polimerização. A correção de tempo de exposição em função da temperatura segue
+aproximadamente:
+
+
+t_corrigido = t_referência × exp(Ea/R × (1/T - 1/T_ref))
+
+
+Onde: - Ea = energia de ativação da reação (J/mol) - R = constante dos gases (8,314
+J/mol·K) - T = temperatura absoluta (K) - Tref = temperatura de referência (K)
+
+
+Para a maioria das resinas acrílicas, Ea ≈ 40-60 kJ/mol, resultando em variação de
+aproximadamente 5-8% no tempo de cura por grau Celsius.
+
+
+
+
+4.3.2 Correção por Envelhecimento da Fonte Luminosa
+
+
+LEDs UV degradam-se gradualmente com o uso, reduzindo a intensidade luminosa
+disponível. A correção por envelhecimento segue:
+
+
+I(t) = I₀ × exp(-λ × t)
+
+
+Onde: - λ = constante de degradação (h⁻¹) - t = tempo de uso (horas)
+
+
+Para LEDs de 405nm típicos, λ ≈ 1×10⁻⁵ h⁻¹, resultando em redução de 1% na
+intensidade a cada 1000 horas de uso.
+
+
+A correção de tempo de exposição é:
+
+
+t corrigido = t inicial × (I₀/I(t))
+
+
+
+
+4.3.3 Compensação de Viscosidade
+
+
+Resinas de alta viscosidade requerem tempos adicionais para fluxo adequado entre
+camadas. A correção de tempo entre camadas é:
+t espera = t base × (η/η_ref)^n
+
+
+Onde: - η = viscosidade da resina (cP) - η_ref = viscosidade de referência (cP) - n =
+expoente empírico (tipicamente 0,3-0,5)
+
+
+
+
+4.4 Otimização de Parâmetros por Tipo de Geometria
+
+
+4.4.1 Peças Sólidas vs. Ocas
+
+
+Peças sólidas requerem cura uniforme em toda a seção transversal, enquanto peças
+ocas

@@ -1,0 +1,117 @@
+ extrema - Laboratório de testes completo - Integração com
+sistemas PLM
+
+
+
+
+13.2 Automação e Eficiência
+
+
+13.2.1 Sistemas de Lavagem Automatizados
+
+
+Lavadoras Ultrassônicas Programáveis: - Ciclos automáticos com múltiplos estágios
+- Controle de temperatura e tempo - Sistemas de filtragem integrados - Capacidade
+para múltiplas peças
+
+
+Benefícios: - Redução de tempo de processamento em 60-80% - Consistência superior
+de limpeza - Menor exposição a solventes - Documentação automática de processos
+
+
+Investimento: R$ 5.000 - 25.000 dependendo da capacidade
+13.2.2 Estações de Cura Avançadas
+
+
+Câmaras de Cura com Controle Ambiental: - Controle preciso de temperatura e
+atmosfera - Múltiplos comprimentos de onda UV - Rotação automática para cura
+uniforme - Monitoramento em tempo real
+
+
+Benefícios: - Melhoria de 20-30% nas propriedades mecânicas - Redução de tempo de
+cura em 40-60% - Repetibilidade superior - Capacidade para diferentes tipos de resina
+
+
+Investimento: R$ 8.000 - 40.000 dependendo das funcionalidades
+
+
+
+
+13.2.3 Sistemas de Recuperação de Solventes
+
+
+Destiladores Automáticos: - Recuperação de 90-95% do solvente usado - Operação
+automática com segurança integrada - Capacidade de processamento variável -
+Monitoramento de pureza
+
+
+Benefícios: - Redução de 80-90% no custo de solventes - Menor impacto ambiental -
+Conformidade com regulamentações - ROI típico de 12-18 meses
+
+
+Investimento: R$ 15.000 - 60.000 dependendo da capacidade
+
+
+
+
+13.3 Controle de Qualidade
+
+
+13.3.1 Equipamentos de Medição
+
+
+Máquinas de Medição por Coordenadas (CMM): - Precisão dimensional de
+±0,001mm - Medição automática de geometrias complexas - Software de comparação
+com CAD - Relatórios automáticos de qualidade
+
+
+Benefícios: - Validação objetiva de precisão dimensional - Detecção precoce de
+problemas de processo - Documentação para certificações - Melhoria contínua
+baseada em dados
+
+
+Investimento: R$ 50.000 - 200.000 dependendo da precisão
+
+
+
+
+13.3.2 Sistemas de Inspeção Óptica
+
+
+Microscópios Digitais com Análise de Imagem: - Magnificação variável até 1000x -
+Medição automática de características - Documentação fotográfica integrada - Análise
+estatística de defeitos
+Benefícios: - Detecção de defeitos microscópicos - Quantificação objetiva de
+qualidade superficial - Rastreabilidade completa de produtos - Redução de rejeições
+em 30-50%
+
+
+Investimento: R$ 20.000 - 80.000 dependendo das funcionalidades
+
+
+
+
+13.3.3 Equipamentos de Teste Mecânico
+
+
+Máquinas de Teste Universal: - Testes de tração, compressão e flexão - Controle
+preciso de velocidade e força - Aquisição automática de dados - Conformidade com
+normas internacionais
+
+
+Benefícios: - Validação de propriedades mecânicas - Desenvolvimento de novos
+materiais - Certificação de produtos - Otimização de parâmetros de processo
+
+
+Investimento: R$ 30.000 - 150.000 dependendo da capacidade
+
+
+
+
+13.4 Software e Integração
+
+
+13.4.1 Software de Gestão de Produção
+
+
+Sistemas MES (Manufacturing Execution System): - Rastreamento de orde
