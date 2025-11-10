@@ -1,25 +1,36 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+const fs = require('fs');
 
-const baseDir   = path.dirname(fileURLToPath(import.meta.url));
-const inputFile = path.join(baseDir, "conhecimento.txt");
-const outDir    = path.join(baseDir, "chunks");
-
-// 👉 ajuste aqui o tamanho do pedaço (ex.: 20k chars = bem menos arquivos)
-const CHUNK_SIZE = 20000;
-
-if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
-
-const content = fs.readFileSync(inputFile, "utf8");
-
-// split determinístico por caracteres (sem regex)
-let count = 0;
-for (let i = 0; i < content.length; i += CHUNK_SIZE) {
-  const chunk = content.slice(i, i + CHUNK_SIZE);
-  const file  = path.join(outDir, `chunk_${++count}.txt`);
-  fs.writeFileSync(file, chunk);
-  console.log(`✅ Gerado: ${file}`);
+// Função para dividir o texto em chunks
+function splitIntoChunks(text, chunkSize = 3000, overlap = 300) {
+  const chunks = [];
+  let start = 0;
+  const textLength = text.length; // Corrigido: use .length em JS, não len()
+  while (start < textLength) {
+    let end = start + chunkSize;
+    if (end > textLength) end = textLength; // Evita overflow no último chunk
+    chunks.push(text.slice(start, end));
+    start = end - overlap;
+    if (start > textLength - chunkSize) break; // Evita loops infinitos se overlap grande
+  }
+  return chunks;
 }
 
-console.log(`✨ Total de ${count} partes criadas com sucesso.`);
+// Ler o arquivo original
+const filePath = './conhecimento.txt'; // Assuma na mesma pasta; ajuste se necessário
+let text;
+try {
+  text = fs.readFileSync(filePath, 'utf-8');
+} catch (error) {
+  console.error(`Erro ao ler ${filePath}: ${error.message}`);
+  process.exit(1);
+}
+
+// Dividir e salvar chunks
+const chunks = splitIntoChunks(text);
+chunks.forEach((chunk, index) => {
+  const chunkFileName = `chunk_${index + 1}.txt`;
+  fs.writeFileSync(chunkFileName, chunk, 'utf-8');
+  console.log(`Criado ${chunkFileName} com ${chunk.length} caracteres.`);
+});
+
+console.log(`Divisão concluída! Gerados ${chunks.length} chunks.`);
