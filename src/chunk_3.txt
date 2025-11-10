@@ -1,0 +1,102 @@
+ Falta de ANVISA e Aplicações Críticas
+
+
+Em aplicações sensíveis, especialmente as odontológicas ou médicas, a resina precisa ter 
+registro na ANVISA (Agência Nacional de Vigilância Sanitária). Comprar resinas sem essa certificação é ilegal e 
+coloca em risco a saúde do paciente final. A Quanton3D assegura que suas linhas específicas atendem a todas as exigências dos órgãos reguladores.
+
+
+Chunk 15: Conclusão de Vendas (Diferencial de Segurança)
+
+
+Ao escolher a Quanton3D, o cliente está optando por resinas legalmente
+registradas, com FISPQ e controle de qualidade rigoroso. A segurança e a tranquilidade de estar trabalhando 
+com um produto certificado e fiscalizado não têm preço, protegendo a saúde do operador e o investimento na impressora.
+
+
+A Quanton3D oferece soluções inovadoras, como as resinas com baixo odor (Low Smell) e a linha Poseidon, que é elogiada por ser Lavável com Água. Estas opções simplificam o pós-processamento, 
+geram economia ao cliente (eliminando o uso de álcool) e melhoram o ambiente de trabalho.
+   1. Explicação e apresentação sobre partes de uma impressora de resina
+
+
+   2. Equipamentos de segurança e cuidados para a saúde
+
+
+   3. Explicação sobre fatiadores e tipos de resina
+
+
+   4. Como calibrar a sua resina e correções de parâmetros
+
+
+   5. Como fazer suportes
+
+
+   6. Como separar modelos
+
+
+   7. Como nivelar a sua impressora
+
+
+   8. Como colocar para imprimir
+
+
+   9. Lavagem e cura para diferentes tipos de resina
+
+
+ 10. Cuidados e procedimentos após impressão
+
+
+ 11. Polimento, lixar e remoção dos suportes
+
+
+ 12. Erros que podem ocorrer e como solucionar
+
+
+ 13. Sugestões de futuros investimentos
+
+
+ 14. Marcas confiáveis e sugestões de impressoras
+15. Marcas ou impressoras não recomendadas
+
+
+ 16. Como fazer cálculo sobre custo para cada impressão
+
+
+
+
+
+
+
+
+INTRODUÇÃO
+
+
+A impressão 3D de resina fotopolimerizável representa uma das tecnologias mais
+revolucionárias   da    manufatura   moderna,     oferecendo    precisão   dimensional
+excepcional e qualidade de superfície superior quando comparada às tecnologias de
+filamento. Este guia abrangente foi desenvolvido para atender desde iniciantes que
+estão dando seus primeiros passos no mundo da impressão 3D até usuários
+avançados que buscam otimizar seus processos e resultados.
+
+
+A tecnologia de estereolitografia (SLA) e processamento digital de luz (DLP) tem
+evoluído rapidamente, tornando-se mais acessível e confiável. No entanto, o sucesso
+na impressão 3D de resina depende fundamentalmente do conhecimento técnico
+adequado, práticas de segurança rigorosas e compreensão profunda dos materiais e
+processos envolvidos.
+
+
+Este manual técnico foi estruturado de forma progressiva, começando com conceitos
+fundamentais e avançando para técnicas especializadas. Cada módulo foi
+cuidadosamente desenvolvido para fornecer conhecimento prático aplicável, baseado
+em experiências reais e melhores práticas da indústria.
+
+
+
+
+
+
+
+
+MÓDULO 1: EXPLICAÇÃO E APRESENTAÇÃO SOBRE
+PARTES DE UMA IMPRESSORA D

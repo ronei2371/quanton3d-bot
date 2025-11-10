@@ -1,0 +1,144 @@
+ pureza farmacêutica
+para evitar contaminação.
+
+
+Equipamentos       Dedicados:   Utilizar   equipamentos   exclusivos   para   evitar
+contaminação cruzada.
+
+
+Documentação: Manter registros detalhados de todos os procedimentos para
+rastreabilidade.
+
+
+
+
+9.2.5 Resinas Laváveis em Água
+
+
+Resinas laváveis em água oferecem vantagens significativas em termos de segurança e
+custo:
+
+
+Temperatura da Água: Água morna (30-40°C) melhora eficiência de lavagem.
+
+
+Detergentes: Pequenas quantidades de detergente neutro podem melhorar remoção
+de resíduos oleosos.
+
+
+Enxágue Final: Enxágue abundante com água destilada para remover resíduos de
+detergente.
+9.3 Sistemas de Lavagem
+
+
+9.3.1 Lavagem Manual
+
+
+Lavagem manual oferece controle máximo mas requer cuidados especiais:
+
+
+Recipientes: Utilizar recipientes de vidro ou polipropileno resistentes a solventes.
+
+
+Ventilação: Garantir ventilação adequada para evitar acúmulo de vapores.
+
+
+EPI: Utilizar luvas resistentes a solventes e óculos de proteção.
+
+
+Agitação: Movimento suave e constante para maximizar transferência de massa.
+
+
+
+
+9.3.2 Lavadoras Ultrassônicas
+
+
+Lavadoras ultrassônicas oferecem limpeza superior para geometrias complexas:
+
+
+Frequência: 40-80 kHz é ideal para limpeza de resinas sem danificar detalhes finos.
+
+
+Potência: 50-100W por litro de solvente oferece eficiência adequada.
+
+
+Tempo: Reduzir tempo de lavagem para 1-2 minutos devido à maior eficiência.
+
+
+Degaseificação: Remover bolhas de ar do solvente antes do uso para máxima
+eficiência.
+
+
+
+
+9.3.3 Sistemas Automatizados
+
+
+Sistemas automatizados oferecem consistência e redução de exposição:
+
+
+Estações de Lavagem: Equipamentos comerciais com múltiplos estágios de lavagem.
+
+
+Controle de Temperatura: Aquecimento controlado do solvente para melhor
+eficiência.
+
+
+Filtragem: Sistemas de filtragem para prolongar vida útil do solvente.
+
+
+Recuperação de Solvente: Destilação para recuperação e reutilização de solventes.
+9.4 Cura Pós-Impressão
+
+
+9.4.1 Fundamentos da Pós-Cura
+
+
+A pós-cura completa a polimerização iniciada durante a impressão, melhorando
+significativamente as propriedades mecânicas finais. O grau de conversão típico após
+impressão é 60-80%, sendo elevado para 90-95% através da pós-cura adequada.
+
+
+A cinética de pós-cura segue modelo de primeira ordem:
+
+
+dα/dt = k × (1 - α)
+
+
+Onde: - α = grau de conversão - k = constante cinética dependente da temperatura e
+intensidade luminosa
+
+
+
+
+9.4.2 Métodos de Pós-Cura
+
+
+Cura UV: Exposição à radiação ultravioleta em câmaras especializadas.
+
+
+Cura Térmica: Aquecimento controlado em fornos para acelerar reações de
+polimerização.
+
+
+Cura Combinada: Combinação de UV e calor para máxima eficiência.
+
+
+Cura em Atmosfera Inerte: Utilização de nitrogênio para prevenir inibição por
+oxigênio.
+
+
+
+
+9.4.3 Parâmetros de Cura UV
+
+
+Comprimento de Onda: 365nm oferece penetração superior comparado a 405nm
+para pós-cura.
+
+
+Intensidade: 5-15 mW/cm² é adequada para a maioria das resinas.
+
+
+Tempo: 10-30 minutos dependendo da espessura e

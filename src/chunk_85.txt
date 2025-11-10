@@ -1,0 +1,40 @@
+de exposição. Execute duas rodadas de testes para ajuste grosseiro e fino. (veja também *18 Amostras de Calibração para etapas extras).
+
+
+O tempo de exposição afeta diretamente o sucesso da sua impressão, pois muita ou pouca exposição pode causar impressões subcuradas ou supercuradas. Para começar, use as configurações recomendadas pelo fabricante da resina como base. A partir daí, execute impressões de teste com pequenos ajustes no tempo de exposição para ajustar as configurações ótimas. O ajuste fino dos tempos de exposição ajudará a alcançar melhores detalhes e reduzir erros de impressão."
+
+
+Mantenha um registro: Anote os tempos de exposição e os tipos de resina para manter suas configurações organizadas.
+
+
+Precisão dimensional: Ajuste os tempos de exposição para partes específicas. A superexposição pode fortalecer as peças, enquanto a subexposição ajuda nos detalhes.
+
+
+Escolher a velocidade de elevação correta é crucial para obter impressões de qualidade sem danificar o seu modelo ou filme FEP. Uma velocidade de elevação mais lenta geralmente reduz as forças de sucção, minimizando a tensão tanto no modelo quanto no FEP. No entanto, uma velocidade de elevação mais rápida pode acelerar os tempos de impressão, mas aumenta o risco de falhas. Teste diferentes velocidades com impressões menores e encontre o equilíbrio que funciona para sua configuração específica."
+
+
+8. Impressão e Suportes
+Comece a impressão: Depois que o seu modelo estiver corretamente orientado e os suportes estiverem colocados, comece a sua impressão. Verifique-o ocasionalmente para garantir que esteja progredindo suavemente.
+
+
+9. Após a Impressão: Limpeza e Remoção de Suportes
+Dica de Remoção de Suportes: Após a impressão, use uma pistola de calor para amolecer os suportes para facilitar a remoção sem danificar o modelo.
+
+
+Furos de drenagem em modelos ocos: Certifique-se de que toda a resina seja drenada das partes ocas do seu modelo. Lave o interior de modelos ocos com álcool isopropílico (IPA) para limpar qualquer resíduo de resina não curada.
+
+
+Modelos ocos e acúmulo de gás: Se houver resina presa no interior, ela pode liberar gás e causar rachaduras ou explosões nos modelos. A limpeza e a drenagem adequadas são essenciais.
+
+
+Lavando suas Impressões
+Remova o excesso de resina: Após a impressão, remova o seu modelo da placa de construção e limpe imediatamente o excesso de resina. Você pode usar álcool isopropílico (IPA) ou uma solução lavável com água dedicada se estiver usando resina lavável com água.
+
+
+O sistema de IPA de 2 ou 3 frascos:
+
+
+Primeira lavagem (frasco de IPA sujo): Mergulhe a impressão no primeiro frasco contendo IPA sujo ou usado. Este frasco removerá a maior parte da resina líquida da superfície da impressão. Agite suavemente ou use uma escova macia para ajudar a soltar a resina.
+
+
+Segunda lavagem (frasco de IPA mais limpo): Mova a impressão para um segundo frasco com IPA mais limpo. Esta segunda lavagem remove qualquer resíduo de resina e proporciona uma li

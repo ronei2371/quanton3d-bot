@@ -1,0 +1,126 @@
+as no ângulo de inclinação:
+
+
+t_inclinado = t_normal × cos(θ)
+Onde θ é o ângulo de inclinação em relação à horizontal.
+
+
+
+
+4.5 Validação e Controle de Qualidade
+
+
+4.5.1 Métricas de Qualidade
+
+
+A qualidade da calibração é avaliada através de métricas quantitativas:
+
+
+Índice    de    Qualidade     Dimensional      (IQD):    IQD     =    100   ×   (1   -
+|erro_médio|/tolerância_especificada)
+
+
+Índice de Qualidade Superficial (IQS): IQS = 100 × (Ra_referência/Ra_medida)
+
+
+Onde Ra é a rugosidade média superficial.
+
+
+
+
+4.5.2 Controle Estatístico de Processo
+
+
+Para produção em série, implementa-se controle estatístico baseado em cartas de
+controle. Os limites de controle são calculados por:
+
+
+LSC = μ + 3σ LIC = μ - 3σ
+
+
+Onde μ é a média do processo e σ o desvio padrão.
+
+
+A capacidade do processo é avaliada pelo índice Cpk:
+
+
+Cpk = min((LSE - μ)/(3σ), (μ - LIE)/(3σ))
+
+
+Onde LSE e LIE são os limites superior e inferior de especificação.
+
+
+
+
+
+
+
+
+MÓDULO 5: COMO FAZER SUPORTES, INDICAÇÕES
+SOBRE TIPOS DE SUPORTES PARA MODELOS
+DIFERENTES
+
+
+5.1 Fundamentos da Teoria de Suportes
+
+
+Os suportes na impressão 3D de resina desempenham múltiplas funções críticas que
+vão além do simples apoio estrutural. Eles devem resistir às forças de separação do
+filme FEP, fornecer ancoragem adequada à plataforma de construção, permitir
+drenagem de resina não curada e facilitar a remoção pós-impressão sem danificar a
+peça final.
+
+
+A física dos suportes baseia-se na análise de forças durante o processo de impressão. A
+força de separação (Fs) exercida durante a elevação da plataforma é calculada por:
+
+
+Fs = A × P + μ × A × σ
+
+
+Onde: - A = área da seção transversal da camada - P = pressão de sucção do filme FEP -
+μ = coeficiente de atrito entre resina curada e FEP - σ = tensão superficial da resina
+
+
+Esta força deve ser adequadamente distribuída através da estrutura de suportes para
+evitar falhas de adesão ou deformações da peça.
+
+
+
+
+5.1.1 Classificação de Suportes por Função
+
+
+Suportes Estruturais: Projetados para resistir ao peso da peça e forças gravitacionais
+durante a construção. Calculados com base na resistência à compressão da resina
+curada e fator de segurança adequado.
+
+
+Suportes de Ancoragem: Conectam a peça à plataforma de construção, resistindo às
+forças de separação. Devem apresentar área de contato suficiente para distribuir
+tensões abaixo do limite de adesão da primeira camada.
+
+
+Suportes de Drenagem: Facilitam o escoamento de resina não curada de cavidades
+internas. Posicionados estrategicamente em pontos baixos da geometria para permitir
+drenagem gravitacional eficiente.
+
+
+Suportes Anti-Deformação: Previnem distorções causadas por tensões internas
+durante a cura. Particularmente importantes em seções finas ou geometrias com alta
+relação superfície/volume.
+
+
+
+
+5.1.2 Análise de Tensões em Suportes
+
+
+A distribuição de tensões em suportes segue princípios da mecânica estrutural. Para
+suportes cilíndricos simples, a tensão de compressão é:
+
+
+σc = F/(π × r²)
+
+
+Onde F é a f

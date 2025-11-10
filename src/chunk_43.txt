@@ -1,0 +1,114 @@
+dências de performance
+
+
+
+
+12.6.2 Substituição Preventiva
+
+
+Componentes de Desgaste: - Filme FEP: substituição a cada 500-1000 impressões -
+Fontes luminosas: substituição baseada em horas de uso - Vedações: substituição
+anual ou conforme inspeção
+
+
+Critérios de Substituição: - Degradação de performance além de tolerâncias - Sinais
+visuais de desgaste ou dano - Atingimento de vida útil especificada
+
+
+
+
+12.6.3 Documentação e Rastreabilidade
+
+
+Registros de Manutenção: - Data e tipo de intervenção - Componentes substituídos -
+Parâmetros antes e após manutenção
+
+
+Análise de Tendências: - Identificação de padrões de falha - Otimização de intervalos
+de manutenção - Previsão de necessidades futuras
+
+
+
+
+
+
+
+
+MÓDULO 13: SUGESTÕES DE FUTUROS
+INVESTIMENTOS PARA FACILITAR SUA VIDA
+DEPENDENDO DO SEGMENTO
+
+
+13.1 Segmentação por Aplicação
+
+
+13.1.1 Hobby e Prototipagem Pessoal
+
+
+Para usuários iniciantes ou hobbyistas, os investimentos devem focar em facilidade de
+uso, versatilidade e custo-benefício adequado.
+
+
+Equipamentos Básicos Recomendados: - Impressora LCD de entrada (Elegoo Mars,
+Anycubic Photon) - Estação de lavagem ultrassônica básica - Câmara de cura UV
+simples - Kit básico de ferramentas de acabamento
+
+
+Investimentos Progressivos:
+Nível 1 (R$ 3.000 - 5.000): - Upgrade para impressora de maior volume (Saturn 3,
+Photon M3) - Sistema de filtragem de ar básico - Bancada dedicada com iluminação
+adequada - Estoque inicial de resinas variadas
+
+
+Nível 2 (R$ 8.000 - 12.000): - Impressora de alta resolução (4K-8K) - Estação de
+lavagem e cura automatizada - Sistema de ventilação profissional - Ferramentas de
+medição de precisão
+
+
+Nível 3 (R$ 15.000 - 25.000): - Múltiplas impressoras para produção paralela - Sistema
+de recuperação de solventes - Equipamentos de pós-processamento avançados -
+Software de gestão de produção
+
+
+
+
+13.1.2 Aplicações Odontológicas
+
+
+O segmento odontológico requer precisão excepcional, biocompatibilidade e
+conformidade regulatória.
+
+
+Equipamentos Especializados:
+
+
+Setup Inicial Profissional (R$ 25.000 - 40.000): - Impressora odontológica certificada
+(Formlabs Form 3B, NextDent) - Resinas biocompatíveis certificadas - Sistema de pós-
+processamento validado - Software de planejamento odontológico
+
+
+Expansão Intermediária (R$ 50.000 - 80.000): - Múltiplas impressoras para diferentes
+aplicações - Sistema de esterilização adequado - Equipamentos de medição
+dimensional de precisão - Treinamento especializado para equipe
+
+
+Setup Avançado (R$ 100.000 - 200.000): - Impressoras industriais de alta velocidade -
+Sistema completo de controle de qualidade - Integração com sistemas CAD/CAM -
+Certificações ISO para produção médica
+
+
+
+
+13.1.3 Joalheria e Fundição
+
+
+A joalheria requer detalhamento extremo e compatibilidade com processos de
+fundição.
+
+
+Equipamentos Especializados:
+
+
+Setup Básico (R$ 15.000 - 25.000): - Impressora de ultra-alta resolução (Phrozen
+Sonic 8K) - Resinas calcinantes específicas - Forno para queima de modelos -
+Ferramentas de acabam

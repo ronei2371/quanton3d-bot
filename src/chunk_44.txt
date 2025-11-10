@@ -1,0 +1,109 @@
+
+
+
+A joalheria requer detalhamento extremo e compatibilidade com processos de
+fundição.
+
+
+Equipamentos Especializados:
+
+
+Setup Básico (R$ 15.000 - 25.000): - Impressora de ultra-alta resolução (Phrozen
+Sonic 8K) - Resinas calcinantes específicas - Forno para queima de modelos -
+Ferramentas de acabamento de precisão
+Setup Profissional (R$ 40.000 - 70.000): - Múltiplas impressoras de diferentes
+resoluções - Sistema de injeção de cera automatizado - Equipamentos de fundição por
+cera perdida - Sistema de controle de qualidade dimensional
+
+
+Setup Industrial (R$ 100.000 - 300.000): - Linha de produção automatizada -
+Sistemas de fundição de alta precisão - Controle de qualidade por visão
+computacional - Integração com sistemas ERP
+
+
+
+
+13.1.4 Prototipagem Industrial
+
+
+Aplicações   industriais   demandam   velocidade,   confiabilidade   e   propriedades
+mecânicas específicas.
+
+
+Equipamentos Recomendados:
+
+
+Setup Básico (R$ 30.000 - 50.000): - Impressoras de grande volume (Elegoo Jupiter) -
+Resinas de engenharia variadas - Sistema de pós-processamento robusto - Software
+de análise dimensional
+
+
+Setup Avançado (R$ 80.000 - 150.000): - Impressoras industriais (Formlabs Form 3L) -
+Materiais especializados (cerâmicos, metálicos) - Equipamentos de teste mecânico -
+Sistema de gestão de projetos
+
+
+Setup Industrial (R$ 200.000 - 500.000): - Múltiplas impressoras de alta velocidade -
+Materiais de performance extrema - Laboratório de testes completo - Integração com
+sistemas PLM
+
+
+
+
+13.2 Automação e Eficiência
+
+
+13.2.1 Sistemas de Lavagem Automatizados
+
+
+Lavadoras Ultrassônicas Programáveis: - Ciclos automáticos com múltiplos estágios
+- Controle de temperatura e tempo - Sistemas de filtragem integrados - Capacidade
+para múltiplas peças
+
+
+Benefícios: - Redução de tempo de processamento em 60-80% - Consistência superior
+de limpeza - Menor exposição a solventes - Documentação automática de processos
+
+
+Investimento: R$ 5.000 - 25.000 dependendo da capacidade
+13.2.2 Estações de Cura Avançadas
+
+
+Câmaras de Cura com Controle Ambiental: - Controle preciso de temperatura e
+atmosfera - Múltiplos comprimentos de onda UV - Rotação automática para cura
+uniforme - Monitoramento em tempo real
+
+
+Benefícios: - Melhoria de 20-30% nas propriedades mecânicas - Redução de tempo de
+cura em 40-60% - Repetibilidade superior - Capacidade para diferentes tipos de resina
+
+
+Investimento: R$ 8.000 - 40.000 dependendo das funcionalidades
+
+
+
+
+13.2.3 Sistemas de Recuperação de Solventes
+
+
+Destiladores Automáticos: - Recuperação de 90-95% do solvente usado - Operação
+automática com segurança integrada - Capacidade de processamento variável -
+Monitoramento de pureza
+
+
+Benefícios: - Redução de 80-90% no custo de solventes - Menor impacto ambiental -
+Conformidade com regulamentações - ROI típico de 12-18 meses
+
+
+Investimento: R$ 15.000 - 60.000 dependendo da capacidade
+
+
+
+
+13.3 Controle de Qualidade
+
+
+13.3.1 Equipamentos de Medição
+
+
+Máquinas de Medição por Coordenadas (CMM): - Precisão dimensional de

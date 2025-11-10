@@ -1,0 +1,121 @@
+ície - C_solvente)
+
+
+Onde: - dm/dt = taxa de remoção de massa - k = coeficiente de transferência de massa
+- A = área superficial - C_superfície = concentração na superfície - C_solvente =
+concentração no solvente
+
+
+
+
+9.1.2 Seleção de Solventes
+
+
+Isopropanol (IPA): Solvente mais comumente utilizado devido à excelente
+solubilidade de acrilatos e baixa toxicidade relativa. Concentração mínima de 99% é
+recomendada para máxima eficiência.
+Etanol: Alternativa ao IPA com eficiência similar e menor custo. Concentração de 95%
+ou superior é necessária para evitar problemas com água residual.
+
+
+Solventes Especializados: Formulações comerciais específicas para limpeza de
+resinas oferecem eficiência superior e menor toxicidade, mas com custo mais elevado.
+
+
+Água: Para resinas laváveis em água, oferece vantagens significativas em termos de
+segurança e custo, mas requer formulações específicas da resina.
+
+
+
+
+9.2 Protocolos de Lavagem por Tipo de Resina
+
+
+9.2.1 Resinas Padrão
+
+
+Resinas padrão requerem protocolo de lavagem em duas etapas para remoção
+eficiente de resíduos:
+
+
+Primeira Lavagem: Imersão em IPA fresco por 2-3 minutos com agitação suave. Esta
+etapa remove a maior parte da resina não curada.
+
+
+Segunda Lavagem: Transferência para IPA limpo por 1-2 minutos adicionais para
+remoção de resíduos finais.
+
+
+Agitação: Movimento suave é essencial para facilitar transferência de massa. Agitação
+excessiva pode danificar detalhes finos.
+
+
+Temperatura:     Lavagem      em   temperatura   ambiente   (20-25°C)   é   adequada.
+Temperaturas elevadas aumentam eficiência mas podem causar deformações.
+
+
+
+
+9.2.2 Resinas Resistentes
+
+
+Resinas resistentes frequentemente contêm aditivos que reduzem a solubilidade em
+solventes convencionais, requerendo protocolos modificados:
+
+
+Tempo Estendido: Aumentar tempo de lavagem para 4-6 minutos na primeira etapa
+devido à menor solubilidade.
+
+
+Agitação Mecânica: Utilização de ultrassom de baixa potência pode melhorar
+eficiência sem danificar a peça.
+
+
+Solventes Alternativos: Misturas de IPA com pequenas quantidades de acetona (5-
+10%) podem melhorar eficiência.
+9.2.3 Resinas Flexíveis
+
+
+Resinas flexíveis apresentam desafios únicos devido à tendência de deformação
+durante manipulação:
+
+
+Suporte Durante Lavagem: Utilizar cestas ou suportes para manter forma durante
+lavagem.
+
+
+Movimentação Cuidadosa: Evitar dobramento ou torção excessiva que pode causar
+danos permanentes.
+
+
+Secagem Controlada: Permitir secagem em posição natural para evitar deformações
+permanentes.
+
+
+
+
+9.2.4 Resinas Biocompatíveis
+
+
+Resinas biocompatíveis requerem protocolos especiais para manter certificações
+médicas:
+
+
+Solventes Grau Farmacêutico: Utilizar apenas solventes com pureza farmacêutica
+para evitar contaminação.
+
+
+Equipamentos       Dedicados:   Utilizar   equipamentos   exclusivos   para   evitar
+contaminação cruzada.
+
+
+Documentação: Manter registros detalhados de todos os procedimentos para
+rastreabilidade.
+
+
+
+
+9.2.5 Resinas Laváveis em Água
+
+
+Resinas lavávei

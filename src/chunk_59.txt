@@ -1,0 +1,16 @@
+ranca no fuso Z. Checagem: Verifique se há resina seca ou sujeira nos rolamentos. 
+,O FEP (fundo do tanque) está embaçado/turvo ,,"Desgaste Localizado (Clouding). O filme está perdendo transparência, reduzindo a luz UV em pontos específicos. ",,"Rotação/Substituição: Gire o tanque de resina em 90∘ (se possível) para distribuir o desgaste, ou substitua o filme FEP/NFEP imediatamente, pois a qualidade da impressão será afetada. "
+Peças falham no centro da plataforma,,"Luz Fraca/Degradação de LED. O LED UV está degradando e perdendo potência, exigindo mais tempo para curar. ","Aumento de Tempo: Aumente o tempo de exposição normal em 0.2 segundos e monitore. Substituição: Se a falha continuar, o conjunto LED/UV pode estar no fim da vida útil (geralmente 2000 a 4000 horas). "
+
+
+Sintoma (O que o Cliente Vê),Diagnóstico mais Provável,Solução Avançada (Ação)
+Peça colapsa na metade da impressão,,"Tensão Extrema/Ilhas Flutuantes. Tensão excessiva de descolamento (peel force) ou falha nos pontos iniciais de cura (""ilhas"").",,"Reforço de Ilha: Aumente o diâmetro do ponto de contato nas ""ilhas"" (pontos mais baixos da peça) para 0.6mm a 0.8mm. Suportes Pesados: Use suportes Médios/Pesados nas primeiras camadas de todas as ilhas."
+Suportes entortam ou ficam curvados,,Suportes Longos e Flexíveis. Suportes são muito longos ou finos para resistir à força lateral de descolamento.,,"Estabilização: Adicione reforços diagonais (braces) entre os suportes longos para criar uma estrutura de treliça, aumentando a rigidez."
+"Peça fica com um ""buraco"" no meio (Vácuo)",,Pressão Negativa Excessiva (Suction Cups) em modelos ocos grandes.,,Ventilação: Adicione 2 a 4 furos de alívio de pressão na parte superior e inferior da peça oca. Reduza a velocidade de Retração (Retract Speed) para 150 mm/min a 200 mm/min.
+Furos na peça estão menores que no design,,Contração Volumétrica e Super-Cura Lateral. A resina curou para dentro.,,Compensação de Buraco: Use a função de Compensação de Furo no slicer para aumentar o diâmetro dos furos em 0.1mm a 0.2mm. Calibração: Reduza o tempo de exposição em incrementos de 0.1s.
+
+
+Sintoma (O que o Cliente Vê),Diagnóstico mais Provável,Solução Rápida (Ação)
+Linhas horizontais (banding) irregulares,,Vibração Frequencial ou Elétrica. Variação de tensão de linha no motor Z (problema elétrico/driver) ou ressonância da impressora.,,Estabilidade: Coloque a impressora em uma superfície sólida (ex: laje de concreto ou tijolos) para mitigar vibrações. Energia: Conecte a impressora a uma fonte de alimentação estável (UPS/nobreak) para mitigar flutuações de voltagem.
+Deslocamento na horizontal (Layer Shift),,Problema Mecânico/Desalinhamento. Folga no eixo Z (Backlash) ou desalinhamento do acoplador motor/fuso.,,Lubrificação: Limpe o fuso Z com IPA e aplique graxa de lítio branca (não óleo comum). Aperto: Verificar e apertar o acoplador do motor.
+Peças estão sempre 0.5mm mais altas/baixas,,Z-Offset Incorreto. O valor de Z=0 não está onde deveria estar.,,Aju
