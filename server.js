@@ -1,6 +1,6 @@
 // =========================
-// 🤖 Quanton3D IA - Servidor Oficial (Atualizado: 11/11/2025)
-// Este código inclui o novo endpoint /api/custom-request para o formulário.
+// 🤖 Quanton3D IA - Servidor Oficial (VERSÃO FINAL LIMPA - 11/11/2025)
+// Inclui rota /api/custom-request e remove duplicações.
 // =========================
 
 import express from "express";
@@ -37,7 +37,7 @@ const conversationHistory = new Map();
 
 // Sugestões de conhecimento e pedidos customizados pendentes
 const knowledgeSuggestions = [];
-const customRequests = []; // Novo array para pedidos customizados
+const customRequests = []; // Array para pedidos customizados
 
 // Rota principal de teste
 app.get("/", (req, res) => {
@@ -46,7 +46,6 @@ app.get("/", (req, res) => {
 
 // Rota de comunicação com o robô (texto)
 app.post("/ask", async (req, res) => {
-  // Código da rota /ask... (MANTER O CÓDIGO EXISTENTE DO MANUS)
   try {
     const { message, sessionId, userName } = req.body;
 
@@ -60,10 +59,7 @@ app.post("/ask", async (req, res) => {
     }
     const history = conversationHistory.get(sessionId);
 
-    // Substitua a lógica do SYSTEM_PROMPT e da chamada à OpenAI aqui
-    // ... (O Manus deve garantir que o código que ele já escreveu está aqui) ...
-
-    // --- Versão Simples (Se o Manus não tiver o código da IA ainda):
+    // --- Versão Simples (Para testes):
     const reply = `Olá, ${userName || 'Usuário'}! Seu backend está funcionando, mas a IA está desativada para testes. Sua mensagem foi: "${message}"`;
 
     // Atualizar histórico
@@ -87,8 +83,6 @@ app.post("/ask", async (req, res) => {
 
 // Rota para enviar sugestão de conhecimento
 app.post("/suggest-knowledge", async (req, res) => {
-  // Código da rota /suggest-knowledge... (MANTER O CÓDIGO EXISTENTE DO MANUS)
-  // ... (O Manus deve manter o código que ele já escreveu aqui) ...
   try {
     const { suggestion, userName, userPhone, sessionId } = req.body;
 
@@ -120,9 +114,8 @@ app.post("/suggest-knowledge", async (req, res) => {
 });
 
 // =================================================================
-// 🌟 CORREÇÃO #1: NOVO ENDPOINT DE PEDIDO ESPECIAL (Tarefa 4) 🌟
+// 🌟 ROTA FINAL: PEDIDO ESPECIAL (Tarefa 4) 🌟
 // =================================================================
-
 app.post("/api/custom-request", async (req, res) => {
     try {
         const { caracteristica, cor, complementos } = req.body;
@@ -138,13 +131,11 @@ app.post("/api/custom-request", async (req, res) => {
 
         customRequests.push(newRequest); // Adiciona ao array de pedidos
         
-        // (Futuramente, o Manus pode adicionar lógica para salvar em um arquivo JSON aqui)
-
         console.log(`✨ Novo Pedido Customizado Recebido: ${cor} - ${caracteristica.substring(0, 30)}...`);
 
         res.json({ 
             success: true, 
-            message: "Pedido customizado recebido com sucesso. Analisaremos as especificações." 
+            message: 'Pedido customizado recebido com sucesso. Analisaremos as especificações.' 
         });
     } catch (err) {
         console.error("❌ Erro ao receber pedido customizado:", err);
