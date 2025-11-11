@@ -8,10 +8,10 @@ import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
 import multer from "multer";
-// IMPORTANTE: O Manus deve garantir que estes arquivos existam no backend:
-// import { SYSTEM_PROMPT, RESINS_DATABASE } from "./knowledge-base.js";
-// import { SLICER_KNOWLEDGE } from "./technical-knowledge.js";
-// import { consultarComRAG } from "./rag-helper.js"; // Se o RAG estiver ativo
+// Imports do conhecimento
+import { SYSTEM_PROMPT, RESINS_DATABASE } from "./knowledge-base.js";
+import { SLICER_KNOWLEDGE } from "./technical-knowledge.js";
+// import { consultarComRAG } from "./rag-helper.js"; // RAG desativado por enquanto
 
 dotenv.config();
 
