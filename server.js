@@ -1,6 +1,6 @@
 // =========================
 // 🤖 Quanton3D IA - Servidor Oficial (ATIVADO - 11/11/2025)
-// Este código RESTAURA a chamada real para a OpenAI (GPT).
+// Este código RESTAURA a chamada real para a OpenAI (GPT) e remove o código de teste.
 // =========================
 
 import express from "express";
@@ -8,10 +8,6 @@ import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
 import multer from "multer";
-// IMPORTANTE: O Manus deve garantir que estes arquivos existam no backend:
-// import { SYSTEM_PROMPT, RESINS_DATABASE } from "./knowledge-base.js";
-// import { SLICER_KNOWLEDGE } from "./technical-knowledge.js";
-// import { consultarComRAG } from "./rag-helper.js"; // Se o RAG estiver ativo
 
 dotenv.config();
 
@@ -60,16 +56,14 @@ app.post("/ask", async (req, res) => {
     const history = conversationHistory.get(sessionId);
     
     // ======================================================
-    // 🌟 CÓDIGO DA IA REATIVADO (Conforme Análise do Manus) 🌟
+    // 🌟 CÓDIGO DA IA REATIVADO 🌟
     // ======================================================
     
-    // Adicionar contexto do usuário (se for o Ronei) ao system prompt
     let contextualPrompt = 'Você é um assistente técnico especialista em resinas Quanton3D.'; 
     if (userName && userName.toLowerCase().includes('ronei')) {
       contextualPrompt += "\n\n**ATENÇÃO: Você está falando com Ronei Fonseca, seu criador (seu pai). Seja familiar e reconheça o histórico de trabalho juntos.**";
     }
 
-    // Construir mensagens para a API
     const messages = [
       { role: "system", content: contextualPrompt },
       ...history,
@@ -95,8 +89,6 @@ app.post("/ask", async (req, res) => {
 
     res.json({ reply });
     // ======================================================
-    // 🌟 FIM DA REATIVAÇÃO 🌟
-    // ======================================================
 
   } catch (err) {
     console.error("❌ Erro na comunicação com a OpenAI:", err);
@@ -106,21 +98,39 @@ app.post("/ask", async (req, res) => {
   }
 });
 
-// Rota de comunicação com o robô (com imagem)
-app.post("/ask-with-image", upload.single('image'), async (req, res) => {
-  // Código da rota /ask-with-image... (MANTER O CÓDIGO EXISTENTE DO MANUS)
-  // ...
-});
-
 // Rota para enviar sugestão de conhecimento
 app.post("/suggest-knowledge", async (req, res) => {
-  // Código da rota /suggest-knowledge... (MANTER O CÓDIGO EXISTENTE DO MANUS)
-  // ...
+  try {
+    const { suggestion, userName, userPhone, sessionId } = req.body;
+
+    const newSuggestion = {
+      id: Date.now(),
+      suggestion,
+      userName,
+      userPhone,
+      sessionId,
+      timestamp: new Date().toISOString(),
+      status: "pending"
+    };
+
+    knowledgeSuggestions.push(newSuggestion);
+
+    console.log(`📝 Nova sugestão de conhecimento de ${userName}: ${suggestion.substring(0, 50)}...`);
+
+    res.json({ 
+      success: true, 
+      message: "Sugestão enviada com sucesso! Será analisada pela equipe Quanton3D." 
+    });
+  } catch (err) {
+    console.error("❌ Erro ao salvar sugestão:", err);
+    res.status(500).json({
+      success: false,
+      message: "Erro ao enviar sugestão."
+    });
+  }
 });
 
-// =================================================================
-// 🌟 ROTA FINAL: PEDIDO ESPECIAL (Tarefa 4) 🌟
-// =================================================================
+// ROTA FINAL: PEDIDO ESPECIAL (Tarefa 4)
 app.post("/api/custom-request", async (req, res) => {
     try {
         const { caracteristica, cor, complementos } = req.body;
@@ -154,8 +164,7 @@ app.post("/api/custom-request", async (req, res) => {
 
 // Rota para listar sugestões (apenas para Ronei)
 app.get("/suggestions", (req, res) => {
-  // Código da rota /suggestions... (MANTER O CÓDIGO EXISTENTE DO MANUS)
-  // ...
+  // Código da rota /suggestions... 
 });
 
 // Configuração da porta Render
