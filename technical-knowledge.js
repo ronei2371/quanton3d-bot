@@ -335,4 +335,4 @@ Um fatiador é um software que converte modelos 3D (arquivos STL, OBJ) em instru
 **LEMBRE-SE:** Cada resina e impressora é única. Use este guia como ponto de partida e ajuste conforme necessário!
 `;
 
-module.exports = { SLICER_KNOWLEDGE };
+export { SLICER_KNOWLEDGE };
