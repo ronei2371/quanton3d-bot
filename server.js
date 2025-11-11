@@ -1,6 +1,6 @@
 // =========================
-// 🤖 Quanton3D IA - Servidor Oficial (VERSÃO FINAL LIMPA - 11/11/2025)
-// Inclui rota /api/custom-request e remove duplicações.
+// 🤖 Quanton3D IA - Servidor Oficial (ATIVADO - 11/11/2025)
+// Este código RESTAURA a chamada real para a OpenAI (GPT).
 // =========================
 
 import express from "express";
@@ -8,10 +8,10 @@ import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
 import multer from "multer";
-// Imports do conhecimento
-import { SYSTEM_PROMPT, RESINS_DATABASE } from "./knowledge-base.js";
-import { SLICER_KNOWLEDGE } from "./technical-knowledge.js";
-// import { consultarComRAG } from "./rag-helper.js"; // RAG desativado por enquanto
+// IMPORTANTE: O Manus deve garantir que estes arquivos existam no backend:
+// import { SYSTEM_PROMPT, RESINS_DATABASE } from "./knowledge-base.js";
+// import { SLICER_KNOWLEDGE } from "./technical-knowledge.js";
+// import { consultarComRAG } from "./rag-helper.js"; // Se o RAG estiver ativo
 
 dotenv.config();
 
@@ -58,20 +58,45 @@ app.post("/ask", async (req, res) => {
       conversationHistory.set(sessionId, []);
     }
     const history = conversationHistory.get(sessionId);
+    
+    // ======================================================
+    // 🌟 CÓDIGO DA IA REATIVADO (Conforme Análise do Manus) 🌟
+    // ======================================================
+    
+    // Adicionar contexto do usuário (se for o Ronei) ao system prompt
+    let contextualPrompt = 'Você é um assistente técnico especialista em resinas Quanton3D.'; 
+    if (userName && userName.toLowerCase().includes('ronei')) {
+      contextualPrompt += "\n\n**ATENÇÃO: Você está falando com Ronei Fonseca, seu criador (seu pai). Seja familiar e reconheça o histórico de trabalho juntos.**";
+    }
 
-    // --- Versão Simples (Para testes):
-    const reply = `Olá, ${userName || 'Usuário'}! Seu backend está funcionando, mas a IA está desativada para testes. Sua mensagem foi: "${message}"`;
+    // Construir mensagens para a API
+    const messages = [
+      { role: "system", content: contextualPrompt },
+      ...history,
+      { role: "user", content: message }
+    ];
+
+    const completion = await openai.chat.completions.create({
+      model,
+      temperature,
+      messages,
+    });
+
+    const reply = completion.choices[0].message.content;
 
     // Atualizar histórico
     history.push({ role: "user", content: message });
     history.push({ role: "assistant", content: reply });
 
+    // Limitar histórico a últimas 20 mensagens
     if (history.length > 20) {
       history.splice(0, history.length - 20);
     }
 
     res.json({ reply });
-    // --- Fim Versão Simples ---
+    // ======================================================
+    // 🌟 FIM DA REATIVAÇÃO 🌟
+    // ======================================================
 
   } catch (err) {
     console.error("❌ Erro na comunicação com a OpenAI:", err);
@@ -81,36 +106,16 @@ app.post("/ask", async (req, res) => {
   }
 });
 
+// Rota de comunicação com o robô (com imagem)
+app.post("/ask-with-image", upload.single('image'), async (req, res) => {
+  // Código da rota /ask-with-image... (MANTER O CÓDIGO EXISTENTE DO MANUS)
+  // ...
+});
+
 // Rota para enviar sugestão de conhecimento
 app.post("/suggest-knowledge", async (req, res) => {
-  try {
-    const { suggestion, userName, userPhone, sessionId } = req.body;
-
-    const newSuggestion = {
-      id: Date.now(),
-      suggestion,
-      userName,
-      userPhone,
-      sessionId,
-      timestamp: new Date().toISOString(),
-      status: "pending"
-    };
-
-    knowledgeSuggestions.push(newSuggestion);
-
-    console.log(`📝 Nova sugestão de conhecimento de ${userName}: ${suggestion.substring(0, 50)}...`);
-
-    res.json({ 
-      success: true, 
-      message: "Sugestão enviada com sucesso! Será analisada pela equipe Quanton3D." 
-    });
-  } catch (err) {
-    console.error("❌ Erro ao salvar sugestão:", err);
-    res.status(500).json({
-      success: false,
-      message: "Erro ao enviar sugestão."
-    });
-  }
+  // Código da rota /suggest-knowledge... (MANTER O CÓDIGO EXISTENTE DO MANUS)
+  // ...
 });
 
 // =================================================================
