@@ -8,6 +8,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
 import multer from "multer";
+import { initializeRAG, searchKnowledge, formatContext } from './rag-search.js';
 
 dotenv.config();
 
@@ -59,10 +60,19 @@ app.post("/ask", async (req, res) => {
     // 🌟 CÓDIGO DA IA REATIVADO 🌟
     // ======================================================
     
+    // 🔍 BUSCAR CONHECIMENTO RELEVANTE (RAG)
+    console.log('🔍 Buscando conhecimento relevante...');
+    const relevantKnowledge = await searchKnowledge(message, 3);
+    const knowledgeContext = formatContext(relevantKnowledge);
+    console.log(`✅ Encontrados ${relevantKnowledge.length} documentos relevantes`);
+    
     let contextualPrompt = 'Você é um assistente técnico especialista em resinas Quanton3D.'; 
     if (userName && userName.toLowerCase().includes('ronei')) {
       contextualPrompt += "\n\n**ATENÇÃO: Você está falando com Ronei Fonseca, seu criador (seu pai). Seja familiar e reconheça o histórico de trabalho juntos.**";
     }
+    
+    // Adicionar conhecimento RAG ao contexto
+    contextualPrompt += knowledgeContext;
 
     const messages = [
       { role: "system", content: contextualPrompt },
@@ -258,6 +268,19 @@ app.get("/suggestions", (req, res) => {
 
 // Configuração da porta Render
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () =>
-  console.log(`✅ Servidor Quanton3D IA rodando na porta ${PORT}`)
-);
+
+// Inicializar RAG antes de iniciar o servidor
+console.log('🚀 Inicializando sistema RAG...');
+initializeRAG().then(() => {
+  console.log('✅ RAG inicializado com sucesso!');
+  app.listen(PORT, () => {
+    console.log(`✅ Servidor Quanton3D IA rodando na porta ${PORT}`);
+    console.log('🤖 Bot com RAG ativado e pronto para uso!');
+  });
+}).catch(err => {
+  console.error('❌ Erro ao inicializar RAG:', err);
+  console.log('⚠️ Servidor iniciando SEM RAG...');
+  app.listen(PORT, () =>
+    console.log(`✅ Servidor Quanton3D IA rodando na porta ${PORT} (sem RAG)`)
+  );
+});
