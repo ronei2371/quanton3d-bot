@@ -1,0 +1,109 @@
+rior e repetibilidade. A resolução
+típica é de 0,001mm.
+
+
+Sistemas Ópticos: Interferômetros laser ou sistemas de triangulação óptica oferecem
+a maior precisão, com resoluções inferiores a 0,0001mm, mas são tipicamente
+encontrados apenas em equipamentos de alta precisão.
+
+
+
+
+7.2 Procedimentos de Nivelamento Manual
+
+
+7.2.1 Preparação Inicial
+
+
+Antes de iniciar o nivelamento, a impressora deve estar em temperatura operacional
+estável por no mínimo 30 minutos. Variações térmicas podem causar expansão
+diferencial dos componentes, afetando a precisão do nivelamento.
+
+
+O tanque de resina deve estar limpo e o filme FEP em condições adequadas, sem
+deformações ou danos que possam afetar a medição. A plataforma de construção
+deve estar limpa e livre de resíduos de impressões anteriores.
+
+
+
+
+7.2.2 Sequência de Nivelamento em Três Pontos
+
+
+   1. Posicionamento Inicial: Mover a plataforma para a posição mais baixa sem
+     contato com o tanque.
+
+
+   2. Ajuste Grosso: Elevar gradualmente a plataforma até contato leve com o filme
+     FEP, identificado pela deformação visível do filme.
+
+
+   3. Medição nos Pontos de Referência: Verificar a distância nos três pontos de
+     ajuste utilizando o método escolhido (papel, sensor, etc.).
+
+
+   4. Ajuste Iterativo: Ajustar os parafusos de nivelamento em sequência, verificando
+     o efeito em todos os pontos após cada ajuste.
+
+
+   5. Verificação Final: Confirmar que todos os pontos apresentam a mesma
+     distância dentro da tolerância especificada.
+
+
+
+
+7.2.3 Cálculo de Correções
+
+
+Para sistemas de três pontos, a correção necessária em cada parafuso é calculada
+através de geometria analítica. Se as distâncias medidas são d₁, d₂, d₃ e a distância
+desejada é d₀, as correções são:
+
+
+Δh₁ = (d₁ - d₀) × k₁ Δh₂ = (d₂ - d₀) × k₂ Δh₃ = (d₃ - d₀) × k₃
+
+
+Onde k₁, k₂, k₃ são fatores de conversão que dependem da geometria específica do
+sistema de ajuste.
+
+
+
+
+7.3 Sistemas de Nivelamento Automático
+
+
+7.3.1 Sensores de Nivelamento
+
+
+Sistemas automáticos utilizam sensores para medir a distância em múltiplos pontos
+da plataforma, construindo um mapa topográfico da superfície. Sensores indutivos
+são comumente utilizados devido à sua robustez e precisão adequada.
+A resolução do sensor deve ser no mínimo 10 vezes superior à tolerância de
+nivelamento desejada. Para tolerância de 0,02mm, sensores com resolução de
+0,002mm ou melhor são necessários.
+
+
+
+
+7.3.2 Algoritmos de Compensação
+
+
+Sistemas avançados implementam compensação por software que corrige pequenos
+desvios de nivelamento através de ajustes na altura de cada camada. O algoritmo
+calcula a correção necessária para cada ponto (x,y) baseado no mapa topográfico:
+
+
+z_corrigido(x,y) = z_nominal + f(x,y)
+
+
+Onde f(x,y) é uma função de interpolação (tipicamente bilinear ou bicúbica) baseada
+nas medições dos sensores.
+
+
+
+
+7.3.3 Calibração de Sensores
+
+
+Sensores de nivelamento requerem calibração periódica para manter precisão. O
+procedimento envolve medição de superfícies de referência com esp

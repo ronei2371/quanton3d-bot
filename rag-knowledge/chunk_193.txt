@@ -1,0 +1,19 @@
+13. Posso deixar a resina no tanque após a impressão de uma peça ou após o uso ?
+Apesar de ser uma prática comum, não é recomendado deixar a resina no tanque após a impressão de uma peça ou após o uso. Existem várias razões para isso:
+a) Polimerização da Resina: Há a possibilidade de que alguma resina polimerizada tenha ficado no fundo do tanque, o que pode interferir na sua próxima impressão.
+b) Decantação do Pigmento: Com o tempo, o pigmento da resina pode decantar, tornando-a não uniforme. Isso pode prejudicar a qualidade da impressão.
+c) Oxidação e Envelhecimento da Resina: A resina exposta ao ambiente, mesmo que dentro do tanque, pode sofrer oxidação, envelhecimento precoce e endurecimento.
+d) Vazamento de Resina: A resina pode vazar por algum orifício do tanque e danificar a impressora.
+Por essas razões, recomendamos que, após cada impressão, você transfira a resina utilizada para outro frasco, utilizando um coador para evitar resíduos ou partículas sólidas que possam comprometer o filme FEP e o LCD.
+Se você optar por manter a resina no tanque, faça isso apenas por pequenos intervalos de tempo entre as impressões. Além disso, lembre-se de agitar cuidadosamente a resina com uma espátula de plástico para não danificar o filme FEP. Evite o uso de espátulas metálicas para essa finalidade. Se for necessário reutilizar a resina, agite-a bem antes de usar. Mantenha a resina no tanque apenas por períodos curtos entre as impressões.
+
+
+
+14.Por que meus suportes se soltam da peça ?
+O principal fator para os suportes se soltarem é devido à insuficiência dos mesmos para suportar as forças exercidas na peça impressa. Além do peso, a peça também sofre com a aderência no FEP e a resistência ao líquido deslocado. Quando somados, esses fatores podem fazer com que os suportes se soltem.
+Existem algumas soluções possíveis para resolver esse problema. As mais eficientes são:
+a) Aumentar a área de contato do suporte com as peças: Isso pode ser feito através da escolha de um perfil de suporte mais grosso (trocar de fino para médio ou de médio para forte no seu fatiador), ou alterando as configurações do suporte em si (nas configurações de topo, aumentar o diâmetro superior e a profundidade de contato). Quando aumentamos o diâmetro de contato, elevamos ao quadrado sua área de contato. Portanto, uma simples adição de 20% no diâmetro superior provoca um aumento de 44% na área de contato, aumentando assim a resistência dos suportes.
+b) Garantir que não existam ilhas não suportadas na colocação dos suportes: Essas ilhas sobrecarregarão os suportes colocados.
+c) Garantir que a resina está corretamente calibrada para a sua impressora: Um tempo de exposição muito longo poderá deformar a peça de forma irregular, fazendo com que ela se solte dos suportes colocados.
+Essas estratégias podem ajudar a evitar que os suportes se soltem da peça durante o processo de impressão. Lembre-se de que cada caso é único e pode exigir uma combinação dessas soluções para obter os melhores resultados.
+

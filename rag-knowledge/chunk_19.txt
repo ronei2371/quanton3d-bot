@@ -1,0 +1,120 @@
+rmente importantes em seções finas ou geometrias com alta
+relação superfície/volume.
+
+
+
+
+5.1.2 Análise de Tensões em Suportes
+
+
+A distribuição de tensões em suportes segue princípios da mecânica estrutural. Para
+suportes cilíndricos simples, a tensão de compressão é:
+
+
+σc = F/(π × r²)
+
+
+Onde F é a força aplicada e r o raio do suporte.
+A tensão crítica de flambagem para suportes esbeltos é determinada pela equação de
+Euler:
+
+
+σcr = (π² × E × I)/(A × L²)
+
+
+Onde: - E = módulo de elasticidade da resina - I = momento de inércia da seção - A =
+área da seção transversal - L = comprimento livre do suporte
+
+
+
+
+5.2 Estratégias de Suporte por Tipo de Geometria
+
+
+5.2.1 Modelos Sólidos
+
+
+Modelos sólidos apresentam desafios específicos relacionados ao grande volume de
+material e forças de separação elevadas. A estratégia de suporte deve considerar a
+distribuição uniforme de cargas e minimização de marcas na superfície final.
+
+
+Para peças cúbicas ou prismáticas, a densidade de suportes é calculada por:
+
+
+ρs = Fs_total/(n × As_individual × σadm)
+
+
+Onde: - ρs = densidade de suportes (suportes/cm²) - Fs_total = força total de separação
+- n = número de suportes - As_individual = área de contato de cada suporte - σadm =
+tensão admissível do material
+
+
+A distribuição ótima segue padrão hexagonal que maximiza a eficiência estrutural
+minimizando o número total de suportes necessários.
+
+
+
+
+5.2.2 Modelos Ocos
+
+
+Modelos ocos requerem consideração especial para drenagem de resina não curada e
+equalização de pressão interna. Furos de drenagem devem ser posicionados nos
+pontos mais baixos da geometria, com diâmetro mínimo calculado por:
+
+
+d_mín = 2 × √(Q × μ × L)/(π × ΔP)
+
+
+Onde: - Q = vazão de drenagem desejada - μ = viscosidade da resina - L = comprimento
+do canal de drenagem - ΔP = diferencial de pressão
+
+
+Furos de ventilação no topo da peça previnem formação de vácuo que pode causar
+deformações. O diâmetro destes furos pode ser menor, tipicamente 1-2mm.
+5.2.3 Geometrias Curvas
+
+
+Superfícies curvas apresentam variação contínua na orientação, requerendo análise
+detalhada para identificação de regiões críticas. O ângulo crítico (θc) abaixo do qual
+suportes são necessários é determinado por:
+
+
+θc = arctan(μ × cos(α))/(1 + μ × sin(α))
+
+
+Onde α é o ângulo de inclinação da superfície em relação à horizontal.
+
+
+Para superfícies esféricas, a distribuição de suportes segue padrão geodésico que
+minimiza distorções na geometria final. O número mínimo de suportes é:
+
+
+N_mín = 4π × R² × ρs
+
+
+Onde R é o raio da esfera.
+
+
+
+
+5.2.4 Modelos Arquitetônicos
+
+
+Modelos arquitetônicos frequentemente apresentam elementos finos como paredes,
+colunas e detalhes ornamentais que requerem estratégias especializadas de suporte.
+Paredes finas com espessura inferior a 1mm necessitam suportes internos para
+prevenir flambagem.
+
+
+A frequência de suportes para paredes é calculada por:
+
+
+L_máx = π × √(E × t³)/(12 × σcr)
+
+
+Onde: - t = espessura da parede - σcr = tensão crítica de flambagem
+
+
+Elementos em bala

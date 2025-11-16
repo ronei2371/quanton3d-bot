@@ -1,0 +1,11 @@
+11. Estou enfrentando problemas com a aderência da impressão na plataforma de impressão. O que posso fazer ?
+Em geral, esse problema pode ser resolvido com algumas dicas. Primeiramente, você pode tentar aumentar o tempo de exposição das primeiras camadas da sua peça. Isso é conhecido como o processo de fixação. O tempo de exposição das primeiras camadas deve ser, em média, de 6 a 10 vezes maior do que o tempo de exposição das camadas normais. Em alguns casos, pode ser necessário aumentar esse tempo em até 72 vezes em relação ao tempo de exposição das camadas subsequentes.
+Além disso, é importante calibrar sua impressora de forma que a mesa ou base da impressora fique bem encostada no fundo do tanque. Você pode fazer um teste simples para verificar isso: prenda uma folha entre o FEP (filme de polímero fluorado) e a base e puxe. A folha deverá sair, mas deverá apresentar um leve atrito.
+Lembre-se, essas são apenas sugestões gerais e pode ser necessário ajustar essas configurações com base na sua impressora específica e no material que você está usando. Se continuar enfrentando problemas, recomendamos que você entre em contato com o suporte do fabricante da sua impressora.
+
+
+
+12. Moro em uma região fria e minhas impressões falham quando a temperatura está baixa. O que devo fazer para evitar falhas na impressão ?
+As resinas 3D, em geral, são produzidas para trabalhar na temperatura ideal entre 18 e 38 graus Celsius. Resinas com maior viscosidade tendem a apresentar falhas em regiões ou épocas frias. Para evitar problemas de impressão em temperaturas baixas, sugerimos algumas medidas.
+Antes de imprimir, você pode aquecer a resina em banho-maria ou utilizar aquecedores elétricos de ar. Isso ajudará a manter a resina na faixa de temperatura ideal. No entanto, é importante não aquecer a resina a mais de 40 graus Celsius para evitar danos ao material. Além disso, o aquecimento nunca deve ser realizado em micro-ondas, pois isso pode alterar as propriedades da resina e causar falhas na impressão.
+Essas medidas podem ajudar a melhorar a qualidade de suas impressões 3D em condições de baixa temperatura. Lembre-se de sempre seguir as instruções do fabricante para obter os melhores resultados.

@@ -1,0 +1,118 @@
+ experimentalmente a dose crítica, utiliza-se o método de exposição
+graduada, onde amostras da resina são expostas a diferentes combinações de
+intensidade e tempo, mantendo o produto I×t constante. O ponto onde inicia-se a
+formação de gel sólido determina a dose crítica.
+
+
+
+
+4.1.2 Profundidade de Penetração
+
+
+A profundidade de penetração (Dp) determina a espessura máxima de camada que
+pode ser adequadamente curada e segue a lei de Beer-Lambert:
+
+
+I(z) = I₀ × exp(-α × z)
+
+
+Onde: - I(z) = intensidade na profundidade z - I₀ = intensidade na superfície - α =
+coeficiente de absorção da resina - z = profundidade
+
+
+A profundidade de cura (Cd) para uma dada dose de exposição é calculada por:
+
+
+Cd = Dp × ln(E/Ec)
+
+
+Onde: - E = dose aplicada - Ec = dose crítica - Dp = profundidade de penetração
+característica
+
+
+
+
+4.2 Metodologia de Calibração Sistemática
+
+
+4.2.1 Teste de Exposição Básica
+
+
+O teste de exposição básica determina o tempo ótimo de exposição para uma resina
+específica em uma impressora particular. Este teste utiliza um modelo padronizado
+com características geométricas conhecidas que permitem avaliação objetiva da
+qualidade de cura.
+
+
+O modelo de teste deve incluir: - Cilindros de diferentes diâmetros (0,2mm a 2,0mm) -
+Furos passantes de diferentes diâmetros - Superfícies planas para avaliação de
+rugosidade - Detalhes finos para avaliação de resolução - Seções de diferentes
+espessuras
+
+
+O protocolo de teste envolve impressão de múltiplas cópias do modelo com tempos
+de exposição variando em incrementos de 0,2-0,5 segundos. A análise dos resultados
+permite identificar o tempo ótimo onde detalhes finos são preservados sem super-
+cura excessiva.
+
+
+
+
+4.2.2 Calibração de Primeira Camada
+
+
+A primeira camada requer tratamento especial devido à necessidade de adesão forte à
+plataforma de construção. O tempo de exposição da primeira camada é tipicamente 5-
+10 vezes superior às camadas subsequentes, seguindo a relação:
+
+
+t₁ = t_normal × F_adesão
+
+
+Onde F_adesão é o fator de adesão, tipicamente entre 5-10.
+
+
+O número de camadas iniciais com exposição prolongada é determinado pela
+equação:
+
+
+N_inicial = max(3, h_crítica/espessura_camada)
+
+
+Onde h_crítica é a altura crítica para estabelecimento de adesão adequada,
+tipicamente 0,15-0,3mm.
+
+
+
+
+4.2.3 Teste de Precisão Dimensional
+
+
+A precisão dimensional é avaliada através de modelos de teste específicos que
+incluem dimensões calibradas. O erro dimensional é quantificado pela equação:
+
+
+Erro_% = ((D_medido - D_nominal)/D_nominal) × 100
+
+
+Correções dimensionais podem ser aplicadas através de fatores de escala:
+
+
+F_escala = D_nominal/D_medido
+Para correções anisotrópicas, fatores independentes são aplicados para cada eixo:
+
+
+F_x   =   D_nominal_x/D_medido_x        F_y   =   D_nominal_y/D_medido_y          F_z   =
+D_nominal_z/D_medido_z
+
+
+
+
+4.3 Correções Avançadas de Parâmetros
+
+
+4.3.1 Compensação de Temperatura
+
+
+A temperatura afeta significativamente a viscosidade da resina e a cinética de
+polimerização. A corre

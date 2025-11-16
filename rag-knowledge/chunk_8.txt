@@ -1,0 +1,81 @@
+dequada contra vapores
+orgânicos de baixo ponto de ebulição típicos das resinas acrilatas.
+Para uso ocasional ou em ambientes bem ventilados, máscaras descartáveis P2 com
+camada de carvão ativado podem ser suficientes. No entanto, para uso profissional ou
+exposições prolongadas, respiradores de face inteira ou sistemas de ar forçado
+oferecem proteção superior e maior conforto durante longos períodos de trabalho.
+
+
+A eficácia dos filtros diminui com o tempo e uso, sendo necessária substituição regular
+conforme especificações do fabricante. Sinais de saturação incluem detecção de
+odores através da máscara ou dificuldade respiratória aumentada.
+
+
+
+
+2.2.3 Proteção Ocular
+
+
+Óculos de segurança com proteção lateral são essenciais para prevenir respingos de
+resina nos olhos. Modelos com vedação periférica oferecem proteção superior contra
+vapores químicos. Para trabalho com sistemas de cura UV, óculos com filtros
+específicos para radiação ultravioleta são obrigatórios para prevenir danos oculares.
+
+
+Lentes de policarbonato oferecem excelente resistência ao impacto e compatibilidade
+química com a maioria dos solventes utilizados na limpeza de peças. Tratamentos
+antiembaçantes são recomendados para manter visibilidade adequada em ambientes
+com alta umidade ou quando utilizados em conjunto com equipamentos de proteção
+respiratória.
+
+
+
+
+2.2.4 Proteção Corporal
+
+
+Aventais ou jalecos de material químicamente resistente protegem a roupa e a pele de
+respingos acidentais. Materiais como Tyvek ou polietileno laminado oferecem
+excelente resistência química mantendo respirabilidade adequada para conforto
+durante uso prolongado.
+
+
+Calçados fechados com solas resistentes a produtos químicos são essenciais para
+proteger os pés de derramamentos acidentais. Materiais como borracha nitrílica ou
+neoprene oferecem proteção adequada contra a maioria das resinas e solventes
+utilizados.
+
+
+
+
+2.3 Ventilação e Controle Ambiental
+
+
+2.3.1 Sistemas de Ventilação
+
+
+Ventilação adequada é fundamental para manter concentrações de vapores orgânicos
+abaixo dos limites de exposição ocupacional. Sistemas de exaustão localizada, como
+capelas químicas ou cabines de fluxo laminar, oferecem proteção superior comparada
+à ventilação geral do ambiente.
+
+
+A taxa de renovação do ar deve ser calculada considerando o volume do ambiente,
+tipos de resinas utilizadas e intensidade de uso. Como regra geral, ambientes
+dedicados à impressão 3D de resina devem ter no mínimo 6 renovações de ar por
+hora, podendo chegar a 12-15 renovações em ambientes de uso intensivo.
+
+
+Sistemas de filtragem com carvão ativado no ponto de exaustão previnem a liberação
+de vapores orgânicos no ambiente externo, sendo particularmente importantes em
+áreas urbanas ou quando a exaustão ocorre próximo a janelas ou sistemas de ar
+condicionado.
+
+
+
+
+2.3.2 Monitoramento da Qualidade do Ar
+
+
+Detectores de vapores orgânicos voláteis (VOC) permitem monitoramento contínuo da
+qualidade do ar no ambiente de trabalho. Dispositivos portáteis co

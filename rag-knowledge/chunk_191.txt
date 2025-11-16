@@ -1,0 +1,12 @@
+9. Após a impressão, as resinas precisam ser curadas ?
+Sim, é necessário realizar a pós-cura do objeto impresso após a impressão. Este processo inclui a remoção do objeto da plataforma de impressão com o auxílio de uma espátula metálica, a lavagem em álcool isopropílico (ou água ou solução adequada) e a secagem. Após a lavagem, você deverá retirar os suportes da peça e secá-la bem.
+Na sequência, recomendamos que a peça seja colocada em uma câmara de cura própria para impressões 3D. Caso não possua o equipamento, você pode expor a peça à luz solar, luz negra, LEDs UV ou câmaras UVs, que são bastante eficazes em terminar a cura do objeto em questão de minutos.
+O tempo de pós-cura varia de acordo com a resina, e essa informação está presente no rótulo de cada produto. Contudo, fique atento, a cura feita pela luz solar poderá resultar em processos de cura não uniforme, problema que poderá ocasionar rachaduras posteriores na peça. Por esse motivo, lembre-se de fazer furos na peça para que a resina possa escorrer bem e lembre-se de rotacionar a peça durante o processo de cura para que os raios UV possam atingir todas as partes da peça de forma mais uniforme.
+É recomendável a utilização de equipamentos próprios para este processo, conhecidos como “Wash and Cure”. Eles são projetados para otimizar e facilitar o processo de pós-cura. Além disso, é importante realizar o teste de calibragem após a pós-cura para garantir a qualidade da impressão.
+
+
+
+10. Qual é o tempo de cura da peça?
+O tempo de cura de uma peça pode variar consideravelmente, dependendo de vários fatores. Estes incluem o tamanho da peça, a densidade da peça (peças ocas terão o tempo de cura significativamente reduzido), o tipo de resina utilizada e, principalmente, a fonte de luz UV utilizada.
+Se a peça for exposta diretamente ao sol, o processo de cura não será uniforme, mas é provável que a peça esteja completamente curada em cerca de 60 minutos. No entanto, em câmaras de cura, o processo será uniforme e evitará deformações, sendo concluído em aproximadamente 5 minutos.
+As especificações dos manuais geralmente indicam um tempo de cura de 1 a 60 minutos para as máquinas de lavagem e cura mais comuns no mercado. No entanto, é sempre importante consultar o manual do fabricante para obter as recomendações específicas para o seu equipamento e material.

@@ -1,0 +1,8 @@
+19. Quando devo trocar o FEP da impressora ?
+A troca do FEP, que é um componente crucial da sua impressora, deve ser realizada sempre que este apresentar sinais de desgaste, como rasgos, furos ou afinamentos. Além dessas condições, é importante observar a translucidez do filme. Se o FEP estiver muito opaco, ele impedirá a passagem de luz da impressora, o que impossibilitará a impressão da peça.
+Nesses casos, a substituição do FEP resolverá imediatamente o problema de não impressão. Se o frame ou a moldura da sua impressora for de plástico, recomendamos que você consulte em nosso site os modelos em metal disponíveis para sua impressora. Isso facilitará as futuras trocas do FEP, aumentando a eficiência e a vida útil da sua impressora. Lembre-se, a manutenção adequada da sua impressora é essencial para garantir a qualidade e a precisão das suas impressões.
+
+
+
+20. Posso reutilizar os frascos após terminar a resina ? Onde devo descartá-los ?
+Os frascos das resinas Quanton 3D não devem ser reutilizados para outros fins após o término da resina. Eles são projetados especificamente para o armazenamento dessas resinas e não devem ser usados para nenhuma outra função. Além disso, é importante ressaltar que esses frascos não devem ser descartados no meio ambiente. Recomendamos que você procure informações em seu município sobre o descarte seguro de produtos químicos. Isso ajudará a garantir que os frascos sejam descartados de maneira responsável e segura, minimizando qualquer impacto potencial no meio ambiente.

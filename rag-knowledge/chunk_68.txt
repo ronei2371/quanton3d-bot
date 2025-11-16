@@ -1,0 +1,20 @@
+cura completa para elevar o grau de conversão para 90%−95%.
+Documentação,,Rastreabilidade: Manter o histórico do produto.,Manter registros detalhados de todos os procedimentos (incluindo parâmetros de pós-processamento) para rastreabilidade.
+Setup da Impressora,,Precisão: Nivelamento e calibração perfeitos.,"Exigência de Calibração Rigorosa (""por toque"") para o Z-offset e Homogeneização da resina por 1 a 2 minutos antes de cada impressão,
+devido à viscosidade das resinas."
+Falhas Críticas e Soluções AvançadasEm odontologia, a falha está frequentemente ligada a problemas de contração e limpeza.Rachaduras na Peça (Pós-Cura Cracking):Diagnóstico
+: Contração extrema durante o pós-processamento, devido à cura muito rápida ou lavagem incompleta14.Solução Master: Utilizar Cura Lenta e Controlada (câmara que permite temperatura controlada)15. 
+Remoção Completa de $100\%$ dos monômeros residuais com IPA novo16.Peças Não Encaixam (Precisão Dimensional):Diagnóstico: Falha de precisão dimensional (tolerâncias apertadas).Solução Master: 
+A precisão dimensional é avaliada através de modelos de teste específicos17. O bot deve recomendar que as peças sejam medidas com Micrômetros internos para furos e Calibradores
+ passa/não-passa para tolerâncias críticas18.Problemas de Suporte: Suportes devem ser posicionados em áreas não críticas, evitando superfícies oclusais e margens de preparos19. 
+ A rugosidade superficial introduzida deve ser inferior a $Ra=0.1\mu m$20.4. Investimento e Infraestrutura (Nível Profissional)Para o seu cliente que atua em odontologia, o
+ investimento segue um caminho claro:Impressora: Impressoras odontológicas certificadas (como Formlabs Form 3B, NextDent)21.Setup Inicial: Software de planejamento odontológico e
+ um sistema de pós-processamento validado (limpeza e cura)22.Expansão: Investimento em equipamentos de medição dimensional de precisão e sistema de esterilização adequado23.Nível Industrial: 
+ Integração com sistemas CAD/CAM e a obtenção de Certificações ISO para produção médica24.
+ Validação e Precisão Dimensional em Aplicações OdontológicasO sucesso de guias cirúrgicos e modelos de alinhamento reside na tolerância dimensional,.
+ que é mais rigorosa do que em prototipagem comum.Tolerância Crítica: Os modelos dentários requerem precisão dimensional excepcional
+ e acabamento superficial superior1. Para aplicações protéticas, a rugosidade superficial introduzida pelos suportes deve ser inferior a $Ra=0.1\mu m$2.Inspeção 
+ Dimensional: A validação da precisão é feita através de instrumentos de medição de alta precisão3.O bot deve recomendar o uso de Paquímetros 
+ para dimensões externas, Micrômetros internos para furos e Calibradores Passa/Não-Passa para tolerâncias críticas4.Para geometrias complexas, o 
+ ideal é o uso de Máquinas de Medição por Coordenadas (CMM), que oferecem precisão de $\pm 0.001mm$5.6. Processamento e Remoção de Suportes (
+ Maximizando a Superfície)Onde posicionar e como remover os suportes para preservar a área

@@ -1,0 +1,152 @@
+ência.
+
+
+Degaseificação: Remover bolhas de ar do solvente antes do uso para máxima
+eficiência.
+
+
+
+
+9.3.3 Sistemas Automatizados
+
+
+Sistemas automatizados oferecem consistência e redução de exposição:
+
+
+Estações de Lavagem: Equipamentos comerciais com múltiplos estágios de lavagem.
+
+
+Controle de Temperatura: Aquecimento controlado do solvente para melhor
+eficiência.
+
+
+Filtragem: Sistemas de filtragem para prolongar vida útil do solvente.
+
+
+Recuperação de Solvente: Destilação para recuperação e reutilização de solventes.
+9.4 Cura Pós-Impressão
+
+
+9.4.1 Fundamentos da Pós-Cura
+
+
+A pós-cura completa a polimerização iniciada durante a impressão, melhorando
+significativamente as propriedades mecânicas finais. O grau de conversão típico após
+impressão é 60-80%, sendo elevado para 90-95% através da pós-cura adequada.
+
+
+A cinética de pós-cura segue modelo de primeira ordem:
+
+
+dα/dt = k × (1 - α)
+
+
+Onde: - α = grau de conversão - k = constante cinética dependente da temperatura e
+intensidade luminosa
+
+
+
+
+9.4.2 Métodos de Pós-Cura
+
+
+Cura UV: Exposição à radiação ultravioleta em câmaras especializadas.
+
+
+Cura Térmica: Aquecimento controlado em fornos para acelerar reações de
+polimerização.
+
+
+Cura Combinada: Combinação de UV e calor para máxima eficiência.
+
+
+Cura em Atmosfera Inerte: Utilização de nitrogênio para prevenir inibição por
+oxigênio.
+
+
+
+
+9.4.3 Parâmetros de Cura UV
+
+
+Comprimento de Onda: 365nm oferece penetração superior comparado a 405nm
+para pós-cura.
+
+
+Intensidade: 5-15 mW/cm² é adequada para a maioria das resinas.
+
+
+Tempo: 10-30 minutos dependendo da espessura e tipo de resina.
+
+
+Temperatura: 40-60°C acelera significativamente o processo.
+
+
+
+
+9.4.4 Cura Térmica em Fornos
+
+
+A cura térmica oferece alternativa prática quando câmaras UV não estão disponíveis:
+Temperatura: 60-80°C para resinas padrão, 80-120°C para resinas de alta
+performance.
+
+
+Tempo: 1-4 horas dependendo da temperatura e espessura da peça.
+
+
+Rampa de Aquecimento: Aquecimento gradual (2-5°C/min) previne tensões térmicas.
+
+
+Atmosfera: Atmosfera inerte (nitrogênio) melhora eficiência e previne degradação
+oxidativa.
+
+
+
+
+9.5 Controle de Qualidade do Pós-Processamento
+
+
+9.5.1 Testes de Limpeza
+
+
+Teste de Pegajosidade: Superfícies adequadamente limpas não devem apresentar
+pegajosidade residual.
+
+
+Teste de Solvente: Aplicação de solvente fresco não deve dissolver material da
+superfície.
+
+
+Inspeção Visual: Ausência de filme oleoso ou resíduos visíveis na superfície.
+
+
+
+
+9.5.2 Verificação de Cura
+
+
+Teste de Dureza: Medição de dureza Shore antes e após pós-cura para verificar
+melhoria.
+
+
+Teste de Flexão: Peças adequadamente curadas devem apresentar comportamento
+elástico consistente.
+
+
+Análise Térmica: DSC (Calorimetria Diferencial de Varredura) pode quantificar grau de
+cura.
+
+
+
+
+9.5.3 Documentação e Rastreabilidade
+
+
+Registros de Processo: Documentar parâmetros utilizados para cada lote.
+
+
+Testes de Qualidade: Registrar resultados de testes para controle estatístico.
+
+
+Rastreabilidade: Manter

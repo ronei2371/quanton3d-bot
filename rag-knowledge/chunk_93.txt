@@ -1,0 +1,59 @@
+o.
+
+
+Exposição: A quantidade de tempo que a luz UV brilha em cada camada de resina para endurecê-la. Tempos de exposição adequados são essenciais para garantir que a resina cure corretamente e que a impressão saia corretamente.
+
+
+Eixo Z: O eixo vertical que controla o movimento para cima e para baixo da placa de construção durante a impressão. Cada vez que uma camada é curada, a placa de construção se eleva e a próxima camada é impressa.
+
+
+Saliências: Partes de um modelo que se estendem para fora sem suporte direto abaixo. Os suportes são geralmente necessários para imprimir essas seções.
+
+
+Furos de Drenagem: Pequenos furos colocados em modelos ocos para permitir que a resina não curada escoe durante ou após a impressão, evitando que fique presa dentro da impressão.
+
+
+Limpeza do Tanque: Um recurso ou método usado para limpar o tanque de resina, geralmente curando uma fina camada de resina no fundo do tanque e depois descolando-a, removendo quaisquer detritos ou resíduos de resina.
+
+
+Construindo Camadas: O processo de criar um objeto empilhando uma camada de resina curada sobre a outra, construindo gradualmente o modelo 3D completo.
+
+
+Forças de Descolamento: As forças que ocorrem quando a camada curada é levantada do filme FEP durante a impressão. Essas forças podem afetar a qualidade e a estabilidade da impressão, especialmente se não forem gerenciadas corretamente.
+
+
+Calibração: O processo de ajuste das configurações para garantir impressões precisas. Isso geralmente envolve ajustar o nivelamento da placa de construção e as configurações de exposição para diferentes tipos de resina
+
+
+
+
+Mike Quanto D3 diretor ADM
+Erick Quanto 3d diretor Geral 
+Administradora Tatiana 
+
+
+Chunk 7: Vantagem Competitiva (Nacional ou. Importada)
+
+
+A Quanton3D é uma fabricante nacional que entende o mercado brasileiro. Diferente de marcas importadas, oferecemos um canal de comunicação direto e suporte em português, com resinas otimizadas para
+o clima e as condições de impressão do Brasil. Além disso, nosso controle de qualidade é local, garantindo consistência no lote e melhor custo-benefício.
+
+
+Chunk 8: Garantia de Desempenho e Qualidade Técnica
+
+
+Garantimos que nossas resinas oferecem alta estabilidade dimensional, crucial para a precisão dos projetos. O cliente investe em um produto que mantém 
+a forma desejada mesmo após a cura. Isso é um diferencial técnico superior, especialmente nas linhas de engenharia e odontologia, onde a precisão é zero erro.
+
+
+Chunk 9: Foco em Diversidade de Aplicações
+
+
+Nosso portfólio não se limita a um único tipo de impressão. Temos linhas específicas, como a Flexform para extrema elasticidade, a Iron para resistência industrial e
+a Alchemist para detalhes estéticos em miniaturas. Se o cliente tem uma necessidade específica, a Quanton3D tem a resina certa, já testada e com parâmetros fornecidos.
+
+
+Chunk 10: Frase de Impacto Final (Call-to-Action)
+
+
+Escolher a Quanton3D não é apenas comprar resina, é investir em um ecossistema completo de 

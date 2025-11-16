@@ -1,0 +1,102 @@
+da - Estoque inicial de resinas variadas
+
+
+Nível 2 (R$ 8.000 - 12.000): - Impressora de alta resolução (4K-8K) - Estação de
+lavagem e cura automatizada - Sistema de ventilação profissional - Ferramentas de
+medição de precisão
+
+
+Nível 3 (R$ 15.000 - 25.000): - Múltiplas impressoras para produção paralela - Sistema
+de recuperação de solventes - Equipamentos de pós-processamento avançados -
+Software de gestão de produção
+
+
+
+
+13.1.2 Aplicações Odontológicas
+
+
+O segmento odontológico requer precisão excepcional, biocompatibilidade e
+conformidade regulatória.
+
+
+Equipamentos Especializados:
+
+
+Setup Inicial Profissional (R$ 25.000 - 40.000): - Impressora odontológica certificada
+(Formlabs Form 3B, NextDent) - Resinas biocompatíveis certificadas - Sistema de pós-
+processamento validado - Software de planejamento odontológico
+
+
+Expansão Intermediária (R$ 50.000 - 80.000): - Múltiplas impressoras para diferentes
+aplicações - Sistema de esterilização adequado - Equipamentos de medição
+dimensional de precisão - Treinamento especializado para equipe
+
+
+Setup Avançado (R$ 100.000 - 200.000): - Impressoras industriais de alta velocidade -
+Sistema completo de controle de qualidade - Integração com sistemas CAD/CAM -
+Certificações ISO para produção médica
+
+
+
+
+13.1.3 Joalheria e Fundição
+
+
+A joalheria requer detalhamento extremo e compatibilidade com processos de
+fundição.
+
+
+Equipamentos Especializados:
+
+
+Setup Básico (R$ 15.000 - 25.000): - Impressora de ultra-alta resolução (Phrozen
+Sonic 8K) - Resinas calcinantes específicas - Forno para queima de modelos -
+Ferramentas de acabamento de precisão
+Setup Profissional (R$ 40.000 - 70.000): - Múltiplas impressoras de diferentes
+resoluções - Sistema de injeção de cera automatizado - Equipamentos de fundição por
+cera perdida - Sistema de controle de qualidade dimensional
+
+
+Setup Industrial (R$ 100.000 - 300.000): - Linha de produção automatizada -
+Sistemas de fundição de alta precisão - Controle de qualidade por visão
+computacional - Integração com sistemas ERP
+
+
+
+
+13.1.4 Prototipagem Industrial
+
+
+Aplicações   industriais   demandam   velocidade,   confiabilidade   e   propriedades
+mecânicas específicas.
+
+
+Equipamentos Recomendados:
+
+
+Setup Básico (R$ 30.000 - 50.000): - Impressoras de grande volume (Elegoo Jupiter) -
+Resinas de engenharia variadas - Sistema de pós-processamento robusto - Software
+de análise dimensional
+
+
+Setup Avançado (R$ 80.000 - 150.000): - Impressoras industriais (Formlabs Form 3L) -
+Materiais especializados (cerâmicos, metálicos) - Equipamentos de teste mecânico -
+Sistema de gestão de projetos
+
+
+Setup Industrial (R$ 200.000 - 500.000): - Múltiplas impressoras de alta velocidade -
+Materiais de performance extrema - Laboratório de testes completo - Integração com
+sistemas PLM
+
+
+
+
+13.2 Automação e Eficiência
+
+
+13.2.1 Sistemas de Lavagem Automatizados
+
+
+Lavadoras Ultrassônicas Programáveis: - Ciclos automáticos com múltiplos estágios
+- Controle de temperatura e tempo - Sistemas de filtragem integrados 

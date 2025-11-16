@@ -1,0 +1,10 @@
+23. Como realizar o processo de fundição e injeção com as resinas Calcinável I e II ?
+O processo envolve várias etapas cuidadosas para garantir resultados satisfatórios. Aqui estão as etapas detalhadas:
+a) Preparação do revestimento: Inclua o revestimento no anel de fundição, garantindo que haja pelo menos 4 mm de parede ao redor dos elementos que serão fundidos.
+b) Pré-aquecimento do forno: Aqueça o forno a uma temperatura de 900 graus Celsius.
+c) Colocação do anel no forno: Quando o revestimento começar a endurecer (geralmente após cerca de 10 minutos), coloque o anel no forno enquanto ele ainda estiver quente.
+e) Posicionamento do anel no forno: Coloque o anel no forno inclinado a um ângulo de 45 graus, com a boca para baixo. Para obter o ângulo de 45 graus, você pode usar um resto de revestimento ou apoiar o anel na parede do forno.
+f) Aquecimento inicial: Após 30 minutos com o forno a 900 graus Celsius, aumente gradualmente a temperatura para 990 graus Celsius, com uma taxa de aumento de 30 graus por minuto. Mantenha a temperatura em 990 graus Celsius por 1 hora. Isso ajudará a eliminar eventuais resíduos existentes.
+g) Ajuste da temperatura final: Após 1 hora a 990 graus Celsius, reduza a temperatura para a temperatura ideal indicada pelo fabricante da liga ou dissilicato utilizados.
+h) Processo de fundição ou injeção: Prossiga com o processo de fundição ou injeção conforme o procedimento normal para esses materiais.
+É importante seguir essas etapas com cuidado, garantindo o tempo e as temperaturas adequadas para obter resultados de fundição e injeção satisfatórios com as resinas Calcinável I e II.

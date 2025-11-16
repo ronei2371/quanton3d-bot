@@ -2,19 +2,72 @@
 // Busca conhecimento relevante para melhorar respostas do bot
 
 import fs from 'fs';
+import path from 'path';
 import { pipeline } from '@xenova/transformers';
 
 let database = null;
 let extractor = null;
 
+// Processar todos os arquivos e criar database
+async function buildDatabase() {
+  console.log('🔨 Construindo database de embeddings...');
+  
+  const knowledgeDir = path.join(process.cwd(), 'rag-knowledge');
+  const files = fs.readdirSync(knowledgeDir).filter(f => f.endsWith('.txt'));
+  
+  console.log(`📂 Encontrados ${files.length} arquivos para processar`);
+  
+  // Carregar modelo de embeddings
+  console.log('🤖 Carregando modelo de embeddings...');
+  const localExtractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+  console.log('✅ Modelo carregado!');
+  
+  const newDatabase = [];
+  
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const filePath = path.join(knowledgeDir, file);
+    const content = fs.readFileSync(filePath, 'utf-8');
+    
+    // Criar embedding
+    const output = await localExtractor(content, { pooling: 'mean', normalize: true });
+    const embedding = Array.from(output.data);
+    
+    newDatabase.push({
+      id: file,
+      content: content,
+      embedding: embedding
+    });
+    
+    if ((i + 1) % 10 === 0) {
+      console.log(`⏳ Processados ${i + 1}/${files.length} arquivos...`);
+    }
+  }
+  
+  // Salvar database
+  const dbPath = path.join(process.cwd(), 'embeddings-database.json');
+  fs.writeFileSync(dbPath, JSON.stringify(newDatabase, null, 2));
+  
+  console.log(`✅ Database criado com ${newDatabase.length} documentos!`);
+  console.log(`💾 Salvo em: ${dbPath}`);
+  
+  return newDatabase;
+}
+
 // Carregar database de embeddings
 export async function initializeRAG() {
   console.log('📚 Carregando database de conhecimento...');
   
-  const dbPath = '/home/ubuntu/quanton3d-bot/embeddings-database.json';
-  database = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+  const dbPath = path.join(process.cwd(), 'embeddings-database.json');
   
-  console.log(`✅ Database carregado: ${database.length} documentos`);
+  // Verificar se database existe
+  if (!fs.existsSync(dbPath)) {
+    console.log('⚠️ Database não encontrado! Gerando automaticamente...');
+    database = await buildDatabase();
+  } else {
+    database = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+    console.log(`✅ Database carregado: ${database.length} documentos`);
+  }
   
   // Carregar modelo de embeddings
   console.log('🤖 Carregando modelo de embeddings...');

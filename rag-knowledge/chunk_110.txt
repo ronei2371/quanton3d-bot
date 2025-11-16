@@ -1,0 +1,141 @@
+
+Onde: - η = viscosidade da resina (cP) - η_ref = viscosidade de referência (cP) - n =
+expoente empírico (tipicamente 0,3-0,5)
+
+
+
+
+4.4 Otimização de Parâmetros por Tipo de Geometria
+
+
+4.4.1 Peças Sólidas vs. Ocas
+
+
+Peças sólidas requerem cura uniforme em toda a seção transversal, enquanto peças
+ocas apresentam desafios específicos relacionados à drenagem de resina não curada e
+pressão interna.
+
+
+Para peças sólidas, o tempo de exposição é otimizado pela equação:
+
+
+t ótimo = Dc/I + k × A^0,5
+
+
+Onde: - A = área da seção transversal - k = constante específica da geometria
+
+
+Para peças ocas, correções adicionais são necessárias:
+
+
+toco = t sólido × (1 + f drenagem × V_ Interno/Vl_total)
+
+
+Onde a drenagem é um fator empírico tipicamente entre 0,1-0,3.
+
+
+
+
+4.4.2 Detalhes Finos e Texturas
+
+
+Detalhes com dimensões próximas ao limite de resolução da impressora requerem
+ajustes específicos de exposição. A relação entre tamanho do detalhe e tempo de
+exposição é:
+
+
+t detalhe = t_ base × (d'mínimo/de detalhe)^α
+
+
+Onde: - d'mínimo = menor detalhe reproduzível - d'detalhe = dimensão do detalhe
+específico - α = expoente de correção (tipicamente 0,2-0,4)
+
+
+
+
+4.4.3 Superfícies Inclinadas
+
+
+Superfícies inclinadas apresentam variação na espessura efetiva de camada,
+requerendo correções baseadas no ângulo de inclinação:
+
+
+t inclinado = t normal × cos(θ)
+Onde θ é o ângulo de inclinação em relação à horizontal.
+
+
+
+
+4.5 Validação e Controle de Qualidade
+
+
+4.5.1 Métricas de Qualidade
+
+
+A qualidade da calibração é avaliada através de métricas quantitativas:
+
+
+Índice    de    Qualidade     Dimensional      (IQD):    IQD     =    100   ×   (1   -
+|erro médio|/tolerância especificada)
+
+
+Índice de Qualidade Superficial (IQS): IQS = 100 × (Ra Referência/Ra Medida)
+
+
+Onde Ra é a rugosidade média superficial.
+
+
+
+
+4.5.2 Controle Estatístico de Processo
+
+
+Para produção em série, implementa-se controle estatístico baseado em cartas de
+controle. Os limites de controle são calculados por:
+
+
+LSC = μ + 3σ LIC = μ - 3σ
+
+
+Onde μ é a média do processo e σ o desvio padrão.
+
+
+A capacidade do processo é avaliada pelo índice Cpk:
+
+
+Cpk = min((LSE - μ)/(3σ), (μ - LIE)/(3σ))
+
+
+Onde LSE e LIE são os limites superior e inferior de especificação.
+
+
+
+
+
+
+
+
+MÓDULO 5: COMO FAZER SUPORTES, INDICAÇÕES
+SOBRE TIPOS DE SUPORTES PARA MODELOS
+DIFERENTES
+
+
+5.1 Fundamentos da Teoria de Suportes
+
+
+Os suportes na impressão 3D de resina desempenham múltiplas funções críticas que
+vão além do simples apoio estrutural. Eles devem resistir às forças de separação do
+filme FEP, fornecer ancoragem adequada à plataforma de construção, permitir
+drenagem de resina não curada e facilitar a remoção pós-impressão sem danificar a
+peça final.
+
+
+A física dos suportes baseia-se na análise de forças durante o processo de impressão. A
+força de separação (Fs) exercida durante a elevação da plataforma é calculada por:
+
+
+Fs = A × P + μ × A × σ
+
+
+Onde: - A = área da seção transversal da camada - P = pressão de sucção do filme FEP -
+μ = 

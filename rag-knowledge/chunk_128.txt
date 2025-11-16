@@ -1,0 +1,151 @@
+r degradação ao longo do
+tempo.
+10.4.3 Substituição de Fontes Luminosas
+
+
+Monitoramento de Vida Útil: Acompanhar horas de uso e degradação de
+performance.
+
+
+Procedimentos de Substituição: Seguir protocolos específicos do fabricante para
+troca segura.
+
+
+Calibração      Pós-Substituição:   Recalibrar sistema após instalação de novos
+componentes.
+
+
+
+
+10.5 Manutenção Mecânica
+
+
+10.5.1 Sistema de Movimentação
+
+
+Lubrificação:     Aplicar   lubrificantes   apropriados   conforme    cronograma   de
+manutenção.
+
+
+Verificação de Folgas: Inspecionar guias lineares e fusos para detectar desgaste
+excessivo.
+
+
+Alinhamento: Verificar alinhamento de eixos utilizando instrumentos de precisão.
+
+
+Calibração de Motores: Ajustar parâmetros de motores para manter precisão de
+posicionamento.
+
+
+
+
+10.5.2 Estrutura e Chassi
+
+
+Inspeção de Fixações: Verificar torque de parafusos e conexões estruturais.
+
+
+Nivelamento da Base: Confirmar nivelamento da impressora utilizando níveis de
+precisão.
+
+
+Isolamento de Vibrações: Verificar eficácia de sistemas de isolamento e substituir
+quando necessário.
+
+
+
+
+10.5.3 Sistemas Elétricos
+
+
+Inspeção de Cabos: Verificar integridade de cabos e conectores.
+
+
+Teste de Continuidade: Verificar continuidade elétrica de circuitos críticos.
+Calibração de Sensores: Ajustar sensores de posição e proximidade conforme
+necessário.
+
+
+
+
+10.6 Gestão de Resíduos e Meio Ambiente
+
+
+10.6.1 Classificação de Resíduos
+
+
+Resina Não Curada: Classificar como resíduo perigoso devido à toxicidade e
+reatividade.
+
+
+Solventes Contaminados: Coletar separadamente para recuperação ou descarte
+especializado.
+
+
+Materiais de Limpeza: Classificar conforme nível de contaminação e composição
+química.
+
+
+Componentes Eletrônicos: Seguir regulamentações específicas para descarte de
+REEE.
+
+
+
+
+10.6.2 Procedimentos de Descarte
+
+
+Contenção Adequada: Utilizar recipientes apropriados e rotulados para cada tipo de
+resíduo.
+
+
+Documentação: Manter registros de quantidades e tipos de resíduos gerados.
+
+
+Transporte Seguro: Utilizar empresas licenciadas para coleta e transporte de resíduos
+perigosos.
+
+
+Certificados de Destinação: Manter certificados de destinação final para auditoria.
+
+
+
+
+10.6.3 Minimização de Resíduos
+
+
+Otimização de Processos: Ajustar parâmetros para minimizar desperdício de resina.
+
+
+Recuperação de Solventes: Implementar sistemas de destilação para reutilização.
+
+
+Reutilização de Materiais: Desenvolver procedimentos para reutilização segura de
+materiais.
+10.7 Cronogramas de Manutenção
+
+
+10.7.1 Manutenção Diária
+
+
+Após Cada Uso: - Limpeza da plataforma de construção - Inspeção visual do filme FEP
+- Verificação de níveis de resina - Limpeza de respingos e derramamentos
+
+
+
+
+10.7.2 Manutenção Semanal
+
+
+Semanalmente: - Limpeza completa do tanque de resina - Verificação de tensão do
+filme FEP - Inspeção de sistemas mecânicos - Teste de funcionamento de sensores
+
+
+
+
+10.7.3 Manutenção Mensal
+
+
+Mensalmente: - Calibração de intensidade luminosa - Verificação de alinhamento
+mecânico - In

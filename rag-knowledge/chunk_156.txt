@@ -1,0 +1,25 @@
+cêndio/Saúde,,Vapores Voláteis. Solventes devem ser manuseados e armazenados com segurança. ,,Segurança: Solventes devem ser armazenados separadamente em armários à prova de fogo. Ventilação: Garantir ventilação adequada para evitar acúmulo de vapores e usar EPI. 
+
+
+Item de Verificação,Ação do Cliente,Diagnóstico Rápido (Se a Falha Ocorreu)
+Resina,Filtrar a resina (malha fina) e verificar se está na temperatura ideal (25∘C−30∘C).,Resina não homogênea ou fria causa falha de adesão e bolhas.
+Plataforma,Limpar com IPA e garantir o nivelamento preciso (±0.02mm de tolerância).,Nivelamento inadequado é a causa número 1 de falha de adesão da primeira camada.
+FEP/Tanque,Inspecionar o filme FEP/NFEP sob luz para clouding (embaçamento) ou resíduos curados.,FEP turvo ou gasto bloqueia a luz UV e causa falhas intermitentes.
+Eixos Z,Verificar ruídos e folgas. Aplicar graxa de lítio branca no fuso.,"Ruídos/atrito no eixo Z causam ""Linhas de Camada"" (banding) ou Layer Shift (deslocamento)."
+
+
+Sintoma (O que Aconteceu),Causa Provável,Solução Rápida (Quanton3D)
+Nenhuma peça gruda na plataforma,,Subexposição da base (exposição insuficiente) OU Resina fria (<20∘C).,Aumentar o Tempo de Exposição da Base em 10% a 20% e garantir a temperatura.
+"Peça gruda no FEP, não na plataforma",,Exposição da base muito baixa OU Tensão do FEP muito alta.,Aumentar as Camadas Base para 6−10 camadas e aumentar a Bottom Lift Distance para 10mm-12mm.
+"""Pé de Elefante""",Super-exposição da base (excesso de cura lateral).,,Diminuir ligeiramente o Tempo de Exposição da Base e verificar se o papel de nivelamento está deslizando com leve atrito (ajuste Z-Offset).
+
+
+Sintoma (O que Aconteceu),Causa Provável,Solução Rápida (Quanton3D)
+Separação de Camadas (Delaminação),,Subexposição das Camadas Normais OU Variação de Temperatura.,Aumentar o Tempo de Exposição Normal em 0.2s a 0.5s e adicionar um Wait Time de 0.5s a 1s para a resina se estabilizar.
+Peça parcialmente impressa/colapsada,Falha total de suporte OU Peça oca sem orifícios de respiro (vácuo).,,Ventilação: Adicione 2 a 4 furos de alívio de pressão na parte superior e inferior do modelo oco. Suportes: Aumente o diâmetro da ponta do suporte para 0.4mm a 0.5mm.
+Perda de Detalhe Fino (Cantos Arredondados),,Super-exposição OU Anti-Aliasing (AA) agressivo.,Diminuir o Tempo de Exposição Normal em incrementos de 0.1s. Use Anti-Aliasing (AA) baixo (nível 2 ou 4) ou desative-o para detalhes extremos.
+
+
+Sintoma (O que Aconteceu),Causa Provável,Solução Rápida (Quanton3D)
+Peça pegajosa/grudenta após a cura,,Lavagem Insuficiente (monômeros residuais) ou Inibição por Oxigênio.,"Lavagem Dupla: Lave em dois banhos de IPA (um sujo inicial, um limpo final). Secagem: Seque completamente (ar comprimido ou esperar 30 minutos) antes da cura UV final."
+Peça fica quebradiça ou rachada,,Pós-Cura Agressiva/Super-Cura que causa retração extrema.,"Reduza o tempo de pós-cura UV (ex: 5 a 10 minutos). Para resinas de engenharia, use Cura em água morna (50∘C) para a

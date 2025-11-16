@@ -1,0 +1,113 @@
+0 caso
+contrário) - Ai = área projetada da parte i
+6.5.2 Considerações de Suporte Compartilhado
+
+
+Partes próximas podem compartilhar estruturas de suporte, reduzindo o material
+necessário e melhorando a eficiência. A distância mínima entre partes para suporte
+compartilhado é:
+
+
+d_mín = 2 × h_suporte × tan(θ_suporte)
+
+
+Onde: - h_suporte = altura do suporte - θ_suporte = ângulo do suporte (tipicamente
+60-75°)
+
+
+
+
+6.5.3 Sequenciamento de Produção
+
+
+Para projetos com múltiplas partes, o sequenciamento de produção pode otimizar o
+tempo total considerando dependências entre partes e disponibilidade de
+equipamentos.
+
+
+O tempo total de produção é minimizado através de programação linear:
+
+
+Minimizar: max(Ti + Σ(tij × xij))
+
+
+Onde: - Ti = tempo de início da tarefa i - tij = tempo de processamento da tarefa j na
+máquina i - xij = variável binária de atribuição
+
+
+
+
+
+
+
+
+MÓDULO 7: COMO NIVELAR A SUA IMPRESSORA
+
+
+7.1 Fundamentos do Nivelamento
+
+
+O nivelamento adequado da impressora constitui o fundamento para impressões
+bem-sucedidas, determinando diretamente a qualidade da adesão da primeira
+camada e a precisão dimensional das peças produzidas. O processo envolve o
+alinhamento preciso da plataforma de construção em relação ao tanque de resina,
+garantindo distância uniforme em toda a área de impressão.
+
+
+A tolerância de nivelamento para impressoras de resina é significativamente mais
+rigorosa que para impressoras de filamento, tipicamente requerendo precisão inferior
+a 0,02mm em toda a área da plataforma. Esta precisão é necessária devido às
+pequenas espessuras de camada utilizadas e à natureza líquida do material antes da
+cura.
+7.1.1 Princípios Geométricos do Nivelamento
+
+
+O nivelamento baseia-se no estabelecimento de um plano de referência paralelo à
+superfície do tanque de resina. Matematicamente, este plano é definido por três
+pontos não colineares, sendo que a maioria das impressoras utiliza sistemas de ajuste
+em três ou quatro pontos.
+
+
+Para um sistema de três pontos, a equação do plano é:
+
+
+ax + by + cz + d = 0
+
+
+Onde os coeficientes a, b, c são determinados pelos vetores normais aos pontos de
+ajuste.
+
+
+A distância de qualquer ponto (x₀, y₀, z₀) ao plano é:
+
+
+distância = |ax₀ + by₀ + cz₀ + d|/√(a² + b² + c²)
+
+
+
+
+7.1.2 Sistemas de Medição de Distância
+
+
+Diferentes métodos são utilizados para medir a distância entre a plataforma e o
+tanque:
+
+
+Método do Papel: Utiliza folhas de papel de espessura conhecida (tipicamente
+0,1mm) como calibre. A distância correta é atingida quando o papel pode ser movido
+com resistência leve mas sem rasgar.
+
+
+Sensores de Proximidade: Sensores indutivos ou capacitivos fornecem medição
+eletrônica da distância, oferecendo precisão superior e repetibilidade. A resolução
+típica é de 0,001mm.
+
+
+Sistemas Ópticos: Interferômetros laser ou sistemas de triangulação óptica oferecem
+a maior precisão, com resoluções inferiores a 0,0001mm, mas são tipicamente
+encontrados apenas em equipamentos de alta precisão.
+
+
+
+
+7.2 Procedimentos de Nive

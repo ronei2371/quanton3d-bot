@@ -1,0 +1,47 @@
+em causar defeitos na impressão. Mexa a resina lentamente antes de despejá-la no tanque e use uma espátula de silicone para remover suavemente quaisquer bolhas. Você também pode deixar a resina descansar por alguns minutos para permitir que as bolhas subam à superfície.
+
+
+Temperatura do ambiente de trabalho: Em geral, a temperatura recomendada da resina é de aproximadamente 25–⁠35°C (77–95°F) para resultados de impressão ótimos. Se o seu quarto estiver muito frio, você pode aquecê-lo para atingir essa faixa usando um aquecedor de ambiente (também em uma tenda) ou com fitas aquecedoras ou envelopes aquecedores ao redor do tanque de resina. A temperatura ambiente consistente ajuda na qualidade da impressão e na viscosidade da resina.
+
+
+Tapetes de plástico: Use tapetes de plástico especiais para reter quaisquer derramamentos de resina, que você pode curar facilmente do lado de fora para descarte seguro.
+
+
+Toalhas de papel: Tenha toalhas de papel à mão para reter resina não curada o tempo todo.
+
+
+Filtros de ar: Embora não sejam perfeitos, os filtros de ar podem ajudar a reduzir as partículas transportadas pelo ar, mas não eliminarão todos os vapores.
+
+
+Dica profissional: tenha todos esses materiais ao alcance o tempo todo!
+
+
+6. Nivelamento e Autonivelamento
+Garantir que a sua placa de construção esteja devidamente nivelada é uma etapa crítica para uma impressão de resina bem-sucedida. Se a placa de construção não estiver nivelada, as impressões podem não aderir corretamente, resultando em empenamento, impressões incompletas ou impressões com falhas.
+
+
+NIVELAMENTO MANUAL:
+
+
+Para impressoras sem função de autonivelamento, você precisará nivelar manualmente a placa de construção. Isso geralmente é feito por:
+
+
+Afrouxando os parafusos na placa de construção.
+
+
+Abaixando a placa para o filme FEP (ou outra camada de liberação) na parte inferior do tanque de resina, usando um pedaço de papel entre a placa de construção e o FEP. (CONSELHO ALTERNATIVO ABAIXO!)
+
+
+Ajustando a placa para que ela entre em contato com o papel com leve resistência.
+
+
+Apertar os parafusos mantendo a pressão uniforme, certificando-se de que a placa permaneça nivelada.
+
+
+Certifique-se de testar os cantos da placa de construção para confirmar que o papel sente a mesma resistência em todas as áreas. Este método pode ajudar a garantir que a placa esteja nivelada em toda a sua superfície.
+
+
+Alternativamente, algumas pessoas recomendam não usar papel: Nivelamento Usando o Tanque: Ao nivelar a sua placa de construção, é importante evitar o uso de papel, como algumas instruções podem sugerir. Em vez disso, nivele sempre a sua impressora com o tanque e o filme FEP instalados. A razão é que nem todos os tanques são usinados ou moldados da mesma forma, e os filmes FEP variam em espessura. Nivelando com o tanque no lugar, você garante uma calibração mais precisa, pois essa configuração reflete as condições reais de impressão, resultando em melhor aderência e impressões mais precisas.
+
+
+AUTONIVEL

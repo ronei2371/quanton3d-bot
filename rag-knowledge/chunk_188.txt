@@ -1,0 +1,13 @@
+3. É essencial agitar bem a resina antes de usá-la, e aqui está o porquê:
+As resinas contêm pigmentos absorvedores de luz e corantes que garantem a cor do produto final. Esses pigmentos e corantes são partículas sólidas que não se dissolvem na resina. Com o tempo, essas partículas tendem a sedimentar no fundo do frasco quando em repouso. Portanto, é crucial agitar vigorosamente a resina antes do uso para homogeneizar esses componentes.
+A homogeneização adequada dos pigmentos e corantes é fundamental para garantir a eficácia e a qualidade da resina. Se a resina não for bem agitada, a impressão poderá apresentar defeitos devido à não homogeneização desses componentes fotoiniciadores e dos pigmentos corantes.
+No caso de resinas com cargas de cerâmica e zircônia, a situação é ainda mais crítica. As partículas de cerâmica e zircônia tendem a se sedimentar mais rapidamente e requerem uma mistura mais intensa para garantir uma distribuição uniforme no produto final. Devido ao tempo de agitação prolongado necessário, é recomendado o uso de um misturador para esses tipos de resinas.
+Portanto, agitar bem a resina antes do uso não é apenas uma recomendação, mas um passo essencial para garantir a qualidade do seu trabalho com resinas.
+
+
+
+4. Como Calibrar Sua Impressora para Usar a Resina Quanton3D
+Em nosso site, oferecemos instruções de calibração para a maioria das impressoras comumente utilizadas no Brasil. Se a sua impressora não estiver listada, você pode baixar o arquivo “Calibrador” em nossa seção de downloads e imprimir usando os tempos de referência de uma impressora semelhante.
+O calibrador consiste em duas peças. A peça menor deve ser pressionada no furo número 3 da peça maior. Se as peças não se encaixarem corretamente no furo número 3, mas se encaixarem nos furos 4 e 5, isso indica que é necessário reduzir o tempo de exposição das camadas. Por outro lado, se as peças ficarem frouxas no furo número 3, mas se encaixarem nos furos 1 e 2, isso indica que é necessário aumentar o tempo de exposição das camadas.
+Recomendamos que você repita a calibração a cada alteração de lote e a cada mudança de linha das resinas. Além disso, existem outros métodos de calibração que podem ser utilizados, e algumas impressoras possuem seus próprios métodos específicos de calibração.
+Caso você tenha dificuldades ao calibrar nossas resinas, entre em contato com nosso suporte técnico pelo WhatsApp (31) 3271-6935. Estamos sempre prontos para ajudá-lo a obter os melhores resultados com nossos produtos.

@@ -1,0 +1,84 @@
+ados e os custos de descarte.
+
+
+
+
+
+
+
+
+MÓDULO 3: EXPLICAÇÃO SOBRE FATIADORES E TIPOS
+DE RESINA E COMO ESCOLHER A RESINA PARA SEU
+PROJETO
+
+
+3.1 Fundamentos dos Softwares Fatiadores
+
+
+Os softwares fatiadores (slicers) constituem a ponte essencial entre o modelo digital
+tridimensional e a impressora física, convertendo geometrias complexas em
+instruções específicas que a impressora pode executar. Este processo de "fatiamento"
+divide o modelo em centenas ou milhares de camadas horizontais, cada uma com
+espessura definida pelo usuário, tipicamente variando entre 0,01mm e 0,2mm.
+
+
+O algoritmo de fatiamento analisa cada camada individualmente, determinando quais
+áreas devem ser expostas à luz UV para solidificar a resina. Esta análise considera não
+apenas a geometria da peça, mas também parâmetros críticos como tempo de
+exposição, intensidade luminosa, velocidades de movimentação e estratégias de
+suporte.
+
+
+
+
+3.1.1 ChiTu Box - O Padrão da Indústria
+
+
+ChiTu Box estabeleceu-se como o software fatiador mais amplamente utilizado para
+impressoras de resina, oferecendo interface intuitiva combinada com funcionalidades
+avançadas. Desenvolvido especificamente para tecnologias SLA e DLP, incorpora
+algoritmos otimizados que consideram as características únicas da impressão de
+resina.
+
+
+A interface do ChiTu Box organiza-se em módulos distintos: preparação do modelo,
+geração de suportes, configuração de parâmetros de impressão e visualização de
+camadas. Esta organização modular permite fluxo de trabalho eficiente, desde a
+importação do modelo até a geração do arquivo final para impressão.
+
+
+O sistema de detecção automática de ilhas é uma funcionalidade crítica que identifica
+geometrias que podem falhar durante a impressão devido à falta de suporte
+adequado. Ilhas são seções da peça que não possuem conexão física com a
+plataforma de construção ou com outras partes já impressas, resultando em falhas de
+impressão quando não adequadamente suportadas.
+
+
+
+
+3.1.2 Prusa Slicer - Versatilidade e Precisão
+
+
+Prusa Slicer, originalmente desenvolvido para impressoras de filamento, expandiu
+suas capacidades para incluir suporte completo à impressão de resina. Sua
+arquitetura modular permite personalização extensiva de parâmetros, sendo
+particularmente valorizado por usuários avançados que necessitam controle fino
+sobre o processo de impressão.
+
+
+O sistema de perfis do Prusa Slicer permite armazenamento e compartilhamento de
+configurações otimizadas para combinações específicas de impressora e resina. Esta
+funcionalidade é especialmente valiosa em ambientes profissionais onde múltiplos
+operadores utilizam equipamentos similares.
+A funcionalidade de simulação de impressão oferece visualização detalhada do
+processo camada por camada, permitindo identificação prévia de potenciais
+problemas como colisões de suporte ou áreas de cura insuficiente.
+
+
+
+
+3.1.3 Lychee Slicer - Inovação e Automação
+
+
+Lychee Slicer representa uma abordagem mais moderna ao fatiamento, incorporando
+algoritmos d

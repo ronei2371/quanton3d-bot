@@ -1,0 +1,51 @@
+ursos avançados, como armazenamento em nuvem e vazamento automático, são bloqueados na versão Pro.
+
+
+PrusaSlicer (Gratuito):
+
+
+Gratuito: O PrusaSlicer é um fatiador de código aberto desenvolvido principalmente para impressoras FDM, mas agora também suporta impressoras de resina. É uma ferramenta poderosa com muitas opções de personalização e recursos de ajuste fino. Você pode ajustar manualmente as configurações para atender às suas necessidades exatas, o que é ótimo para usuários que preferem mais controle.
+
+
+Vantagens: Gratuito, altamente personalizável e oferece configurações avançadas para usuários experientes.
+
+
+Desvantagens: A interface pode parecer menos amigável do que ChiTuBox ou Lychee para iniciantes.
+
+
+Workshop de Fótons (Gratuito) :
+
+
+Gratuito: Desenvolvido pela Anycubic para suas impressoras da série Photon, o Photon Workshop também é compatível com outras impressoras de resina. É um fatiador básico, mas eficaz, para usuários que preferem uma solução tudo-em-um diretamente do fabricante da sua impressora.
+
+
+Vantagens: Adaptado para impressoras Anycubic, simples e direto.
+
+
+Desvantagens: Menos rico em recursos do que outros fatiadores, a geração de suporte é mais básica.
+
+
+Vantagens e Desvantagens:
+Ferramentas gratuitas: ChiTuBox, Lychee Slicer, PrusaSlicer e Photon Workshop oferecem muitos recursos gratuitamente, tornando-os ideais para amadores e iniciantes. No entanto, as versões gratuitas podem não ter recursos avançados de geração ou otimização de suporte.
+
+
+Versões pagas: As versões Pro do ChiTuBox e Lychee Slicer fornecem ferramentas de suporte aprimoradas, vazamento, detecção de ilhas e controle mais preciso sobre o fatiamento, o que pode ser útil para profissionais que buscam resultados de alta qualidade. No entanto, o custo adicional pode não valer a pena para usuários casuais.
+
+
+Em última análise, a escolha do fatiador depende das suas necessidades específicas e do seu nível de experiência. Muitos usuários começam com opções gratuitas como ChiTuBox ou Lychee e passam para as versões Pro à medida que ganham mais experiência ou precisam de recursos avançados.
+
+
+Glossário:
+Placa de Construção: A superfície plana onde a sua impressão 3D é formada camada por camada. Também conhecida como base de impressão ou plataforma de construção.
+
+
+Filme FEP: Uma folha de plástico transparente e flexível na parte inferior do tanque de resina que permite que a impressão se desprenda facilmente após cada camada ser curada. FEP significa fluorinated ethylene propylene.
+
+
+Ferramenta de Fatiamento: Software usado para converter um modelo 3D em camadas imprimíveis "fatiando" o modelo horizontalmente. Este software gera um arquivo que a impressora lê para criar o objeto camada por camada. Exemplos incluem Chitubox e Lychee Slicer.
+
+
+Suportes: Estruturas temporárias adicionadas durante o processo de fatiamento para apoiar partes de um modelo que ficam suspensas no ar, evitando que falhem durante a impressão.
+
+
+Tanque de Resina: O recipiente que con
