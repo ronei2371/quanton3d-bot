@@ -162,6 +162,95 @@ app.post("/api/custom-request", async (req, res) => {
 });
 
 
+// Banco de dados de usuários registrados
+const registeredUsers = new Map();
+
+// Rota para registrar usuário
+app.post("/register-user", async (req, res) => {
+  try {
+    const { name, phone, email, sessionId } = req.body;
+    
+    const userData = {
+      name,
+      phone,
+      email,
+      sessionId,
+      registeredAt: new Date().toISOString()
+    };
+    
+    registeredUsers.set(sessionId, userData);
+    console.log(`👤 Novo usuário registrado: ${name} (${email})`);
+    
+    res.json({ success: true, message: 'Usuário registrado com sucesso!' });
+  } catch (err) {
+    console.error("❌ Erro ao registrar usuário:", err);
+    res.status(500).json({ success: false, message: "Erro ao registrar usuário." });
+  }
+});
+
+// Rota para perguntas com imagem
+app.post("/ask-with-image", upload.single('image'), async (req, res) => {
+  try {
+    const { message, sessionId } = req.body;
+    const imageFile = req.file;
+    
+    if (!imageFile) {
+      return res.status(400).json({ success: false, message: "Nenhuma imagem foi enviada." });
+    }
+    
+    // Converter imagem para base64
+    const base64Image = imageFile.buffer.toString('base64');
+    const imageUrl = `data:${imageFile.mimetype};base64,${base64Image}`;
+    
+    const model = process.env.OPENAI_MODEL || "gpt-4o";
+    
+    // Buscar histórico da sessão
+    if (!conversationHistory.has(sessionId)) {
+      conversationHistory.set(sessionId, []);
+    }
+    const history = conversationHistory.get(sessionId);
+    
+    // Adicionar mensagem com imagem ao histórico
+    history.push({
+      role: "user",
+      content: [
+        { type: "text", text: message || "Analise esta imagem relacionada a impressão 3D com resina" },
+        { type: "image_url", image_url: { url: imageUrl } }
+      ]
+    });
+    
+    // Chamar OpenAI com visão
+    const response = await openai.chat.completions.create({
+      model: model,
+      messages: [
+        {
+          role: "system",
+          content: "Você é um especialista em impressão 3D com resina UV SLA. Analise imagens de peças impressas, problemas de impressão, e forneça diagnósticos precisos e soluções."
+        },
+        ...history
+      ],
+      max_tokens: 1000,
+    });
+    
+    const reply = response.choices[0].message.content;
+    
+    // Adicionar resposta ao histórico
+    history.push({ role: "assistant", content: reply });
+    
+    // Limitar histórico
+    if (history.length > 20) {
+      history.splice(0, history.length - 20);
+    }
+    
+    console.log(`📷 Análise de imagem para sessão ${sessionId}`);
+    
+    res.json({ success: true, reply });
+  } catch (err) {
+    console.error("❌ Erro ao processar imagem:", err);
+    res.status(500).json({ success: false, message: "Erro ao analisar imagem." });
+  }
+});
+
 // Rota para listar sugestões (apenas para Ronei)
 app.get("/suggestions", (req, res) => {
   // Código da rota /suggestions... 
