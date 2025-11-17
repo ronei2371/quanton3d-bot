@@ -36,6 +36,11 @@ const conversationHistory = new Map();
 const knowledgeSuggestions = [];
 const customRequests = []; // Array para pedidos customizados
 
+// Métricas e Analytics
+const conversationMetrics = []; // Todas as conversas
+const userRegistrations = []; // Cadastros de usuários
+const siteVisits = []; // Visitas ao site
+
 // Rota principal de teste
 app.get("/", (req, res) => {
   res.send("🚀 Quanton3D IA Online! Backend ativo e operacional.");
@@ -96,6 +101,16 @@ app.post("/ask", async (req, res) => {
     if (history.length > 20) {
       history.splice(0, history.length - 20);
     }
+
+    // Adicionar métrica de conversa
+    conversationMetrics.push({
+      sessionId,
+      userName: userName || 'Anônimo',
+      message,
+      reply,
+      timestamp: new Date().toISOString(),
+      documentsFound: relevantKnowledge.length
+    });
 
     res.json({ reply });
     // ======================================================
@@ -189,6 +204,10 @@ app.post("/register-user", async (req, res) => {
     };
     
     registeredUsers.set(sessionId, userData);
+    
+    // Adicionar aos registros para métricas
+    userRegistrations.push(userData);
+    
     console.log(`👤 Novo usuário registrado: ${name} (${email})`);
     
     res.json({ success: true, message: 'Usuário registrado com sucesso!' });
@@ -259,6 +278,78 @@ app.post("/ask-with-image", upload.single('image'), async (req, res) => {
     console.error("❌ Erro ao processar imagem:", err);
     res.status(500).json({ success: false, message: "Erro ao analisar imagem." });
   }
+});
+
+// Rota para obter métricas e analytics
+app.get("/metrics", (req, res) => {
+  const { auth } = req.query;
+  
+  // Autenticação
+  if (auth !== 'quanton3d_admin_secret') {
+    return res.status(401).json({ success: false, message: 'Não autorizado' });
+  }
+  
+  // Calcular estatísticas
+  const totalConversations = conversationMetrics.length;
+  const totalRegistrations = userRegistrations.length;
+  const uniqueSessions = new Set(conversationMetrics.map(c => c.sessionId)).size;
+  
+  // Perguntas mais frequentes (top 10)
+  const questionCounts = {};
+  conversationMetrics.forEach(conv => {
+    const question = conv.message.toLowerCase().trim();
+    questionCounts[question] = (questionCounts[question] || 0) + 1;
+  });
+  const topQuestions = Object.entries(questionCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([question, count]) => ({ question, count }));
+  
+  // Conversas por resina (buscar menções)
+  const resinMentions = {
+    'Pyroblast+': 0,
+    'Iron/Iron 7030': 0,
+    'Spin+': 0,
+    'Spark': 0,
+    'FlexForm': 0,
+    'Alchemist': 0,
+    'Poseidon': 0,
+    'LowSmell': 0,
+    'Castable': 0,
+    'Outras': 0
+  };
+  
+  conversationMetrics.forEach(conv => {
+    const msg = conv.message.toLowerCase();
+    let found = false;
+    Object.keys(resinMentions).forEach(resin => {
+      if (msg.includes(resin.toLowerCase())) {
+        resinMentions[resin]++;
+        found = true;
+      }
+    });
+    if (!found && (msg.includes('resina') || msg.includes('material'))) {
+      resinMentions['Outras']++;
+    }
+  });
+  
+  res.json({
+    success: true,
+    metrics: {
+      conversations: {
+        total: totalConversations,
+        uniqueSessions,
+        recent: conversationMetrics.slice(-50).reverse() // Últimas 50
+      },
+      registrations: {
+        total: totalRegistrations,
+        users: userRegistrations
+      },
+      topQuestions,
+      resinMentions,
+      lastUpdated: new Date().toISOString()
+    }
+  });
 });
 
 // Rota para listar sugestões (apenas para Ronei)
