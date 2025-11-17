@@ -52,7 +52,7 @@ app.post("/ask", async (req, res) => {
     const { message, sessionId, userName } = req.body;
 
     const model = process.env.OPENAI_MODEL || "gpt-4o";
-    const temperature = parseFloat(process.env.OPENAI_TEMPERATURE) || 0.3;
+    const temperature = parseFloat(process.env.OPENAI_TEMPERATURE) || 0.0;
 
     console.log(`🧠 Modelo: ${model} | Temperatura: ${temperature} | Usuário: ${userName || 'Anônimo'}`);
 
