@@ -264,7 +264,19 @@ app.post("/ask-with-image", upload.single('image'), async (req, res) => {
 
 // Rota para listar sugestões (apenas para Ronei)
 app.get("/suggestions", (req, res) => {
-  // Código da rota /suggestions... 
+  const { auth } = req.query;
+  
+  // Autenticação simples
+  if (auth !== 'quanton3d_admin_secret') {
+    return res.status(401).json({ success: false, message: 'Não autorizado' });
+  }
+  
+  // Retornar sugestões
+  res.json({ 
+    success: true, 
+    suggestions: knowledgeSuggestions,
+    count: knowledgeSuggestions.length
+  });
 });
 
 // Configuração da porta Render
