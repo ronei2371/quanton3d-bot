@@ -60,11 +60,12 @@ app.post("/ask", async (req, res) => {
     // 🌟 CÓDIGO DA IA REATIVADO 🌟
     // ======================================================
     
-    // 🔍 BUSCAR CONHECIMENTO RELEVANTE (RAG)
-    console.log('🔍 Buscando conhecimento relevante...');
-    const relevantKnowledge = await searchKnowledge(message, 3);
-    const knowledgeContext = formatContext(relevantKnowledge);
-    console.log(`✅ Encontrados ${relevantKnowledge.length} documentos relevantes`);
+    // 🔍 BUSCAR CONHECIMENTO RELEVANTE (RAG) - TEMPORARIAMENTE DESATIVADO
+    // console.log('🔍 Buscando conhecimento relevante...');
+    // const relevantKnowledge = await searchKnowledge(message, 3);
+    // const knowledgeContext = formatContext(relevantKnowledge);
+    // console.log(`✅ Encontrados ${relevantKnowledge.length} documentos relevantes`);
+    const knowledgeContext = ''; // RAG desativado temporariamente
     
     let contextualPrompt = 'Você é um assistente técnico especialista em resinas Quanton3D.'; 
     if (userName && userName.toLowerCase().includes('ronei')) {
@@ -269,18 +270,25 @@ app.get("/suggestions", (req, res) => {
 // Configuração da porta Render
 const PORT = process.env.PORT || 3001;
 
-// Inicializar RAG antes de iniciar o servidor
-console.log('🚀 Inicializando sistema RAG...');
-initializeRAG().then(() => {
-  console.log('✅ RAG inicializado com sucesso!');
-  app.listen(PORT, () => {
-    console.log(`✅ Servidor Quanton3D IA rodando na porta ${PORT}`);
-    console.log('🤖 Bot com RAG ativado e pronto para uso!');
-  });
-}).catch(err => {
-  console.error('❌ Erro ao inicializar RAG:', err);
-  console.log('⚠️ Servidor iniciando SEM RAG...');
-  app.listen(PORT, () =>
-    console.log(`✅ Servidor Quanton3D IA rodando na porta ${PORT} (sem RAG)`)
-  );
+// Inicializar RAG antes de iniciar o servidor - TEMPORARIAMENTE DESATIVADO
+// console.log('🚀 Inicializando sistema RAG...');
+// initializeRAG().then(() => {
+//   console.log('✅ RAG inicializado com sucesso!');
+//   app.listen(PORT, () => {
+//     console.log(`✅ Servidor Quanton3D IA rodando na porta ${PORT}`);
+//     console.log('🤖 Bot com RAG ativado e pronto para uso!');
+//   });
+// }).catch(err => {
+//   console.error('❌ Erro ao inicializar RAG:', err);
+//   console.log('⚠️ Servidor iniciando SEM RAG...');
+//   app.listen(PORT, () =>
+//     console.log(`✅ Servidor Quanton3D IA rodando na porta ${PORT} (sem RAG)`)
+//   );
+// });
+
+// Servidor rodando SEM RAG (temporariamente)
+console.log('⚠️ RAG desativado temporariamente');
+app.listen(PORT, () => {
+  console.log(`✅ Servidor Quanton3D IA rodando na porta ${PORT}`);
+  console.log('🤖 Bot pronto para uso (sem RAG)!');
 });
