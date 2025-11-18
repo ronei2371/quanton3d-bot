@@ -27,7 +27,13 @@ async function buildDatabase() {
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     const filePath = path.join(knowledgeDir, file);
-    const content = fs.readFileSync(filePath, 'utf-8');
+    const content = fs.readFileSync(filePath, 'utf-8').trim();
+
+if (!content) {
+  console.log(`⚠️ Ignorado: ${file} (arquivo vazio ou só espaços)`);
+  continue;
+}
+
     
     // Criar embedding
     const output = await localExtractor(content, { pooling: 'mean', normalize: true });
