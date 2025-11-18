@@ -166,10 +166,13 @@ app.post("/suggest-knowledge", async (req, res) => {
 // ROTA FINAL: PEDIDO ESPECIAL (Tarefa 4)
 app.post("/api/custom-request", async (req, res) => {
     try {
-        const { caracteristica, cor, complementos } = req.body;
+        const { name, phone, email, caracteristica, cor, complementos } = req.body;
 
         const newRequest = {
             id: Date.now(),
+            name: name || 'Não informado',
+            phone: phone || 'Não informado',
+            email: email || 'Não informado',
             caracteristica,
             cor,
             complementos,
@@ -179,7 +182,7 @@ app.post("/api/custom-request", async (req, res) => {
 
         customRequests.push(newRequest); // Adiciona ao array de pedidos
         
-        console.log(`✨ Novo Pedido Customizado Recebido: ${cor} - ${caracteristica.substring(0, 30)}...`);
+        console.log(`✨ Novo Pedido Customizado de ${name}: ${cor} - ${caracteristica.substring(0, 30)}...`);
 
         res.json({ 
             success: true, 
@@ -192,6 +195,23 @@ app.post("/api/custom-request", async (req, res) => {
             message: "Erro ao processar o pedido customizado."
         });
     }
+});
+
+// Rota para listar pedidos customizados (admin)
+app.get("/custom-requests", (req, res) => {
+  const { auth } = req.query;
+  
+  // Autenticação
+  if (auth !== 'quanton3d_admin_secret') {
+    return res.status(401).json({ success: false, message: 'Não autorizado' });
+  }
+  
+  // Retornar pedidos customizados (mais recentes primeiro)
+  res.json({ 
+    success: true, 
+    requests: customRequests.slice().reverse(),
+    count: customRequests.length
+  });
 });
 
 
@@ -378,6 +398,60 @@ app.get("/metrics", (req, res) => {
       lastUpdated: new Date().toISOString()
     }
   });
+});
+
+// Rota para adicionar conhecimento manualmente ao RAG
+app.post("/add-knowledge", async (req, res) => {
+  try {
+    const { auth, title, content } = req.body;
+    
+    // Autenticação
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, error: 'Não autorizado' });
+    }
+    
+    if (!title || !content) {
+      return res.status(400).json({ success: false, error: 'Título e conteúdo são obrigatórios' });
+    }
+    
+    // Importar fs dinamicamente
+    const fs = await import('fs');
+    const path = await import('path');
+    
+    // Criar nome de arquivo seguro
+    const safeFileName = title
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/[^a-z0-9]+/g, '_') // Substitui caracteres especiais por _
+      .replace(/^_+|_+$/g, '') // Remove _ do início e fim
+      .substring(0, 50); // Limita tamanho
+    
+    const timestamp = Date.now();
+    const fileName = `${safeFileName}_${timestamp}.txt`;
+    const filePath = path.default.join(process.cwd(), 'rag-knowledge', fileName);
+    
+    // Formatar conteúdo com título
+    const formattedContent = `${title}\n\n${content}`;
+    
+    // Salvar arquivo
+    fs.default.writeFileSync(filePath, formattedContent, 'utf-8');
+    
+    console.log(`✅ Novo conhecimento adicionado: ${fileName}`);
+    
+    // Reinicializar RAG para incluir novo arquivo
+    await initializeRAG();
+    console.log('🔄 RAG reinicializado com novo conhecimento');
+    
+    res.json({ 
+      success: true, 
+      message: 'Conhecimento adicionado com sucesso',
+      fileName 
+    });
+  } catch (err) {
+    console.error('❌ Erro ao adicionar conhecimento:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // Rota para listar sugestões (apenas para Ronei)
