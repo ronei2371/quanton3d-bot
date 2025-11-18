@@ -139,3 +139,14 @@ export default {
   searchKnowledge,
   formatContext
 };
+import { ChromaClient } from "chromadb";
+const chroma = new ChromaClient({ path: "./quanton3d-db" });
+
+const collection = await chroma.getOrCreateCollection({ name: "quanton3d" });
+
+await collection.add({
+  ids: newDatabase.map((entry, idx) => `doc-${idx}`),
+  documents: newDatabase.map(entry => entry.content),
+  embeddings: newDatabase.map(entry => entry.embedding),
+});
+console.log("[CHROMA] Dados enviados para a ChromaDB.");
