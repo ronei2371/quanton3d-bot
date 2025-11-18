@@ -103,9 +103,15 @@ app.post("/ask", async (req, res) => {
     }
 
     // Adicionar métrica de conversa
+    // Buscar nome do usuário registrado
+    const registeredUser = registeredUsers.get(sessionId);
+    const finalUserName = registeredUser ? registeredUser.name : (userName || 'Anônimo');
+    
     conversationMetrics.push({
       sessionId,
-      userName: userName || 'Anônimo',
+      userName: finalUserName,
+      userPhone: registeredUser ? registeredUser.phone : null,
+      userEmail: registeredUser ? registeredUser.email : null,
       message,
       reply,
       timestamp: new Date().toISOString(),
@@ -126,7 +132,7 @@ app.post("/ask", async (req, res) => {
 // Rota para enviar sugestão de conhecimento
 app.post("/suggest-knowledge", async (req, res) => {
   try {
-    const { suggestion, userName, userPhone, sessionId } = req.body;
+    const { suggestion, userName, userPhone, sessionId, lastBotReply, lastUserMessage } = req.body;
 
     const newSuggestion = {
       id: Date.now(),
@@ -134,6 +140,8 @@ app.post("/suggest-knowledge", async (req, res) => {
       userName,
       userPhone,
       sessionId,
+      lastUserMessage: lastUserMessage || 'N/A',
+      lastBotReply: lastBotReply || 'N/A',
       timestamp: new Date().toISOString(),
       status: "pending"
     };
@@ -296,10 +304,18 @@ app.get("/metrics", (req, res) => {
   
   // Perguntas mais frequentes (top 10)
   const questionCounts = {};
+  const ignoredPhrases = ['ola', 'oi', 'bom dia', 'boa tarde', 'boa noite', 'olá', 'p'];
+  
   conversationMetrics.forEach(conv => {
     const question = conv.message.toLowerCase().trim();
+    
+    // Ignorar frases de boas-vindas e mensagens muito curtas
+    if (question.length < 3) return;
+    if (ignoredPhrases.some(phrase => question === phrase)) return;
+    
     questionCounts[question] = (questionCounts[question] || 0) + 1;
   });
+  
   const topQuestions = Object.entries(questionCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10)
@@ -320,15 +336,27 @@ app.get("/metrics", (req, res) => {
   };
   
   conversationMetrics.forEach(conv => {
-    const msg = conv.message.toLowerCase();
+    // Buscar menções tanto na pergunta quanto na resposta
+    const fullText = (conv.message + ' ' + conv.reply).toLowerCase();
     let found = false;
+    
     Object.keys(resinMentions).forEach(resin => {
-      if (msg.includes(resin.toLowerCase())) {
+      const resinLower = resin.toLowerCase();
+      // Buscar variações do nome
+      const variations = [
+        resinLower,
+        resinLower.replace('+', ''),
+        resinLower.replace('/', ' '),
+        resinLower.split('/')[0] // Primeiro nome (ex: "iron" de "iron/iron 7030")
+      ];
+      
+      if (variations.some(v => fullText.includes(v))) {
         resinMentions[resin]++;
         found = true;
       }
     });
-    if (!found && (msg.includes('resina') || msg.includes('material'))) {
+    
+    if (!found && (fullText.includes('resina') || fullText.includes('material'))) {
       resinMentions['Outras']++;
     }
   });
