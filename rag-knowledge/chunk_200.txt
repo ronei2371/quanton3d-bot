@@ -1,0 +1,53 @@
+=== 50 ERROS SLA/DLP + SOLUÇÃO RÁPIDA + MELHOR RESINA QUANTON3D ===
+
+1. Não gruda na base → 40–60s base, limpar FEP, Iron 7030 ou Pyroblast+
+2. Desprende no meio → Re-nivelar placa, lift speed 60–90 mm/min
+3. Peça quebra fácil → Baixar exposição 0,5s, usar Spin+, FlexForm ou VulcanCast
+4. Bolhas na peça → Mexer 3 min + descansar 10 min, Alchemist
+5. Elephant foot → Z lift base 10 mm, menos tempo base
+6. Buracos nas paredes → +0,5s exposição, Alchemist ou Spark
+7. Suporte cai → Suporte médio/pesado, tip 0,5 mm
+8. Resina pegajosa → Ambiente frio ou LED fraco → aquecer ou trocar LED
+9. FEP embaçado → Trocar FEP, limpar só com álcool 99%
+10. Gruda no FEP → +10s nas camadas base ou lixar leve FEP
+11. Camadas visíveis → AA nível 8 + Grey offset 50%
+12. Quebra ao tirar suporte → FlexForm ou -0,5s exposição
+13. Sucção forte (pop) → Hollow + 4 furos 3–4 mm
+14. Resina vaza da cuba → Apertar parafusos da cuba
+15. Para no meio → Trocar pendrive (FAT32)
+16. Manchas brancas → Resina contaminada → trocar
+17. Detalhe some → Alchemist 1,8–2,2s em 0,03 mm
+18. Encolhimento pós-cura → Resina velha ou exposição alta
+19. Bleeding → -0,3s ou Bloom 0
+20. Suction cups → Hollow + furos + lift lento
+21. Ghosting → Lift speed ≤60 mm/min
+22. Textura arenosa → +0,5s exposição
+23. FEP rasga rápido → Velocidade descida lenta ou nFEP
+24. Resina cura sozinha → Tampa aberta → guardar no escuro
+25. Falha só no canto → Re-nivelar ou tirar bolha da cuba
+26. Peça muito translúcida → Exposição alta → baixar
+27. Amarela na cura → Máximo 3–5 min na estação UV
+28. Suporte não gruda na peça → Base do suporte 1,4×
+29. Marca de suporte funda → Depth 0,5 mm
+30. Resina muito grossa no inverno → Aquecer garrafa 40°C
+31. Rachadura em peças grossas → Hollow + wall 2–3 mm
+32. Falha em peças grandes → Mais tempo base + raft
+33. Peça gruda demais na placa → Espátula flexível + calor leve
+34. Cheiro forte → Máscara + exaustor
+35. Tela LCD manchada → Limpar com álcool + trocar polarizador
+36. Overexposure spots → Calibrar tela ou -0,3s
+37. Light bleed → Dimming on (Lychee)
+38. Peça com veios → Temperatura <20°C → aquecer sala
+39. Camada 0,02 falha → Só Alchemist ou Spark
+40. FEP solta bolha → Apertar cuba uniformemente
+41. Impressão falha após 50% → Cuba com resina pouca
+42. Suporte muito fraco em miniatura → 100% densidade
+43. Peça opaca demais → Exposição baixa → +0,3s
+44. Resina endurece no bico (DLP) → Limpar bico a cada 2h
+45. Fantasmas em texto pequeno → Anti-aliasing 16
+46. Base muito grossa → Diminuir número de camadas base
+47. Peça solta da raft → Mais tempo base ou raft maior
+48. Bolhas só no topo → Resina do fundo do frasco → filtrar
+49. Impressão lenta demais → Lift speed 120–150 mm/min (só se não der sucção)
+50. Cliente reclama de cheiro → Recomendar Spin+ ou Alchemist (menos odor)
+
