@@ -80,27 +80,110 @@ Tatiana - Administradora
 === LINHAS DE PRODUTOS ===
 
 LINHA PROFISSIONAL:
-- Pyroblast+ (Alta temperatura)
-- Iron 7030 (Mecânica)
-- Spin+ (Fundição)
+- Pyroblast+ A Resina Pyroblast é a escolha ideal tanto para iniciantes quanto para usuários avançados que buscam criar modelos de alta qualidade.
+Esta resina premium combina precisão de impressão, dureza e fluidez de maneira excepcional, permitindo a produção de peças detalhadas com durabilidade impressionante.
+Graças à sua alta precisão e capacidade de impressão rápida, a Resina 3D Pyroblast garante resultados excelentes, sendo perfeita para a fabricação de peças decorativas, artísticas e protótipos
+É fundamental lembrar que as resinas 3D são produtos químicos e devem ser manipuladas com cuidado.
+Em resumo, a Resina 3D Pyroblast é uma escolha de alta qualidade que oferece excelente desempenho e resultados impressionantes para todas as suas necessidades de impressão 3D.
+Vantagens: Alta precisão: Permite a criação de peças com detalhes nítidos e precisão dimensional excepcional. Dureza: Proporciona maior resistência e durabilidade às peças impressas.
+Fluidez: Garante um fluxo suave durante a impressão, minimizando bolhas e imperfeições.Impressão rápida: Reduz o tempo total de impressão, otimizando sua produtividade.
+Versatilidade: Adequada para diversos tipos de aplicações, desde peças decorativas e artísticas até protótipos funcionais. Aplicações: Peças decorativas Modelos artísticos
+Protótipos Miniaturas Figuras de ação
+
+- Iron A Resina Iron destaca-se por sua alta resistência ao impacto, dureza intermediária e flexibilidade, ideal para aplicações industriais,  prototipagem funcional, peças finais, 
+ferramentas, e até mesmo aplicações médicas e artísticas. Recomenda-se o uso de EPI e seguir as instruções do rótulo para um manuseio seguro.
+Principais características  Indicação: Indicada para projetos que requerem flexibilidade e resistência a impactos. Alta Resistência ao Impacto: Ideal para peças que enfrentam condições adversas.
+Dureza Intermediária: Versatilidade para diversas aplicações industriais. Flexibilidade: Permite maior liberdade no design e funcionalidade das peças.
+
+- Iron 7030  A linha 70/30 destaca-se por sua combinação equilibrada de flexibilidade e resistência, proporcionando detalhes precisos e acabamento de qualidade superior.
+ É ideal para a criação de protótipos e peças que exigem durabilidade, como componentes flexíveis. No entanto, não é recomendada para a fabricação de peças com estruturas finas e 
+ suspensas, como asas de dragões, devido à sua composição específica. Devido à natureza química da resina, o uso de Equipamentos de Proteção Individual (EPI) é essencial para garantir a segurança durante o manuseio.
+ A Resina 70/30 da Quanton3D é uma escolha excelente para quem busca resultados de alta precisão e confiabilidade em impressões 3D.
+
+- Spin+ A linha Spin oferece maior rigidez e leve flexibilidade com alto nível de detalhes. A resina Spin destaca-se por suas cores opacas e precisão, resistindo a deformações sob tensões.
+ Recomenda-se o uso de EPIs no manuseio. É indicada para protótipos funcionais, peças de uso final, modelos detalhados e objetos decorativos que exigem precisão dimensional.
+características Indicação: Peças de grande formato com alto nível de detalhes sem deformação. Resistência e Flexibilidade: Além da alta precisão, as resinas Spin combinam rigidez com leve flexibilidade, 
+tornando-as aptas a suportar tensões sem se deformar, sendo perfeitas para protótipos funcionais e peças de uso final.Cores Opacas: As resinas
+ Spin estão disponíveis em diversas cores opacas, permitindo a criação de peças com um acabamento visualmente atraente e profissional.
+
 - Castable (Fundição profissional)
 
 LINHA ODONTOLÓGICA:
-- Athom Dental (Modelos de estudo)
-- Athom Alinhadores (Modelos para alinhadores)
+- Athom Dental A linha Athom Dental é ideal para criar modelos de estudo, troquéis e protótipos de peças dentárias.
+ Com alta precisão e qualidade de impressão, facilita estudos detalhados e prototipagem eficiente na área odontológica.
+ É importante notar que esta resina é destinada apenas para uso externo, não sendo biocompatível, e requer cuidados específicos no manuseio
+
+- Athom Alinhadores A linha Athom Alinhadores oferece alta resolução e precisão para visualização detalhada de modelos complexos. Com baixa contração, minimiza distorções,
+ garantindo modelos precisos. Além disso, possui boa resistência à temperatura, suportando o calor das plastificadoras a vácuo sem deformar, sendo ideal para aplicações odontológicas. 
+ É importante notar que esta resina é destinada apenas para uso externo, não sendo biocompatível, e requer cuidados específicos no manuseio, incluindo o uso de Equipamentos de Proteção Individual (EPIs) 
+ e a observância rigorosa das instruções do fabricante.v
+
 - Athom Gengiva (Simulação de gengiva)
-- Athom Castable (Fundição odontológica)
+- Vulcan A linha Vulcan Cast é de alta performance, resistente a altas temperaturas (até 250°C), durável e tenaz,
+ sendo perfeita para moldes de vulcanização. Oferece impressão de detalhes precisos e textura delicada, com baixa taxa de encolhimento,
+ sendo altamente recomendada para projetos que exigem resistência e precisão, como moldes industriais e protótipos funcionais.
+
+Ultra White
+Resistência a altas temperaturas de 250°C
+Resistência química muito forte devido ao composto cerâmico
+Taxa de absorção de água muito baixa
+
+Aplicações
+Moldes de injeção de baixa tiragem
+Conformação a vácuo
+Aplicação odontológica
+Esculturas artísticas
+Projetado para processo de borracha vulcanizada
+
+Propriedades do Sculpt Ultra White
+Dureza Shore: 99D
+Tensão de tração na ruptura: 31 MPa
+Impacto IZOD:  Entalhado, J/m
+HDT a 0,455 MPa: 250°C
+Alongamento na ruptura: 1%
+Módulo de Young: 8000 MPa
+
+Resina Vulcan Cast – Ultra White
+A Vulcan Cast resina de impressão Ultra White aumenta a resistência ainda mais para 250°C com nossa nova formulação composta, aumentando a dureza e a resistência química.
+Esta resina 3D Ultra White é ideal para fundição de joias, kit GK e aplicações de moldagem que exigem resistência a altas temperaturas.
+Resolução e acabamento excepcionais
+Qualidade de superfície impecável: A Vulcan Cast Ultra é conhecida por sua superfície fosca e acabamento exclusivo em branco fosco opaco, garantindo que os modelos fiquem deslumbrantes com o mínimo de 
+pós-processamento necessário.Experiência de impressão perfeita: A resina proporciona uma transição perfeita da impressão para a apresentação final, reduzindo significativamente o 
+tempo e o esforço de pós-processamento.
+Propriedades e compatibilidade aprimoradas da resinaAditivo Poderoso: A Vulcan Cast melhora significativamente a resistência à temperatura e a precisão de resinas misturadas, servindo como um aditivo potente para propriedades de material aprimoradas. Ampla adaptabilidade: A Vulcan Cast é compatível com DLP de alto desempenho e um amplo espectro de impressoras de resina LCD, garantindo ampla aplicabilidade e facilidade de uso em projetos complexos. Resistência incomparável a altas temperaturas
+Desempenho térmico impressionante: A resina Vulcan Cast pode suportar temperaturas de até 250°C sem amolecer, mantendo sua estrutura e integridade mesmo em seu HDT.
+Aplicação em Processos Tradicionais: Vulcan Cast também adiciona pó cerâmico especial, o que não só melhora a resistência à temperatura, mas também atinge uma superfície fosca de resina fosca de alta qualidade. Esta resina de alta temperatura é crucial para processos de fabricação tradicionais que exigem precisão em peças de protótipo, incluindo moldagem de borracha vulcanizada e moldagem por injeção de alta temperatura.
+Ideal para trabalhos detalhados e aplicações resistentes a altas temperaturas
+Da gravação detalhada de modelos a tarefas de moldagem por injeção resistentes a altas temperaturas, a compatibilidade da resina garante que ela possa atender às diferentes demandas de amadores
+e profissionais, promovendo resultados de alta qualidade em uma variedade de configurações.
+A resina branca opaca oferece uma superfície fosca, tornando-a perfeita para impressão e gravação avançada de modelos de mesa.
+O HDT de 250°C garante que a resina possa suportar aplicações de alta temperatura, como moldagem por injeção.
 
 LINHA GERAL:
-- Spark (Alta precisão)
-- Alchemist (Efeitos especiais)
-- Flexform (Flexível)
-- Poseidon (Lavável em água)
+- Spark A linha Spark foi desenvolvida para criar peças com acabamento cristalino e visual limpo, essa resina se destaca pela alta pigmentação, cura 
+rápida e capacidade de personalização com cores vibrantes. Sua fórmula oferece uma excelente rigidez, sendo perfeita para objetos translúcidos que exigem alta resistência.
+
+- AlchemistA linha Alchemist foi especialmente criada para fornecer efeitos especiais em colecionáveis ​​e itens de decoração.
+ Com alta qualidade, ela oferece soluções, rápida polimerização e durabilidade. 
+ Suas cores translúcidas e vibrantes garantem um acabamento fosco após a limpeza com álcool isopropílico,
+ podendo ser refinado por lixamento ou aplicação de verniz. Indicada para peças decorativas, protótipos, acessórios e diversas outras aplicações.
+
+- FlexformA linha Flexform é projetada para protótipos Principais características
+Indicação: Indicada para protótipos e peças que exigem resistência e alto nível de flexibilidade.
+Alta Flexibilidade: Adaptação a diversas formas e condições sem comprometer a integridade estrutural.
+Durabilidade Robusta: Resistência a desgastes, impactos e outros danos mecânicos.
+Precisão Dimensional: Criação de peças com detalhes finos e complexos.
+
+- Poseidon A linha 70/30 destaca-se por sua combinação equilibrada de flexibilidade e resistência, proporcionando detalhes precisos e acabamento de qualidade superior.
+ É ideal para a criação de protótipos e peças que exigem durabilidade, como componentes flexíveis. No entanto, não é recomendada para a fabricação de peças com estruturas finas e 
+ suspensas, como asas de dragões, devido à sua composição específica. Devido à natureza química da resina, o uso de Equipamentos de Proteção Individual (EPI) é essencial para garantir a segurança durante o manuseio.
+ A Resina 70/30 da Quanton3D é uma escolha excelente para quem busca resultados de alta precisão e confiabilidade em impressões 3D.
+
 - LowSmell (Baixo odor)
 
 === CONTATO ===
 
-WhatsApp: (31) 98334-0053
+WhatsApp: (31)32716935
 Email: ronei3271@gmail.com
 Site: https://axtonronei.online
 
@@ -109,7 +192,7 @@ Segunda a Sexta: 9h às 18h
 Sábado: 9h às 13h
 
 Endereço:
-[Informação não disponível publicamente]
+AV Pedro II 5056 Jardin M0ntanhes
 
 === POLÍTICAS ===
 
