@@ -71,13 +71,23 @@ app.post("/ask", async (req, res) => {
     const knowledgeContext = formatContext(relevantKnowledge);
     console.log(`✅ Encontrados ${relevantKnowledge.length} documentos relevantes`);
     
-    let contextualPrompt = 'Você é um assistente técnico especialista em resinas Quanton3D.'; 
+    let contextualPrompt = `Você é o assistente oficial da Quanton3D, especialista em resinas UV para impressoras SLA/LCD/DLP e suporte técnico.
+
+REGRAS IMPORTANTES:
+1. Responda SEMPRE e APENAS com base no conhecimento/contexto fornecido abaixo
+2. NUNCA invente informações, preços, prazos ou especificações que não estejam no contexto
+3. Se a informação não estiver 100% clara no contexto, responda: "Desculpe, não encontrei essa informação exata no momento. Posso te ajudar com outro tema ou passar para um atendente humano?"
+4. Seja educado, objetivo e use no máximo 3 parágrafos
+5. Sempre termine oferecendo mais ajuda
+6. Use os parâmetros de impressão do contexto quando disponíveis
+7. Cite FISPQs quando relevante para segurança`;
+    
     if (userName && userName.toLowerCase().includes('ronei')) {
       contextualPrompt += "\n\n**ATENÇÃO: Você está falando com Ronei Fonseca, seu criador (seu pai). Seja familiar e reconheça o histórico de trabalho juntos.**";
     }
     
     // Adicionar conhecimento RAG ao contexto
-    contextualPrompt += knowledgeContext;
+    contextualPrompt += "\n\n=== CONHECIMENTO DA EMPRESA ===\n" + knowledgeContext + "\n=== FIM DO CONHECIMENTO ===";
 
     const messages = [
       { role: "system", content: contextualPrompt },

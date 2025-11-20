@@ -1,0 +1,269 @@
+TROUBLESHOOTING - PROBLEMAS COMUNS E SOLUÇÕES
+
+Este guia cobre os problemas mais comuns em impressão 3D de resina e suas soluções.
+
+=== 1. PEÇAS OCAS ESTÃO VAZANDO RESINA ===
+
+CAUSAS:
+- Falta de furos de drenagem
+- Furos muito pequenos
+- Resina não curada dentro da peça
+
+SOLUÇÕES:
+1. Sempre adicione 2-3 furos de drenagem (mínimo 2mm de diâmetro)
+2. Posicione furos na parte inferior da peça
+3. Lave bem a peça com IPA, agitando para remover resina interna
+4. Deixe secar completamente antes da pós-cura
+5. Se necessário, use seringa com IPA para lavar interior
+
+=== 2. IMPRESSÃO FALHANDO/NÃO ADERINDO À PLATAFORMA ===
+
+CAUSAS:
+- Plataforma desnivelada
+- Exposição base insuficiente
+- Temperatura muito baixa
+- Plataforma lisa demais
+
+SOLUÇÕES:
+1. Refaça nivelamento da plataforma (papel sulfite deve ter resistência leve)
+2. Aumente exposição base em 10-20s
+3. Aumente camadas base para 10-12
+4. Lixe levemente a plataforma com lixa 220-400
+5. Limpe plataforma com IPA antes de imprimir
+6. Verifique temperatura ambiente (ideal 25-30°C)
+7. Se temperatura baixa, pré-aqueça resina até 35-40°C máximo
+
+=== 3. PEÇA FICANDO MAIOR QUE DEVERIA ===
+
+CAUSAS:
+- Superexposição
+- Temperatura muito alta
+- UV da impressora muito forte
+
+SOLUÇÕES:
+1. Diminua tempo de exposição em 0,5-1s
+2. Faça teste de calibração com CALIBRADOR.STL
+3. Verifique temperatura ambiente (não deve passar de 35°C)
+4. Se impressora nova, UV pode estar muito forte - diminua exposição
+5. Verifique se resina está dentro da validade
+
+=== 4. CAMADAS DESCASCANDO/DELAMINAÇÃO ===
+
+CAUSAS:
+- Lift speed muito rápido
+- Lift distance insuficiente
+- Resina muito fria
+- FEP danificado
+
+SOLUÇÕES:
+1. Diminua lift speed para 50-60mm/min
+2. Aumente lift distance para 8-10mm
+3. Verifique temperatura da resina (ideal 25-30°C)
+4. Inspecione FEP - se turvo ou arranhado, substitua
+5. Limpe FEP com IPA e pano macio
+6. Aumente tempo de exposição em 0,5s
+
+=== 5. PEÇA GRUDANDO NO FEP ===
+
+CAUSAS:
+- Suportes insuficientes
+- Lift distance muito pequeno
+- FEP muito tensionado ou frouxo
+- Área de contato muito grande
+
+SOLUÇÕES:
+1. Adicione mais suportes, especialmente em áreas grandes
+2. Aumente lift distance para 8-10mm
+3. Diminua lift speed para 50-60mm/min
+4. Verifique tensão do FEP (deve soar como tambor ao bater levemente)
+5. Incline peça em 30-45° para reduzir área de contato
+6. Aplique PTFE dry lube no FEP (opcional)
+
+=== 6. DETALHES PERDIDOS/PEÇA SEM DEFINIÇÃO ===
+
+CAUSAS:
+- Superexposição
+- Resina muito velha
+- LCD/UV fraco
+- Altura de camada muito alta
+
+SOLUÇÕES:
+1. Diminua tempo de exposição em 0,5-1s
+2. Verifique validade da resina (12 meses)
+3. Teste potência do LCD/UV (pode enfraquecer com uso)
+4. Use altura de camada 0,05mm para máxima qualidade
+5. Limpe LCD com pano macio e IPA
+6. Agite bem a resina antes de usar
+
+=== 7. PEÇA COM FUROS/FALHAS ===
+
+CAUSAS:
+- Subexposição
+- Resina contaminada
+- Bolhas de ar
+- Temperatura muito baixa
+
+SOLUÇÕES:
+1. Aumente tempo de exposição em 0,5-1s
+2. Filtre resina antes de usar (coador de café ou malha fina)
+3. Agite resina suavemente para evitar bolhas
+4. Deixe resina descansar 5-10min após agitar
+5. Verifique temperatura ambiente (mínimo 20°C)
+6. Limpe tanque e FEP antes de imprimir
+
+=== 8. PEÇA QUEBRANDO FACILMENTE APÓS IMPRESSÃO ===
+
+CAUSAS:
+- Pós-cura excessiva
+- Resina errada para aplicação
+- Peça muito fina
+- Lavagem insuficiente
+
+SOLUÇÕES:
+1. Reduza tempo de pós-cura (5-15min geralmente suficiente)
+2. Verifique se resina é adequada (use Iron/7030 para peças resistentes)
+3. Aumente espessura de paredes para mínimo 2mm
+4. Lave bem com IPA antes da pós-cura
+5. Evite pós-cura ao sol (UV irregular)
+
+=== 9. PEÇA FICANDO PEGAJOSA APÓS LAVAGEM ===
+
+CAUSAS:
+- Lavagem insuficiente
+- IPA contaminado
+- Pós-cura não realizada
+- Resina não totalmente curada
+
+SOLUÇÕES:
+1. Lave por mais tempo (3-5 minutos)
+2. Use IPA limpo (troque quando ficar roxo/turvo)
+3. Faça pós-cura em câmara UV (10-15min)
+4. Seque completamente antes da pós-cura
+5. Lave em 2 etapas: 1º banho (2min) + 2º banho com IPA limpo (2min)
+
+=== 10. LINHAS/MARCAS HORIZONTAIS NA PEÇA ===
+
+CAUSAS:
+- FEP danificado
+- LCD com pixels mortos
+- Vibração durante impressão
+- Z-axis desalinhado
+
+SOLUÇÕES:
+1. Inspecione FEP - substitua se arranhado
+2. Teste LCD com arquivo de teste (quadrado branco)
+3. Coloque impressora em superfície estável
+4. Verifique parafusos do Z-axis
+5. Lubrifique Z-axis se necessário
+6. Evite tocar na impressora durante impressão
+
+=== 11. SUPORTES MUITO DIFÍCEIS DE REMOVER ===
+
+CAUSAS:
+- Suportes muito grossos
+- Ponto de contato muito grande
+- Pós-cura excessiva
+
+SOLUÇÕES:
+1. Use suportes médios ou leves quando possível
+2. Diminua tamanho do ponto de contato (0,3-0,4mm)
+3. Remova suportes ANTES da pós-cura
+4. Use alicate de corte fino
+5. Lixe suavemente após remoção
+6. Congele peça por 10min antes de remover (opcional)
+
+=== 12. RESINA VAZANDO DO TANQUE ===
+
+CAUSAS:
+- FEP rasgado
+- Tanque rachado
+- Parafusos do tanque frouxos
+
+SOLUÇÕES:
+1. Inspecione FEP - substitua se rasgado
+2. Verifique tanque por rachaduras
+3. Aperte parafusos do tanque uniformemente
+4. Não aperte demais (pode rachar tanque)
+5. Substitua O-ring se desgastado
+
+=== 13. IMPRESSORA NÃO LIGA/LCD NÃO ACENDE ===
+
+CAUSAS:
+- Cabo de alimentação solto
+- Fusível queimado
+- LCD danificado
+- Placa mãe com problema
+
+SOLUÇÕES:
+1. Verifique cabo de alimentação
+2. Teste tomada com outro aparelho
+3. Verifique fusível (geralmente atrás da impressora)
+4. Teste LCD com arquivo de teste
+5. Contate suporte técnico se problema persistir
+
+=== 14. PEÇA COM CHEIRO FORTE APÓS PÓS-CURA ===
+
+CAUSAS:
+- Lavagem insuficiente
+- Resina não totalmente curada
+- Pós-cura insuficiente
+
+SOLUÇÕES:
+1. Lave novamente com IPA por 3-5min
+2. Faça pós-cura adicional (5-10min)
+3. Deixe peça em local ventilado por 24h
+4. Use resina LowSmell para aplicações sensíveis
+5. Cheiro deve desaparecer após 48h
+
+=== 15. ARQUIVO STL NÃO ABRE NO SLICER ===
+
+CAUSAS:
+- Arquivo corrompido
+- Malha não manifold
+- Arquivo muito grande
+
+SOLUÇÕES:
+1. Repare arquivo no Meshmixer ou 3D Builder
+2. Use "Make Solid" no Meshmixer
+3. Reduza polígonos se arquivo muito pesado
+4. Tente outro slicer (Chitubox, Lychee, PrusaSlicer)
+5. Baixe arquivo novamente
+
+=== DICAS PREVENTIVAS ===
+
+MANUTENÇÃO REGULAR:
+1. Limpe FEP após cada impressão
+2. Filtre resina a cada 3-5 impressões
+3. Limpe LCD semanalmente
+4. Verifique nivelamento mensalmente
+5. Lubrifique Z-axis a cada 3 meses
+
+ARMAZENAMENTO:
+1. Mantenha resina em local escuro e fresco (18-35°C)
+2. Feche bem o frasco após uso
+3. Não deixe resina no tanque por mais de 1 semana
+4. Cubra tanque com papel alumínio se não for usar
+
+SEGURANÇA:
+1. SEMPRE use luvas ao manusear resina
+2. Use óculos de proteção
+3. Trabalhe em local ventilado
+4. Lave mãos após uso mesmo com luvas
+5. Descarte resina conforme legislação local
+6. Mantenha longe de crianças e animais
+
+=== QUANDO PROCURAR SUPORTE TÉCNICO ===
+
+Procure suporte se:
+- Problema persiste após todas as tentativas
+- Impressora faz ruídos estranhos
+- LCD apresenta manchas/pixels mortos
+- Vazamento de resina não identificado
+- Erro de firmware/software
+- Dúvidas sobre compatibilidade de resinas
+
+CONTATO QUANTON3D:
+- WhatsApp: (31) 98334-0053
+- Email: ronei3271@gmail.com
+- Site: https://axtonronei.online
+- Horário: Segunda a Sexta, 9h-18h

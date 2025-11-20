@@ -1,0 +1,265 @@
+PARÂMETROS DE IMPRESSÃO QUANTON3D
+
+Este documento contém parâmetros recomendados para impressão com resinas Quanton3D em diversas impressoras.
+Os valores são pontos de partida - ajustes podem ser necessários conforme ambiente e lote.
+
+=== PYROBLAST+ (Alta Temperatura) ===
+
+Altura de Camada: 0,05mm
+Exposição Normal: 3-4s
+Retract Speed: 150mm/min
+Lift Speed: 60mm/min
+Exposição Base: 40-50s
+Lift Distance: 6-8mm
+Camadas Base: 8-10
+Temperatura: 28-32°C
+
+Observações: Resina viscosa, agite bem antes de usar. Pós-cura obrigatória em 60°C por 30min.
+
+=== IRON 7030 (Mecânica) ===
+
+Altura de Camada: 0,05mm
+Tempo de Exposição: 2-6s
+Retract Speed: 150mm/min
+Lift Speed: 65mm/min
+Exposição Base: 30-60s
+Lift Distance: 6-8mm
+Camadas de Base: 8-10
+Temperatura: 28-32°C
+
+=== SPIN+ (Fundição/Castable) ===
+
+Altura de Camada: 0,05mm
+Tempo de Exposição: 2-6s
+Retract Speed: 150mm/min
+Lift Speed: 60mm/min
+Exposição Base: 30-60s
+Lift Distance: 6-8mm
+Camadas de Base: 8-10
+Temperatura: 28-32°C
+
+Observações: Ideal para joalheria, odontologia (fundição por cera perdida). Queima limpa sem resíduos.
+
+=== SPARK (Alta Precisão) ===
+
+Altura de Camada: 0,05mm
+Tempo de Exposição: 2-4s
+Retract Speed: 150mm/min
+Lift Speed: 60mm/min
+Exposição Base: 30-50s
+Lift Distance: 6-8mm
+Camadas de Base: 8-10
+Temperatura: 28-32°C
+
+=== FLEXFORM (Flexível) ===
+
+Altura de Camada: 0,05mm
+Tempo de Exposição: 3-6s
+Retract Speed: 120mm/min
+Lift Speed: 50mm/min
+Exposição Base: 35-60s
+Lift Distance: 7-9mm
+Camadas de Base: 8-12
+Temperatura: 28-32°C
+
+Observações: Resina flexível tipo borracha. Ideal para vedações, juntas, peças flexíveis.
+
+=== ALCHEMIST (Alta Precisão) ===
+
+Altura de Camada: 0,05mm
+Tempo de Exposição: 2-4s
+Retract Speed: 150mm/min
+Lift Speed: 60mm/min
+Exposição Base: 30-50s
+Lift Distance: 6-8mm
+Camadas de Base: 8-10
+Temperatura: 28-32°C
+
+=== LOWSMELL (Baixo Odor) ===
+
+Altura de Camada: 0,05mm
+Tempo de Exposição: 2-5s
+Retract Speed: 150mm/min
+Lift Speed: 60mm/min
+Exposição Base: 30-55s
+Lift Distance: 6-8mm
+Camadas de Base: 8-10
+Temperatura: 28-32°C
+
+=== POSEIDON (Lavável em Água) ===
+
+Altura de Camada: 0,05mm
+Tempo de Exposição: 2-5s
+Retract Speed: 150mm/min
+Lift Speed: 60mm/min
+Exposição Base: 30-55s
+Lift Distance: 6-8mm
+Camadas de Base: 8-10
+Temperatura: 28-32°C
+
+Observações: Lavável em água (sem necessidade de álcool). Baixo odor.
+
+=== CASTABLE (Fundição Profissional) ===
+
+Altura de Camada: 0,05mm
+Tempo de Exposição: 2-5s
+Retract Speed: 150mm/min
+Lift Speed: 60mm/min
+Exposição Base: 30-55s
+Lift Distance: 6-8mm
+Camadas de Base: 8-10
+Temperatura: 28-32°C
+
+=== ATHOM GENGIVA (Simulação de Gengiva) ===
+
+Altura de Camada: 0,05mm
+Tempo de Exposição: 3-6s
+Retract Speed: 150mm/min
+Lift Speed: 60mm/min
+Exposição Base: 35-60s
+Lift Distance: 6-8mm
+Camadas de Base: 8-10
+Temperatura: 28-32°C
+
+Cor: Rosa gengiva
+Observações: Resina para simulação de gengiva em modelos odontológicos
+
+=== ATHOM CASTABLE (Odontológica Fundição) ===
+
+Altura de Camada: 0,05mm
+Tempo de Exposição: 2-5s
+Retract Speed: 150mm/min
+Lift Speed: 60mm/min
+Exposição Base: 30-55s
+Lift Distance: 6-8mm
+Camadas de Base: 8-10
+Temperatura: 28-32°C
+
+Cor: Roxo
+Observações: Resina odontológica para fundição
+
+=== PARÂMETROS POR IMPRESSORA ===
+
+ANYCUBIC PHOTON MONO 4K:
+- Altura de Camada: 0,05mm
+- Exposição Normal: 2-3s
+- Exposição Base: 30-40s
+- Camadas Base: 8
+- Lift Distance: 6mm
+- Lift Speed: 60mm/min
+- Retract Speed: 150mm/min
+
+ELEGOO MARS 3:
+- Altura de Camada: 0,05mm
+- Exposição Normal: 2,5-3,5s
+- Exposição Base: 35-45s
+- Camadas Base: 8
+- Lift Distance: 7mm
+- Lift Speed: 65mm/min
+- Retract Speed: 150mm/min
+
+CREALITY HALOT-ONE:
+- Altura de Camada: 0,05mm
+- Exposição Normal: 2-3s
+- Exposição Base: 30-40s
+- Camadas Base: 8
+- Lift Distance: 6mm
+- Lift Speed: 60mm/min
+- Retract Speed: 150mm/min
+
+PHROZEN SONIC MINI 8K:
+- Altura de Camada: 0,05mm
+- Exposição Normal: 1,5-2,5s
+- Exposição Base: 25-35s
+- Camadas Base: 8
+- Lift Distance: 6mm
+- Lift Speed: 70mm/min
+- Retract Speed: 150mm/min
+
+EPAX X1:
+- Altura de Camada: 0,05mm
+- Exposição Normal: 8-10s
+- Exposição Base: 60-80s
+- Camadas Base: 8
+- Lift Distance: 6mm
+- Lift Speed: 60mm/min
+- Retract Speed: 150mm/min
+
+=== DICAS DE CALIBRAÇÃO ===
+
+1. TESTE DE EXPOSIÇÃO:
+   - Use arquivo CALIBRADOR.STL disponível no site
+   - Imprima com parâmetros iniciais
+   - Ajuste tempo de exposição até alcançar qualidade ideal
+   - Peça deve ter detalhes nítidos sem superexposição
+
+2. TEMPERATURA AMBIENTE:
+   - Ideal: 25-30°C
+   - Abaixo de 20°C: aumente exposição em 10-20%
+   - Acima de 35°C: diminua exposição em 10-20%
+
+3. ALTURA DE CAMADA:
+   - 0,05mm: máxima qualidade, mais lento
+   - 0,1mm: equilíbrio qualidade/velocidade
+   - 0,2mm: impressão rápida, menos detalhes
+
+4. LIFT DISTANCE:
+   - Peças pequenas: 6mm
+   - Peças médias: 7-8mm
+   - Peças grandes: 8-10mm
+
+5. VELOCIDADES:
+   - Lift Speed: 60-70mm/min (padrão)
+   - Retract Speed: 150mm/min (padrão)
+   - Diminua se houver falhas de adesão
+
+=== PÓS-CURA ===
+
+TEMPO DE PÓS-CURA (Câmara UV):
+- Pyroblast+: 30min a 60°C (obrigatório)
+- Iron 7030: 10-15min
+- Spin+: 10-15min
+- Spark: 5-10min
+- Alchemist: 5-10min
+- Flexform: 5-8min
+- Poseidon: 10-15min
+- LowSmell: 10-15min
+
+IMPORTANTE:
+- Lave bem com IPA antes da pós-cura
+- Seque completamente
+- Pós-cura melhora resistência mecânica
+- Exposição excessiva pode deixar peça quebradiça
+
+=== TROUBLESHOOTING DE PARÂMETROS ===
+
+PROBLEMA: Peça não adere à plataforma
+SOLUÇÃO:
+- Aumente exposição base em 10-20s
+- Aumente camadas base para 10-12
+- Verifique nivelamento da plataforma
+- Lixe levemente a plataforma
+
+PROBLEMA: Peça com falhas/buracos
+SOLUÇÃO:
+- Aumente tempo de exposição em 0,5-1s
+- Verifique temperatura ambiente
+- Agite bem a resina antes de usar
+
+PROBLEMA: Peça superexposta (detalhes perdidos)
+SOLUÇÃO:
+- Diminua tempo de exposição em 0,5-1s
+- Verifique se UV da impressora não está muito forte
+
+PROBLEMA: Camadas descascando
+SOLUÇÃO:
+- Diminua lift speed
+- Aumente lift distance
+- Verifique FEP/LCD
+
+PROBLEMA: Peça grudando no FEP
+SOLUÇÃO:
+- Aumente lift distance
+- Diminua lift speed
+- Adicione mais suportes
+- Verifique tensão do FEP

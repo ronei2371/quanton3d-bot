@@ -1,0 +1,330 @@
+QUANTON3D - INFORMAÇÕES DA EMPRESA
+
+=== SOBRE A QUANTON3D ===
+
+A Quanton3D é uma fabricante nacional de resinas UV para impressoras 3D SLA/LCD/DLP.
+Somos especializados em desenvolver resinas de alta performance para o mercado brasileiro.
+
+MISSÃO:
+Fornecer resinas de alta qualidade com suporte técnico especializado, atendendo às necessidades específicas do mercado brasileiro de impressão 3D.
+
+VISÃO:
+Ser referência nacional em resinas UV para impressão 3D, reconhecida pela qualidade, inovação e atendimento diferenciado.
+
+VALORES:
+- Qualidade acima de tudo
+- Suporte técnico especializado
+- Inovação constante
+- Compromisso com o cliente
+- Sustentabilidade e responsabilidade ambiental
+
+=== DIFERENCIAIS ===
+
+1. FABRICANTE NACIONAL:
+   - Entendemos o mercado brasileiro
+   - Resinas otimizadas para clima tropical
+   - Suporte em português
+   - Comunicação direta com fabricante
+   - Melhor custo-benefício que importadas
+
+2. CONTROLE DE QUALIDADE:
+   - Cada lote passa por testes rigorosos
+   - Análise de matéria-prima antes da produção
+   - Testes de viscosidade, tempo de cura e resistência mecânica
+   - Verificação de cor e transparência
+   - Testes de compatibilidade com diferentes impressoras
+   - Rastreabilidade completa de lotes
+
+3. MATÉRIA-PRIMA PREMIUM:
+   - Fotoiniciadores e monômeros de fornecedores certificados
+   - Componentes importados de alta qualidade
+   - Consistência entre lotes garantida
+   - Sem aditivos de baixa qualidade
+
+4. CERTIFICAÇÕES:
+   - Todas as resinas possuem FISPQ completa
+   - Certificados de conformidade
+   - Registro completo conforme legislação brasileira
+   - Documentação técnica disponível
+
+5. SUPORTE TÉCNICO:
+   - Atendimento especializado em português
+   - Parâmetros de impressão para diversas impressoras
+   - Guias de troubleshooting detalhados
+   - Atendimento direto com fabricante
+   - Resposta rápida via WhatsApp e email
+
+=== EQUIPE ===
+
+Ronei Fonseca - Diretor Operacional
+- Especialista em impressão 3D de resina
+- Responsável por desenvolvimento de produtos
+- Atendimento técnico especializado
+
+Gislen - Diretora Financeira
+- Gestão financeira e administrativa
+- Controle de qualidade
+
+Mike - Diretor Administrativo
+- Gestão de operações
+- Logística e distribuição
+
+Erick - Diretor Geral
+- Visão estratégica da empresa
+- Desenvolvimento de negócios
+
+Tatiana - Administradora
+- Gestão administrativa
+- Atendimento ao cliente
+
+=== LINHAS DE PRODUTOS ===
+
+LINHA PROFISSIONAL:
+- Pyroblast+ (Alta temperatura)
+- Iron 7030 (Mecânica)
+- Spin+ (Fundição)
+- Castable (Fundição profissional)
+
+LINHA ODONTOLÓGICA:
+- Athom Dental (Modelos de estudo)
+- Athom Alinhadores (Modelos para alinhadores)
+- Athom Gengiva (Simulação de gengiva)
+- Athom Castable (Fundição odontológica)
+
+LINHA GERAL:
+- Spark (Alta precisão)
+- Alchemist (Efeitos especiais)
+- Flexform (Flexível)
+- Poseidon (Lavável em água)
+- LowSmell (Baixo odor)
+
+=== CONTATO ===
+
+WhatsApp: (31) 98334-0053
+Email: ronei3271@gmail.com
+Site: https://axtonronei.online
+
+Horário de Atendimento:
+Segunda a Sexta: 9h às 18h
+Sábado: 9h às 13h
+
+Endereço:
+[Informação não disponível publicamente]
+
+=== POLÍTICAS ===
+
+GARANTIA:
+- Todas as resinas têm garantia de qualidade
+- Troca em caso de defeito de fabricação
+- Validade de 12 meses a partir da data de fabricação
+
+DEVOLUÇÃO:
+- Aceita devolução de produtos com defeito
+- Prazo de 7 dias para comunicar problema
+- Produto deve estar lacrado para troca (exceto defeito)
+
+ENVIO:
+- Enviamos para todo o Brasil
+- Frete calculado conforme região
+- Embalagem segura para transporte
+- Rastreamento de pedidos
+
+PAGAMENTO:
+- Cartão de crédito
+- PIX
+- Boleto bancário
+- Transferência bancária
+
+=== SUSTENTABILIDADE ===
+
+COMPROMISSO AMBIENTAL:
+- Descarte responsável de resíduos
+- Orientação aos clientes sobre descarte correto
+- Embalagens recicláveis
+- Processo produtivo com menor impacto ambiental possível
+
+DESCARTE CORRETO DE RESINA:
+1. NUNCA descarte resina líquida no esgoto ou lixo comum
+2. Cure resina residual ao sol até solidificar completamente
+3. Descarte resina curada como resíduo sólido
+4. IPA contaminado deve ser descartado em local apropriado
+5. Consulte legislação local para descarte de resíduos químicos
+
+=== PERGUNTAS FREQUENTES ===
+
+P: Resinas Quanton3D funcionam em qualquer impressora?
+R: Sim! Nossas resinas são compatíveis com impressoras SLA/LCD/DLP que usam UV 395-405nm. Fornecemos parâmetros para diversas impressoras.
+
+P: Qual a validade das resinas?
+R: 12 meses a partir da data de fabricação, quando armazenadas corretamente (18-35°C, local escuro e ventilado).
+
+P: Preciso de pós-cura?
+R: Sim, recomendamos pós-cura para todas as resinas. Melhora resistência mecânica e finaliza cura completa. Pyroblast+ requer pós-cura obrigatória a 60°C.
+
+P: Posso misturar resinas diferentes?
+R: Não recomendamos. Cada resina tem formulação específica. Misturar pode comprometer propriedades e qualidade.
+
+P: Como faço calibração inicial?
+R: Use arquivo CALIBRADOR.STL disponível no site, comece com parâmetros recomendados e ajuste até alcançar qualidade ideal.
+
+P: Resinas são tóxicas?
+R: Sim, resinas UV são produtos químicos que requerem cuidados. SEMPRE use EPIs (luvas, óculos, máscara). Nenhuma resina é biocompatível - apenas para uso externo.
+
+P: Qual resina escolher para meu projeto?
+R: Depende da aplicação:
+- Peças mecânicas: Iron 7030
+- Alta temperatura: Pyroblast+
+- Fundição: Spin+ ou Castable
+- Flexível: Flexform
+- Baixo odor: LowSmell ou Poseidon
+- Alta precisão: Spark ou Alchemist
+- Odontologia: Linha Athom
+
+P: Fornecem suporte técnico?
+R: Sim! Atendimento especializado via WhatsApp e email. Ajudamos com calibração, troubleshooting e dúvidas técnicas.
+
+P: Onde comprar resinas Quanton3D?
+R: Direto pelo site https://axtonronei.online ou WhatsApp (31) 98334-0053
+
+P: Fazem formulações customizadas?
+R: Sim! Entre em contato para projetos especiais. Desenvolvemos resinas sob medida para necessidades específicas.
+
+=== ALERTA IMPORTANTE: RESINAS CHINESAS SEM REGISTRO ===
+
+CUIDADO ao usar produtos químicos sem registro no Brasil!
+
+RISCOS DE RESINAS NÃO REGISTRADAS:
+
+1. SAÚDE:
+   - Composição desconhecida pode causar alergias, irritações ou intoxicação
+   - Sem informações de segurança adequadas
+   - Risco de contaminação
+
+2. LEGAL:
+   - Uso de produtos não regulamentados pode gerar responsabilidade civil e criminal
+   - Falta de documentação legal
+   - Problemas em fiscalizações
+
+3. QUALIDADE:
+   - Sem controle de qualidade
+   - Resultados imprevisíveis
+   - Inconsistências entre lotes
+   - Possível contaminação
+
+4. MEIO AMBIENTE:
+   - Descarte inadequado pode contaminar solo e água
+   - Composição desconhecida dificulta descarte correto
+
+5. SEGURANÇA:
+   - Ausência de FISPQ
+   - Falta de instruções adequadas de manuseio
+   - Sem rastreabilidade em caso de problemas
+
+VANTAGENS DAS RESINAS QUANTON3D:
+✅ Registro completo e conformidade com legislação brasileira
+✅ FISPQ disponível para todas as resinas
+✅ Controle rigoroso de qualidade em cada lote
+✅ Suporte técnico especializado
+✅ Garantia de origem e rastreabilidade
+✅ Componentes certificados
+✅ Segurança para você e seus clientes
+
+=== CASOS DE SUCESSO ===
+
+ODONTOLOGIA:
+Diversos dentistas utilizam nossas resinas Athom para modelos de estudo e alinhadores, com resultados precisos e confiáveis.
+
+JOALHERIA:
+Joalheiros profissionais confiam na Spin+ para fundição de peças delicadas, com queima limpa e sem resíduos.
+
+PROTOTIPAGEM INDUSTRIAL:
+Empresas usam Iron 7030 para protótipos funcionais que precisam resistir a testes mecânicos.
+
+MINIATURAS E COLECIONÁVEIS:
+Artistas escolhem Alchemist e Spark para miniaturas com detalhes incríveis e cores vibrantes.
+
+=== INOVAÇÃO E DESENVOLVIMENTO ===
+
+Estamos constantemente desenvolvendo novas resinas e melhorando as existentes.
+
+LANÇAMENTOS RECENTES:
+- Pyroblast+ (Alta temperatura)
+- Athom Alinhadores (Odontologia)
+- LowSmell (Baixo odor)
+
+EM DESENVOLVIMENTO:
+- Novas cores para linha Alchemist
+- Resinas com propriedades especiais
+- Formulações customizadas sob demanda
+
+FEEDBACK DOS CLIENTES:
+Valorizamos o feedback! Suas sugestões nos ajudam a melhorar produtos e desenvolver novas soluções.
+
+=== TREINAMENTOS E WORKSHOPS ===
+
+Oferecemos:
+- Orientação técnica gratuita via WhatsApp
+- Guias completos no site
+- Suporte para calibração
+- Dicas de troubleshooting
+- Parâmetros atualizados
+
+CONTEÚDO EDUCATIVO:
+- Guia completo de impressão 3D de resina
+- Vídeos tutoriais (em desenvolvimento)
+- Blog com dicas e novidades
+- FAQ detalhado
+
+=== PARCERIAS ===
+
+Estamos abertos a parcerias com:
+- Revendedores
+- Escolas e universidades
+- Empresas de prototipagem
+- Profissionais da área odontológica
+- Joalherias e ateliês
+
+Entre em contato para discutir oportunidades de parceria!
+
+=== RESPONSABILIDADE SOCIAL ===
+
+EDUCAÇÃO:
+- Apoio a projetos educacionais
+- Orientação técnica gratuita
+- Compartilhamento de conhecimento
+
+COMUNIDADE:
+- Participação ativa em comunidades de impressão 3D
+- Suporte a makers e entusiastas
+- Incentivo à inovação
+
+=== CERTIFICAÇÕES E CONFORMIDADE ===
+
+FISPQS DISPONÍVEIS:
+- Iron 7030
+- Spin+
+- Iron Skin
+- LowSmell
+- Poseidon
+- Pyroblast+
+- Spark
+
+CONFORMIDADE:
+- Legislação brasileira de produtos químicos
+- Normas de segurança
+- Rastreabilidade de lotes
+- Documentação técnica completa
+
+=== VISÃO DE FUTURO ===
+
+Nosso objetivo é continuar sendo referência em resinas UV no Brasil, expandindo nossa linha de produtos e mantendo o compromisso com qualidade e atendimento diferenciado.
+
+METAS:
+- Ampliar linha de produtos
+- Desenvolver resinas com propriedades especiais
+- Expandir rede de distribuição
+- Fortalecer suporte técnico
+- Investir em sustentabilidade
+
+Conte com a Quanton3D para seus projetos de impressão 3D!
+Qualidade, suporte e inovação - sempre ao seu lado.
