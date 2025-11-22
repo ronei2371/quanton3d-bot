@@ -119,16 +119,18 @@ BOAS PRÁTICAS:
 - Considere dividir peças muito grandes
 ```
 
-**6. ESCOLHA DA RESINA:**
+**6. ESCOLHA DA RESINA QUANTON3D:**
 ```
-RESINAS MAIS RESISTENTES A RACHADURAS:
+RESINAS QUANTON3D MAIS RESISTENTES A RACHADURAS:
 - Iron 7030: Boa resistência mecânica e flexibilidade
 - Flexform: Para peças que precisam absorver tensões
 - Spin+: Rigidez com leve flexibilidade
+- Poseidon: Ótima para peças grandes e funcionais
 
-EVITE PARA PEÇAS CRÍTICAS:
-- Resinas muito rígidas em peças grandes
-- Resinas vencidas ou mal armazenadas
+IMPORTANTE:
+- Sempre use resinas dentro da validade (12 meses)
+- Armazene corretamente (18-35°C, protegido da luz)
+- Todas as resinas Quanton3D são de alta qualidade
 ```
 
 === TRATAMENTO DE PEÇAS JÁ IMPRESSAS ===
