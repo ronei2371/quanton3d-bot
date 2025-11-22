@@ -15,7 +15,17 @@ import path from 'path';
 dotenv.config();
 
 // ===== SISTEMA DE PERSISTÊNCIA =====
-const DATA_FILE = path.join(process.cwd(), 'data-persistence.json');
+// Usa disco persistente do Render se disponível, senão usa pasta atual
+const DATA_DIR = process.env.RENDER_DISK_PATH || process.cwd();
+const DATA_FILE = path.join(DATA_DIR, 'data-persistence.json');
+
+// Criar diretório se não existir
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  console.log(`📁 Diretório criado: ${DATA_DIR}`);
+}
+
+console.log(`💾 Usando caminho de persistência: ${DATA_FILE}`);
 
 // Função para carregar dados do arquivo
 function loadData() {
