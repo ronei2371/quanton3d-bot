@@ -1,0 +1,251 @@
+PEÇAS RACHANDO APÓS IMPRESSÃO - CAUSAS E SOLUÇÕES
+
+Este documento aborda o problema comum de peças impressas em resina que racham ou quebram após alguns dias ou semanas.
+
+=== POR QUE PEÇAS RACHAM APÓS ALGUNS DIAS? ===
+
+O problema de peças rachando após impressão geralmente está relacionado a **tensões internas** que se acumulam durante o processo de cura e pós-cura. Essas tensões podem se manifestar dias ou semanas depois, causando rachaduras espontâneas.
+
+=== CAUSAS PRINCIPAIS ===
+
+1. **PÓS-CURA EXCESSIVA OU IRREGULAR**
+   - Exposição prolongada a UV causa cura excessiva na superfície
+   - Interior da peça cura em ritmo diferente
+   - Cria tensões internas que eventualmente causam rachaduras
+   - Especialmente crítico em peças espessas ou ocas
+
+2. **LAVAGEM INSUFICIENTE**
+   - Resina não curada permanece na superfície ou interior
+   - Continua curando lentamente ao longo dos dias
+   - Expansão desigual causa tensões e rachaduras
+   - Comum em peças ocas sem furos de drenagem adequados
+
+3. **MUDANÇAS DE TEMPERATURA E UMIDADE**
+   - Peças absorvem umidade do ar
+   - Expansão e contração com variações térmicas
+   - Materiais com diferentes coeficientes de expansão
+   - Especialmente problemático em climas úmidos
+
+4. **CURA INCOMPLETA DURANTE IMPRESSÃO**
+   - Subexposição durante impressão
+   - Camadas não aderem completamente
+   - Delaminação progressiva ao longo do tempo
+   - Agravado por estresse mecânico
+
+5. **RESINA VENCIDA OU MAL ARMAZENADA**
+   - Resina fora da validade (12 meses)
+   - Armazenamento em temperatura inadequada
+   - Exposição à luz solar
+   - Componentes degradados causam cura irregular
+
+6. **GEOMETRIA DA PEÇA**
+   - Paredes muito finas (<1mm)
+   - Transições bruscas de espessura
+   - Áreas com concentração de tensão
+   - Peças ocas sem alívio de pressão
+
+=== SOLUÇÕES E PREVENÇÃO ===
+
+**1. PÓS-CURA ADEQUADA:**
+```
+TEMPO RECOMENDADO (Câmara UV):
+- Peças pequenas (<5cm): 5-10 minutos
+- Peças médias (5-15cm): 10-15 minutos
+- Peças grandes (>15cm): 15-20 minutos máximo
+
+IMPORTANTE:
+- NÃO exceda 20 minutos de pós-cura
+- Vire a peça na metade do tempo para cura uniforme
+- Use câmara UV com rotação automática (ideal)
+- Evite pós-cura ao sol (UV irregular)
+```
+
+**2. LAVAGEM CORRETA:**
+```
+PROTOCOLO DE LAVAGEM:
+1. Primeiro banho IPA (2-3 minutos)
+   - Agite suavemente
+   - Use escova macia em áreas complexas
+
+2. Segundo banho IPA limpo (2-3 minutos)
+   - Remove resina residual
+   - IPA deve estar transparente
+
+3. Secagem completa
+   - Deixe secar ao ar por 10-15 minutos
+   - Use ar comprimido em cavidades
+   - Verifique se não há resina líquida
+
+PARA PEÇAS OCAS:
+- Faça 2-3 furos de drenagem (mínimo 2mm)
+- Lave interior com seringa de IPA
+- Deixe drenar completamente
+- Seque com ar comprimido
+```
+
+**3. CONTROLE DE AMBIENTE:**
+```
+ARMAZENAMENTO IDEAL:
+- Temperatura: 18-25°C (estável)
+- Umidade: 40-60%
+- Longe de luz solar direta
+- Em local ventilado
+
+EVITE:
+- Deixar peças no carro (variação térmica)
+- Ambientes muito úmidos (>70%)
+- Mudanças bruscas de temperatura
+- Exposição prolongada ao sol
+```
+
+**4. TÉCNICA DE IMPRESSÃO:**
+```
+PARÂMETROS PARA EVITAR RACHADURAS:
+- Não subexponha (teste de calibração)
+- Use altura de camada adequada (0,05mm ideal)
+- Adicione suportes suficientes
+- Evite grandes áreas sólidas sem drenagem
+- Incline peças em 30-45° quando possível
+```
+
+**5. DESIGN DA PEÇA:**
+```
+BOAS PRÁTICAS:
+- Espessura mínima de parede: 2mm
+- Adicione filetes em cantos (raio mínimo 0,5mm)
+- Evite mudanças bruscas de espessura
+- Adicione nervuras de reforço em áreas grandes
+- Peças ocas: sempre com furos de drenagem
+- Considere dividir peças muito grandes
+```
+
+**6. ESCOLHA DA RESINA:**
+```
+RESINAS MAIS RESISTENTES A RACHADURAS:
+- Iron 7030: Boa resistência mecânica e flexibilidade
+- Flexform: Para peças que precisam absorver tensões
+- Spin+: Rigidez com leve flexibilidade
+
+EVITE PARA PEÇAS CRÍTICAS:
+- Resinas muito rígidas em peças grandes
+- Resinas vencidas ou mal armazenadas
+```
+
+=== TRATAMENTO DE PEÇAS JÁ IMPRESSAS ===
+
+**PREVENÇÃO APÓS IMPRESSÃO:**
+1. Lave muito bem (protocolo acima)
+2. Seque completamente
+3. Pós-cura moderada (não exceda tempo)
+4. Deixe "descansar" 24h antes de uso intenso
+5. Armazene em ambiente controlado
+
+**SE PEÇA JÁ ESTÁ RACHANDO:**
+1. Identifique causa (checklist acima)
+2. Para rachaduras pequenas:
+   - Lixe levemente área rachada
+   - Aplique resina líquida na rachadura
+   - Cure com UV portátil (30-60s)
+   - Lixe e pinte se necessário
+
+3. Para rachaduras grandes:
+   - Considere reimprimir com correções
+   - Revise parâmetros de impressão
+   - Ajuste pós-cura
+
+=== CHECKLIST DE DIAGNÓSTICO ===
+
+Se suas peças estão rachando, verifique:
+
+☐ Resina está dentro da validade?
+☐ Resina foi armazenada corretamente (18-35°C, escuro)?
+☐ Lavagem foi completa (2 banhos de IPA)?
+☐ Peça secou completamente antes da pós-cura?
+☐ Tempo de pós-cura foi adequado (não excessivo)?
+☐ Peças ocas têm furos de drenagem?
+☐ Ambiente de armazenamento é estável?
+☐ Parâmetros de impressão estão calibrados?
+☐ Peça tem espessura adequada (>2mm)?
+☐ Houve mudanças bruscas de temperatura?
+
+=== CASOS ESPECÍFICOS ===
+
+**MINIATURAS E PEÇAS PEQUENAS:**
+- Rachaduras geralmente por pós-cura excessiva
+- Reduza tempo de pós-cura para 5-8 minutos
+- Lave muito bem (resina acumula em detalhes)
+
+**PEÇAS GRANDES E OCAS:**
+- Rachaduras por tensão interna e drenagem ruim
+- SEMPRE adicione múltiplos furos de drenagem
+- Lave interior com seringa
+- Pós-cura em etapas (10min + vire + 5min)
+
+**PEÇAS FUNCIONAIS:**
+- Rachaduras por estresse mecânico + tensão interna
+- Use resinas mais resistentes (Iron 7030)
+- Aumente espessura de paredes críticas
+- Adicione nervuras de reforço
+
+**PEÇAS EXPOSTAS AO SOL:**
+- UV contínuo causa degradação
+- Pinte ou envernize após impressão
+- Use resinas com maior resistência UV
+- Evite exposição prolongada
+
+=== DICAS PROFISSIONAIS ===
+
+1. **TESTE DE TENSÃO:**
+   - Após pós-cura, deixe peça 48h em repouso
+   - Se rachar nesse período, ajuste processo
+   - Peças que passam 48h geralmente são estáveis
+
+2. **RECOZIMENTO (ANNEALING):**
+   - Para peças críticas, faça "recozimento"
+   - Aqueça peça gradualmente a 40-50°C por 1h
+   - Deixe esfriar lentamente
+   - Alivia tensões internas
+
+3. **DOCUMENTAÇÃO:**
+   - Anote parâmetros de peças bem-sucedidas
+   - Registre problemas e soluções
+   - Crie "receitas" para diferentes aplicações
+
+4. **TESTES PERIÓDICOS:**
+   - Faça peça de teste a cada novo lote de resina
+   - Monitore por 1 semana
+   - Ajuste processo se necessário
+
+=== QUANDO PROCURAR SUPORTE ===
+
+Entre em contato com Quanton3D se:
+- Problema persiste após todas as tentativas
+- Rachaduras ocorrem mesmo com processo correto
+- Suspeita de problema com lote de resina
+- Precisa de orientação para aplicação específica
+
+**CONTATO:**
+- WhatsApp: (31) 98334-0053
+- Email: ronei3271@gmail.com
+- Horário: Segunda a Sexta, 9h-18h
+
+=== RESUMO RÁPIDO ===
+
+**PRINCIPAIS CAUSAS:**
+1. Pós-cura excessiva
+2. Lavagem insuficiente
+3. Resina não curada no interior
+4. Variação de temperatura/umidade
+5. Tensões internas acumuladas
+
+**SOLUÇÃO PRINCIPAL:**
+1. Lave MUITO BEM (2 banhos IPA)
+2. Seque COMPLETAMENTE
+3. Pós-cura MODERADA (10-15min máximo)
+4. Armazene em ambiente ESTÁVEL
+5. Use furos de drenagem em peças ocas
+
+**LEMBRE-SE:**
+Mais pós-cura NÃO é melhor! Excesso causa mais problemas que falta.
+Lavagem adequada é CRÍTICA para evitar rachaduras tardias.
+Ambiente estável é essencial para durabilidade das peças.

@@ -9,8 +9,52 @@ import dotenv from "dotenv";
 import OpenAI from "openai";
 import multer from "multer";
 import { initializeRAG, searchKnowledge, formatContext } from './rag-search.js';
+import fs from 'fs';
+import path from 'path';
 
 dotenv.config();
+
+// ===== SISTEMA DE PERSISTÊNCIA =====
+const DATA_FILE = path.join(process.cwd(), 'data-persistence.json');
+
+// Função para carregar dados do arquivo
+function loadData() {
+  try {
+    if (fs.existsSync(DATA_FILE)) {
+      const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+      console.log('✅ Dados carregados do arquivo de persistência');
+      return data;
+    }
+  } catch (err) {
+    console.error('⚠️ Erro ao carregar dados:', err.message);
+  }
+  return {
+    conversationMetrics: [],
+    userRegistrations: [],
+    knowledgeSuggestions: [],
+    customRequests: []
+  };
+}
+
+// Função para salvar dados no arquivo
+function saveData() {
+  try {
+    const data = {
+      conversationMetrics,
+      userRegistrations,
+      knowledgeSuggestions,
+      customRequests,
+      lastSaved: new Date().toISOString()
+    };
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    console.log('💾 Dados salvos com sucesso');
+  } catch (err) {
+    console.error('❌ Erro ao salvar dados:', err.message);
+  }
+}
+
+// Carregar dados ao iniciar
+const persistedData = loadData();
 
 const app = express();
 app.use(cors());
@@ -33,13 +77,16 @@ const openai = new OpenAI({
 const conversationHistory = new Map();
 
 // Sugestões de conhecimento e pedidos customizados pendentes
-const knowledgeSuggestions = [];
-const customRequests = []; // Array para pedidos customizados
+const knowledgeSuggestions = persistedData.knowledgeSuggestions || [];
+const customRequests = persistedData.customRequests || []; // Array para pedidos customizados
 
 // Métricas e Analytics
-const conversationMetrics = []; // Todas as conversas
-const userRegistrations = []; // Cadastros de usuários
+const conversationMetrics = persistedData.conversationMetrics || []; // Todas as conversas
+const userRegistrations = persistedData.userRegistrations || []; // Cadastros de usuários
 const siteVisits = []; // Visitas ao site
+
+// Salvar dados a cada 30 segundos
+setInterval(saveData, 30000);
 
 // Rota principal de teste
 app.get("/", (req, res) => {
