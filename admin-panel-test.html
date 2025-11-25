@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin - Teste Local</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .suggestion {
+            border: 1px solid #ddd;
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        .suggestion.approved {
+            border-color: #4CAF50;
+            background: #f1f8e9;
+        }
+        .suggestion.rejected {
+            border-color: #f44336;
+            background: #ffebee;
+        }
+        .suggestion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .suggestion-meta {
+            font-size: 0.9em;
+            color: #666;
+        }
+        .suggestion-content {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 3px;
+        }
+        .actions {
+            margin-top: 15px;
+        }
+        .btn {
+            padding: 8px 16px;
+            margin: 0 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-approve {
+            background: #4CAF50;
+            color: white;
+        }
+        .btn-reject {
+            background: #f44336;
+            color: white;
+        }
+        .btn-refresh {
+            background: #2196F3;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.8;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status.approved {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .rag-status {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Painel Admin - Quanton3D Bot</h1>
+            <p>Teste Local - Gerenciamento de Sugestões</p>
+        </div>
+
+        <div id="rag-status" class="rag-status">
+            <h3>📊 Status do RAG</h3>
+            <div id="rag-info">Carregando...</div>
+            <button class="btn btn-refresh" onclick="checkRAGStatus()">Verificar Status</button>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <button class="btn btn-refresh" onclick="loadSuggestions()">🔄 Atualizar Lista</button>
+            <span id="total-count" style="margin-left: 15px; color: #666;"></span>
+        </div>
+
+        <div id="message-area"></div>
+        
+        <div id="loading" class="loading" style="display: none;">
+            Carregando sugestões...
+        </div>
+
+        <div id="suggestions-container">
+            <!-- Sugestões serão carregadas aqui -->
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001';
+        const AUTH_TOKEN = 'quanton3d_admin_secret';
+
+        // Função para mostrar mensagens
+        function showMessage(message, type = 'success') {
+            const messageArea = document.getElementById('message-area');
+            messageArea.innerHTML = `<div class="${type}">${message}</div>`;
+            setTimeout(() => {
+                messageArea.innerHTML = '';
+            }, 5000);
+        }
+
+        // Função para verificar status do RAG
+        async function checkRAGStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/rag-status?auth=${AUTH_TOKEN}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const status = data.status;
+                    const healthIcon = status.isHealthy ? '✅' : '⚠️';
+                    document.getElementById('rag-info').innerHTML = `
+                        ${healthIcon} <strong>Status:</strong> ${status.isHealthy ? 'Saudável' : 'Precisa Atenção'}<br>
+                        📁 Arquivos de Conhecimento: ${status.knowledgeFiles}<br>
+                        💾 Entradas no Database: ${status.databaseEntries}<br>
+                        🔍 Status do Database: ${status.databaseStatus}<br>
+                        🕒 Última Verificação: ${new Date(status.lastCheck).toLocaleString('pt-BR')}
+                    `;
+                } else {
+                    document.getElementById('rag-info').innerHTML = '❌ Erro ao verificar status';
+                }
+            } catch (error) {
+                document.getElementById('rag-info').innerHTML = '❌ Erro de conexão';
+                console.error('Erro ao verificar RAG:', error);
+            }
+        }
+
+        // Função para carregar sugestões
+        async function loadSuggestions() {
+            const loading = document.getElementById('loading');
+            const container = document.getElementById('suggestions-container');
+            
+            loading.style.display = 'block';
+            container.innerHTML = '';
+
+            try {
+                const response = await fetch(`${API_BASE}/suggestions?auth=${AUTH_TOKEN}`);
+                const data = await response.json();
+
+                loading.style.display = 'none';
+
+                if (data.success) {
+                    const suggestions = data.suggestions;
+                    document.getElementById('total-count').textContent = `Total: ${suggestions.length} sugestões`;
+
+                    if (suggestions.length === 0) {
+                        container.innerHTML = '<div class="loading">Nenhuma sugestão encontrada.</div>';
+                        return;
+                    }
+
+                    // Ordenar por data (mais recentes primeiro)
+                    suggestions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                    suggestions.forEach(suggestion => {
+                        const suggestionDiv = document.createElement('div');
+                        suggestionDiv.className = `suggestion ${suggestion.status}`;
+                        
+                        const statusClass = suggestion.status || 'pending';
+                        const statusText = {
+                            'pending': 'Pendente',
+                            'approved': 'Aprovado',
+                            'rejected': 'Rejeitado'
+                        }[statusClass] || 'Desconhecido';
+
+                        suggestionDiv.innerHTML = `
+                            <div class="suggestion-header">
+                                <div>
+                                    <strong>${suggestion.userName || 'Usuário Anônimo'}</strong>
+                                    <span class="status ${statusClass}">${statusText}</span>
+                                </div>
+                                <div class="suggestion-meta">
+                                    ID: ${suggestion.id} | ${new Date(suggestion.timestamp).toLocaleString('pt-BR')}
+                                </div>
+                            </div>
+                            
+                            <div class="suggestion-content">
+                                <strong>Sugestão:</strong><br>
+                                ${suggestion.suggestion}
+                            </div>
+                            
+                            ${suggestion.userPhone ? `<div class="suggestion-meta">📞 ${suggestion.userPhone}</div>` : ''}
+                            
+                            ${suggestion.approvedAt ? `<div class="suggestion-meta">✅ Aprovado em: ${new Date(suggestion.approvedAt).toLocaleString('pt-BR')}</div>` : ''}
+                            ${suggestion.rejectedAt ? `<div class="suggestion-meta">❌ Rejeitado em: ${new Date(suggestion.rejectedAt).toLocaleString('pt-BR')}</div>` : ''}
+                            ${suggestion.fileName ? `<div class="suggestion-meta">📁 Arquivo: ${suggestion.fileName}</div>` : ''}
+                            
+                            <div class="actions">
+                                ${suggestion.status === 'pending' ? `
+                                    <button class="btn btn-approve" onclick="approveSuggestion(${suggestion.id})">
+                                        ✅ Aprovar
+                                    </button>
+                                    <button class="btn btn-reject" onclick="rejectSuggestion(${suggestion.id})">
+                                        ❌ Rejeitar
+                                    </button>
+                                ` : `
+                                    <em>Ação já realizada</em>
+                                `}
+                            </div>
+                        `;
+                        
+                        container.appendChild(suggestionDiv);
+                    });
+                } else {
+                    showMessage('Erro ao carregar sugestões: ' + data.message, 'error');
+                }
+            } catch (error) {
+                loading.style.display = 'none';
+                showMessage('Erro de conexão ao carregar sugestões', 'error');
+                console.error('Erro:', error);
+            }
+        }
+
+        // Função para aprovar sugestão
+        async function approveSuggestion(suggestionId) {
+            if (!confirm(`Tem certeza que deseja aprovar a sugestão ${suggestionId}?`)) {
+                return;
+            }
+
+            try {
+                showMessage('Processando aprovação...', 'success');
+                
+                const response = await fetch(`${API_BASE}/approve-suggestion/${suggestionId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        auth: AUTH_TOKEN
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(`✅ Sugestão ${suggestionId} aprovada com sucesso! Arquivo: ${data.fileName}`, 'success');
+                    // Recarregar lista após 2 segundos
+                    setTimeout(() => {
+                        loadSuggestions();
+                        checkRAGStatus();
+                    }, 2000);
+                } else {
+                    showMessage(`❌ Erro ao aprovar: ${data.message || data.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage('❌ Erro de conexão ao aprovar sugestão', 'error');
+                console.error('Erro:', error);
+            }
+        }
+
+        // Função para rejeitar sugestão
+        async function rejectSuggestion(suggestionId) {
+            const reason = prompt('Motivo da rejeição (opcional):');
+            if (reason === null) return; // Usuário cancelou
+
+            if (!confirm(`Tem certeza que deseja rejeitar a sugestão ${suggestionId}?`)) {
+                return;
+            }
+
+            try {
+                showMessage('Processando rejeição...', 'success');
+                
+                const response = await fetch(`${API_BASE}/reject-suggestion/${suggestionId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        auth: AUTH_TOKEN,
+                        reason: reason
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(`❌ Sugestão ${suggestionId} rejeitada com sucesso!`, 'success');
+                    // Recarregar lista após 2 segundos
+                    setTimeout(() => {
+                        loadSuggestions();
+                    }, 2000);
+                } else {
+                    showMessage(`❌ Erro ao rejeitar: ${data.message || data.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage('❌ Erro de conexão ao rejeitar sugestão', 'error');
+                console.error('Erro:', error);
+            }
+        }
+
+        // Carregar dados ao inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSuggestions();
+            checkRAGStatus();
+        });
+    </script>
+</body>
+</html>

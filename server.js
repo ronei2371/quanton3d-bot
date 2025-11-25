@@ -542,6 +542,263 @@ app.get("/suggestions", (req, res) => {
   });
 });
 
+// ===== NOVAS ROTAS DE APROVAÇÃO =====
+
+// Função para criar backup antes de operações críticas
+function createBackup() {
+  try {
+    const backupFile = path.join(DATA_DIR, `backup-${Date.now()}.json`);
+    const currentData = {
+      conversationMetrics,
+      userRegistrations,
+      knowledgeSuggestions,
+      customRequests,
+      backupTimestamp: new Date().toISOString()
+    };
+    fs.writeFileSync(backupFile, JSON.stringify(currentData, null, 2), 'utf-8');
+    console.log(`💾 Backup criado: ${backupFile}`);
+    return backupFile;
+  } catch (err) {
+    console.error('❌ Erro ao criar backup:', err);
+    return null;
+  }
+}
+
+// Função para logging persistente
+function logOperation(operation, details) {
+  try {
+    const logFile = path.join(DATA_DIR, 'operations.log');
+    const logEntry = `${new Date().toISOString()} - ${operation}: ${JSON.stringify(details)}\n`;
+    fs.appendFileSync(logFile, logEntry, 'utf-8');
+  } catch (err) {
+    console.error('❌ Erro ao salvar log:', err);
+  }
+}
+
+// Rota para aprovar sugestão
+app.put("/approve-suggestion/:id", async (req, res) => {
+  let backupFile = null;
+  try {
+    const { auth } = req.body;
+    const suggestionId = parseInt(req.params.id);
+    
+    console.log(`🔍 Tentativa de aprovação da sugestão ID: ${suggestionId}`);
+    
+    // Autenticação
+    if (auth !== 'quanton3d_admin_secret') {
+      console.log('❌ Tentativa de acesso não autorizado');
+      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    }
+    
+    // Criar backup antes da operação
+    backupFile = createBackup();
+    
+    // Encontrar sugestão
+    const suggestionIndex = knowledgeSuggestions.findIndex(s => s.id === suggestionId);
+    if (suggestionIndex === -1) {
+      console.log(`❌ Sugestão ${suggestionId} não encontrada`);
+      return res.status(404).json({ success: false, message: 'Sugestão não encontrada' });
+    }
+    
+    const suggestion = knowledgeSuggestions[suggestionIndex];
+    console.log(`📝 Aprovando sugestão de ${suggestion.userName}: ${suggestion.suggestion.substring(0, 50)}...`);
+    
+    // Criar arquivo de conhecimento
+    const timestamp = Date.now();
+    const safeTitle = `sugestao_aprovada_${suggestionId}_${timestamp}`;
+    const fileName = `${safeTitle}.txt`;
+    const filePath = path.join(process.cwd(), 'rag-knowledge', fileName);
+    
+    // Formatar conteúdo com metadados
+    const formattedContent = `SUGESTÃO APROVADA - ${suggestion.userName}
+Data da Sugestão: ${suggestion.timestamp}
+Data de Aprovação: ${new Date().toISOString()}
+Usuário: ${suggestion.userName}
+Telefone: ${suggestion.userPhone || 'N/A'}
+
+CONTEÚDO DA SUGESTÃO:
+${suggestion.suggestion}
+
+CONTEXTO DA CONVERSA:
+Última mensagem do usuário: ${suggestion.lastUserMessage}
+Última resposta do bot: ${suggestion.lastBotReply}`;
+    
+    // Salvar arquivo
+    fs.writeFileSync(filePath, formattedContent, 'utf-8');
+    console.log(`✅ Arquivo de conhecimento criado: ${fileName}`);
+    
+    // Atualizar status da sugestão
+    knowledgeSuggestions[suggestionIndex].status = 'approved';
+    knowledgeSuggestions[suggestionIndex].approvedAt = new Date().toISOString();
+    knowledgeSuggestions[suggestionIndex].fileName = fileName;
+    knowledgeSuggestions[suggestionIndex].approvedBy = 'admin';
+    
+    // Salvar dados atualizados
+    saveData();
+    
+    // Reinicializar RAG para incluir novo conhecimento
+    console.log('🔄 Reinicializando RAG com novo conhecimento...');
+    await initializeRAG();
+    console.log('✅ RAG reinicializado com sucesso!');
+    
+    // Log da operação
+    logOperation('APPROVE_SUGGESTION', {
+      suggestionId,
+      userName: suggestion.userName,
+      fileName,
+      timestamp: new Date().toISOString()
+    });
+    
+    console.log(`🎉 Sugestão ${suggestionId} aprovada com sucesso!`);
+    
+    res.json({ 
+      success: true, 
+      message: 'Sugestão aprovada e conhecimento adicionado ao RAG com sucesso!',
+      fileName,
+      suggestionId,
+      approvedAt: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error(`❌ Erro ao aprovar sugestão ${req.params.id}:`, err);
+    
+    // Log do erro
+    logOperation('APPROVE_SUGGESTION_ERROR', {
+      suggestionId: req.params.id,
+      error: err.message,
+      backupFile,
+      timestamp: new Date().toISOString()
+    });
+    
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erro interno ao aprovar sugestão',
+      message: 'Tente novamente. Se o problema persistir, verifique os logs.',
+      backupAvailable: backupFile !== null
+    });
+  }
+});
+
+// Rota para rejeitar sugestão
+app.put("/reject-suggestion/:id", async (req, res) => {
+  let backupFile = null;
+  try {
+    const { auth, reason } = req.body;
+    const suggestionId = parseInt(req.params.id);
+    
+    console.log(`🔍 Tentativa de rejeição da sugestão ID: ${suggestionId}`);
+    
+    // Autenticação
+    if (auth !== 'quanton3d_admin_secret') {
+      console.log('❌ Tentativa de acesso não autorizado');
+      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    }
+    
+    // Criar backup antes da operação
+    backupFile = createBackup();
+    
+    // Encontrar sugestão
+    const suggestionIndex = knowledgeSuggestions.findIndex(s => s.id === suggestionId);
+    if (suggestionIndex === -1) {
+      console.log(`❌ Sugestão ${suggestionId} não encontrada`);
+      return res.status(404).json({ success: false, message: 'Sugestão não encontrada' });
+    }
+    
+    const suggestion = knowledgeSuggestions[suggestionIndex];
+    console.log(`❌ Rejeitando sugestão de ${suggestion.userName}: ${suggestion.suggestion.substring(0, 50)}...`);
+    
+    // Atualizar status da sugestão
+    knowledgeSuggestions[suggestionIndex].status = 'rejected';
+    knowledgeSuggestions[suggestionIndex].rejectedAt = new Date().toISOString();
+    knowledgeSuggestions[suggestionIndex].rejectionReason = reason || 'Não especificado';
+    knowledgeSuggestions[suggestionIndex].rejectedBy = 'admin';
+    
+    // Salvar dados atualizados
+    saveData();
+    
+    // Log da operação
+    logOperation('REJECT_SUGGESTION', {
+      suggestionId,
+      userName: suggestion.userName,
+      reason: reason || 'Não especificado',
+      timestamp: new Date().toISOString()
+    });
+    
+    console.log(`❌ Sugestão ${suggestionId} rejeitada com sucesso!`);
+    
+    res.json({ 
+      success: true, 
+      message: 'Sugestão rejeitada com sucesso!',
+      suggestionId,
+      rejectedAt: new Date().toISOString(),
+      reason: reason || 'Não especificado'
+    });
+  } catch (err) {
+    console.error(`❌ Erro ao rejeitar sugestão ${req.params.id}:`, err);
+    
+    // Log do erro
+    logOperation('REJECT_SUGGESTION_ERROR', {
+      suggestionId: req.params.id,
+      error: err.message,
+      backupFile,
+      timestamp: new Date().toISOString()
+    });
+    
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erro interno ao rejeitar sugestão',
+      message: 'Tente novamente. Se o problema persistir, verifique os logs.',
+      backupAvailable: backupFile !== null
+    });
+  }
+});
+
+// Rota para verificar integridade do RAG
+app.get("/rag-status", async (req, res) => {
+  try {
+    const { auth } = req.query;
+    
+    // Autenticação
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    }
+    
+    const knowledgeDir = path.join(process.cwd(), 'rag-knowledge');
+    const files = fs.readdirSync(knowledgeDir).filter(f => f.endsWith('.txt'));
+    const dbPath = path.join(process.cwd(), 'embeddings-database.json');
+    
+    let databaseStatus = 'not_found';
+    let databaseCount = 0;
+    
+    if (fs.existsSync(dbPath)) {
+      try {
+        const database = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+        databaseCount = database.length;
+        databaseStatus = 'loaded';
+      } catch (err) {
+        databaseStatus = 'corrupted';
+      }
+    }
+    
+    const status = {
+      knowledgeFiles: files.length,
+      databaseEntries: databaseCount,
+      databaseStatus,
+      isHealthy: files.length === databaseCount && databaseStatus === 'loaded',
+      lastCheck: new Date().toISOString()
+    };
+    
+    console.log('🔍 Status do RAG verificado:', status);
+    
+    res.json({ 
+      success: true, 
+      status
+    });
+  } catch (err) {
+    console.error('❌ Erro ao verificar status do RAG:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Configuração da porta Render
 const PORT = process.env.PORT || 3001;
 
