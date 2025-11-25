@@ -426,31 +426,38 @@ app.get("/metrics", (req, res) => {
     'Outras': 0
   };
   
-  conversationMetrics.forEach(conv => {
+  // Pre-compute resin variations once for efficiency
+  // This avoids creating new arrays for each conversation
+  const resinVariationsMap = {};
+  for (const resin of Object.keys(resinMentions)) {
+    if (resin === 'Outras') continue;
+    const resinLower = resin.toLowerCase();
+    resinVariationsMap[resin] = [
+      resinLower,
+      resinLower.replace('+', ''),
+      resinLower.replace('/', ' '),
+      resinLower.split('/')[0]
+    ];
+  }
+  const resinKeys = Object.keys(resinVariationsMap);
+  
+  for (const conv of conversationMetrics) {
     // Buscar menções tanto na pergunta quanto na resposta
     const fullText = (conv.message + ' ' + conv.reply).toLowerCase();
     let found = false;
     
-    Object.keys(resinMentions).forEach(resin => {
-      const resinLower = resin.toLowerCase();
-      // Buscar variações do nome
-      const variations = [
-        resinLower,
-        resinLower.replace('+', ''),
-        resinLower.replace('/', ' '),
-        resinLower.split('/')[0] // Primeiro nome (ex: "iron" de "iron/iron 7030")
-      ];
-      
+    for (const resin of resinKeys) {
+      const variations = resinVariationsMap[resin];
       if (variations.some(v => fullText.includes(v))) {
         resinMentions[resin]++;
         found = true;
       }
-    });
+    }
     
     if (!found && (fullText.includes('resina') || fullText.includes('material'))) {
       resinMentions['Outras']++;
     }
-  });
+  }
   
   res.json({
     success: true,
