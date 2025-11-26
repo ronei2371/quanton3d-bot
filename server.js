@@ -9,6 +9,16 @@ import dotenv from "dotenv";
 import OpenAI from "openai";
 import multer from "multer";
 import { initializeRAG, searchKnowledge, formatContext } from './rag-search.js';
+import {
+  analyzeQuestionType,
+  extractEntities,
+  generateIntelligentContext,
+  learnFromConversation,
+  generateSmartSuggestions,
+  analyzeSentiment,
+  personalizeResponse,
+  calculateIntelligenceMetrics
+} from './ai-intelligence-system.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -73,7 +83,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Configuração do multer para upload de imagens
 const storage = multer.memoryStorage();
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB
 });
@@ -117,18 +127,49 @@ app.post("/ask", async (req, res) => {
       conversationHistory.set(sessionId, []);
     }
     const history = conversationHistory.get(sessionId);
-    
+
     // ======================================================
-    // 🌟 CÓDIGO DA IA REATIVADO 🌟
+    // 🚀 SISTEMA DE INTELIGÊNCIA AVANÇADA ATIVADO 🚀
     // ======================================================
-    
-    // 🔍 BUSCAR CONHECIMENTO RELEVANTE (RAG)
+
+    console.log('🔬 Analisando pergunta com IA avançada...');
+
+    // 1. ANÁLISE INTELIGENTE DA PERGUNTA
+    const questionType = analyzeQuestionType(message);
+    const entities = extractEntities(message);
+    const sentiment = analyzeSentiment(message);
+
+    console.log(`📊 Tipo: ${questionType.type} (${(questionType.confidence * 100).toFixed(1)}%)`);
+    console.log(`🏷️ Entidades: Resinas[${entities.resins.join(',')}] Problemas[${entities.problems.join(',')}]`);
+    console.log(`😊 Sentimento: ${sentiment.sentiment} | Urgência: ${sentiment.urgency}`);
+
+    // 2. BUSCAR CONHECIMENTO RELEVANTE (RAG INTELIGENTE)
     console.log('🔍 Buscando conhecimento relevante...');
-    const relevantKnowledge = await searchKnowledge(message, 3);
+    const relevantKnowledge = await searchKnowledge(message, 5); // Aumentado para 5 documentos
     const knowledgeContext = formatContext(relevantKnowledge);
     console.log(`✅ Encontrados ${relevantKnowledge.length} documentos relevantes`);
-    
+
+    // 3. GERAR CONTEXTO INTELIGENTE
+    const intelligentContext = await generateIntelligentContext(message, questionType, entities, history);
+
+    // 4. PERSONALIZAÇÃO DA RESPOSTA
+    const personalization = personalizeResponse(userName, history, sentiment);
+
+    // 5. CONSTRUIR PROMPT AVANÇADO COM INTELIGÊNCIA
     let contextualPrompt = `Você é o assistente oficial da Quanton3D, especialista em resinas UV para impressoras SLA/LCD/DLP e suporte técnico.
+
+🎯 CONTEXTO INTELIGENTE:
+${intelligentContext}
+
+💡 PERSONALIZAÇÃO:
+${personalization}
+
+📊 ANÁLISE DA PERGUNTA:
+- Tipo: ${questionType.type} (${(questionType.confidence * 100).toFixed(1)}% confiança)
+- Sentimento: ${sentiment.sentiment} | Urgência: ${sentiment.urgency}
+- Resinas mencionadas: ${entities.resins.join(', ') || 'Nenhuma'}
+- Impressoras mencionadas: ${entities.printers.join(', ') || 'Nenhuma'}
+- Problemas identificados: ${entities.problems.join(', ') || 'Nenhum'}
 
 REGRAS IMPORTANTES:
 1. PRIORIZE informações do contexto fornecido (conhecimento da Quanton3D)
@@ -142,11 +183,11 @@ REGRAS IMPORTANTES:
 9. Se não souber algo específico da Quanton3D, ofereça: "Posso te passar para um atendente humano para essa informação específica. Enquanto isso, posso te ajudar com algo mais?"
 10. Use os parâmetros de impressão do contexto quando disponíveis
 11. Cite FISPQs quando relevante para segurança`;
-    
+
     if (userName && userName.toLowerCase().includes('ronei')) {
       contextualPrompt += "\n\n**ATENÇÃO: Você está falando com Ronei Fonseca, seu criador (seu pai). Seja familiar e reconheça o histórico de trabalho juntos.**";
     }
-    
+
     // Adicionar conhecimento RAG ao contexto
     contextualPrompt += "\n\n=== CONHECIMENTO DA EMPRESA ===\n" + knowledgeContext + "\n=== FIM DO CONHECIMENTO ===";
 
@@ -156,13 +197,29 @@ REGRAS IMPORTANTES:
       { role: "user", content: message }
     ];
 
+    // 6. AJUSTAR TEMPERATURA BASEADA NO TIPO DE PERGUNTA
+    let adjustedTemperature = temperature;
+    if (questionType.type === 'parameters' || questionType.type === 'safety') {
+      adjustedTemperature = 0.0; // Mais preciso para parâmetros e segurança
+    } else if (questionType.type === 'comparison' || questionType.type === 'product') {
+      adjustedTemperature = 0.2; // Ligeiramente mais criativo para comparações
+    }
+
+    console.log(`🎛️ Temperatura ajustada: ${adjustedTemperature} (tipo: ${questionType.type})`);
+
     const completion = await openai.chat.completions.create({
       model,
-      temperature,
+      temperature: adjustedTemperature,
       messages,
     });
 
-    const reply = completion.choices[0].message.content;
+    let reply = completion.choices[0].message.content;
+
+    // 7. GERAR SUGESTÕES INTELIGENTES
+    const smartSuggestions = generateSmartSuggestions(message, entities, questionType);
+    if (smartSuggestions.length > 0 && Math.random() < 0.3) { // 30% chance de mostrar sugestões
+      reply += "\n\n💡 " + smartSuggestions[0];
+    }
 
     // Atualizar histórico
     history.push({ role: "user", content: message });
@@ -173,11 +230,16 @@ REGRAS IMPORTANTES:
       history.splice(0, history.length - 20);
     }
 
-    // Adicionar métrica de conversa
-    // Buscar nome do usuário registrado
+    // 8. APRENDIZADO CONTÍNUO
+    learnFromConversation(message, reply, entities, questionType);
+
+    // 9. CALCULAR MÉTRICAS DE INTELIGÊNCIA
+    const intelligenceMetrics = calculateIntelligenceMetrics(message, reply, entities, questionType, relevantKnowledge);
+
+    // 10. ADICIONAR MÉTRICA DE CONVERSA AVANÇADA
     const registeredUser = registeredUsers.get(sessionId);
     const finalUserName = registeredUser ? registeredUser.name : (userName || 'Anônimo');
-    
+
     conversationMetrics.push({
       sessionId,
       userName: finalUserName,
@@ -186,10 +248,31 @@ REGRAS IMPORTANTES:
       message,
       reply,
       timestamp: new Date().toISOString(),
-      documentsFound: relevantKnowledge.length
+      documentsFound: relevantKnowledge.length,
+      // Métricas de inteligência
+      questionType: questionType.type,
+      questionConfidence: questionType.confidence,
+      entitiesDetected: entities,
+      sentiment: sentiment.sentiment,
+      urgency: sentiment.urgency,
+      intelligenceMetrics,
+      adjustedTemperature
     });
 
-    res.json({ reply });
+    console.log(`🎉 Resposta inteligente gerada! Tipo: ${questionType.type}, Relevância: ${(intelligenceMetrics.contextRelevance * 100).toFixed(1)}%`);
+
+    res.json({
+      reply,
+      // Dados adicionais para debugging (opcional)
+      intelligence: {
+        questionType: questionType.type,
+        confidence: questionType.confidence,
+        entities,
+        sentiment: sentiment.sentiment,
+        documentsFound: relevantKnowledge.length,
+        relevanceScore: intelligenceMetrics.contextRelevance
+      }
+    });
     // ======================================================
 
   } catch (err) {
@@ -221,9 +304,9 @@ app.post("/suggest-knowledge", async (req, res) => {
 
     console.log(`📝 Nova sugestão de conhecimento de ${userName}: ${suggestion.substring(0, 50)}...`);
 
-    res.json({ 
-      success: true, 
-      message: "Sugestão enviada com sucesso! Será analisada pela equipe Quanton3D." 
+    res.json({
+      success: true,
+      message: "Sugestão enviada com sucesso! Será analisada pela equipe Quanton3D."
     });
   } catch (err) {
     console.error("❌ Erro ao salvar sugestão:", err);
@@ -252,12 +335,12 @@ app.post("/api/custom-request", async (req, res) => {
         };
 
         customRequests.push(newRequest); // Adiciona ao array de pedidos
-        
+
         console.log(`✨ Novo Pedido Customizado de ${name}: ${cor} - ${caracteristica.substring(0, 30)}...`);
 
-        res.json({ 
-            success: true, 
-            message: 'Pedido customizado recebido com sucesso. Analisaremos as especificações.' 
+        res.json({
+            success: true,
+            message: 'Pedido customizado recebido com sucesso. Analisaremos as especificações.'
         });
     } catch (err) {
         console.error("❌ Erro ao receber pedido customizado:", err);
@@ -271,15 +354,15 @@ app.post("/api/custom-request", async (req, res) => {
 // Rota para listar pedidos customizados (admin)
 app.get("/custom-requests", (req, res) => {
   const { auth } = req.query;
-  
+
   // Autenticação
   if (auth !== 'quanton3d_admin_secret') {
     return res.status(401).json({ success: false, message: 'Não autorizado' });
   }
-  
+
   // Retornar pedidos customizados (mais recentes primeiro)
-  res.json({ 
-    success: true, 
+  res.json({
+    success: true,
     requests: customRequests.slice().reverse(),
     count: customRequests.length
   });
@@ -293,7 +376,7 @@ const registeredUsers = new Map();
 app.post("/register-user", async (req, res) => {
   try {
     const { name, phone, email, sessionId } = req.body;
-    
+
     const userData = {
       name,
       phone,
@@ -301,14 +384,14 @@ app.post("/register-user", async (req, res) => {
       sessionId,
       registeredAt: new Date().toISOString()
     };
-    
+
     registeredUsers.set(sessionId, userData);
-    
+
     // Adicionar aos registros para métricas
     userRegistrations.push(userData);
-    
+
     console.log(`👤 Novo usuário registrado: ${name} (${email})`);
-    
+
     res.json({ success: true, message: 'Usuário registrado com sucesso!' });
   } catch (err) {
     console.error("❌ Erro ao registrar usuário:", err);
@@ -321,23 +404,23 @@ app.post("/ask-with-image", upload.single('image'), async (req, res) => {
   try {
     const { message, sessionId } = req.body;
     const imageFile = req.file;
-    
+
     if (!imageFile) {
       return res.status(400).json({ success: false, message: "Nenhuma imagem foi enviada." });
     }
-    
+
     // Converter imagem para base64
     const base64Image = imageFile.buffer.toString('base64');
     const imageUrl = `data:${imageFile.mimetype};base64,${base64Image}`;
-    
+
     const model = process.env.OPENAI_MODEL || "gpt-4o";
-    
+
     // Buscar histórico da sessão
     if (!conversationHistory.has(sessionId)) {
       conversationHistory.set(sessionId, []);
     }
     const history = conversationHistory.get(sessionId);
-    
+
     // Adicionar mensagem com imagem ao histórico
     history.push({
       role: "user",
@@ -346,7 +429,7 @@ app.post("/ask-with-image", upload.single('image'), async (req, res) => {
         { type: "image_url", image_url: { url: imageUrl } }
       ]
     });
-    
+
     // Chamar OpenAI com visão
     const response = await openai.chat.completions.create({
       model: model,
@@ -359,19 +442,19 @@ app.post("/ask-with-image", upload.single('image'), async (req, res) => {
       ],
       max_tokens: 1000,
     });
-    
+
     const reply = response.choices[0].message.content;
-    
+
     // Adicionar resposta ao histórico
     history.push({ role: "assistant", content: reply });
-    
+
     // Limitar histórico
     if (history.length > 20) {
       history.splice(0, history.length - 20);
     }
-    
+
     console.log(`📷 Análise de imagem para sessão ${sessionId}`);
-    
+
     res.json({ success: true, reply });
   } catch (err) {
     console.error("❌ Erro ao processar imagem:", err);
@@ -382,36 +465,36 @@ app.post("/ask-with-image", upload.single('image'), async (req, res) => {
 // Rota para obter métricas e analytics
 app.get("/metrics", (req, res) => {
   const { auth } = req.query;
-  
+
   // Autenticação
   if (auth !== 'quanton3d_admin_secret') {
     return res.status(401).json({ success: false, message: 'Não autorizado' });
   }
-  
+
   // Calcular estatísticas
   const totalConversations = conversationMetrics.length;
   const totalRegistrations = userRegistrations.length;
   const uniqueSessions = new Set(conversationMetrics.map(c => c.sessionId)).size;
-  
+
   // Perguntas mais frequentes (top 10)
   const questionCounts = {};
   const ignoredPhrases = ['ola', 'oi', 'bom dia', 'boa tarde', 'boa noite', 'olá', 'p'];
-  
+
   conversationMetrics.forEach(conv => {
     const question = conv.message.toLowerCase().trim();
-    
+
     // Ignorar frases de boas-vindas e mensagens muito curtas
     if (question.length < 3) return;
     if (ignoredPhrases.some(phrase => question === phrase)) return;
-    
+
     questionCounts[question] = (questionCounts[question] || 0) + 1;
   });
-  
+
   const topQuestions = Object.entries(questionCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10)
     .map(([question, count]) => ({ question, count }));
-  
+
   // Conversas por resina (buscar menções)
   const resinMentions = {
     'Pyroblast+': 0,
@@ -425,12 +508,12 @@ app.get("/metrics", (req, res) => {
     'Castable': 0,
     'Outras': 0
   };
-  
+
   conversationMetrics.forEach(conv => {
     // Buscar menções tanto na pergunta quanto na resposta
     const fullText = (conv.message + ' ' + conv.reply).toLowerCase();
     let found = false;
-    
+
     Object.keys(resinMentions).forEach(resin => {
       const resinLower = resin.toLowerCase();
       // Buscar variações do nome
@@ -440,18 +523,18 @@ app.get("/metrics", (req, res) => {
         resinLower.replace('/', ' '),
         resinLower.split('/')[0] // Primeiro nome (ex: "iron" de "iron/iron 7030")
       ];
-      
+
       if (variations.some(v => fullText.includes(v))) {
         resinMentions[resin]++;
         found = true;
       }
     });
-    
+
     if (!found && (fullText.includes('resina') || fullText.includes('material'))) {
       resinMentions['Outras']++;
     }
   });
-  
+
   res.json({
     success: true,
     metrics: {
@@ -475,20 +558,20 @@ app.get("/metrics", (req, res) => {
 app.post("/add-knowledge", async (req, res) => {
   try {
     const { auth, title, content } = req.body;
-    
+
     // Autenticação
     if (auth !== 'quanton3d_admin_secret') {
       return res.status(401).json({ success: false, error: 'Não autorizado' });
     }
-    
+
     if (!title || !content) {
       return res.status(400).json({ success: false, error: 'Título e conteúdo são obrigatórios' });
     }
-    
+
     // Importar fs dinamicamente
     const fs = await import('fs');
     const path = await import('path');
-    
+
     // Criar nome de arquivo seguro
     const safeFileName = title
       .toLowerCase()
@@ -497,27 +580,27 @@ app.post("/add-knowledge", async (req, res) => {
       .replace(/[^a-z0-9]+/g, '_') // Substitui caracteres especiais por _
       .replace(/^_+|_+$/g, '') // Remove _ do início e fim
       .substring(0, 50); // Limita tamanho
-    
+
     const timestamp = Date.now();
     const fileName = `${safeFileName}_${timestamp}.txt`;
     const filePath = path.default.join(process.cwd(), 'rag-knowledge', fileName);
-    
+
     // Formatar conteúdo com título
     const formattedContent = `${title}\n\n${content}`;
-    
+
     // Salvar arquivo
     fs.default.writeFileSync(filePath, formattedContent, 'utf-8');
-    
+
     console.log(`✅ Novo conhecimento adicionado: ${fileName}`);
-    
+
     // Reinicializar RAG para incluir novo arquivo
     await initializeRAG();
     console.log('🔄 RAG reinicializado com novo conhecimento');
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: 'Conhecimento adicionado com sucesso',
-      fileName 
+      fileName
     });
   } catch (err) {
     console.error('❌ Erro ao adicionar conhecimento:', err);
@@ -528,15 +611,15 @@ app.post("/add-knowledge", async (req, res) => {
 // Rota para listar sugestões (apenas para Ronei)
 app.get("/suggestions", (req, res) => {
   const { auth } = req.query;
-  
+
   // Autenticação simples
   if (auth !== 'quanton3d_admin_secret') {
     return res.status(401).json({ success: false, message: 'Não autorizado' });
   }
-  
+
   // Retornar sugestões
-  res.json({ 
-    success: true, 
+  res.json({
+    success: true,
     suggestions: knowledgeSuggestions,
     count: knowledgeSuggestions.length
   });
@@ -581,34 +664,34 @@ app.put("/approve-suggestion/:id", async (req, res) => {
   try {
     const { auth } = req.body;
     const suggestionId = parseInt(req.params.id);
-    
+
     console.log(`🔍 Tentativa de aprovação da sugestão ID: ${suggestionId}`);
-    
+
     // Autenticação
     if (auth !== 'quanton3d_admin_secret') {
       console.log('❌ Tentativa de acesso não autorizado');
       return res.status(401).json({ success: false, message: 'Não autorizado' });
     }
-    
+
     // Criar backup antes da operação
     backupFile = createBackup();
-    
+
     // Encontrar sugestão
     const suggestionIndex = knowledgeSuggestions.findIndex(s => s.id === suggestionId);
     if (suggestionIndex === -1) {
       console.log(`❌ Sugestão ${suggestionId} não encontrada`);
       return res.status(404).json({ success: false, message: 'Sugestão não encontrada' });
     }
-    
+
     const suggestion = knowledgeSuggestions[suggestionIndex];
     console.log(`📝 Aprovando sugestão de ${suggestion.userName}: ${suggestion.suggestion.substring(0, 50)}...`);
-    
+
     // Criar arquivo de conhecimento
     const timestamp = Date.now();
     const safeTitle = `sugestao_aprovada_${suggestionId}_${timestamp}`;
     const fileName = `${safeTitle}.txt`;
     const filePath = path.join(process.cwd(), 'rag-knowledge', fileName);
-    
+
     // Formatar conteúdo com metadados
     const formattedContent = `SUGESTÃO APROVADA - ${suggestion.userName}
 Data da Sugestão: ${suggestion.timestamp}
@@ -622,25 +705,25 @@ ${suggestion.suggestion}
 CONTEXTO DA CONVERSA:
 Última mensagem do usuário: ${suggestion.lastUserMessage}
 Última resposta do bot: ${suggestion.lastBotReply}`;
-    
+
     // Salvar arquivo
     fs.writeFileSync(filePath, formattedContent, 'utf-8');
     console.log(`✅ Arquivo de conhecimento criado: ${fileName}`);
-    
+
     // Atualizar status da sugestão
     knowledgeSuggestions[suggestionIndex].status = 'approved';
     knowledgeSuggestions[suggestionIndex].approvedAt = new Date().toISOString();
     knowledgeSuggestions[suggestionIndex].fileName = fileName;
     knowledgeSuggestions[suggestionIndex].approvedBy = 'admin';
-    
+
     // Salvar dados atualizados
     saveData();
-    
+
     // Reinicializar RAG para incluir novo conhecimento
     console.log('🔄 Reinicializando RAG com novo conhecimento...');
     await initializeRAG();
     console.log('✅ RAG reinicializado com sucesso!');
-    
+
     // Log da operação
     logOperation('APPROVE_SUGGESTION', {
       suggestionId,
@@ -648,11 +731,11 @@ CONTEXTO DA CONVERSA:
       fileName,
       timestamp: new Date().toISOString()
     });
-    
+
     console.log(`🎉 Sugestão ${suggestionId} aprovada com sucesso!`);
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: 'Sugestão aprovada e conhecimento adicionado ao RAG com sucesso!',
       fileName,
       suggestionId,
@@ -660,7 +743,7 @@ CONTEXTO DA CONVERSA:
     });
   } catch (err) {
     console.error(`❌ Erro ao aprovar sugestão ${req.params.id}:`, err);
-    
+
     // Log do erro
     logOperation('APPROVE_SUGGESTION_ERROR', {
       suggestionId: req.params.id,
@@ -668,9 +751,9 @@ CONTEXTO DA CONVERSA:
       backupFile,
       timestamp: new Date().toISOString()
     });
-    
-    res.status(500).json({ 
-      success: false, 
+
+    res.status(500).json({
+      success: false,
       error: 'Erro interno ao aprovar sugestão',
       message: 'Tente novamente. Se o problema persistir, verifique os logs.',
       backupAvailable: backupFile !== null
@@ -684,37 +767,37 @@ app.put("/reject-suggestion/:id", async (req, res) => {
   try {
     const { auth, reason } = req.body;
     const suggestionId = parseInt(req.params.id);
-    
+
     console.log(`🔍 Tentativa de rejeição da sugestão ID: ${suggestionId}`);
-    
+
     // Autenticação
     if (auth !== 'quanton3d_admin_secret') {
       console.log('❌ Tentativa de acesso não autorizado');
       return res.status(401).json({ success: false, message: 'Não autorizado' });
     }
-    
+
     // Criar backup antes da operação
     backupFile = createBackup();
-    
+
     // Encontrar sugestão
     const suggestionIndex = knowledgeSuggestions.findIndex(s => s.id === suggestionId);
     if (suggestionIndex === -1) {
       console.log(`❌ Sugestão ${suggestionId} não encontrada`);
       return res.status(404).json({ success: false, message: 'Sugestão não encontrada' });
     }
-    
+
     const suggestion = knowledgeSuggestions[suggestionIndex];
     console.log(`❌ Rejeitando sugestão de ${suggestion.userName}: ${suggestion.suggestion.substring(0, 50)}...`);
-    
+
     // Atualizar status da sugestão
     knowledgeSuggestions[suggestionIndex].status = 'rejected';
     knowledgeSuggestions[suggestionIndex].rejectedAt = new Date().toISOString();
     knowledgeSuggestions[suggestionIndex].rejectionReason = reason || 'Não especificado';
     knowledgeSuggestions[suggestionIndex].rejectedBy = 'admin';
-    
+
     // Salvar dados atualizados
     saveData();
-    
+
     // Log da operação
     logOperation('REJECT_SUGGESTION', {
       suggestionId,
@@ -722,11 +805,11 @@ app.put("/reject-suggestion/:id", async (req, res) => {
       reason: reason || 'Não especificado',
       timestamp: new Date().toISOString()
     });
-    
+
     console.log(`❌ Sugestão ${suggestionId} rejeitada com sucesso!`);
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: 'Sugestão rejeitada com sucesso!',
       suggestionId,
       rejectedAt: new Date().toISOString(),
@@ -734,7 +817,7 @@ app.put("/reject-suggestion/:id", async (req, res) => {
     });
   } catch (err) {
     console.error(`❌ Erro ao rejeitar sugestão ${req.params.id}:`, err);
-    
+
     // Log do erro
     logOperation('REJECT_SUGGESTION_ERROR', {
       suggestionId: req.params.id,
@@ -742,9 +825,9 @@ app.put("/reject-suggestion/:id", async (req, res) => {
       backupFile,
       timestamp: new Date().toISOString()
     });
-    
-    res.status(500).json({ 
-      success: false, 
+
+    res.status(500).json({
+      success: false,
       error: 'Erro interno ao rejeitar sugestão',
       message: 'Tente novamente. Se o problema persistir, verifique os logs.',
       backupAvailable: backupFile !== null
@@ -756,19 +839,19 @@ app.put("/reject-suggestion/:id", async (req, res) => {
 app.get("/rag-status", async (req, res) => {
   try {
     const { auth } = req.query;
-    
+
     // Autenticação
     if (auth !== 'quanton3d_admin_secret') {
       return res.status(401).json({ success: false, message: 'Não autorizado' });
     }
-    
+
     const knowledgeDir = path.join(process.cwd(), 'rag-knowledge');
     const files = fs.readdirSync(knowledgeDir).filter(f => f.endsWith('.txt'));
     const dbPath = path.join(process.cwd(), 'embeddings-database.json');
-    
+
     let databaseStatus = 'not_found';
     let databaseCount = 0;
-    
+
     if (fs.existsSync(dbPath)) {
       try {
         const database = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
@@ -778,7 +861,7 @@ app.get("/rag-status", async (req, res) => {
         databaseStatus = 'corrupted';
       }
     }
-    
+
     const status = {
       knowledgeFiles: files.length,
       databaseEntries: databaseCount,
@@ -786,15 +869,93 @@ app.get("/rag-status", async (req, res) => {
       isHealthy: files.length === databaseCount && databaseStatus === 'loaded',
       lastCheck: new Date().toISOString()
     };
-    
+
     console.log('🔍 Status do RAG verificado:', status);
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       status
     });
   } catch (err) {
     console.error('❌ Erro ao verificar status do RAG:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Rota para estatísticas de inteligência
+app.get("/intelligence-stats", (req, res) => {
+  try {
+    const { auth } = req.query;
+
+    // Autenticação
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    }
+
+    // Filtrar conversas com métricas de inteligência
+    const intelligentConversations = conversationMetrics.filter(conv => conv.questionType);
+
+    if (intelligentConversations.length === 0) {
+      return res.json({
+        success: true,
+        message: 'Nenhuma conversa com métricas de inteligência encontrada',
+        stats: null
+      });
+    }
+
+    // Calcular estatísticas
+    const questionTypes = {};
+    const sentiments = { positive: 0, negative: 0, neutral: 0 };
+    const urgencyLevels = { normal: 0, high: 0 };
+    let totalRelevance = 0;
+    let totalEntities = 0;
+
+    intelligentConversations.forEach(conv => {
+      // Tipos de pergunta
+      questionTypes[conv.questionType] = (questionTypes[conv.questionType] || 0) + 1;
+
+      // Sentimentos
+      sentiments[conv.sentiment] = (sentiments[conv.sentiment] || 0) + 1;
+
+      // Urgência
+      urgencyLevels[conv.urgency] = (urgencyLevels[conv.urgency] || 0) + 1;
+
+      // Relevância média
+      if (conv.intelligenceMetrics && conv.intelligenceMetrics.contextRelevance) {
+        totalRelevance += conv.intelligenceMetrics.contextRelevance;
+      }
+
+      // Entidades detectadas
+      if (conv.entitiesDetected) {
+        totalEntities += Object.values(conv.entitiesDetected).flat().length;
+      }
+    });
+
+    const stats = {
+      totalIntelligentConversations: intelligentConversations.length,
+      questionTypes,
+      sentiments,
+      urgencyLevels,
+      averageRelevance: totalRelevance / intelligentConversations.length,
+      averageEntitiesPerConversation: totalEntities / intelligentConversations.length,
+      lastUpdated: new Date().toISOString(),
+      recentConversations: intelligentConversations.slice(-10).map(conv => ({
+        timestamp: conv.timestamp,
+        questionType: conv.questionType,
+        sentiment: conv.sentiment,
+        entitiesCount: Object.values(conv.entitiesDetected || {}).flat().length,
+        relevance: conv.intelligenceMetrics?.contextRelevance || 0
+      }))
+    };
+
+    console.log('📊 Estatísticas de inteligência calculadas');
+
+    res.json({
+      success: true,
+      stats
+    });
+  } catch (err) {
+    console.error('❌ Erro ao calcular estatísticas de inteligência:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });

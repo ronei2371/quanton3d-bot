@@ -137,9 +137,11 @@
         </div>
 
         <div id="rag-status" class="rag-status">
-            <h3>📊 Status do RAG</h3>
+            <h3>📊 Status do Sistema</h3>
             <div id="rag-info">Carregando...</div>
-            <button class="btn btn-refresh" onclick="checkRAGStatus()">Verificar Status</button>
+            <div id="intelligence-info" style="margin-top: 15px;"></div>
+            <button class="btn btn-refresh" onclick="checkRAGStatus()">Verificar RAG</button>
+            <button class="btn btn-refresh" onclick="checkIntelligenceStats()">Estatísticas IA</button>
         </div>
 
         <div style="margin-bottom: 20px;">
@@ -148,7 +150,7 @@
         </div>
 
         <div id="message-area"></div>
-        
+
         <div id="loading" class="loading" style="display: none;">
             Carregando sugestões...
         </div>
@@ -176,7 +178,7 @@
             try {
                 const response = await fetch(`${API_BASE}/rag-status?auth=${AUTH_TOKEN}`);
                 const data = await response.json();
-                
+
                 if (data.success) {
                     const status = data.status;
                     const healthIcon = status.isHealthy ? '✅' : '⚠️';
@@ -196,11 +198,51 @@
             }
         }
 
+        // Função para verificar estatísticas de inteligência
+        async function checkIntelligenceStats() {
+            try {
+                const response = await fetch(`${API_BASE}/intelligence-stats?auth=${AUTH_TOKEN}`);
+                const data = await response.json();
+
+                if (data.success && data.stats) {
+                    const stats = data.stats;
+
+                    // Tipos de pergunta mais comuns
+                    const topQuestionTypes = Object.entries(stats.questionTypes)
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 3)
+                        .map(([type, count]) => `${type} (${count})`)
+                        .join(', ');
+
+                    document.getElementById('intelligence-info').innerHTML = `
+                        <strong>🧠 Estatísticas de Inteligência:</strong><br>
+                        💬 Conversas Inteligentes: ${stats.totalIntelligentConversations}<br>
+                        📊 Relevância Média: ${(stats.averageRelevance * 100).toFixed(1)}%<br>
+                        🏷️ Entidades por Conversa: ${stats.averageEntitiesPerConversation.toFixed(1)}<br>
+                        📈 Tipos Mais Comuns: ${topQuestionTypes}<br>
+                        😊 Sentimentos: +${stats.sentiments.positive} |±${stats.sentiments.neutral} |-${stats.sentiments.negative}<br>
+                        ⚡ Urgência Alta: ${stats.urgencyLevels.high || 0} conversas<br>
+                        🕒 Última Atualização: ${new Date(stats.lastUpdated).toLocaleString('pt-BR')}
+                    `;
+                } else if (data.success && !data.stats) {
+                    document.getElementById('intelligence-info').innerHTML = `
+                        <strong>🧠 Estatísticas de Inteligência:</strong><br>
+                        ℹ️ ${data.message}
+                    `;
+                } else {
+                    document.getElementById('intelligence-info').innerHTML = '❌ Erro ao verificar estatísticas de IA';
+                }
+            } catch (error) {
+                document.getElementById('intelligence-info').innerHTML = '❌ Erro de conexão com IA';
+                console.error('Erro ao verificar estatísticas:', error);
+            }
+        }
+
         // Função para carregar sugestões
         async function loadSuggestions() {
             const loading = document.getElementById('loading');
             const container = document.getElementById('suggestions-container');
-            
+
             loading.style.display = 'block';
             container.innerHTML = '';
 
@@ -225,7 +267,7 @@
                     suggestions.forEach(suggestion => {
                         const suggestionDiv = document.createElement('div');
                         suggestionDiv.className = `suggestion ${suggestion.status}`;
-                        
+
                         const statusClass = suggestion.status || 'pending';
                         const statusText = {
                             'pending': 'Pendente',
@@ -243,18 +285,18 @@
                                     ID: ${suggestion.id} | ${new Date(suggestion.timestamp).toLocaleString('pt-BR')}
                                 </div>
                             </div>
-                            
+
                             <div class="suggestion-content">
                                 <strong>Sugestão:</strong><br>
                                 ${suggestion.suggestion}
                             </div>
-                            
+
                             ${suggestion.userPhone ? `<div class="suggestion-meta">📞 ${suggestion.userPhone}</div>` : ''}
-                            
+
                             ${suggestion.approvedAt ? `<div class="suggestion-meta">✅ Aprovado em: ${new Date(suggestion.approvedAt).toLocaleString('pt-BR')}</div>` : ''}
                             ${suggestion.rejectedAt ? `<div class="suggestion-meta">❌ Rejeitado em: ${new Date(suggestion.rejectedAt).toLocaleString('pt-BR')}</div>` : ''}
                             ${suggestion.fileName ? `<div class="suggestion-meta">📁 Arquivo: ${suggestion.fileName}</div>` : ''}
-                            
+
                             <div class="actions">
                                 ${suggestion.status === 'pending' ? `
                                     <button class="btn btn-approve" onclick="approveSuggestion(${suggestion.id})">
@@ -268,7 +310,7 @@
                                 `}
                             </div>
                         `;
-                        
+
                         container.appendChild(suggestionDiv);
                     });
                 } else {
@@ -289,7 +331,7 @@
 
             try {
                 showMessage('Processando aprovação...', 'success');
-                
+
                 const response = await fetch(`${API_BASE}/approve-suggestion/${suggestionId}`, {
                     method: 'PUT',
                     headers: {
@@ -329,7 +371,7 @@
 
             try {
                 showMessage('Processando rejeição...', 'success');
-                
+
                 const response = await fetch(`${API_BASE}/reject-suggestion/${suggestionId}`, {
                     method: 'PUT',
                     headers: {
@@ -362,6 +404,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadSuggestions();
             checkRAGStatus();
+            checkIntelligenceStats();
         });
     </script>
 </body>
