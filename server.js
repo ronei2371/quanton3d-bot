@@ -399,15 +399,18 @@ app.post("/register-user", async (req, res) => {
   }
 });
 
-// Rota para perguntas com imagem
+// Rota para perguntas com imagem - VISION-TO-RAG FLOW
+// Fluxo: 1) GPT-4o Vision analisa imagem -> 2) Busca no RAG -> 3) Resposta baseada em conhecimento Quanton3D
 app.post("/ask-with-image", upload.single('image'), async (req, res) => {
   try {
-    const { message, sessionId } = req.body;
+    const { message, sessionId, userName } = req.body;
     const imageFile = req.file;
 
     if (!imageFile) {
       return res.status(400).json({ success: false, message: "Nenhuma imagem foi enviada." });
     }
+
+    console.log(`📷 [VISION-TO-RAG] Iniciando análise de imagem para sessão ${sessionId}`);
 
     // Converter imagem para base64
     const base64Image = imageFile.buffer.toString('base64');
@@ -421,31 +424,155 @@ app.post("/ask-with-image", upload.single('image'), async (req, res) => {
     }
     const history = conversationHistory.get(sessionId);
 
-    // Adicionar mensagem com imagem ao histórico
-    history.push({
-      role: "user",
-      content: [
-        { type: "text", text: message || "Analise esta imagem relacionada a impressão 3D com resina" },
-        { type: "image_url", image_url: { url: imageUrl } }
-      ]
-    });
+    // ======================================================
+    // 🔍 PASSO 1: ANÁLISE DA IMAGEM COM GPT-4o VISION
+    // Objetivo: Obter descrição TEXTUAL do problema/objeto
+    // ======================================================
+    console.log('🔍 [PASSO 1] Analisando imagem com GPT-4o Vision...');
 
-    // Chamar OpenAI com visão
-    const response = await openai.chat.completions.create({
+    const visionResponse = await openai.chat.completions.create({
       model: model,
       messages: [
         {
           role: "system",
-          content: "Você é um especialista em impressão 3D com resina UV SLA. Analise imagens de peças impressas, problemas de impressão, e forneça diagnósticos precisos e soluções."
+          content: `Você é um especialista técnico em impressão 3D com resina UV SLA da Quanton3D.
+
+TAREFA: Analise a imagem e forneça uma DESCRIÇÃO TÉCNICA DETALHADA do que você vê.
+
+INSTRUÇÕES:
+1. Descreva APENAS o que você observa na imagem (defeitos, aparência, características da peça)
+2. NÃO dê soluções ou recomendações ainda - apenas descreva o problema
+3. NÃO mencione marcas de resina específicas na descrição
+4. Se a imagem NÃO estiver relacionada a impressão 3D com resina, diga explicitamente: "Esta imagem não parece estar relacionada a impressão 3D com resina."
+5. Seja objetivo e técnico na descrição
+
+FORMATO DA RESPOSTA:
+- Tipo de objeto/peça (se identificável)
+- Problemas visíveis (rachaduras, falhas de aderência, deformações, etc.)
+- Características da superfície
+- Qualquer outro detalhe técnico relevante`
         },
-        ...history
+        {
+          role: "user",
+          content: [
+            { type: "text", text: message || "Analise esta imagem relacionada a impressão 3D com resina e descreva o que você vê." },
+            { type: "image_url", image_url: { url: imageUrl } }
+          ]
+        }
+      ],
+      max_tokens: 500,
+    });
+
+    const imageDescription = visionResponse.choices[0].message.content;
+    console.log(`✅ [PASSO 1] Descrição da imagem: ${imageDescription.substring(0, 100)}...`);
+
+    // Verificar se a imagem é relacionada a impressão 3D
+    const isUnrelated = imageDescription.toLowerCase().includes('não parece estar relacionada') ||
+                        imageDescription.toLowerCase().includes('não está relacionada') ||
+                        imageDescription.toLowerCase().includes('não é relacionada');
+
+    if (isUnrelated) {
+      console.log('⚠️ Imagem não relacionada a impressão 3D detectada');
+      const unrelatedReply = "Essa imagem não parece estar relacionada a impressão 3D com resina. Meu foco é suporte técnico para resinas Quanton3D e impressão 3D SLA/LCD/DLP. Posso te ajudar com alguma dúvida sobre impressão 3D com resina?";
+      
+      // Adicionar ao histórico como texto simples
+      history.push({ role: "user", content: message || "(imagem enviada)" });
+      history.push({ role: "assistant", content: unrelatedReply });
+      
+      return res.json({ success: true, reply: unrelatedReply });
+    }
+
+    // ======================================================
+    // 🔍 PASSO 2: BUSCA NO RAG COM A DESCRIÇÃO DA IMAGEM
+    // Objetivo: Encontrar conhecimento relevante da Quanton3D
+    // ======================================================
+    console.log('🔍 [PASSO 2] Buscando conhecimento relevante no RAG...');
+
+    // Combinar mensagem do usuário com descrição da imagem para busca mais precisa
+    const combinedText = (message ? `Relato do usuário: ${message}\n\n` : '') +
+                         `Descrição da imagem (analisada pela IA): ${imageDescription}`;
+
+    // Extrair entidades e analisar tipo de pergunta
+    const entities = extractEntities(combinedText);
+    const questionType = analyzeQuestionType(combinedText);
+    const sentiment = analyzeSentiment(combinedText);
+
+    console.log(`📊 Tipo: ${questionType.type} | Entidades: Resinas[${entities.resins.join(',')}] Problemas[${entities.problems.join(',')}]`);
+
+    // Buscar conhecimento relevante no RAG
+    let relevantKnowledge = [];
+    let knowledgeContext = '';
+    
+    try {
+      relevantKnowledge = await searchKnowledge(combinedText, 5);
+      knowledgeContext = formatContext(relevantKnowledge);
+      console.log(`✅ [PASSO 2] Encontrados ${relevantKnowledge.length} documentos relevantes`);
+    } catch (ragError) {
+      console.error('⚠️ Erro ao buscar no RAG:', ragError.message);
+      knowledgeContext = '(Base de conhecimento temporariamente indisponível)';
+    }
+
+    // Verificar se encontrou conhecimento relevante
+    const hasRelevantKnowledge = relevantKnowledge.length > 0 && 
+                                  relevantKnowledge[0].similarity > 0.2;
+
+    // ======================================================
+    // 🎯 PASSO 3: GERAR RESPOSTA BASEADA NO RAG
+    // Objetivo: Resposta usando EXCLUSIVAMENTE conhecimento Quanton3D
+    // ======================================================
+    console.log('🎯 [PASSO 3] Gerando resposta baseada no conhecimento Quanton3D...');
+
+    const ragSystemPrompt = `Você é o assistente oficial da Quanton3D, especialista em resinas UV para impressoras SLA/LCD/DLP.
+
+REGRAS ABSOLUTAS:
+1. Use EXCLUSIVAMENTE o conhecimento técnico fornecido no contexto abaixo (documentos da Quanton3D).
+2. NÃO use conhecimento genérico da internet ou do seu próprio treinamento para dados técnicos (parâmetros, propriedades, marcas, etc).
+3. Se a informação necessária NÃO estiver claramente no contexto, diga explicitamente:
+   - "Para este caso específico, recomendo entrar em contato com o suporte técnico da Quanton3D para uma análise mais detalhada."
+   - E dê apenas orientações gerais seguras (sem inventar parâmetros).
+4. Não invente propriedades, valores de tempo de exposição ou características de resinas que não apareçam no contexto.
+5. Sempre mantenha o foco em resinas Quanton3D e impressão 3D com resina.
+6. NUNCA recomende produtos de outras marcas.
+7. Quando mencionar parâmetros de impressão, eles DEVEM corresponder a valores presentes no contexto.
+8. Seja educado, objetivo e use no máximo 3 parágrafos.
+9. Sempre termine oferecendo mais ajuda.
+
+${hasRelevantKnowledge ? '' : '⚠️ ATENÇÃO: Poucos documentos relevantes encontrados. Seja conservador nas recomendações e sugira contato com suporte humano se necessário.'}
+
+=== CONHECIMENTO DA QUANTON3D ===
+${knowledgeContext}
+=== FIM DO CONHECIMENTO ===
+
+DESCRIÇÃO DO PROBLEMA (baseada na análise da imagem):
+${combinedText}`;
+
+    // Gerar resposta final baseada no RAG (chamada TEXT-ONLY, sem imagem)
+    const finalResponse = await openai.chat.completions.create({
+      model: model,
+      temperature: 0.0, // Temperatura zero para máxima precisão
+      messages: [
+        { role: "system", content: ragSystemPrompt },
+        { role: "user", content: "Com base APENAS no conhecimento da Quanton3D fornecido, analise o problema descrito e forneça recomendações técnicas específicas." }
       ],
       max_tokens: 1000,
     });
 
-    const reply = response.choices[0].message.content;
+    let reply = finalResponse.choices[0].message.content;
 
-    // Adicionar resposta ao histórico
+    // Adicionar nota sobre análise de imagem se relevante
+    if (!hasRelevantKnowledge) {
+      reply += "\n\n💡 *Dica: Para uma análise mais precisa, me informe qual resina Quanton3D você está usando e qual modelo de impressora.*";
+    }
+
+    // ======================================================
+    // 📝 PASSO 4: ATUALIZAR HISTÓRICO E MÉTRICAS
+    // ======================================================
+    
+    // Adicionar ao histórico como texto (não multimodal) para consistência
+    history.push({ 
+      role: "user", 
+      content: `${message || '(imagem enviada)'}\n[Análise da imagem: ${imageDescription.substring(0, 200)}...]` 
+    });
     history.push({ role: "assistant", content: reply });
 
     // Limitar histórico
@@ -453,12 +580,52 @@ app.post("/ask-with-image", upload.single('image'), async (req, res) => {
       history.splice(0, history.length - 20);
     }
 
-    console.log(`📷 Análise de imagem para sessão ${sessionId}`);
+    // Calcular métricas de inteligência
+    const intelligenceMetrics = calculateIntelligenceMetrics(combinedText, reply, entities, questionType, relevantKnowledge);
 
-    res.json({ success: true, reply });
+    // Registrar métrica de conversa com imagem
+    const registeredUser = registeredUsers.get(sessionId);
+    const finalUserName = registeredUser ? registeredUser.name : (userName || 'Anônimo');
+
+    conversationMetrics.push({
+      sessionId,
+      userName: finalUserName,
+      userPhone: registeredUser ? registeredUser.phone : null,
+      userEmail: registeredUser ? registeredUser.email : null,
+      message: message || '(imagem enviada)',
+      reply,
+      timestamp: new Date().toISOString(),
+      documentsFound: relevantKnowledge.length,
+      // Métricas específicas de imagem
+      isImageAnalysis: true,
+      imageDescription: imageDescription.substring(0, 500),
+      questionType: questionType.type,
+      questionConfidence: questionType.confidence,
+      entitiesDetected: entities,
+      sentiment: sentiment.sentiment,
+      urgency: sentiment.urgency,
+      intelligenceMetrics,
+      hasRelevantKnowledge
+    });
+
+    console.log(`🎉 [VISION-TO-RAG] Resposta gerada com sucesso! Docs: ${relevantKnowledge.length}, Relevância: ${hasRelevantKnowledge ? 'Alta' : 'Baixa'}`);
+
+    res.json({ 
+      success: true, 
+      reply,
+      // Dados adicionais para debugging (opcional)
+      visionToRag: {
+        imageAnalyzed: true,
+        documentsFound: relevantKnowledge.length,
+        hasRelevantKnowledge,
+        questionType: questionType.type,
+        entitiesDetected: entities
+      }
+    });
+
   } catch (err) {
-    console.error("❌ Erro ao processar imagem:", err);
-    res.status(500).json({ success: false, message: "Erro ao analisar imagem." });
+    console.error("❌ Erro ao processar imagem com Vision-to-RAG:", err);
+    res.status(500).json({ success: false, message: "Erro ao analisar imagem. Tente novamente." });
   }
 });
 
