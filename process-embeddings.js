@@ -48,9 +48,9 @@ async function processEmbeddings() {
     }
     
     try {
-      // ✅ MUDANÇA CRÍTICA: Usar text-embedding-3-large (igual ao rag-helper.js)
+      // Criar embedding com OpenAI
       const response = await openai.embeddings.create({
-        model: 'text-embedding-3-large', // ✅ MUDADO de 3-small para 3-large
+        model: 'text-embedding-3-small',
         input: cleanContent,
       });
       
