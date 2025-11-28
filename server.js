@@ -463,32 +463,34 @@ FORMATO DA RESPOSTA:
       knowledgeContext = '(Base de conhecimento temporariamente indisponível)';
     }
 
-    // Verificar se encontrou conhecimento relevante
+    // Verificar se encontrou conhecimento relevante (threshold 0.7 - consistente com rag-search.js)
+    const relevanceThreshold = parseFloat(process.env.RAG_MIN_RELEVANCE || '0.7');
     const hasRelevantKnowledge = relevantKnowledge.length > 0 && 
-                                  relevantKnowledge[0].similarity > 0.2;
+                                  relevantKnowledge[0].similarity >= relevanceThreshold;
 
     // ======================================================
-    // 🎯 PASSO 3: GERAR RESPOSTA BASEADA NO RAG
-    // Objetivo: Resposta usando EXCLUSIVAMENTE conhecimento Quanton3D
+    // 🎯 PASSO 3: GERAR RESPOSTA - SMART FALLBACK
+    // Se RAG tem conhecimento relevante -> usa RAG estrito
+    // Se RAG NÃO tem conhecimento -> usa conhecimento geral do GPT-4o
     // ======================================================
-    console.log('🎯 [PASSO 3] Gerando resposta baseada no conhecimento Quanton3D...');
+    
+    let reply;
 
-    const ragSystemPrompt = `Você é o assistente oficial da Quanton3D, especialista em resinas UV para impressoras SLA/LCD/DLP.
+    if (hasRelevantKnowledge) {
+      // MODO RAG ESTRITO - Usa APENAS conhecimento da Quanton3D
+      console.log('🎯 [PASSO 3] MODO RAG: Gerando resposta baseada no conhecimento Quanton3D...');
+
+      const ragSystemPrompt = `Você é o assistente oficial da Quanton3D, especialista em resinas UV para impressoras SLA/LCD/DLP.
 
 REGRAS ABSOLUTAS:
 1. Use EXCLUSIVAMENTE o conhecimento técnico fornecido no contexto abaixo (documentos da Quanton3D).
 2. NÃO use conhecimento genérico da internet ou do seu próprio treinamento para dados técnicos (parâmetros, propriedades, marcas, etc).
-3. Se a informação necessária NÃO estiver claramente no contexto, diga explicitamente:
-   - "Para este caso específico, recomendo entrar em contato com o suporte técnico da Quanton3D para uma análise mais detalhada."
-   - E dê apenas orientações gerais seguras (sem inventar parâmetros).
-4. Não invente propriedades, valores de tempo de exposição ou características de resinas que não apareçam no contexto.
-5. Sempre mantenha o foco em resinas Quanton3D e impressão 3D com resina.
-6. NUNCA recomende produtos de outras marcas.
-7. Quando mencionar parâmetros de impressão, eles DEVEM corresponder a valores presentes no contexto.
-8. Seja educado, objetivo e use no máximo 3 parágrafos.
-9. Sempre termine oferecendo mais ajuda.
-
-${hasRelevantKnowledge ? '' : '⚠️ ATENÇÃO: Poucos documentos relevantes encontrados. Seja conservador nas recomendações e sugira contato com suporte humano se necessário.'}
+3. Não invente propriedades, valores de tempo de exposição ou características de resinas que não apareçam no contexto.
+4. Sempre mantenha o foco em resinas Quanton3D e impressão 3D com resina.
+5. NUNCA recomende produtos de outras marcas.
+6. Quando mencionar parâmetros de impressão, eles DEVEM corresponder a valores presentes no contexto.
+7. Seja educado, objetivo e use no máximo 3 parágrafos.
+8. Sempre termine oferecendo mais ajuda.
 
 === CONHECIMENTO DA QUANTON3D ===
 ${knowledgeContext}
@@ -497,21 +499,53 @@ ${knowledgeContext}
 DESCRIÇÃO DO PROBLEMA (baseada na análise da imagem):
 ${combinedText}`;
 
-    // Gerar resposta final baseada no RAG (chamada TEXT-ONLY, sem imagem)
-    const finalResponse = await openai.chat.completions.create({
-      model: model,
-      temperature: 0.0, // Temperatura zero para máxima precisão
-      messages: [
-        { role: "system", content: ragSystemPrompt },
-        { role: "user", content: "Com base APENAS no conhecimento da Quanton3D fornecido, analise o problema descrito e forneça recomendações técnicas específicas." }
-      ],
-      max_tokens: 1000,
-    });
+      const ragResponse = await openai.chat.completions.create({
+        model: model,
+        temperature: 0.0, // Temperatura zero para máxima precisão
+        messages: [
+          { role: "system", content: ragSystemPrompt },
+          { role: "user", content: "Com base no conhecimento da Quanton3D fornecido, analise o problema descrito e forneça recomendações técnicas específicas." }
+        ],
+        max_tokens: 1000,
+      });
 
-    let reply = finalResponse.choices[0].message.content;
+      reply = ragResponse.choices[0].message.content;
 
-    // Adicionar nota sobre análise de imagem se relevante
-    if (!hasRelevantKnowledge) {
+    } else {
+      // MODO SMART FALLBACK - RAG não tem conhecimento, usa GPT-4o como especialista geral
+      console.log('🎯 [PASSO 3] MODO FALLBACK: Usando conhecimento geral de impressão 3D...');
+
+      const fallbackSystemPrompt = `Você é um especialista em impressão 3D com resina UV (SLA/LCD/DLP).
+
+CONTEXTO: Você está ajudando um cliente da Quanton3D, mas NÃO encontramos documentos específicos da empresa para este caso.
+
+REGRAS:
+1. Use seu conhecimento geral de impressão 3D com resina para:
+   - Identificar o tipo de defeito observado (descolamento da base, falha de adesão, warping, suporte insuficiente, etc.)
+   - Explicar as causas prováveis do problema
+   - Sugerir passos de troubleshooting e correção
+2. NÃO invente dados específicos da Quanton3D (nomes de produtos, valores exatos de parâmetros próprios da marca).
+3. Para parâmetros exatos de resinas Quanton3D, diga: "Para os parâmetros específicos da sua resina Quanton3D, consulte a ficha técnica ou entre em contato com o suporte técnico."
+4. Seja objetivo, em até 3 parágrafos.
+5. Mantenha foco em segurança e boas práticas de impressão 3D.
+6. Sempre termine oferecendo mais ajuda.
+
+DESCRIÇÃO DO PROBLEMA (baseada na análise da imagem):
+${combinedText}`;
+
+      const fallbackResponse = await openai.chat.completions.create({
+        model: model,
+        temperature: 0.1, // Temperatura baixa mas permite linguagem natural
+        messages: [
+          { role: "system", content: fallbackSystemPrompt },
+          { role: "user", content: "Analise o problema descrito e forneça diagnóstico técnico com recomendações de correção." }
+        ],
+        max_tokens: 1000,
+      });
+
+      reply = fallbackResponse.choices[0].message.content;
+      
+      // Adicionar dica para melhorar a análise
       reply += "\n\n💡 *Dica: Para uma análise mais precisa, me informe qual resina Quanton3D você está usando e qual modelo de impressora.*";
     }
 
