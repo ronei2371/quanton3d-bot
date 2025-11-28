@@ -3,9 +3,14 @@
 
 import { MongoClient } from 'mongodb';
 
-// URI do MongoDB (usar variavel de ambiente ou fallback)
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://ronei3271_db_user:OAlRnyGskVYCCzpC@quanton3d.e7xb5h2.mongodb.net/?appName=Quanton3D';
+// URI do MongoDB (OBRIGATORIO via variavel de ambiente)
+const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = 'quanton3d';
+
+if (!MONGODB_URI) {
+  console.error('[MongoDB] ERRO CRITICO: Variavel de ambiente MONGODB_URI nao definida!');
+  console.error('[MongoDB] Configure MONGODB_URI no Render ou no arquivo .env');
+}
 
 let client = null;
 let db = null;

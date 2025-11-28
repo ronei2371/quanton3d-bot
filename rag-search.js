@@ -14,6 +14,10 @@ const openai = new OpenAI({
 const EMBEDDING_MODEL = 'text-embedding-3-large';
 const EMBEDDING_DIMENSIONS = 3072; // Dimensao do text-embedding-3-large
 
+// Limiar minimo de relevancia para considerar um documento util
+// Documentos com similaridade abaixo deste valor serao ignorados
+const MIN_RELEVANCE_THRESHOLD = 0.7;
+
 let lastInitialization = null;
 let documentsCount = 0;
 
@@ -118,11 +122,18 @@ export async function searchKnowledge(query, topK = 5) {
       similarity: cosineSimilarity(queryEmbedding, doc.embedding)
     }));
 
-    // 4. Ordenar por similaridade (maior primeiro) e retornar top K
+    // 4. Ordenar por similaridade (maior primeiro)
     results.sort((a, b) => b.similarity - a.similarity);
-    const topResults = results.slice(0, topK);
+    
+    // 5. Filtrar por limiar de relevancia (apenas documentos com score >= 0.7)
+    const relevantResults = results.filter(r => r.similarity >= MIN_RELEVANCE_THRESHOLD);
+    const topResults = relevantResults.slice(0, topK);
 
-    logRAG(`Encontrados ${topResults.length} documentos relevantes (melhor: ${(topResults[0]?.similarity * 100 || 0).toFixed(1)}%)`, 'INFO');
+    if (topResults.length === 0) {
+      logRAG(`Nenhum documento com relevancia >= ${MIN_RELEVANCE_THRESHOLD * 100}% encontrado (melhor: ${(results[0]?.similarity * 100 || 0).toFixed(1)}%)`, 'WARN');
+    } else {
+      logRAG(`Encontrados ${topResults.length} documentos relevantes (melhor: ${(topResults[0]?.similarity * 100).toFixed(1)}%)`, 'INFO');
+    }
 
     return topResults;
   } catch (err) {
@@ -134,7 +145,8 @@ export async function searchKnowledge(query, topK = 5) {
 // Formatar contexto para o GPT
 export function formatContext(results) {
   if (!results || results.length === 0) {
-    return '';
+    // Nenhum documento relevante encontrado - instruir o bot a ser honesto
+    return '\n\n[AVISO: Nenhum documento com relevancia suficiente foi encontrado no banco de conhecimento da Quanton3D para esta pergunta. Se a pergunta for especifica sobre produtos, precos ou informacoes da empresa, responda: "Nao encontrei essa informacao especifica no meu banco de dados. Posso te passar para um atendente humano para essa informacao." Para perguntas tecnicas gerais sobre impressao 3D, voce pode usar seu conhecimento geral.]\n\n';
   }
 
   let context = '\n\n CONHECIMENTO TECNICO RELEVANTE:\n\n';
@@ -145,8 +157,8 @@ export function formatContext(results) {
   });
 
   context += '---\n\n';
-  context += 'Use o conhecimento acima para responder com precisao tecnica. ';
-  context += 'Se a informacao nao estiver no conhecimento, use seu conhecimento geral.\n\n';
+  context += 'Use EXCLUSIVAMENTE o conhecimento acima para responder. ';
+  context += 'NAO invente informacoes que nao estejam no contexto.\n\n';
 
   return context;
 }
