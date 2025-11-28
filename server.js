@@ -199,11 +199,12 @@ REGRAS IMPORTANTES:
     ];
 
     // 6. AJUSTAR TEMPERATURA BASEADA NO TIPO DE PERGUNTA
-    let adjustedTemperature = temperature;
+    // Temperatura baixa (0.05-0.1) para respostas precisas e sem criatividade
+    let adjustedTemperature = 0.1; // Base: precisao maxima
     if (questionType.type === 'parameters' || questionType.type === 'safety') {
-      adjustedTemperature = 0.0; // Mais preciso para parâmetros e segurança
+      adjustedTemperature = 0.05; // Ultra preciso para parametros e seguranca
     } else if (questionType.type === 'comparison' || questionType.type === 'product') {
-      adjustedTemperature = 0.2; // Ligeiramente mais criativo para comparações
+      adjustedTemperature = 0.1; // Ainda preciso para comparacoes
     }
 
     console.log(`🎛️ Temperatura ajustada: ${adjustedTemperature} (tipo: ${questionType.type})`);
