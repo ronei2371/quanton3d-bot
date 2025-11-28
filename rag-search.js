@@ -1,189 +1,77 @@
-// Módulo de busca semântica RAG (Retrieval-Augmented Generation)
+// Modulo de busca semantica RAG (Retrieval-Augmented Generation)
+// VERSAO MONGODB - Usa text-embedding-3-large da OpenAI e MongoDB para persistencia
 // Busca conhecimento relevante para melhorar respostas do bot
-// VERSÃO MELHORADA - Com verificação de integridade e logs detalhados
 
-import fs from 'fs';
-import path from 'path';
-import { pipeline } from '@xenova/transformers';
+import OpenAI from 'openai';
+import { getDocumentsCollection, isConnected } from './db.js';
 
-let database = null;
-let extractor = null;
+// Cliente OpenAI para embeddings
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+// Modelo de embeddings unificado (mesmo para salvar e buscar)
+const EMBEDDING_MODEL = 'text-embedding-3-large';
+const EMBEDDING_DIMENSIONS = 3072; // Dimensao do text-embedding-3-large
+
 let lastInitialization = null;
+let documentsCount = 0;
 
-// Função para logging do RAG
+// Funcao para logging do RAG
 function logRAG(message, level = 'INFO') {
   const timestamp = new Date().toISOString();
   console.log(`[RAG-${level}] ${timestamp} - ${message}`);
-
-  // Salvar log em arquivo se possível
-  try {
-    const logFile = path.join(process.cwd(), 'rag-operations.log');
-    const logEntry = `${timestamp} [${level}] ${message}\n`;
-    fs.appendFileSync(logFile, logEntry, 'utf-8');
-  } catch (err) {
-    // Ignorar erros de log para não quebrar o sistema
-  }
 }
 
-// Verificar integridade do database
-function verifyDatabaseIntegrity() {
-  try {
-    const knowledgeDir = path.join(process.cwd(), 'rag-knowledge');
-    const files = fs.readdirSync(knowledgeDir).filter(f => f.endsWith('.txt'));
-    const dbPath = path.join(process.cwd(), 'embeddings-database.json');
-
-    if (!fs.existsSync(dbPath)) {
-      logRAG('Database não encontrado', 'WARN');
-      return { isValid: false, reason: 'database_not_found', filesCount: files.length, dbCount: 0 };
-    }
-
-    const database = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
-
-    if (!Array.isArray(database)) {
-      logRAG('Database corrompido - não é um array', 'ERROR');
-      return { isValid: false, reason: 'database_corrupted', filesCount: files.length, dbCount: 0 };
-    }
-
-    if (files.length !== database.length) {
-      logRAG(`Inconsistência: ${files.length} arquivos vs ${database.length} entradas no DB`, 'WARN');
-      return { isValid: false, reason: 'count_mismatch', filesCount: files.length, dbCount: database.length };
-    }
-
-    // Verificar se todos os arquivos têm entrada no database
-    const dbIds = new Set(database.map(entry => entry.id));
-    const missingFiles = files.filter(file => !dbIds.has(file));
-
-    if (missingFiles.length > 0) {
-      logRAG(`Arquivos sem embedding: ${missingFiles.join(', ')}`, 'WARN');
-      return { isValid: false, reason: 'missing_embeddings', filesCount: files.length, dbCount: database.length, missingFiles };
-    }
-
-    logRAG(`Integridade verificada: ${files.length} arquivos, ${database.length} embeddings`, 'INFO');
-    return { isValid: true, filesCount: files.length, dbCount: database.length };
-  } catch (err) {
-    logRAG(`Erro ao verificar integridade: ${err.message}`, 'ERROR');
-    return { isValid: false, reason: 'verification_error', error: err.message };
-  }
-}
-
-// Processar todos os arquivos e criar database
-async function buildDatabase() {
-  logRAG('Iniciando construção do database de embeddings', 'INFO');
-
-  const knowledgeDir = path.join(process.cwd(), 'rag-knowledge');
-
-  if (!fs.existsSync(knowledgeDir)) {
-    logRAG(`Diretório de conhecimento não encontrado: ${knowledgeDir}`, 'ERROR');
-    throw new Error(`Diretório de conhecimento não encontrado: ${knowledgeDir}`);
-  }
-
-  const files = fs.readdirSync(knowledgeDir).filter(f => f.endsWith('.txt'));
-  logRAG(`Encontrados ${files.length} arquivos para processar`, 'INFO');
-
-  if (files.length === 0) {
-    logRAG('Nenhum arquivo .txt encontrado no diretório de conhecimento', 'WARN');
-    return [];
-  }
-
-  // Carregar modelo de embeddings
-  logRAG('Carregando modelo de embeddings Xenova/all-MiniLM-L6-v2...', 'INFO');
-  const localExtractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-  logRAG('Modelo de embeddings carregado com sucesso', 'INFO');
-
-  const newDatabase = [];
-  const startTime = Date.now();
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const filePath = path.join(knowledgeDir, file);
-
-    try {
-      const content = fs.readFileSync(filePath, 'utf-8');
-
-      // Validar conteúdo
-      if (content.trim().length < 10) {
-        logRAG(`Arquivo ${file} muito pequeno (${content.length} chars), pulando`, 'WARN');
-        continue;
-      }
-
-      // Criar embedding
-      const output = await localExtractor(content, { pooling: 'mean', normalize: true });
-      const embedding = Array.from(output.data);
-
-      newDatabase.push({
-        id: file,
-        content: content.trim(),
-        embedding: embedding,
-        processedAt: new Date().toISOString(),
-        contentLength: content.length
-      });
-
-      if ((i + 1) % 5 === 0) {
-        logRAG(`Processados ${i + 1}/${files.length} arquivos...`, 'INFO');
-      }
-    } catch (err) {
-      logRAG(`Erro ao processar arquivo ${file}: ${err.message}`, 'ERROR');
-    }
-  }
-
-  // Criar backup do database anterior se existir
-  const dbPath = path.join(process.cwd(), 'embeddings-database.json');
-  if (fs.existsSync(dbPath)) {
-    const backupPath = path.join(process.cwd(), `embeddings-database-backup-${Date.now()}.json`);
-    fs.copyFileSync(dbPath, backupPath);
-    logRAG(`Backup do database anterior criado: ${backupPath}`, 'INFO');
-  }
-
-  // Salvar novo database
-  fs.writeFileSync(dbPath, JSON.stringify(newDatabase, null, 2));
-
-  const processingTime = ((Date.now() - startTime) / 1000).toFixed(2);
-  logRAG(`Database criado com ${newDatabase.length} documentos em ${processingTime}s`, 'INFO');
-  logRAG(`Database salvo em: ${dbPath}`, 'INFO');
-
-  return newDatabase;
-}
-
-// Carregar database de embeddings
+// Inicializar RAG (verificar conexao e contar documentos)
 export async function initializeRAG() {
   try {
-    logRAG('Iniciando inicialização do RAG', 'INFO');
+    logRAG('Iniciando inicializacao do RAG com MongoDB', 'INFO');
 
-    // Verificar integridade primeiro
-    const integrity = verifyDatabaseIntegrity();
-
-    if (!integrity.isValid) {
-      logRAG(`Database inválido: ${integrity.reason}`, 'WARN');
-      logRAG('Reconstruindo database automaticamente...', 'INFO');
-      database = await buildDatabase();
-    } else {
-      // Carregar database existente
-      const dbPath = path.join(process.cwd(), 'embeddings-database.json');
-      database = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
-      logRAG(`Database carregado: ${database.length} documentos`, 'INFO');
+    if (!isConnected()) {
+      throw new Error('MongoDB nao conectado. Conecte primeiro usando connectToMongo()');
     }
 
-    // Carregar modelo de embeddings
-    logRAG('Carregando modelo de embeddings...', 'INFO');
-    extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-    logRAG('Modelo de embeddings carregado com sucesso', 'INFO');
+    const collection = getDocumentsCollection();
+    documentsCount = await collection.countDocuments();
+    
+    logRAG(`RAG inicializado: ${documentsCount} documentos na colecao`, 'INFO');
+    logRAG(`Modelo de embeddings: ${EMBEDDING_MODEL}`, 'INFO');
 
     lastInitialization = new Date().toISOString();
-    logRAG(`RAG inicializado com sucesso em ${lastInitialization}`, 'INFO');
 
     return {
       success: true,
-      documentsCount: database.length,
-      initializedAt: lastInitialization
+      documentsCount,
+      initializedAt: lastInitialization,
+      embeddingModel: EMBEDDING_MODEL
     };
   } catch (err) {
-    logRAG(`Erro crítico na inicialização do RAG: ${err.message}`, 'ERROR');
+    logRAG(`Erro critico na inicializacao do RAG: ${err.message}`, 'ERROR');
+    throw err;
+  }
+}
+
+// Gerar embedding usando OpenAI text-embedding-3-large
+export async function generateEmbedding(text) {
+  try {
+    const response = await openai.embeddings.create({
+      model: EMBEDDING_MODEL,
+      input: text,
+    });
+    return response.data[0].embedding;
+  } catch (err) {
+    logRAG(`Erro ao gerar embedding: ${err.message}`, 'ERROR');
     throw err;
   }
 }
 
 // Calcular similaridade de cosseno entre dois vetores
 function cosineSimilarity(a, b) {
+  if (!a || !b || a.length !== b.length) {
+    return 0;
+  }
+  
   let dotProduct = 0;
   let normA = 0;
   let normB = 0;
@@ -194,31 +82,53 @@ function cosineSimilarity(a, b) {
     normB += b[i] * b[i];
   }
 
-  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+  const denominator = Math.sqrt(normA) * Math.sqrt(normB);
+  return denominator === 0 ? 0 : dotProduct / denominator;
 }
 
-// Buscar conhecimento relevante
-export async function searchKnowledge(query, topK = 3) {
-  if (!database || !extractor) {
-    throw new Error('RAG não inicializado. Chame initializeRAG() primeiro.');
+// Buscar conhecimento relevante no MongoDB
+export async function searchKnowledge(query, topK = 5) {
+  if (!isConnected()) {
+    throw new Error('MongoDB nao conectado. Conecte primeiro usando connectToMongo()');
   }
 
-  // Criar embedding da pergunta
-  const queryOutput = await extractor(query, { pooling: 'mean', normalize: true });
-  const queryEmbedding = Array.from(queryOutput.data);
+  try {
+    logRAG(`Buscando conhecimento para: "${query.substring(0, 50)}..."`, 'INFO');
 
-  // Calcular similaridade com todos os documentos
-  const results = database.map(doc => ({
-    id: doc.id,
-    content: doc.content,
-    similarity: cosineSimilarity(queryEmbedding, doc.embedding)
-  }));
+    // 1. Gerar embedding da pergunta
+    const queryEmbedding = await generateEmbedding(query);
 
-  // Ordenar por similaridade (maior primeiro)
-  results.sort((a, b) => b.similarity - a.similarity);
+    // 2. Buscar todos os documentos com embeddings
+    const collection = getDocumentsCollection();
+    const documents = await collection.find(
+      { embedding: { $exists: true, $ne: [] } },
+      { projection: { _id: 1, title: 1, content: 1, embedding: 1 } }
+    ).toArray();
 
-  // Retornar top K resultados
-  return results.slice(0, topK);
+    if (documents.length === 0) {
+      logRAG('Nenhum documento com embedding encontrado', 'WARN');
+      return [];
+    }
+
+    // 3. Calcular similaridade com cada documento
+    const results = documents.map(doc => ({
+      id: doc._id.toString(),
+      title: doc.title || 'Sem titulo',
+      content: doc.content,
+      similarity: cosineSimilarity(queryEmbedding, doc.embedding)
+    }));
+
+    // 4. Ordenar por similaridade (maior primeiro) e retornar top K
+    results.sort((a, b) => b.similarity - a.similarity);
+    const topResults = results.slice(0, topK);
+
+    logRAG(`Encontrados ${topResults.length} documentos relevantes (melhor: ${(topResults[0]?.similarity * 100 || 0).toFixed(1)}%)`, 'INFO');
+
+    return topResults;
+  } catch (err) {
+    logRAG(`Erro na busca: ${err.message}`, 'ERROR');
+    throw err;
+  }
 }
 
 // Formatar contexto para o GPT
@@ -227,32 +137,94 @@ export function formatContext(results) {
     return '';
   }
 
-  let context = '\n\n📚 CONHECIMENTO TÉCNICO RELEVANTE:\n\n';
+  let context = '\n\n CONHECIMENTO TECNICO RELEVANTE:\n\n';
 
   results.forEach((result, index) => {
-    context += `[Documento ${index + 1}] (Relevância: ${(result.similarity * 100).toFixed(1)}%)\n`;
+    context += `[Documento ${index + 1}] (Relevancia: ${(result.similarity * 100).toFixed(1)}%)\n`;
     context += `${result.content}\n\n`;
   });
 
   context += '---\n\n';
-  context += 'Use o conhecimento acima para responder com precisão técnica. ';
-  context += 'Se a informação não estiver no conhecimento, use seu conhecimento geral.\n\n';
+  context += 'Use o conhecimento acima para responder com precisao tecnica. ';
+  context += 'Se a informacao nao estiver no conhecimento, use seu conhecimento geral.\n\n';
 
   return context;
 }
 
-// Exportar função de verificação de integridade
-export function checkRAGIntegrity() {
-  return verifyDatabaseIntegrity();
+// Adicionar novo documento ao RAG (usado na aprovacao de sugestoes)
+export async function addDocument(title, content, source = 'suggestion') {
+  if (!isConnected()) {
+    throw new Error('MongoDB nao conectado');
+  }
+
+  try {
+    logRAG(`Adicionando documento: ${title}`, 'INFO');
+
+    // Gerar embedding do conteudo
+    const embedding = await generateEmbedding(content);
+
+    // Inserir no MongoDB
+    const collection = getDocumentsCollection();
+    const result = await collection.insertOne({
+      title,
+      content,
+      source,
+      embedding,
+      embeddingModel: EMBEDDING_MODEL,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    documentsCount++;
+    logRAG(`Documento adicionado com sucesso: ${result.insertedId}`, 'INFO');
+
+    return {
+      success: true,
+      documentId: result.insertedId,
+      title
+    };
+  } catch (err) {
+    logRAG(`Erro ao adicionar documento: ${err.message}`, 'ERROR');
+    throw err;
+  }
 }
 
-// Exportar informações do RAG
+// Verificar integridade do RAG
+export async function checkRAGIntegrity() {
+  if (!isConnected()) {
+    return { isValid: false, reason: 'mongodb_not_connected' };
+  }
+
+  try {
+    const collection = getDocumentsCollection();
+    const totalDocs = await collection.countDocuments();
+    const docsWithEmbedding = await collection.countDocuments({ 
+      embedding: { $exists: true, $ne: [] } 
+    });
+
+    const isValid = totalDocs > 0 && docsWithEmbedding === totalDocs;
+
+    return {
+      isValid,
+      totalDocuments: totalDocs,
+      documentsWithEmbedding: docsWithEmbedding,
+      embeddingModel: EMBEDDING_MODEL,
+      reason: !isValid ? 'missing_embeddings' : null
+    };
+  } catch (err) {
+    return { isValid: false, reason: 'verification_error', error: err.message };
+  }
+}
+
+// Obter informacoes do RAG
 export function getRAGInfo() {
   return {
-    isInitialized: database !== null && extractor !== null,
-    documentsCount: database ? database.length : 0,
+    isInitialized: isConnected(),
+    documentsCount,
     lastInitialization,
-    modelLoaded: extractor !== null
+    embeddingModel: EMBEDDING_MODEL,
+    embeddingDimensions: EMBEDDING_DIMENSIONS,
+    storage: 'MongoDB'
   };
 }
 
@@ -260,6 +232,8 @@ export default {
   initializeRAG,
   searchKnowledge,
   formatContext,
+  addDocument,
   checkRAGIntegrity,
-  getRAGInfo
+  getRAGInfo,
+  generateEmbedding
 };
