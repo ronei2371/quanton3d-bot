@@ -8,7 +8,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
 import multer from "multer";
-import { initializeRAG, searchKnowledge, formatContext } from './rag-search.js';
+import { initializeRAG, searchKnowledge, formatContext, addDocument } from './rag-search.js';
+import { connectToMongo, getMessagesCollection } from './db.js';
 import {
   analyzeQuestionType,
   extractEntities,
@@ -853,49 +854,42 @@ app.put("/approve-suggestion/:id", async (req, res) => {
     const suggestion = knowledgeSuggestions[suggestionIndex];
     console.log(`📝 Aprovando sugestão de ${suggestion.userName}: ${suggestion.suggestion.substring(0, 50)}...`);
 
-    // Criar arquivo de conhecimento
-    const timestamp = Date.now();
-    const safeTitle = `sugestao_aprovada_${suggestionId}_${timestamp}`;
-    const fileName = `${safeTitle}.txt`;
-    const filePath = path.join(process.cwd(), 'rag-knowledge', fileName);
-
-    // Formatar conteúdo com metadados
-    const formattedContent = `SUGESTÃO APROVADA - ${suggestion.userName}
-Data da Sugestão: ${suggestion.timestamp}
-Data de Aprovação: ${new Date().toISOString()}
-Usuário: ${suggestion.userName}
+    // Formatar conteúdo com metadados para o MongoDB
+    const documentTitle = `Sugestao Aprovada - ${suggestion.userName} - ${suggestionId}`;
+    const formattedContent = `SUGESTAO APROVADA - ${suggestion.userName}
+Data da Sugestao: ${suggestion.timestamp}
+Data de Aprovacao: ${new Date().toISOString()}
+Usuario: ${suggestion.userName}
 Telefone: ${suggestion.userPhone || 'N/A'}
 
-CONTEÚDO DA SUGESTÃO:
+CONTEUDO DA SUGESTAO:
 ${suggestion.suggestion}
 
 CONTEXTO DA CONVERSA:
-Última mensagem do usuário: ${suggestion.lastUserMessage}
-Última resposta do bot: ${suggestion.lastBotReply}`;
+Ultima mensagem do usuario: ${suggestion.lastUserMessage}
+Ultima resposta do bot: ${suggestion.lastBotReply}`;
 
-    // Salvar arquivo
-    fs.writeFileSync(filePath, formattedContent, 'utf-8');
-    console.log(`✅ Arquivo de conhecimento criado: ${fileName}`);
+    // Adicionar documento ao MongoDB via RAG
+    console.log('📝 Adicionando conhecimento ao MongoDB...');
+    const addResult = await addDocument(documentTitle, formattedContent, 'suggestion');
+    console.log(`✅ Documento adicionado ao MongoDB: ${addResult.documentId}`);
 
     // Atualizar status da sugestão
     knowledgeSuggestions[suggestionIndex].status = 'approved';
     knowledgeSuggestions[suggestionIndex].approvedAt = new Date().toISOString();
-    knowledgeSuggestions[suggestionIndex].fileName = fileName;
+    knowledgeSuggestions[suggestionIndex].documentId = addResult.documentId.toString();
     knowledgeSuggestions[suggestionIndex].approvedBy = 'admin';
 
     // Salvar dados atualizados
     saveData();
 
-    // Reinicializar RAG para incluir novo conhecimento
-    console.log('🔄 Reinicializando RAG com novo conhecimento...');
-    await initializeRAG();
-    console.log('✅ RAG reinicializado com sucesso!');
+    console.log('✅ Conhecimento integrado ao RAG com sucesso!');
 
     // Log da operação
     logOperation('APPROVE_SUGGESTION', {
       suggestionId,
       userName: suggestion.userName,
-      fileName,
+      documentId: addResult.documentId.toString(),
       timestamp: new Date().toISOString()
     });
 
@@ -903,8 +897,8 @@ CONTEXTO DA CONVERSA:
 
     res.json({
       success: true,
-      message: 'Sugestão aprovada e conhecimento adicionado ao RAG com sucesso!',
-      fileName,
+      message: 'Sugestão aprovada e conhecimento adicionado ao MongoDB com sucesso!',
+      documentId: addResult.documentId.toString(),
       suggestionId,
       approvedAt: new Date().toISOString()
     });
@@ -1127,21 +1121,121 @@ app.get("/intelligence-stats", (req, res) => {
   }
 });
 
+// ===== ENDPOINT FALE CONOSCO (MongoDB) =====
+app.post("/api/contact", async (req, res) => {
+  try {
+    const { name, email, phone, message, source } = req.body;
+
+    console.log(`📧 Nova mensagem de contato de: ${name || 'Anonimo'}`);
+
+    // Validacao basica
+    if (!message || message.trim().length < 5) {
+      return res.status(400).json({
+        success: false,
+        error: 'Mensagem muito curta. Por favor, descreva sua duvida ou solicitacao.'
+      });
+    }
+
+    if (!email && !phone) {
+      return res.status(400).json({
+        success: false,
+        error: 'Por favor, informe um email ou telefone para contato.'
+      });
+    }
+
+    // Salvar no MongoDB
+    const messagesCollection = getMessagesCollection();
+    const contactMessage = {
+      name: name || 'Anonimo',
+      email: email || null,
+      phone: phone || null,
+      message: message.trim(),
+      source: source || 'site-form',
+      status: 'new',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await messagesCollection.insertOne(contactMessage);
+
+    console.log(`✅ Mensagem salva no MongoDB: ${result.insertedId}`);
+
+    // Log da operacao
+    logOperation('CONTACT_MESSAGE', {
+      messageId: result.insertedId.toString(),
+      name: contactMessage.name,
+      hasEmail: !!email,
+      hasPhone: !!phone,
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: 'Mensagem enviada com sucesso! Entraremos em contato em breve.',
+      messageId: result.insertedId.toString()
+    });
+  } catch (err) {
+    console.error('❌ Erro ao salvar mensagem de contato:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao enviar mensagem. Tente novamente.'
+    });
+  }
+});
+
+// Rota para listar mensagens de contato (admin)
+app.get("/api/contact", async (req, res) => {
+  try {
+    const { auth } = req.query;
+
+    // Autenticacao
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    }
+
+    const messagesCollection = getMessagesCollection();
+    const messages = await messagesCollection
+      .find({})
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .toArray();
+
+    res.json({
+      success: true,
+      messages,
+      count: messages.length
+    });
+  } catch (err) {
+    console.error('❌ Erro ao listar mensagens:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Configuração da porta Render
 const PORT = process.env.PORT || 3001;
 
-// Inicializar RAG antes de iniciar o servidor
-console.log('🚀 Inicializando sistema RAG...');
-initializeRAG().then(() => {
-  console.log('✅ RAG inicializado com sucesso!');
-  app.listen(PORT, () => {
-    console.log(`✅ Servidor Quanton3D IA rodando na porta ${PORT}`);
-    console.log('🤖 Bot com RAG ativado e pronto para uso!');
-  });
-}).catch(err => {
-  console.error('❌ Erro ao inicializar RAG:', err);
-  console.log('⚠️ Servidor iniciando SEM RAG...');
-  app.listen(PORT, () =>
-    console.log(`✅ Servidor Quanton3D IA rodando na porta ${PORT} (sem RAG)`)
-  );
-});
+// Inicializar MongoDB e RAG antes de iniciar o servidor
+async function startServer() {
+  try {
+    console.log('🚀 Conectando ao MongoDB...');
+    await connectToMongo();
+    console.log('✅ MongoDB conectado com sucesso!');
+
+    console.log('🚀 Inicializando sistema RAG...');
+    await initializeRAG();
+    console.log('✅ RAG inicializado com sucesso!');
+
+    app.listen(PORT, () => {
+      console.log(`✅ Servidor Quanton3D IA rodando na porta ${PORT}`);
+      console.log('🤖 Bot com RAG + MongoDB ativado e pronto para uso!');
+    });
+  } catch (err) {
+    console.error('❌ Erro na inicialização:', err);
+    console.log('⚠️ Servidor iniciando com funcionalidade limitada...');
+    app.listen(PORT, () =>
+      console.log(`✅ Servidor Quanton3D IA rodando na porta ${PORT} (funcionalidade limitada)`)
+    );
+  }
+}
+
+startServer();
