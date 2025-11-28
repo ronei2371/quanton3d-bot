@@ -20,62 +20,12 @@ import {
   personalizeResponse,
   calculateIntelligenceMetrics
 } from './ai-intelligence-system.js';
-import fs from 'fs';
-import path from 'path';
 
 dotenv.config();
 
-// ===== SISTEMA DE PERSISTÊNCIA =====
-// Usa disco persistente do Render se disponível, senão usa pasta atual
-const DATA_DIR = process.env.RENDER_DISK_PATH || process.cwd();
-const DATA_FILE = path.join(DATA_DIR, 'data-persistence.json');
-
-// Criar diretório se não existir
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  console.log(`📁 Diretório criado: ${DATA_DIR}`);
-}
-
-console.log(`💾 Usando caminho de persistência: ${DATA_FILE}`);
-
-// Função para carregar dados do arquivo
-function loadData() {
-  try {
-    if (fs.existsSync(DATA_FILE)) {
-      const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-      console.log('✅ Dados carregados do arquivo de persistência');
-      return data;
-    }
-  } catch (err) {
-    console.error('⚠️ Erro ao carregar dados:', err.message);
-  }
-  return {
-    conversationMetrics: [],
-    userRegistrations: [],
-    knowledgeSuggestions: [],
-    customRequests: []
-  };
-}
-
-// Função para salvar dados no arquivo
-function saveData() {
-  try {
-    const data = {
-      conversationMetrics,
-      userRegistrations,
-      knowledgeSuggestions,
-      customRequests,
-      lastSaved: new Date().toISOString()
-    };
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
-    console.log('💾 Dados salvos com sucesso');
-  } catch (err) {
-    console.error('❌ Erro ao salvar dados:', err.message);
-  }
-}
-
-// Carregar dados ao iniciar
-const persistedData = loadData();
+// ===== PERSISTENCIA APENAS VIA MONGODB =====
+// Removido sistema de arquivos locais - usar APENAS MongoDB via process.env.MONGODB_URI
+console.log('🔧 Sistema configurado para usar APENAS MongoDB para persistencia');
 
 const app = express();
 app.use(cors());
@@ -97,17 +47,16 @@ const openai = new OpenAI({
 // Histórico de conversas por sessão
 const conversationHistory = new Map();
 
-// Sugestões de conhecimento e pedidos customizados pendentes
-const knowledgeSuggestions = persistedData.knowledgeSuggestions || [];
-const customRequests = persistedData.customRequests || []; // Array para pedidos customizados
+// Sugestões de conhecimento e pedidos customizados pendentes (em memoria - persistidos via MongoDB)
+const knowledgeSuggestions = [];
+const customRequests = [];
 
-// Métricas e Analytics
-const conversationMetrics = persistedData.conversationMetrics || []; // Todas as conversas
-const userRegistrations = persistedData.userRegistrations || []; // Cadastros de usuários
-const siteVisits = []; // Visitas ao site
+// Métricas e Analytics (em memoria - persistidos via MongoDB)
+const conversationMetrics = [];
+const userRegistrations = [];
+const siteVisits = [];
 
-// Salvar dados a cada 30 segundos
-setInterval(saveData, 30000);
+// NOTA: Dados sao persistidos via MongoDB, nao mais em arquivos locais
 
 // Rota principal de teste
 app.get("/", (req, res) => {
@@ -796,40 +745,14 @@ app.get("/suggestions", (req, res) => {
 
 // ===== NOVAS ROTAS DE APROVAÇÃO =====
 
-// Função para criar backup antes de operações críticas
-function createBackup() {
-  try {
-    const backupFile = path.join(DATA_DIR, `backup-${Date.now()}.json`);
-    const currentData = {
-      conversationMetrics,
-      userRegistrations,
-      knowledgeSuggestions,
-      customRequests,
-      backupTimestamp: new Date().toISOString()
-    };
-    fs.writeFileSync(backupFile, JSON.stringify(currentData, null, 2), 'utf-8');
-    console.log(`💾 Backup criado: ${backupFile}`);
-    return backupFile;
-  } catch (err) {
-    console.error('❌ Erro ao criar backup:', err);
-    return null;
-  }
-}
-
-// Função para logging persistente
+// Função para logging de operacoes (apenas console - sem arquivos locais)
 function logOperation(operation, details) {
-  try {
-    const logFile = path.join(DATA_DIR, 'operations.log');
-    const logEntry = `${new Date().toISOString()} - ${operation}: ${JSON.stringify(details)}\n`;
-    fs.appendFileSync(logFile, logEntry, 'utf-8');
-  } catch (err) {
-    console.error('❌ Erro ao salvar log:', err);
-  }
+  const logEntry = `${new Date().toISOString()} - ${operation}: ${JSON.stringify(details)}`;
+  console.log(`📝 [LOG] ${logEntry}`);
 }
 
 // Rota para aprovar sugestão
 app.put("/approve-suggestion/:id", async (req, res) => {
-  let backupFile = null;
   try {
     const { auth } = req.body;
     const suggestionId = parseInt(req.params.id);
@@ -841,9 +764,6 @@ app.put("/approve-suggestion/:id", async (req, res) => {
       console.log('❌ Tentativa de acesso não autorizado');
       return res.status(401).json({ success: false, message: 'Não autorizado' });
     }
-
-    // Criar backup antes da operação
-    backupFile = createBackup();
 
     // Encontrar sugestão
     const suggestionIndex = knowledgeSuggestions.findIndex(s => s.id === suggestionId);
@@ -881,9 +801,6 @@ Ultima resposta do bot: ${suggestion.lastBotReply}`;
     knowledgeSuggestions[suggestionIndex].documentId = addResult.documentId.toString();
     knowledgeSuggestions[suggestionIndex].approvedBy = 'admin';
 
-    // Salvar dados atualizados
-    saveData();
-
     console.log('✅ Conhecimento integrado ao RAG com sucesso!');
 
     // Log da operação
@@ -910,22 +827,19 @@ Ultima resposta do bot: ${suggestion.lastBotReply}`;
     logOperation('APPROVE_SUGGESTION_ERROR', {
       suggestionId: req.params.id,
       error: err.message,
-      backupFile,
       timestamp: new Date().toISOString()
     });
 
     res.status(500).json({
       success: false,
       error: 'Erro interno ao aprovar sugestão',
-      message: 'Tente novamente. Se o problema persistir, verifique os logs.',
-      backupAvailable: backupFile !== null
+      message: 'Tente novamente. Se o problema persistir, verifique os logs.'
     });
   }
 });
 
 // Rota para rejeitar sugestão
 app.put("/reject-suggestion/:id", async (req, res) => {
-  let backupFile = null;
   try {
     const { auth, reason } = req.body;
     const suggestionId = parseInt(req.params.id);
@@ -937,9 +851,6 @@ app.put("/reject-suggestion/:id", async (req, res) => {
       console.log('❌ Tentativa de acesso não autorizado');
       return res.status(401).json({ success: false, message: 'Não autorizado' });
     }
-
-    // Criar backup antes da operação
-    backupFile = createBackup();
 
     // Encontrar sugestão
     const suggestionIndex = knowledgeSuggestions.findIndex(s => s.id === suggestionId);
@@ -956,9 +867,6 @@ app.put("/reject-suggestion/:id", async (req, res) => {
     knowledgeSuggestions[suggestionIndex].rejectedAt = new Date().toISOString();
     knowledgeSuggestions[suggestionIndex].rejectionReason = reason || 'Não especificado';
     knowledgeSuggestions[suggestionIndex].rejectedBy = 'admin';
-
-    // Salvar dados atualizados
-    saveData();
 
     // Log da operação
     logOperation('REJECT_SUGGESTION', {
@@ -984,15 +892,13 @@ app.put("/reject-suggestion/:id", async (req, res) => {
     logOperation('REJECT_SUGGESTION_ERROR', {
       suggestionId: req.params.id,
       error: err.message,
-      backupFile,
       timestamp: new Date().toISOString()
     });
 
     res.status(500).json({
       success: false,
       error: 'Erro interno ao rejeitar sugestão',
-      message: 'Tente novamente. Se o problema persistir, verifique os logs.',
-      backupAvailable: backupFile !== null
+      message: 'Tente novamente. Se o problema persistir, verifique os logs.'
     });
   }
 });
