@@ -68,6 +68,11 @@ export function getMessagesCollection() {
   return getDb().collection('messages');
 }
 
+// Obter colecao de galeria (Fotos de impressoes)
+export function getGalleryCollection() {
+  return getDb().collection('gallery');
+}
+
 // Fechar conexao (para cleanup)
 export async function closeMongo() {
   if (client) {
@@ -88,6 +93,7 @@ export default {
   getDb,
   getDocumentsCollection,
   getMessagesCollection,
+  getGalleryCollection,
   closeMongo,
   isConnected
 };

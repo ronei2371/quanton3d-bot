@@ -9,7 +9,8 @@ import dotenv from "dotenv";
 import OpenAI from "openai";
 import multer from "multer";
 import { initializeRAG, searchKnowledge, formatContext, addDocument } from './rag-search.js';
-import { connectToMongo, getMessagesCollection } from './db.js';
+import { connectToMongo, getMessagesCollection, getGalleryCollection } from './db.js';
+import { v2 as cloudinary } from 'cloudinary';
 import {
   analyzeQuestionType,
   extractEntities,
@@ -22,6 +23,19 @@ import {
 } from './ai-intelligence-system.js';
 
 dotenv.config();
+
+// ===== CONFIGURACAO DO CLOUDINARY =====
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+if (process.env.CLOUDINARY_CLOUD_NAME) {
+  console.log('☁️ Cloudinary configurado:', process.env.CLOUDINARY_CLOUD_NAME);
+} else {
+  console.warn('⚠️ Cloudinary nao configurado - galeria de fotos desabilitada');
+}
 
 // ===== PERSISTENCIA APENAS VIA MONGODB =====
 // Removido sistema de arquivos locais - usar APENAS MongoDB via process.env.MONGODB_URI
@@ -1151,6 +1165,376 @@ app.get("/api/contact", async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
+// ===== ENDPOINTS DA GALERIA DE FOTOS =====
+
+// Configuracao do multer para upload de multiplas imagens (galeria)
+const galleryUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB por imagem
+  fileFilter: (req, file, cb) => {
+    // Aceitar apenas imagens
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Apenas imagens sao permitidas'), false);
+    }
+  }
+});
+
+// Funcao auxiliar para upload no Cloudinary
+async function uploadToCloudinary(buffer, mimetype) {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'quanton3d-gallery',
+        resource_type: 'image',
+        transformation: [
+          { width: 1200, height: 1200, crop: 'limit' }, // Limitar tamanho
+          { quality: 'auto:good' } // Otimizar qualidade
+        ]
+      },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+    uploadStream.end(buffer);
+  });
+}
+
+// POST /api/gallery - Enviar nova foto para galeria
+app.post("/api/gallery", galleryUpload.array('images', 2), async (req, res) => {
+  try {
+    const { name, resin, printer, comment } = req.body;
+    const imageFiles = req.files;
+
+    console.log(`📸 [GALERIA] Nova submissao de ${name || 'Anonimo'}`);
+
+    // Validacoes
+    if (!process.env.CLOUDINARY_CLOUD_NAME) {
+      return res.status(503).json({
+        success: false,
+        error: 'Servico de galeria nao configurado. Entre em contato com o suporte.'
+      });
+    }
+
+    if (!imageFiles || imageFiles.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Pelo menos uma foto e obrigatoria.'
+      });
+    }
+
+    if (!resin || !printer) {
+      return res.status(400).json({
+        success: false,
+        error: 'Resina e impressora sao obrigatorios.'
+      });
+    }
+
+    // Verificar limite de 2 fotos por configuracao
+    const galleryCollection = getGalleryCollection();
+    const existingCount = await galleryCollection.countDocuments({
+      resin: resin,
+      printer: printer,
+      status: { $in: ['pending', 'approved'] }
+    });
+
+    if (existingCount >= 2) {
+      return res.status(400).json({
+        success: false,
+        error: `Ja existem 2 fotos para a configuracao ${resin} + ${printer}. Limite atingido.`
+      });
+    }
+
+    // Upload das imagens para o Cloudinary
+    const uploadedImages = [];
+    for (const file of imageFiles) {
+      try {
+        const result = await uploadToCloudinary(file.buffer, file.mimetype);
+        uploadedImages.push({
+          url: result.secure_url,
+          publicId: result.public_id,
+          width: result.width,
+          height: result.height
+        });
+        console.log(`✅ Imagem enviada para Cloudinary: ${result.public_id}`);
+      } catch (uploadErr) {
+        console.error('❌ Erro no upload para Cloudinary:', uploadErr);
+        return res.status(500).json({
+          success: false,
+          error: 'Erro ao fazer upload da imagem. Tente novamente.'
+        });
+      }
+    }
+
+    // Salvar no MongoDB
+    const galleryEntry = {
+      name: name || 'Anonimo',
+      resin,
+      printer,
+      comment: comment || '',
+      images: uploadedImages,
+      status: 'pending', // pending, approved, rejected
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await galleryCollection.insertOne(galleryEntry);
+
+    console.log(`✅ [GALERIA] Entrada salva: ${result.insertedId}`);
+
+    res.json({
+      success: true,
+      message: 'Fotos enviadas com sucesso! Aguarde aprovacao do administrador.',
+      entryId: result.insertedId.toString()
+    });
+  } catch (err) {
+    console.error('❌ [GALERIA] Erro ao salvar:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao enviar fotos. Tente novamente.'
+    });
+  }
+});
+
+// GET /api/gallery - Listar fotos aprovadas (publico)
+app.get("/api/gallery", async (req, res) => {
+  try {
+    const { page = 1, limit = 20, resin, printer } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const galleryCollection = getGalleryCollection();
+
+    // Filtros opcionais
+    const filter = { status: 'approved' };
+    if (resin) filter.resin = resin;
+    if (printer) filter.printer = printer;
+
+    const [entries, total] = await Promise.all([
+      galleryCollection
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .toArray(),
+      galleryCollection.countDocuments(filter)
+    ]);
+
+    res.json({
+      success: true,
+      entries,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (err) {
+    console.error('❌ [GALERIA] Erro ao listar:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/gallery/pending - Listar fotos pendentes (admin)
+app.get("/api/gallery/pending", async (req, res) => {
+  try {
+    const { auth } = req.query;
+
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    }
+
+    const galleryCollection = getGalleryCollection();
+    const entries = await galleryCollection
+      .find({ status: 'pending' })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    res.json({
+      success: true,
+      entries,
+      count: entries.length
+    });
+  } catch (err) {
+    console.error('❌ [GALERIA] Erro ao listar pendentes:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/gallery/all - Listar todas as fotos (admin)
+app.get("/api/gallery/all", async (req, res) => {
+  try {
+    const { auth } = req.query;
+
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    }
+
+    const galleryCollection = getGalleryCollection();
+    const entries = await galleryCollection
+      .find({})
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .toArray();
+
+    res.json({
+      success: true,
+      entries,
+      count: entries.length
+    });
+  } catch (err) {
+    console.error('❌ [GALERIA] Erro ao listar todas:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// PUT /api/gallery/:id/approve - Aprovar foto (admin)
+app.put("/api/gallery/:id/approve", async (req, res) => {
+  try {
+    const { auth } = req.query;
+    const { id } = req.params;
+
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    }
+
+    const galleryCollection = getGalleryCollection();
+    const { ObjectId } = await import('mongodb');
+
+    const result = await galleryCollection.updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          status: 'approved',
+          approvedAt: new Date(),
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Entrada nao encontrada' });
+    }
+
+    console.log(`✅ [GALERIA] Foto aprovada: ${id}`);
+
+    res.json({
+      success: true,
+      message: 'Foto aprovada com sucesso!'
+    });
+  } catch (err) {
+    console.error('❌ [GALERIA] Erro ao aprovar:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// PUT /api/gallery/:id/reject - Rejeitar foto (admin)
+app.put("/api/gallery/:id/reject", async (req, res) => {
+  try {
+    const { auth } = req.query;
+    const { id } = req.params;
+
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    }
+
+    const galleryCollection = getGalleryCollection();
+    const { ObjectId } = await import('mongodb');
+
+    // Buscar entrada para deletar imagens do Cloudinary
+    const entry = await galleryCollection.findOne({ _id: new ObjectId(id) });
+
+    if (!entry) {
+      return res.status(404).json({ success: false, message: 'Entrada nao encontrada' });
+    }
+
+    // Deletar imagens do Cloudinary
+    if (entry.images && entry.images.length > 0) {
+      for (const img of entry.images) {
+        try {
+          await cloudinary.uploader.destroy(img.publicId);
+          console.log(`🗑️ Imagem deletada do Cloudinary: ${img.publicId}`);
+        } catch (delErr) {
+          console.error('⚠️ Erro ao deletar imagem do Cloudinary:', delErr);
+        }
+      }
+    }
+
+    // Atualizar status para rejeitado
+    await galleryCollection.updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          status: 'rejected',
+          rejectedAt: new Date(),
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    console.log(`❌ [GALERIA] Foto rejeitada: ${id}`);
+
+    res.json({
+      success: true,
+      message: 'Foto rejeitada e removida.'
+    });
+  } catch (err) {
+    console.error('❌ [GALERIA] Erro ao rejeitar:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DELETE /api/gallery/:id - Deletar foto (admin)
+app.delete("/api/gallery/:id", async (req, res) => {
+  try {
+    const { auth } = req.query;
+    const { id } = req.params;
+
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    }
+
+    const galleryCollection = getGalleryCollection();
+    const { ObjectId } = await import('mongodb');
+
+    // Buscar entrada para deletar imagens do Cloudinary
+    const entry = await galleryCollection.findOne({ _id: new ObjectId(id) });
+
+    if (!entry) {
+      return res.status(404).json({ success: false, message: 'Entrada nao encontrada' });
+    }
+
+    // Deletar imagens do Cloudinary
+    if (entry.images && entry.images.length > 0) {
+      for (const img of entry.images) {
+        try {
+          await cloudinary.uploader.destroy(img.publicId);
+          console.log(`🗑️ Imagem deletada do Cloudinary: ${img.publicId}`);
+        } catch (delErr) {
+          console.error('⚠️ Erro ao deletar imagem do Cloudinary:', delErr);
+        }
+      }
+    }
+
+    // Deletar do MongoDB
+    await galleryCollection.deleteOne({ _id: new ObjectId(id) });
+
+    console.log(`🗑️ [GALERIA] Entrada deletada: ${id}`);
+
+    res.json({
+      success: true,
+      message: 'Foto deletada com sucesso.'
+    });
+  } catch (err) {
+    console.error('❌ [GALERIA] Erro ao deletar:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ===== FIM DOS ENDPOINTS DA GALERIA =====
 
 // Configuração da porta Render
 const PORT = process.env.PORT || 3001;
