@@ -1,9 +1,9 @@
 // 🧠 SISTEMA DE INTELIGÊNCIA AVANÇADA PARA QUANTON3D BOT
 // Implementa funcionalidades avançadas de IA para tornar o bot mais inteligente
+// ✅ VERSÃO CORRIGIDA: Aprendizado salvo no MongoDB (não em arquivos locais)
 
 import { searchKnowledge } from './rag-search.js';
-import fs from 'fs';
-import path from 'path';
+import { getLearningCollection } from './db.js';
 
 // ===== SISTEMA DE ANÁLISE DE CONTEXTO =====
 
@@ -195,7 +195,7 @@ MODO SEGURANÇA PRIORITÁRIA:
   }
   
   if (entities.printers.length > 0) {
-    contextPrompt += `\n\nIMPRESSORAS MENCIONADAS: ${entities.printers.join(', ')}`;
+    contextPrompt += `\n\nIMPRESSOTRAS MENCIONADAS: ${entities.printers.join(', ')}`;
     contextPrompt += `\nConsidere as características específicas destas impressoras.`;
   }
   
@@ -207,11 +207,11 @@ MODO SEGURANÇA PRIORITÁRIA:
   return contextPrompt;
 }
 
-// ===== SISTEMA DE APRENDIZADO CONTÍNUO =====
+// ===== SISTEMA DE APRENDIZADO CONTÍNUO (MONGODB) =====
 
-export function learnFromConversation(message, reply, entities, questionType) {
+export async function learnFromConversation(message, reply, entities, questionType) {
   const learningData = {
-    timestamp: new Date().toISOString(),
+    timestamp: new Date(),
     message,
     reply,
     entities,
@@ -221,25 +221,30 @@ export function learnFromConversation(message, reply, entities, questionType) {
     entitiesCount: Object.values(entities).flat().length
   };
   
-  // Salvar dados de aprendizado
+  // ✅ CORRIGIDO: Salvar no MongoDB ao invés de arquivo local
   try {
-    const learningFile = path.join(process.cwd(), 'ai-learning-data.json');
-    let existingData = [];
-    
-    if (fs.existsSync(learningFile)) {
-      existingData = JSON.parse(fs.readFileSync(learningFile, 'utf-8'));
-    }
-    
-    existingData.push(learningData);
+    const learningCollection = getLearningCollection();
+    await learningCollection.insertOne(learningData);
     
     // Manter apenas os últimos 1000 registros
-    if (existingData.length > 1000) {
-      existingData = existingData.slice(-1000);
+    const count = await learningCollection.countDocuments();
+    if (count > 1000) {
+      const oldest = await learningCollection
+        .find()
+        .sort({ timestamp: 1 })
+        .limit(count - 1000)
+        .toArray();
+      
+      const oldestIds = oldest.map(doc => doc._id);
+      await learningCollection.deleteMany({ _id: { $in: oldestIds } });
+      
+      console.log(`🧹 Aprendizado: ${count - 1000} registros antigos removidos`);
     }
     
-    fs.writeFileSync(learningFile, JSON.stringify(existingData, null, 2));
+    console.log('✅ Dados de aprendizado salvos no MongoDB');
   } catch (err) {
-    console.error('❌ Erro ao salvar dados de aprendizado:', err);
+    console.error('❌ Erro ao salvar dados de aprendizado no MongoDB:', err);
+    // Não bloquear o fluxo se der erro no aprendizado
   }
 }
 
