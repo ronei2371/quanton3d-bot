@@ -1581,7 +1581,145 @@ app.delete("/api/gallery/:id", async (req, res) => {
 });
 
 // ===== FIM DOS ENDPOINTS DA GALERIA =====
+// ===== SISTEMA DE FEEDBACK E MELHORIA DE CONHECIMENTO =====
+// Adicionar no server.js - NOVAS ROTAS
 
+// Rota para adicionar conhecimento baseado em feedback
+app.post("/api/add-knowledge-from-feedback", async (req, res) => {
+  try {
+    const { auth, title, content, conversationId, originalQuestion, originalReply } = req.body;
+
+    // Autenticação
+    if (auth !== process.env.ADMIN_SECRET || auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    }
+
+    if (!title || !content) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Título e conteúdo são obrigatórios' 
+      });
+    }
+
+    console.log(`📚 [FEEDBACK] Adicionando conhecimento: ${title}`);
+
+    // Formatar conteúdo com metadados
+    const formattedContent = `${title}
+
+${content}
+
+---
+ORIGEM: Feedback de conversa
+DATA: ${new Date().toISOString()}
+PERGUNTA ORIGINAL: ${originalQuestion || 'N/A'}
+RESPOSTA ANTERIOR (INCORRETA): ${originalReply ? originalReply.substring(0, 200) + '...' : 'N/A'}`;
+
+    // Adicionar ao RAG usando função existente
+    const result = await addDocument(title, formattedContent, 'admin_feedback');
+
+    console.log(`✅ [FEEDBACK] Conhecimento adicionado ao RAG: ${result.documentId}`);
+
+    // Marcar conversa como "melhorada" nas métricas
+    if (conversationId) {
+      const metricIndex = conversationMetrics.findIndex(
+        m => m.sessionId === conversationId || 
+             (m.message === originalQuestion && m.reply === originalReply)
+      );
+      
+      if (metricIndex !== -1) {
+        conversationMetrics[metricIndex].feedbackAdded = true;
+        conversationMetrics[metricIndex].feedbackDocumentId = result.documentId.toString();
+        conversationMetrics[metricIndex].feedbackAddedAt = new Date().toISOString();
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Conhecimento adicionado com sucesso ao RAG!',
+      documentId: result.documentId.toString(),
+      title
+    });
+  } catch (err) {
+    console.error('❌ [FEEDBACK] Erro ao adicionar conhecimento:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao adicionar conhecimento',
+      message: err.message
+    });
+  }
+});
+
+// Rota para marcar conversa como "resposta ruim"
+app.put("/api/mark-bad-response/:index", async (req, res) => {
+  try {
+    const { auth, reason } = req.body;
+    const index = parseInt(req.params.index);
+
+    // Autenticação
+    if (auth !== process.env.ADMIN_SECRET || auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    }
+
+    if (index < 0 || index >= conversationMetrics.length) {
+      return res.status(404).json({ success: false, message: 'Conversa não encontrada' });
+    }
+
+    conversationMetrics[index].markedAsBad = true;
+    conversationMetrics[index].badResponseReason = reason || 'Não especificado';
+    conversationMetrics[index].markedAt = new Date().toISOString();
+
+    console.log(`⚠️ [FEEDBACK] Conversa ${index} marcada como ruim: ${reason}`);
+
+    res.json({
+      success: true,
+      message: 'Resposta marcada como ruim',
+      index
+    });
+  } catch (err) {
+    console.error('❌ [FEEDBACK] Erro ao marcar resposta:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Rota para obter estatísticas de feedback
+app.get("/api/feedback-stats", async (req, res) => {
+  try {
+    const { auth } = req.query;
+
+    // Autenticação
+    if (auth !== process.env.ADMIN_SECRET || auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    }
+
+    const totalConversations = conversationMetrics.length;
+    const conversationsWithFeedback = conversationMetrics.filter(c => c.feedbackAdded).length;
+    const badResponses = conversationMetrics.filter(c => c.markedAsBad).length;
+    const pendingReview = conversationMetrics.filter(
+      c => !c.feedbackAdded && !c.markedAsBad && c.documentsFound === 0
+    ).length;
+
+    const stats = {
+      total: totalConversations,
+      withFeedback: conversationsWithFeedback,
+      markedAsBad: badResponses,
+      pendingReview,
+      improvementRate: totalConversations > 0 
+        ? ((conversationsWithFeedback / totalConversations) * 100).toFixed(1)
+        : 0
+    };
+
+    res.json({
+      success: true,
+      stats
+    });
+  } catch (err) {
+    console.error('❌ [FEEDBACK] Erro ao obter estatísticas:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ===== ADICIONAR ESTAS ROTAS NO server.js =====
+// Cole este código ANTES da linha "const PORT = process.env.PORT || 3001;"
 // Configuração da porta Render
 const PORT = process.env.PORT || 3001;
 
