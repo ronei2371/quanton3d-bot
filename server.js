@@ -397,35 +397,47 @@ app.post("/ask-with-image", upload.single('image'), async (req, res) => {
 
     const visionResponse = await openai.chat.completions.create({
       model: model,
+      temperature: 0, // Temperatura zero para maxima precisao
       messages: [
         {
           role: "system",
-          content: `Você é um especialista técnico em impressão 3D com resina UV SLA da Quanton3D.
+          content: `Voce e um especialista tecnico em impressao 3D com RESINA UV (tecnologias SLA / LCD / DLP) da Quanton3D.
 
-TAREFA: Analise a imagem e forneça uma DESCRIÇÃO TÉCNICA DETALHADA do que você vê.
+IMPORTANTE: Este atendimento e SEMPRE sobre impressao 3D com RESINA UV. NUNCA fale de filamento, FDM, bico, nozzle ou mesa aquecida. Se a imagem parecer ser de impressao FDM com filamento, diga explicitamente: "Esta imagem parece ser de impressao FDM com filamento, nao de resina."
 
-INSTRUÇÕES:
-1. Descreva APENAS o que você observa na imagem (defeitos, aparência, características da peça)
-2. NÃO dê soluções ou recomendações ainda - apenas descreva o problema
-3. NÃO mencione marcas de resina específicas na descrição
-4. Se a imagem NÃO estiver relacionada a impressão 3D com resina, diga explicitamente: "Esta imagem não parece estar relacionada a impressão 3D com resina."
-5. Seja objetivo e técnico na descrição
+TAREFA: Analise a imagem e forneca uma DESCRICAO TECNICA DETALHADA do que voce ve.
+
+CHECKLIST OBRIGATORIO - Verifique SEMPRE nesta ordem:
+1. DESCOLAMENTO DA BASE: A peca esta bem aderida a plataforma de construcao? Ha sinais de descolamento (peca soltando da base, bordas levantadas, peca presa apenas na FEP, base da peca com falhas)?
+2. FALHAS DE SUPORTE: Suportes quebrados, marcas fortes de suporte, falha de sustentacao, suportes insuficientes?
+3. PROBLEMAS DE CAMADA: Layer shift, linhas irregulares, bandas horizontais, delaminacao entre camadas?
+4. DEFEITOS DE CURA: Bolhas, oclusoes, regioes mal curadas, partes moles ou pegajosas?
+5. DEFORMACOES: Warping, empenamento, distorcao da geometria?
+6. QUALIDADE SUPERFICIAL: Rugosidade excessiva, marcas, imperfeicoes?
 
 FORMATO DA RESPOSTA:
-- Tipo de objeto/peça (se identificável)
-- Problemas visíveis (rachaduras, falhas de aderência, deformações, etc.)
-- Características da superfície
-- Qualquer outro detalhe técnico relevante`
+Comece SEMPRE com: "Problema principal: [descreva o defeito mais grave]"
+
+Se houver descolamento da base, essa DEVE ser a primeira coisa citada:
+"Problema principal: descolamento da base (peca soltando da plataforma de construcao)."
+
+Depois descreva:
+- Tipo de objeto/peca (se identificavel)
+- Outros problemas visiveis
+- Caracteristicas da superficie
+- Detalhes tecnicos relevantes
+
+Se a imagem NAO estiver relacionada a impressao 3D com resina, diga: "Esta imagem nao parece estar relacionada a impressao 3D com resina."`
         },
         {
           role: "user",
           content: [
-            { type: "text", text: message || "Analise esta imagem relacionada a impressão 3D com resina e descreva o que você vê." },
+            { type: "text", text: message || "Analise esta imagem relacionada a impressao 3D com resina e descreva o que voce ve." },
             { type: "image_url", image_url: { url: imageUrl } }
           ]
         }
       ],
-      max_tokens: 500,
+      max_tokens: 600,
     });
 
     const imageDescription = visionResponse.choices[0].message.content;
@@ -494,23 +506,29 @@ FORMATO DA RESPOSTA:
       // MODO RAG ESTRITO - Usa APENAS conhecimento da Quanton3D
       console.log('🎯 [PASSO 3] MODO RAG: Gerando resposta baseada no conhecimento Quanton3D...');
 
-      const ragSystemPrompt = `Você é o assistente oficial da Quanton3D, especialista em resinas UV para impressoras SLA/LCD/DLP.
+      const ragSystemPrompt = `Voce e o assistente oficial da Quanton3D, especialista em resinas UV para impressoras SLA/LCD/DLP.
 
 REGRAS ABSOLUTAS:
-1. Use EXCLUSIVAMENTE o conhecimento técnico fornecido no contexto abaixo (documentos da Quanton3D).
-2. NÃO use conhecimento genérico da internet ou do seu próprio treinamento para dados técnicos (parâmetros, propriedades, marcas, etc).
-3. Não invente propriedades, valores de tempo de exposição ou características de resinas que não apareçam no contexto.
-4. Sempre mantenha o foco em resinas Quanton3D e impressão 3D com resina.
+1. Use EXCLUSIVAMENTE o conhecimento tecnico fornecido no contexto abaixo (documentos da Quanton3D).
+2. NAO use conhecimento generico da internet ou do seu proprio treinamento para dados tecnicos (parametros, propriedades, marcas, etc).
+3. Nao invente propriedades, valores de tempo de exposicao ou caracteristicas de resinas que nao aparecam no contexto.
+4. Sempre mantenha o foco em resinas Quanton3D e impressao 3D com resina UV (SLA/LCD/DLP).
 5. NUNCA recomende produtos de outras marcas.
-6. Quando mencionar parâmetros de impressão, eles DEVEM corresponder a valores presentes no contexto.
-7. Seja educado, objetivo e use no máximo 3 parágrafos.
+6. Quando mencionar parametros de impressao, eles DEVEM corresponder a valores presentes no contexto.
+7. Seja educado, objetivo e use no maximo 3 paragrafos.
 8. Sempre termine oferecendo mais ajuda.
+
+REGRAS ESPECIFICAS PARA DEFEITOS:
+- Este atendimento e SEMPRE sobre impressao 3D com resina UV (SLA/LCD/DLP), NUNCA sobre FDM/filamento.
+- NUNCA use as palavras "filamento", "bico", "nozzle", "extrusora" ou "mesa aquecida".
+- Se o contexto mencionar descolamento de base, trate isso como causa principal.
+- Priorize identificar: descolamento da base, falha de adesao entre camadas, problemas tipicos de resina.
 
 === CONHECIMENTO DA QUANTON3D ===
 ${knowledgeContext}
 === FIM DO CONHECIMENTO ===
 
-DESCRIÇÃO DO PROBLEMA (baseada na análise da imagem):
+DESCRICAO DO PROBLEMA (baseada na analise da imagem):
 ${combinedText}`;
 
       const ragResponse = await openai.chat.completions.create({
@@ -529,22 +547,25 @@ ${combinedText}`;
       // MODO SMART FALLBACK - RAG não tem conhecimento, usa GPT-4o como especialista geral
       console.log('🎯 [PASSO 3] MODO FALLBACK: Usando conhecimento geral de impressão 3D...');
 
-      const fallbackSystemPrompt = `Você é um especialista em impressão 3D com resina UV (SLA/LCD/DLP).
+      const fallbackSystemPrompt = `Voce e um especialista em impressao 3D com resina UV (SLA/LCD/DLP).
 
-CONTEXTO: Você está ajudando um cliente da Quanton3D, mas NÃO encontramos documentos específicos da empresa para este caso.
+CONTEXTO: Voce esta ajudando um cliente da Quanton3D, mas NAO encontramos documentos especificos da empresa para este caso.
+
+IMPORTANTE: Este atendimento e SEMPRE sobre impressao 3D com RESINA UV (SLA/LCD/DLP). NUNCA fale de filamento, FDM, bico, nozzle, extrusora ou mesa aquecida.
 
 REGRAS:
-1. Use seu conhecimento geral de impressão 3D com resina para:
-   - Identificar o tipo de defeito observado (descolamento da base, falha de adesão, warping, suporte insuficiente, etc.)
-   - Explicar as causas prováveis do problema
-   - Sugerir passos de troubleshooting e correção
-2. NÃO invente dados específicos da Quanton3D (nomes de produtos, valores exatos de parâmetros próprios da marca).
-3. Para parâmetros exatos de resinas Quanton3D, diga: "Para os parâmetros específicos da sua resina Quanton3D, consulte a ficha técnica ou entre em contato com o suporte técnico."
-4. Seja objetivo, em até 3 parágrafos.
-5. Mantenha foco em segurança e boas práticas de impressão 3D.
+1. Use seu conhecimento geral de impressao 3D com RESINA para:
+   - Identificar o tipo de defeito observado (descolamento da base, falha de adesao, warping, suporte insuficiente, etc.)
+   - Explicar as causas provaveis do problema
+   - Sugerir passos de troubleshooting e correcao
+2. NAO invente dados especificos da Quanton3D (nomes de produtos, valores exatos de parametros proprios da marca).
+3. Para parametros exatos de resinas Quanton3D, diga: "Para os parametros especificos da sua resina Quanton3D, consulte a ficha tecnica ou entre em contato com o suporte tecnico."
+4. Seja objetivo, em ate 3 paragrafos.
+5. Mantenha foco em seguranca e boas praticas de impressao 3D com resina.
 6. Sempre termine oferecendo mais ajuda.
+7. Se o problema for descolamento da base, priorize essa analise.
 
-DESCRIÇÃO DO PROBLEMA (baseada na análise da imagem):
+DESCRICAO DO PROBLEMA (baseada na analise da imagem):
 ${combinedText}`;
 
       const fallbackResponse = await openai.chat.completions.create({
@@ -1206,7 +1227,17 @@ async function uploadToCloudinary(buffer, mimetype) {
 // POST /api/gallery - Enviar nova foto para galeria
 app.post("/api/gallery", galleryUpload.array('images', 2), async (req, res) => {
   try {
-    const { name, resin, printer, comment } = req.body;
+    const { 
+      name, resin, printer, comment,
+      // Campos de configuracao de impressao
+      layerHeight, baseLayers, exposureTime, baseExposureTime,
+      transitionLayers, uvOffDelay,
+      lowerLiftDistance1, lowerLiftDistance2,
+      liftDistance1, liftDistance2,
+      liftSpeed1, liftSpeed2,
+      lowerRetractSpeed1, lowerRetractSpeed2,
+      retractSpeed1, retractSpeed2
+    } = req.body;
     const imageFiles = req.files;
 
     console.log(`📸 [GALERIA] Nova submissao de ${name || 'Anonimo'}`);
@@ -1276,6 +1307,20 @@ app.post("/api/gallery", galleryUpload.array('images', 2), async (req, res) => {
       printer,
       comment: comment || '',
       images: uploadedImages,
+      // Parametros de configuracao de impressao
+      params: {
+        layerHeight: layerHeight || '',
+        baseLayers: baseLayers || '',
+        exposureTime: exposureTime || '',
+        baseExposureTime: baseExposureTime || '',
+        transitionLayers: transitionLayers || '',
+        uvOffDelay: uvOffDelay || '',
+        lowerLiftDistance: { value1: lowerLiftDistance1 || '', value2: lowerLiftDistance2 || '' },
+        liftDistance: { value1: liftDistance1 || '', value2: liftDistance2 || '' },
+        liftSpeed: { value1: liftSpeed1 || '', value2: liftSpeed2 || '' },
+        lowerRetractSpeed: { value1: lowerRetractSpeed1 || '', value2: lowerRetractSpeed2 || '' },
+        retractSpeed: { value1: retractSpeed1 || '', value2: retractSpeed2 || '' }
+      },
       status: 'pending', // pending, approved, rejected
       createdAt: new Date(),
       updatedAt: new Date()
