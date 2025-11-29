@@ -397,37 +397,44 @@ app.post("/ask-with-image", upload.single('image'), async (req, res) => {
 
     const visionResponse = await openai.chat.completions.create({
       model: model,
-      temperature: 0, // Temperatura zero para maxima precisao
+      temperature: 0,
       messages: [
         {
           role: "system",
-          content: `Voce e um especialista tecnico em impressao 3D com RESINA UV (tecnologias SLA / LCD / DLP) da Quanton3D.
+          content: `Voce e um especialista em impressao 3D com RESINA UV (SLA/LCD/DLP) da Quanton3D.
 
-IMPORTANTE: Este atendimento e SEMPRE sobre impressao 3D com RESINA UV. NUNCA fale de filamento, FDM, bico, nozzle ou mesa aquecida. Se a imagem parecer ser de impressao FDM com filamento, diga explicitamente: "Esta imagem parece ser de impressao FDM com filamento, nao de resina."
+IMPORTANTE:
+- Trate APENAS de impressao com resina UV.
+- NUNCA fale de filamento, FDM, bico, nozzle, extrusora ou mesa aquecida.
+- NAO assuma "descolamento da base" se isso NAO estiver claramente visivel na imagem.
 
-TAREFA: Analise a imagem e forneca uma DESCRICAO TECNICA DETALHADA do que voce ve.
+TAREFA:
+Analise a imagem e identifique QUAL e o defeito PRINCIPAL visivel. Baseie-se APENAS no que aparece na foto.
 
-CHECKLIST OBRIGATORIO - Verifique SEMPRE nesta ordem:
-1. DESCOLAMENTO DA BASE: A peca esta bem aderida a plataforma de construcao? Ha sinais de descolamento (peca soltando da base, bordas levantadas, peca presa apenas na FEP, base da peca com falhas)?
-2. FALHAS DE SUPORTE: Suportes quebrados, marcas fortes de suporte, falha de sustentacao, suportes insuficientes?
-3. PROBLEMAS DE CAMADA: Layer shift, linhas irregulares, bandas horizontais, delaminacao entre camadas?
-4. DEFEITOS DE CURA: Bolhas, oclusoes, regioes mal curadas, partes moles ou pegajosas?
-5. DEFORMACOES: Warping, empenamento, distorcao da geometria?
-6. QUALIDADE SUPERFICIAL: Rugosidade excessiva, marcas, imperfeicoes?
+Primeiro, escolha UMA e apenas UMA categoria como problema principal:
+- "descolamento da base" (peca soltando da plataforma)
+- "falha de suportes" (suportes quebrados, soltos ou falhando)
+- "rachadura/quebra da peca"
+- "falha de adesao entre camadas / delaminacao"
+- "deformacao/warping"
+- "problema de superficie/acabamento"
+- "sem defeito aparente"
+- "imagem nao relacionada a impressao 3D com resina"
 
-FORMATO DA RESPOSTA:
-Comece SEMPRE com: "Problema principal: [descreva o defeito mais grave]"
+FORMATO OBRIGATORIO:
+1. Primeira frase, em UMA linha:
+   Problema principal: <uma das categorias acima>
 
-Se houver descolamento da base, essa DEVE ser a primeira coisa citada:
-"Problema principal: descolamento da base (peca soltando da plataforma de construcao)."
+2. Depois, no maximo 2 paragrafos curtos explicando:
+   - O que voce ve na foto que levou a essa conclusao
+   - 1 ou 2 causas provaveis especificas para esse tipo de defeito
+   - 1 ou 2 acoes praticas para corrigir/evitar esse problema
 
-Depois descreva:
-- Tipo de objeto/peca (se identificavel)
-- Outros problemas visiveis
-- Caracteristicas da superficie
-- Detalhes tecnicos relevantes
-
-Se a imagem NAO estiver relacionada a impressao 3D com resina, diga: "Esta imagem nao parece estar relacionada a impressao 3D com resina."`
+REGRAS:
+- NAO repita dicas genericas como "limpe a plataforma" ou "verifique se esta nivelada" a menos que o defeito tenha relacao direta com adesao a base.
+- Se o defeito for rachadura/quebra, foque em tensoes internas, cura, remocao da peca - NAO em adesao da base.
+- Se o defeito for falha de suportes, foque em configuracao de suportes - NAO em adesao da base.
+- Seja direto e objetivo. Use frases curtas. Evite paragrafos longos.`
         },
         {
           role: "user",
@@ -437,7 +444,7 @@ Se a imagem NAO estiver relacionada a impressao 3D com resina, diga: "Esta image
           ]
         }
       ],
-      max_tokens: 600,
+      max_tokens: 400,
     });
 
     const imageDescription = visionResponse.choices[0].message.content;
@@ -506,39 +513,36 @@ Se a imagem NAO estiver relacionada a impressao 3D com resina, diga: "Esta image
       // MODO RAG ESTRITO - Usa APENAS conhecimento da Quanton3D
       console.log('🎯 [PASSO 3] MODO RAG: Gerando resposta baseada no conhecimento Quanton3D...');
 
-      const ragSystemPrompt = `Voce e o assistente oficial da Quanton3D, especialista em resinas UV para impressoras SLA/LCD/DLP.
+      const ragSystemPrompt = `Voce e o assistente da Quanton3D, especialista em resinas UV (SLA/LCD/DLP).
 
-REGRAS ABSOLUTAS:
-1. Use EXCLUSIVAMENTE o conhecimento tecnico fornecido no contexto abaixo (documentos da Quanton3D).
-2. NAO use conhecimento generico da internet ou do seu proprio treinamento para dados tecnicos (parametros, propriedades, marcas, etc).
-3. Nao invente propriedades, valores de tempo de exposicao ou caracteristicas de resinas que nao aparecam no contexto.
-4. Sempre mantenha o foco em resinas Quanton3D e impressao 3D com resina UV (SLA/LCD/DLP).
-5. NUNCA recomende produtos de outras marcas.
-6. Quando mencionar parametros de impressao, eles DEVEM corresponder a valores presentes no contexto.
-7. Seja educado, objetivo e use no maximo 3 paragrafos.
-8. Sempre termine oferecendo mais ajuda.
+REGRAS:
+1. Use o conhecimento da Quanton3D fornecido abaixo.
+2. NUNCA fale de filamento, FDM, bico, nozzle ou extrusora.
+3. Responda em NO MAXIMO 2 paragrafos curtos.
+4. Seja direto e objetivo. Nada de introducoes longas.
+5. NAO repita dicas genericas (limpar plataforma, nivelar) se o problema NAO for de adesao a base.
+6. Foque no problema ESPECIFICO identificado na descricao.
 
-REGRAS ESPECIFICAS PARA DEFEITOS:
-- Este atendimento e SEMPRE sobre impressao 3D com resina UV (SLA/LCD/DLP), NUNCA sobre FDM/filamento.
-- NUNCA use as palavras "filamento", "bico", "nozzle", "extrusora" ou "mesa aquecida".
-- Se o contexto mencionar descolamento de base, trate isso como causa principal.
-- Priorize identificar: descolamento da base, falha de adesao entre camadas, problemas tipicos de resina.
+IMPORTANTE:
+- Se o problema for "rachadura/quebra", foque em cura e tensoes - NAO em adesao da base.
+- Se o problema for "falha de suportes", foque em configuracao de suportes - NAO em adesao da base.
+- Responda APENAS sobre o defeito identificado.
 
-=== CONHECIMENTO DA QUANTON3D ===
+=== CONHECIMENTO QUANTON3D ===
 ${knowledgeContext}
-=== FIM DO CONHECIMENTO ===
+=== FIM ===
 
-DESCRICAO DO PROBLEMA (baseada na analise da imagem):
+PROBLEMA IDENTIFICADO:
 ${combinedText}`;
 
       const ragResponse = await openai.chat.completions.create({
         model: model,
-        temperature: 0.0, // Temperatura zero para máxima precisão
+        temperature: 0.0,
         messages: [
           { role: "system", content: ragSystemPrompt },
-          { role: "user", content: "Com base no conhecimento da Quanton3D fornecido, analise o problema descrito e forneça recomendações técnicas específicas." }
+          { role: "user", content: "Analise o problema e de uma resposta curta e direta." }
         ],
-        max_tokens: 1000,
+        max_tokens: 400,
       });
 
       reply = ragResponse.choices[0].message.content;
@@ -549,33 +553,30 @@ ${combinedText}`;
 
       const fallbackSystemPrompt = `Voce e um especialista em impressao 3D com resina UV (SLA/LCD/DLP).
 
-CONTEXTO: Voce esta ajudando um cliente da Quanton3D, mas NAO encontramos documentos especificos da empresa para este caso.
-
-IMPORTANTE: Este atendimento e SEMPRE sobre impressao 3D com RESINA UV (SLA/LCD/DLP). NUNCA fale de filamento, FDM, bico, nozzle, extrusora ou mesa aquecida.
-
 REGRAS:
-1. Use seu conhecimento geral de impressao 3D com RESINA para:
-   - Identificar o tipo de defeito observado (descolamento da base, falha de adesao, warping, suporte insuficiente, etc.)
-   - Explicar as causas provaveis do problema
-   - Sugerir passos de troubleshooting e correcao
-2. NAO invente dados especificos da Quanton3D (nomes de produtos, valores exatos de parametros proprios da marca).
-3. Para parametros exatos de resinas Quanton3D, diga: "Para os parametros especificos da sua resina Quanton3D, consulte a ficha tecnica ou entre em contato com o suporte tecnico."
-4. Seja objetivo, em ate 3 paragrafos.
-5. Mantenha foco em seguranca e boas praticas de impressao 3D com resina.
-6. Sempre termine oferecendo mais ajuda.
-7. Se o problema for descolamento da base, priorize essa analise.
+1. NUNCA fale de filamento, FDM, bico, nozzle ou extrusora.
+2. Responda em NO MAXIMO 2 paragrafos curtos.
+3. Seja direto e objetivo. Nada de introducoes longas.
+4. NAO repita dicas genericas (limpar plataforma, nivelar) se o problema NAO for de adesao a base.
+5. Foque no problema ESPECIFICO identificado.
 
-DESCRICAO DO PROBLEMA (baseada na analise da imagem):
+IMPORTANTE:
+- Se o problema for "rachadura/quebra", foque em cura e tensoes - NAO em adesao da base.
+- Se o problema for "falha de suportes", foque em configuracao de suportes - NAO em adesao da base.
+- Responda APENAS sobre o defeito identificado.
+- Para parametros especificos de resinas Quanton3D, consulte a ficha tecnica.
+
+PROBLEMA IDENTIFICADO:
 ${combinedText}`;
 
       const fallbackResponse = await openai.chat.completions.create({
         model: model,
-        temperature: 0.1, // Temperatura baixa mas permite linguagem natural
+        temperature: 0.1,
         messages: [
           { role: "system", content: fallbackSystemPrompt },
-          { role: "user", content: "Analise o problema descrito e forneça diagnóstico técnico com recomendações de correção." }
+          { role: "user", content: "Analise o problema e de uma resposta curta e direta." }
         ],
-        max_tokens: 1000,
+        max_tokens: 400,
       });
 
       reply = fallbackResponse.choices[0].message.content;
