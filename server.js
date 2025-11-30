@@ -821,10 +821,10 @@ function logOperation(operation, details) {
   console.log(`📝 [LOG] ${logEntry}`);
 }
 
-// Rota para aprovar sugestão
+// Rota para aprovar sugestão (com suporte a edição da resposta)
 app.put("/approve-suggestion/:id", async (req, res) => {
   try {
-    const { auth } = req.body;
+    const { auth, editedAnswer } = req.body;
     const suggestionId = parseInt(req.params.id);
 
     console.log(`🔍 Tentativa de aprovação da sugestão ID: ${suggestionId}`);
@@ -845,20 +845,34 @@ app.put("/approve-suggestion/:id", async (req, res) => {
     const suggestion = knowledgeSuggestions[suggestionIndex];
     console.log(`📝 Aprovando sugestão de ${suggestion.userName}: ${suggestion.suggestion.substring(0, 50)}...`);
 
+    // Usar resposta editada pelo admin se fornecida, senão usar resposta original do bot
+    const finalAnswer = editedAnswer && editedAnswer.trim() ? editedAnswer : suggestion.lastBotReply;
+    const wasEdited = editedAnswer && editedAnswer.trim() ? true : false;
+
+    if (wasEdited) {
+      console.log(`✏️ Resposta foi editada pelo admin`);
+    }
+
     // Formatar conteúdo com metadados para o MongoDB
-    const documentTitle = `Sugestao Aprovada - ${suggestion.userName} - ${suggestionId}`;
-    const formattedContent = `SUGESTAO APROVADA - ${suggestion.userName}
+    const documentTitle = `Conhecimento Curado - ${suggestion.userName} - ${suggestionId}`;
+    const formattedContent = `CONHECIMENTO CURADO PELO ADMIN
 Data da Sugestao: ${suggestion.timestamp}
 Data de Aprovacao: ${new Date().toISOString()}
 Usuario: ${suggestion.userName}
 Telefone: ${suggestion.userPhone || 'N/A'}
+Resposta Editada: ${wasEdited ? 'Sim' : 'Nao'}
 
-CONTEUDO DA SUGESTAO:
-${suggestion.suggestion}
+PERGUNTA ORIGINAL DO CLIENTE:
+${suggestion.lastUserMessage}
 
-CONTEXTO DA CONVERSA:
-Ultima mensagem do usuario: ${suggestion.lastUserMessage}
-Ultima resposta do bot: ${suggestion.lastBotReply}`;
+RESPOSTA CORRETA (CURADA):
+${finalAnswer}
+
+RESPOSTA ORIGINAL DO BOT:
+${suggestion.lastBotReply}
+
+SUGESTAO DO CLIENTE:
+${suggestion.suggestion}`;
 
     // Adicionar documento ao MongoDB via RAG
     console.log('📝 Adicionando conhecimento ao MongoDB...');

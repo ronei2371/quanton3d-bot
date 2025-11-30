@@ -16,7 +16,9 @@ const EMBEDDING_DIMENSIONS = 3072; // Dimensao do text-embedding-3-large
 
 // Limiar minimo de relevancia para considerar um documento util
 // Documentos com similaridade abaixo deste valor serao ignorados
-const MIN_RELEVANCE_THRESHOLD = 0.7;
+// NOTA: Reduzido de 0.7 para 0.5 para melhorar recall - text-embedding-3-large
+// pode ter scores mais baixos mesmo para documentos relevantes
+const MIN_RELEVANCE_THRESHOLD = 0.5;
 
 let lastInitialization = null;
 let documentsCount = 0;
