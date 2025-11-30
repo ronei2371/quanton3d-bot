@@ -548,41 +548,21 @@ ${combinedText}`;
       reply = ragResponse.choices[0].message.content;
 
     } else {
-      // MODO SMART FALLBACK - RAG não tem conhecimento, usa GPT-4o como especialista geral
-      console.log('🎯 [PASSO 3] MODO FALLBACK: Usando conhecimento geral de impressão 3D...');
+      // MODO SEM CONHECIMENTO - RAG não encontrou solução, NÃO usa conhecimento genérico
+      console.log('🎯 [PASSO 3] SEM CONHECIMENTO NO RAG - Informando cliente para chamar WhatsApp');
 
-      const fallbackSystemPrompt = `Voce e um especialista em impressao 3D com resina UV (SLA/LCD/DLP).
+      // Extrair apenas a primeira linha da descrição (problema principal)
+      const problemaPrincipal = imageDescription.split('\n')[0] || 'Problema visual identificado na imagem';
 
-REGRAS:
-1. NUNCA fale de filamento, FDM, bico, nozzle ou extrusora.
-2. Responda em NO MAXIMO 2 paragrafos curtos.
-3. Seja direto e objetivo. Nada de introducoes longas.
-4. NAO repita dicas genericas (limpar plataforma, nivelar) se o problema NAO for de adesao a base.
-5. Foque no problema ESPECIFICO identificado.
+      reply = `**Análise da Imagem:**
+${problemaPrincipal}
 
-IMPORTANTE:
-- Se o problema for "rachadura/quebra", foque em cura e tensoes - NAO em adesao da base.
-- Se o problema for "falha de suportes", foque em configuracao de suportes - NAO em adesao da base.
-- Responda APENAS sobre o defeito identificado.
-- Para parametros especificos de resinas Quanton3D, consulte a ficha tecnica.
+**Resultado da Busca:**
+Não encontrei uma solução específica para esse problema no banco de conhecimento Quanton3D.
 
-PROBLEMA IDENTIFICADO:
-${combinedText}`;
+📞 **Por favor, entre em contato pelo WhatsApp** para uma análise detalhada com nossa equipe técnica. Eles poderão avaliar sua situação específica e fornecer a orientação correta.
 
-      const fallbackResponse = await openai.chat.completions.create({
-        model: model,
-        temperature: 0.1,
-        messages: [
-          { role: "system", content: fallbackSystemPrompt },
-          { role: "user", content: "Analise o problema e de uma resposta curta e direta." }
-        ],
-        max_tokens: 400,
-      });
-
-      reply = fallbackResponse.choices[0].message.content;
-      
-      // Adicionar dica para melhorar a análise
-      reply += "\n\n💡 *Dica: Para uma análise mais precisa, me informe qual resina Quanton3D você está usando e qual modelo de impressora.*";
+WhatsApp: (11) 99999-9999`;
     }
 
     // ======================================================
