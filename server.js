@@ -8,8 +8,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
 import multer from "multer";
-import { initializeRAG, searchKnowledge, formatContext, addDocument } from './rag-search.js';
-import { connectToMongo, getMessagesCollection, getGalleryCollection } from './db.js';
+import { initializeRAG, searchKnowledge, formatContext, addDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding } from './rag-search.js';
+import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection } from './db.js';
 import { v2 as cloudinary } from 'cloudinary';
 import {
   analyzeQuestionType,
@@ -511,6 +511,76 @@ a menos que o defeito tenha relacao DIRETA com adesao a base.`
       history.push({ role: "assistant", content: unrelatedReply });
       
       return res.json({ success: true, reply: unrelatedReply });
+    }
+
+    // ======================================================
+    // 🖼️ PASSO 1.5: BUSCA NO VISUAL RAG (BANCO DE CONHECIMENTO VISUAL)
+    // Objetivo: Verificar se existe um exemplo visual similar no banco de treinamento
+    // ======================================================
+    console.log('🖼️ [PASSO 1.5] Buscando no Visual RAG (banco de conhecimento visual)...');
+
+    const visionDescriptionObj = {
+      problema: problema || 'problema nao identificado',
+      descricao: descricao || imageDescription.substring(0, 200),
+      causas: causas || '',
+      acoes: acoes || ''
+    };
+
+    let visualMatch = null;
+    try {
+      const visualResults = await searchVisualKnowledge(visionDescriptionObj, 1);
+      if (visualResults.length > 0) {
+        visualMatch = visualResults[0];
+        console.log(`✅ [VISUAL-RAG] Encontrado exemplo visual similar! Similaridade: ${(visualMatch.similarity * 100).toFixed(1)}%`);
+        console.log(`   Defeito: ${visualMatch.defectType}`);
+      } else {
+        console.log('⚠️ [VISUAL-RAG] Nenhum exemplo visual similar encontrado no banco de treinamento');
+      }
+    } catch (visualErr) {
+      console.error('⚠️ [VISUAL-RAG] Erro ao buscar conhecimento visual:', visualErr.message);
+    }
+
+    // Se encontrou match visual com alta similaridade, usar resposta do Visual RAG
+    if (visualMatch && visualMatch.similarity >= 0.7) {
+      console.log('🎯 [VISUAL-RAG] Usando resposta do banco de conhecimento visual!');
+      
+      const visualReply = formatVisualResponse(visualMatch);
+      
+      // Adicionar ao histórico
+      history.push({ 
+        role: "user", 
+        content: `${message || '(imagem enviada)'}\n[Análise da imagem: ${imageDescription.substring(0, 200)}...]` 
+      });
+      history.push({ role: "assistant", content: visualReply });
+
+      // Limitar histórico
+      if (history.length > 20) {
+        history.splice(0, history.length - 20);
+      }
+
+      // Registrar métrica
+      const registeredUser = registeredUsers.get(sessionId);
+      const finalUserName = registeredUser ? registeredUser.name : (userName || 'Anônimo');
+
+      conversationMetrics.push({
+        sessionId,
+        userName: finalUserName,
+        message: message || '(imagem enviada)',
+        reply: visualReply,
+        timestamp: new Date().toISOString(),
+        isImageAnalysis: true,
+        imageDescription: imageDescription.substring(0, 500),
+        usedVisualRAG: true,
+        visualMatchSimilarity: visualMatch.similarity,
+        visualMatchDefectType: visualMatch.defectType
+      });
+
+      return res.json({ 
+        success: true, 
+        reply: visualReply,
+        usedVisualRAG: true,
+        visualMatchSimilarity: visualMatch.similarity
+      });
     }
 
     // ======================================================
@@ -1622,6 +1692,206 @@ app.delete("/api/gallery/:id", async (req, res) => {
 });
 
 // ===== FIM DOS ENDPOINTS DA GALERIA =====
+
+// ===== VISUAL RAG - BANCO DE CONHECIMENTO VISUAL =====
+// Permite admin treinar o bot com fotos de problemas + diagnostico + solucao
+
+// POST /api/visual-knowledge - Adicionar conhecimento visual (admin)
+app.post("/api/visual-knowledge", upload.single('image'), async (req, res) => {
+  try {
+    const { auth } = req.query;
+    const { defectType, diagnosis, solution } = req.body;
+    const imageFile = req.file;
+
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    }
+
+    if (!imageFile) {
+      return res.status(400).json({ success: false, message: 'Imagem obrigatoria' });
+    }
+
+    if (!defectType || !diagnosis || !solution) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Tipo de defeito, diagnostico e solucao sao obrigatorios' 
+      });
+    }
+
+    console.log(`📸 [VISUAL-RAG] Processando imagem de treinamento: ${defectType}`);
+
+    // 1. Upload da imagem para Cloudinary
+    const cloudinaryResult = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'quanton3d/visual-knowledge',
+          resource_type: 'image',
+          transformation: [{ width: 800, height: 800, crop: 'limit' }]
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      uploadStream.end(imageFile.buffer);
+    });
+
+    const imageUrl = cloudinaryResult.secure_url;
+    const publicId = cloudinaryResult.public_id;
+
+    console.log(`☁️ [VISUAL-RAG] Imagem enviada para Cloudinary: ${publicId}`);
+
+    // 2. Analisar imagem com GPT-4o Vision para obter descricao estruturada
+    const base64Image = imageFile.buffer.toString('base64');
+    const imageDataUrl = `data:${imageFile.mimetype};base64,${base64Image}`;
+
+    const model = process.env.OPENAI_MODEL || "gpt-4o";
+
+    const visionResponse = await openai.chat.completions.create({
+      model: model,
+      temperature: 0,
+      messages: [
+        {
+          role: "system",
+          content: `Voce e um especialista em impressao 3D com RESINA UV (SLA/LCD/DLP) da Quanton3D.
+Analise esta imagem de TREINAMENTO e descreva o problema de forma estruturada.
+
+=== FORMATO DE SAIDA OBRIGATORIO (UMA INFORMACAO POR LINHA) ===
+
+Relacionada: SIM ou NAO
+Problema: <tipo do defeito>
+Confianca: ALTA, MEDIA ou BAIXA
+Descricao: <1-2 frases do que voce ve na foto>
+Causas: <1-2 causas provaveis ESPECIFICAS>
+Acoes: <1-2 acoes praticas ESPECIFICAS>`
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: `Analise esta imagem de treinamento. O admin classificou como: "${defectType}"` },
+            { type: "image_url", image_url: { url: imageDataUrl } }
+          ]
+        }
+      ],
+      max_tokens: 500
+    });
+
+    const visionText = visionResponse.choices[0].message.content;
+    console.log(`🔍 [VISUAL-RAG] Analise Vision: ${visionText.substring(0, 100)}...`);
+
+    // 3. Extrair campos estruturados
+    const extractField = (text, fieldName) => {
+      const regex = new RegExp(`${fieldName}:\\s*(.+)`, 'i');
+      const match = text.match(regex);
+      return match ? match[1].trim() : null;
+    };
+
+    const visionDescription = {
+      relacionada: extractField(visionText, 'Relacionada'),
+      problema: extractField(visionText, 'Problema') || defectType,
+      confianca: extractField(visionText, 'Confianca'),
+      descricao: extractField(visionText, 'Descricao'),
+      causas: extractField(visionText, 'Causas'),
+      acoes: extractField(visionText, 'Acoes'),
+      rawText: visionText
+    };
+
+    // 4. Adicionar ao banco de conhecimento visual
+    const result = await addVisualKnowledge(
+      imageUrl,
+      defectType,
+      diagnosis,
+      solution,
+      visionDescription
+    );
+
+    console.log(`✅ [VISUAL-RAG] Conhecimento visual adicionado: ${result.documentId}`);
+
+    res.json({
+      success: true,
+      message: 'Conhecimento visual adicionado com sucesso!',
+      documentId: result.documentId.toString(),
+      imageUrl,
+      defectType,
+      visionDescription
+    });
+  } catch (err) {
+    console.error('❌ [VISUAL-RAG] Erro ao adicionar conhecimento visual:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/visual-knowledge - Listar conhecimentos visuais (admin)
+app.get("/api/visual-knowledge", async (req, res) => {
+  try {
+    const { auth } = req.query;
+
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    }
+
+    const documents = await listVisualKnowledge();
+
+    res.json({
+      success: true,
+      documents,
+      count: documents.length
+    });
+  } catch (err) {
+    console.error('❌ [VISUAL-RAG] Erro ao listar conhecimento visual:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DELETE /api/visual-knowledge/:id - Deletar conhecimento visual (admin)
+app.delete("/api/visual-knowledge/:id", async (req, res) => {
+  try {
+    const { auth } = req.query;
+    const { id } = req.params;
+
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    }
+
+    // Buscar documento para deletar imagem do Cloudinary
+    const collection = getVisualKnowledgeCollection();
+    const { ObjectId } = await import('mongodb');
+    const doc = await collection.findOne({ _id: new ObjectId(id) });
+
+    if (doc && doc.imageUrl) {
+      // Extrair publicId da URL do Cloudinary
+      const urlParts = doc.imageUrl.split('/');
+      const publicIdWithExt = urlParts.slice(-2).join('/');
+      const publicId = publicIdWithExt.replace(/\.[^/.]+$/, '');
+      
+      try {
+        await cloudinary.uploader.destroy(publicId);
+        console.log(`🗑️ [VISUAL-RAG] Imagem deletada do Cloudinary: ${publicId}`);
+      } catch (delErr) {
+        console.error('⚠️ Erro ao deletar imagem do Cloudinary:', delErr);
+      }
+    }
+
+    const result = await deleteVisualKnowledge(id);
+
+    if (!result.success) {
+      return res.status(404).json({ success: false, message: 'Documento nao encontrado' });
+    }
+
+    console.log(`🗑️ [VISUAL-RAG] Conhecimento visual deletado: ${id}`);
+
+    res.json({
+      success: true,
+      message: 'Conhecimento visual deletado com sucesso!'
+    });
+  } catch (err) {
+    console.error('❌ [VISUAL-RAG] Erro ao deletar conhecimento visual:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ===== FIM DO VISUAL RAG =====
+
 // ===== SISTEMA DE FEEDBACK E MELHORIA DE CONHECIMENTO =====
 // Adicionar no server.js - NOVAS ROTAS
 

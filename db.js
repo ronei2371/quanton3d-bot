@@ -79,6 +79,11 @@ export function getGalleryCollection() {
   return getDb().collection('gallery');
 }
 
+// Obter colecao de conhecimento visual (Visual RAG)
+export function getVisualKnowledgeCollection() {
+  return getDb().collection('visual_knowledge');
+}
+
 // Fechar conexao (para cleanup)
 export async function closeMongo() {
   if (client) {
@@ -100,6 +105,7 @@ export default {
   getDocumentsCollection,
   getMessagesCollection,
   getGalleryCollection,
+  getVisualKnowledgeCollection,
   closeMongo,
   isConnected
 };

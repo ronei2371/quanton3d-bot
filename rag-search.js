@@ -3,7 +3,7 @@
 // Busca conhecimento relevante para melhorar respostas do bot
 
 import OpenAI from 'openai';
-import { getDocumentsCollection, isConnected } from './db.js';
+import { getDocumentsCollection, getVisualKnowledgeCollection, isConnected } from './db.js';
 
 // Cliente OpenAI para embeddings
 const openai = new OpenAI({
@@ -242,6 +242,179 @@ export function getRAGInfo() {
   };
 }
 
+// ============================================================
+// VISUAL RAG - Busca por similaridade de imagens via texto
+// ============================================================
+
+// Limiar de similaridade para Visual RAG (mais alto que texto)
+const VISUAL_MIN_RELEVANCE_THRESHOLD = 0.7;
+
+// Adicionar exemplo visual ao banco de conhecimento
+export async function addVisualKnowledge(imageUrl, defectType, diagnosis, solution, visionDescription) {
+  if (!isConnected()) {
+    throw new Error('MongoDB nao conectado');
+  }
+
+  try {
+    logRAG(`Adicionando conhecimento visual: ${defectType}`, 'INFO');
+
+    // Montar texto canonico para embedding (combina descricao visual + diagnostico + solucao)
+    const textForEmbedding = `Problema: ${defectType}
+Descricao: ${visionDescription.descricao || ''}
+Causas: ${visionDescription.causas || ''}
+Acoes: ${visionDescription.acoes || ''}
+Diagnostico: ${diagnosis}
+Solucao: ${solution}`;
+
+    // Gerar embedding do texto
+    const embedding = await generateEmbedding(textForEmbedding);
+
+    // Inserir no MongoDB
+    const collection = getVisualKnowledgeCollection();
+    const result = await collection.insertOne({
+      imageUrl,
+      defectType,
+      diagnosis,
+      solution,
+      visionDescription,
+      textForEmbedding,
+      embedding,
+      embeddingModel: EMBEDDING_MODEL,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    logRAG(`Conhecimento visual adicionado: ${result.insertedId}`, 'INFO');
+
+    return {
+      success: true,
+      documentId: result.insertedId,
+      defectType
+    };
+  } catch (err) {
+    logRAG(`Erro ao adicionar conhecimento visual: ${err.message}`, 'ERROR');
+    throw err;
+  }
+}
+
+// Buscar conhecimento visual similar
+export async function searchVisualKnowledge(visionDescription, topK = 3) {
+  if (!isConnected()) {
+    throw new Error('MongoDB nao conectado');
+  }
+
+  try {
+    // Montar texto de consulta a partir da descricao da imagem do cliente
+    const queryText = `Problema: ${visionDescription.problema || ''}
+Descricao: ${visionDescription.descricao || ''}
+Causas: ${visionDescription.causas || ''}
+Acoes: ${visionDescription.acoes || ''}`;
+
+    logRAG(`Buscando conhecimento visual para: "${queryText.substring(0, 50)}..."`, 'INFO');
+
+    // Gerar embedding da consulta
+    const queryEmbedding = await generateEmbedding(queryText);
+
+    // Buscar todos os documentos visuais com embeddings
+    const collection = getVisualKnowledgeCollection();
+    const documents = await collection.find(
+      { embedding: { $exists: true, $ne: [] } },
+      { projection: { _id: 1, imageUrl: 1, defectType: 1, diagnosis: 1, solution: 1, visionDescription: 1, embedding: 1 } }
+    ).toArray();
+
+    if (documents.length === 0) {
+      logRAG('Nenhum conhecimento visual encontrado no banco', 'WARN');
+      return [];
+    }
+
+    // Calcular similaridade com cada documento
+    const results = documents.map(doc => ({
+      id: doc._id.toString(),
+      imageUrl: doc.imageUrl,
+      defectType: doc.defectType,
+      diagnosis: doc.diagnosis,
+      solution: doc.solution,
+      visionDescription: doc.visionDescription,
+      similarity: cosineSimilarity(queryEmbedding, doc.embedding)
+    }));
+
+    // Ordenar por similaridade (maior primeiro)
+    results.sort((a, b) => b.similarity - a.similarity);
+
+    // Filtrar por limiar de relevancia
+    const relevantResults = results.filter(r => r.similarity >= VISUAL_MIN_RELEVANCE_THRESHOLD);
+    const topResults = relevantResults.slice(0, topK);
+
+    if (topResults.length === 0) {
+      logRAG(`Nenhum conhecimento visual com relevancia >= ${VISUAL_MIN_RELEVANCE_THRESHOLD * 100}% (melhor: ${(results[0]?.similarity * 100 || 0).toFixed(1)}%)`, 'WARN');
+    } else {
+      logRAG(`Encontrados ${topResults.length} exemplos visuais relevantes (melhor: ${(topResults[0]?.similarity * 100).toFixed(1)}%)`, 'INFO');
+    }
+
+    return topResults;
+  } catch (err) {
+    logRAG(`Erro na busca visual: ${err.message}`, 'ERROR');
+    throw err;
+  }
+}
+
+// Formatar resposta do Visual RAG
+export function formatVisualResponse(visualMatch) {
+  if (!visualMatch) {
+    return null;
+  }
+
+  return `**Analise Visual (baseada em exemplos do banco Quanton3D):**
+
+**Problema identificado:** ${visualMatch.defectType}
+(Similaridade: ${(visualMatch.similarity * 100).toFixed(0)}%)
+
+**Diagnostico tecnico:**
+${visualMatch.diagnosis}
+
+**Solucao recomendada:**
+${visualMatch.solution}`;
+}
+
+// Listar todos os conhecimentos visuais (para admin)
+export async function listVisualKnowledge() {
+  if (!isConnected()) {
+    throw new Error('MongoDB nao conectado');
+  }
+
+  try {
+    const collection = getVisualKnowledgeCollection();
+    const documents = await collection.find(
+      {},
+      { projection: { _id: 1, imageUrl: 1, defectType: 1, diagnosis: 1, solution: 1, createdAt: 1 } }
+    ).sort({ createdAt: -1 }).toArray();
+
+    return documents;
+  } catch (err) {
+    logRAG(`Erro ao listar conhecimento visual: ${err.message}`, 'ERROR');
+    throw err;
+  }
+}
+
+// Deletar conhecimento visual
+export async function deleteVisualKnowledge(id) {
+  if (!isConnected()) {
+    throw new Error('MongoDB nao conectado');
+  }
+
+  try {
+    const collection = getVisualKnowledgeCollection();
+    const { ObjectId } = await import('mongodb');
+    const result = await collection.deleteOne({ _id: new ObjectId(id) });
+    
+    logRAG(`Conhecimento visual deletado: ${id}`, 'INFO');
+    return { success: result.deletedCount > 0 };
+  } catch (err) {
+    logRAG(`Erro ao deletar conhecimento visual: ${err.message}`, 'ERROR');
+    throw err;
+  }
+}
+
 export default {
   initializeRAG,
   searchKnowledge,
@@ -249,5 +422,11 @@ export default {
   addDocument,
   checkRAGIntegrity,
   getRAGInfo,
-  generateEmbedding
+  generateEmbedding,
+  // Visual RAG
+  addVisualKnowledge,
+  searchVisualKnowledge,
+  formatVisualResponse,
+  listVisualKnowledge,
+  deleteVisualKnowledge
 };
