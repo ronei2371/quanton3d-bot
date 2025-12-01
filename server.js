@@ -526,13 +526,19 @@ a menos que o defeito tenha relacao DIRETA com adesao a base.`
       acoes: acoes || ''
     };
 
+    // Log detalhado para diagnostico
+    console.log(`🔍 [VISUAL-RAG] Query: problema="${visionDescriptionObj.problema}", descricao="${visionDescriptionObj.descricao?.substring(0, 50)}..."`);
+
     let visualMatch = null;
     try {
       const visualResults = await searchVisualKnowledge(visionDescriptionObj, 1);
+      console.log(`📊 [VISUAL-RAG] Resultados retornados: ${visualResults.length}`);
+      
       if (visualResults.length > 0) {
         visualMatch = visualResults[0];
-        console.log(`✅ [VISUAL-RAG] Encontrado exemplo visual similar! Similaridade: ${(visualMatch.similarity * 100).toFixed(1)}%`);
+        console.log(`✅ [VISUAL-RAG] Match encontrado! Similaridade: ${(visualMatch.similarity * 100).toFixed(1)}%`);
         console.log(`   Defeito: ${visualMatch.defectType}`);
+        console.log(`   Diagnostico: ${visualMatch.diagnosis?.substring(0, 50)}...`);
       } else {
         console.log('⚠️ [VISUAL-RAG] Nenhum exemplo visual similar encontrado no banco de treinamento');
       }
@@ -887,6 +893,7 @@ app.get("/metrics", (req, res) => {
 });
 
 // Rota para adicionar conhecimento manualmente ao RAG
+// CORRIGIDO: Agora usa addDocument() que salva no MongoDB com embedding
 app.post("/add-knowledge", async (req, res) => {
   try {
     const { auth, title, content } = req.body;
@@ -900,39 +907,18 @@ app.post("/add-knowledge", async (req, res) => {
       return res.status(400).json({ success: false, error: 'Título e conteúdo são obrigatórios' });
     }
 
-    // Importar fs dinamicamente
-    const fs = await import('fs');
-    const path = await import('path');
+    console.log(`📚 [ADD-KNOWLEDGE] Adicionando conhecimento: ${title}`);
 
-    // Criar nome de arquivo seguro
-    const safeFileName = title
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-      .replace(/[^a-z0-9]+/g, '_') // Substitui caracteres especiais por _
-      .replace(/^_+|_+$/g, '') // Remove _ do início e fim
-      .substring(0, 50); // Limita tamanho
+    // Usar addDocument() que gera embedding e salva no MongoDB
+    // Isso garante que o conhecimento persiste e é encontrado pelo RAG
+    const result = await addDocument(title, content, 'admin_panel');
 
-    const timestamp = Date.now();
-    const fileName = `${safeFileName}_${timestamp}.txt`;
-    const filePath = path.default.join(process.cwd(), 'rag-knowledge', fileName);
-
-    // Formatar conteúdo com título
-    const formattedContent = `${title}\n\n${content}`;
-
-    // Salvar arquivo
-    fs.default.writeFileSync(filePath, formattedContent, 'utf-8');
-
-    console.log(`✅ Novo conhecimento adicionado: ${fileName}`);
-
-    // Reinicializar RAG para incluir novo arquivo
-    await initializeRAG();
-    console.log('🔄 RAG reinicializado com novo conhecimento');
+    console.log(`✅ [ADD-KNOWLEDGE] Conhecimento adicionado com sucesso! ID: ${result.documentId}`);
 
     res.json({
       success: true,
-      message: 'Conhecimento adicionado com sucesso',
-      fileName
+      message: 'Conhecimento adicionado com sucesso ao RAG!',
+      documentId: result.documentId.toString()
     });
   } catch (err) {
     console.error('❌ Erro ao adicionar conhecimento:', err);

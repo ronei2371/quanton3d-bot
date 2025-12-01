@@ -246,8 +246,9 @@ export function getRAGInfo() {
 // VISUAL RAG - Busca por similaridade de imagens via texto
 // ============================================================
 
-// Limiar de similaridade para Visual RAG (mais alto que texto)
-const VISUAL_MIN_RELEVANCE_THRESHOLD = 0.7;
+// Limiar de similaridade para Visual RAG
+// Ajustado de 0.7 para 0.5 para melhor deteccao de problemas visuais
+const VISUAL_MIN_RELEVANCE_THRESHOLD = 0.5;
 
 // Adicionar exemplo visual ao banco de conhecimento
 export async function addVisualKnowledge(imageUrl, defectType, diagnosis, solution, visionDescription) {
@@ -326,9 +327,11 @@ Acoes: ${visionDescription.acoes || ''}`;
     ).toArray();
 
     if (documents.length === 0) {
-      logRAG('Nenhum conhecimento visual encontrado no banco', 'WARN');
+      logRAG('Nenhum conhecimento visual encontrado no banco (verifique se tem documentos com embedding e status correto)', 'WARN');
       return [];
     }
+
+    logRAG(`[VISUAL-RAG] Encontrados ${documents.length} documentos visuais no banco`, 'INFO');
 
     // Calcular similaridade com cada documento
     const results = documents.map(doc => ({
@@ -344,14 +347,17 @@ Acoes: ${visionDescription.acoes || ''}`;
     // Ordenar por similaridade (maior primeiro)
     results.sort((a, b) => b.similarity - a.similarity);
 
+    // Log detalhado dos top 3 resultados para diagnostico
+    logRAG(`[VISUAL-RAG] Top 3 similaridades: ${results.slice(0, 3).map(r => `${r.defectType}=${(r.similarity * 100).toFixed(1)}%`).join(', ')}`, 'INFO');
+
     // Filtrar por limiar de relevancia
     const relevantResults = results.filter(r => r.similarity >= VISUAL_MIN_RELEVANCE_THRESHOLD);
     const topResults = relevantResults.slice(0, topK);
 
     if (topResults.length === 0) {
-      logRAG(`Nenhum conhecimento visual com relevancia >= ${VISUAL_MIN_RELEVANCE_THRESHOLD * 100}% (melhor: ${(results[0]?.similarity * 100 || 0).toFixed(1)}%)`, 'WARN');
+      logRAG(`[VISUAL-RAG] Nenhum match >= ${VISUAL_MIN_RELEVANCE_THRESHOLD * 100}% (melhor: ${(results[0]?.similarity * 100 || 0).toFixed(1)}% - ${results[0]?.defectType || 'N/A'})`, 'WARN');
     } else {
-      logRAG(`Encontrados ${topResults.length} exemplos visuais relevantes (melhor: ${(topResults[0]?.similarity * 100).toFixed(1)}%)`, 'INFO');
+      logRAG(`[VISUAL-RAG] Match encontrado! ${topResults.length} resultados (melhor: ${(topResults[0]?.similarity * 100).toFixed(1)}% - ${topResults[0]?.defectType})`, 'INFO');
     }
 
     return topResults;
