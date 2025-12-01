@@ -315,10 +315,13 @@ Acoes: ${visionDescription.acoes || ''}`;
     // Gerar embedding da consulta
     const queryEmbedding = await generateEmbedding(queryText);
 
-    // Buscar todos os documentos visuais com embeddings
+    // Buscar apenas documentos visuais aprovados com embeddings
     const collection = getVisualKnowledgeCollection();
     const documents = await collection.find(
-      { embedding: { $exists: true, $ne: [] } },
+      { 
+        embedding: { $exists: true, $ne: [] },
+        $or: [{ status: 'approved' }, { status: { $exists: false } }]
+      },
       { projection: { _id: 1, imageUrl: 1, defectType: 1, diagnosis: 1, solution: 1, visionDescription: 1, embedding: 1 } }
     ).toArray();
 
@@ -376,7 +379,7 @@ ${visualMatch.diagnosis}
 ${visualMatch.solution}`;
 }
 
-// Listar todos os conhecimentos visuais (para admin)
+// Listar todos os conhecimentos visuais aprovados (para admin)
 export async function listVisualKnowledge() {
   if (!isConnected()) {
     throw new Error('MongoDB nao conectado');
@@ -384,9 +387,10 @@ export async function listVisualKnowledge() {
 
   try {
     const collection = getVisualKnowledgeCollection();
+    // Filtrar apenas documentos aprovados ou sem status (compatibilidade com antigos)
     const documents = await collection.find(
-      {},
-      { projection: { _id: 1, imageUrl: 1, defectType: 1, diagnosis: 1, solution: 1, createdAt: 1 } }
+      { $or: [{ status: 'approved' }, { status: { $exists: false } }] },
+      { projection: { _id: 1, imageUrl: 1, defectType: 1, diagnosis: 1, solution: 1, createdAt: 1, status: 1 } }
     ).sort({ createdAt: -1 }).toArray();
 
     return documents;

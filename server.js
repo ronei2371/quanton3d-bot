@@ -680,6 +680,53 @@ Não encontrei uma solução específica para esse problema no banco de conhecim
 📞 **Por favor, entre em contato pelo WhatsApp** para uma análise detalhada com nossa equipe técnica. Eles poderão avaliar sua situação específica e fornecer a orientação correta.
 
 WhatsApp: (31) 3271-6935`;
+
+      // ======================================================
+      // 📸 SALVAR FOTO AUTOMATICAMENTE PARA TREINAMENTO
+      // Quando o bot não encontra solução, salva a foto como pendente
+      // para o admin adicionar o conhecimento depois
+      // ======================================================
+      try {
+        const registeredUser = registeredUsers.get(sessionId);
+        const collection = getVisualKnowledgeCollection();
+        
+        // Upload da imagem para Cloudinary (usando base64 do imageFile)
+        const cloudinaryResult = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              folder: 'quanton3d/visual-knowledge-pending',
+              resource_type: 'image',
+              transformation: [{ width: 800, height: 800, crop: 'limit' }]
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          uploadStream.end(imageFile.buffer);
+        });
+
+        const pendingDoc = {
+          imageUrl: cloudinaryResult.secure_url,
+          status: 'pending',
+          source: 'auto',
+          userName: registeredUser ? registeredUser.name : (userName || 'Anonimo'),
+          userPhone: registeredUser ? registeredUser.phone : null,
+          lastUserMessage: message || null,
+          autoAnalysis: imageDescription,
+          defectType: null,
+          diagnosis: '',
+          solution: '',
+          embedding: null,
+          createdAt: new Date()
+        };
+
+        await collection.insertOne(pendingDoc);
+        console.log(`📸 [VISUAL-RAG] Foto salva automaticamente para treinamento`);
+      } catch (pendingErr) {
+        console.error('⚠️ Erro ao salvar foto pendente:', pendingErr.message);
+        // Não interrompe o fluxo principal se falhar
+      }
     }
 
     // ======================================================
@@ -1886,6 +1933,161 @@ app.delete("/api/visual-knowledge/:id", async (req, res) => {
     });
   } catch (err) {
     console.error('❌ [VISUAL-RAG] Erro ao deletar conhecimento visual:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/visual-knowledge/pending - Listar fotos pendentes para treinamento (admin)
+app.get("/api/visual-knowledge/pending", async (req, res) => {
+  try {
+    const { auth } = req.query;
+
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    }
+
+    const collection = getVisualKnowledgeCollection();
+    const documents = await collection
+      .find({ status: 'pending' })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    res.json({
+      success: true,
+      documents,
+      count: documents.length
+    });
+  } catch (err) {
+    console.error('❌ [VISUAL-RAG] Erro ao listar fotos pendentes:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// PUT /api/visual-knowledge/:id/approve - Aprovar foto pendente e adicionar conhecimento (admin)
+app.put("/api/visual-knowledge/:id/approve", async (req, res) => {
+  try {
+    const { auth } = req.query;
+    const { id } = req.params;
+    const { defectType, diagnosis, solution } = req.body;
+
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    }
+
+    if (!defectType || !diagnosis || !solution) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Tipo de defeito, diagnostico e solucao sao obrigatorios' 
+      });
+    }
+
+    const collection = getVisualKnowledgeCollection();
+    const { ObjectId } = await import('mongodb');
+    
+    // Buscar documento pendente
+    const doc = await collection.findOne({ _id: new ObjectId(id), status: 'pending' });
+    
+    if (!doc) {
+      return res.status(404).json({ success: false, message: 'Documento pendente nao encontrado' });
+    }
+
+    // Gerar embedding para o texto combinado
+    const combinedText = `${defectType} ${diagnosis} ${solution}`;
+    const embeddingResponse = await openai.embeddings.create({
+      model: "text-embedding-3-large",
+      input: combinedText
+    });
+    const embedding = embeddingResponse.data[0].embedding;
+
+    // Atualizar documento com conhecimento e status aprovado
+    const result = await collection.updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          status: 'approved',
+          defectType,
+          diagnosis,
+          solution,
+          embedding,
+          approvedAt: new Date()
+        }
+      }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(500).json({ success: false, message: 'Erro ao aprovar documento' });
+    }
+
+    console.log(`✅ [VISUAL-RAG] Foto pendente aprovada e treinada: ${id}`);
+
+    res.json({
+      success: true,
+      message: 'Conhecimento visual aprovado e adicionado com sucesso!'
+    });
+  } catch (err) {
+    console.error('❌ [VISUAL-RAG] Erro ao aprovar foto pendente:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/visual-knowledge/pending - Adicionar foto pendente automaticamente (chamado pelo bot)
+app.post("/api/visual-knowledge/pending", upload.single('image'), async (req, res) => {
+  try {
+    const { userName, userPhone, lastUserMessage, autoAnalysis } = req.body;
+    const imageFile = req.file;
+
+    if (!imageFile) {
+      return res.status(400).json({ success: false, message: 'Imagem obrigatoria' });
+    }
+
+    console.log(`📸 [VISUAL-RAG] Salvando foto pendente para treinamento`);
+
+    // Upload da imagem para Cloudinary
+    const cloudinaryResult = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'quanton3d/visual-knowledge-pending',
+          resource_type: 'image',
+          transformation: [{ width: 800, height: 800, crop: 'limit' }]
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      uploadStream.end(imageFile.buffer);
+    });
+
+    const imageUrl = cloudinaryResult.secure_url;
+
+    // Salvar documento pendente no MongoDB
+    const collection = getVisualKnowledgeCollection();
+    const pendingDoc = {
+      imageUrl,
+      status: 'pending',
+      source: 'user',
+      userName: userName || 'Anonimo',
+      userPhone: userPhone || null,
+      lastUserMessage: lastUserMessage || null,
+      autoAnalysis: autoAnalysis || null,
+      defectType: null,
+      diagnosis: '',
+      solution: '',
+      embedding: null,
+      createdAt: new Date()
+    };
+
+    const result = await collection.insertOne(pendingDoc);
+
+    console.log(`✅ [VISUAL-RAG] Foto pendente salva: ${result.insertedId}`);
+
+    res.json({
+      success: true,
+      message: 'Foto salva para treinamento',
+      documentId: result.insertedId.toString()
+    });
+  } catch (err) {
+    console.error('❌ [VISUAL-RAG] Erro ao salvar foto pendente:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
