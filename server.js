@@ -403,38 +403,65 @@ app.post("/ask-with-image", upload.single('image'), async (req, res) => {
           role: "system",
           content: `Voce e um especialista em impressao 3D com RESINA UV (SLA/LCD/DLP) da Quanton3D.
 
-IMPORTANTE:
+REGRAS GERAIS:
 - Trate APENAS de impressao com resina UV.
 - NUNCA fale de filamento, FDM, bico, nozzle, extrusora ou mesa aquecida.
 - NAO assuma "descolamento da base" se isso NAO estiver claramente visivel na imagem.
+- NAO invente detalhes que nao aparecem na foto. Use apenas o que e visualmente observavel.
 
-TAREFA:
-Analise a imagem e identifique QUAL e o defeito PRINCIPAL visivel. Baseie-se APENAS no que aparece na foto.
+=== PASSO 1: A IMAGEM E RELACIONADA A IMPRESSAO 3D COM RESINA? ===
 
-Primeiro, escolha UMA e apenas UMA categoria como problema principal:
+Considere como RELACIONADA se houver QUALQUER indicacao de:
+- Impressora 3D de resina, cuba, plataforma, tanque, tela LCD/UV
+- Peca impressa em resina (mesmo parcialmente), suportes, base de impressao
+- Fotos do processo ou do resultado de uma impressao em resina
+- Objetos pequenos que parecem pecas impressas (miniaturas, prototipos, joias, dentaduras)
+- Qualquer objeto com textura de camadas tipica de impressao 3D
+
+IMPORTANTE: Se tiver QUALQUER duvida, considere como RELACIONADA e escolha um defeito.
+So use "imagem nao relacionada" quando for CLARAMENTE algo totalmente diferente
+(paisagem, pessoas, animais, carro, documento, tela de computador sem impressora, comida, etc).
+
+=== PASSO 2: SE FOR RELACIONADA, ESCOLHA UM UNICO DEFEITO PRINCIPAL ===
+
+Escolha UMA e apenas UMA categoria:
 - "descolamento da base" (peca soltando da plataforma)
 - "falha de suportes" (suportes quebrados, soltos ou falhando)
-- "rachadura/quebra da peca"
-- "falha de adesao entre camadas / delaminacao"
-- "deformacao/warping"
-- "problema de superficie/acabamento"
-- "sem defeito aparente"
+- "rachadura/quebra da peca" (trincas, quebras, fragmentos)
+- "falha de adesao entre camadas / delaminacao" (camadas separando)
+- "deformacao/warping" (peca entortada, curvada)
+- "problema de superficie/acabamento" (rugosidade, bolhas, manchas)
+- "excesso ou falta de cura" (peca mole, pegajosa ou quebradiça)
+- "sem defeito aparente" (peca parece OK)
 - "imagem nao relacionada a impressao 3D com resina"
 
-FORMATO OBRIGATORIO:
-1. Primeira frase, em UMA linha:
-   Problema principal: <uma das categorias acima>
+=== FORMATO DE SAIDA OBRIGATORIO (UMA INFORMACAO POR LINHA) ===
 
-2. Depois, no maximo 2 paragrafos curtos explicando:
-   - O que voce ve na foto que levou a essa conclusao
-   - 1 ou 2 causas provaveis especificas para esse tipo de defeito
-   - 1 ou 2 acoes praticas para corrigir/evitar esse problema
+Relacionada: SIM ou NAO
+Problema: <uma das categorias acima, exatamente como escrito>
+Confianca: ALTA, MEDIA ou BAIXA
+Descricao: <1-2 frases do que voce ve na foto>
+Causas: <1-2 causas provaveis ESPECIFICAS com parametros>
+Acoes: <1-2 acoes praticas ESPECIFICAS com valores>
 
-REGRAS:
-- NAO repita dicas genericas como "limpe a plataforma" ou "verifique se esta nivelada" a menos que o defeito tenha relacao direta com adesao a base.
-- Se o defeito for rachadura/quebra, foque em tensoes internas, cura, remocao da peca - NAO em adesao da base.
-- Se o defeito for falha de suportes, foque em configuracao de suportes - NAO em adesao da base.
-- Seja direto e objetivo. Use frases curtas. Evite paragrafos longos.`
+=== DIRETRIZES PARA CAUSAS E ACOES ===
+
+SEJA ESPECIFICO! Em vez de "verifique os parametros", diga por exemplo:
+- "Aumentar tempo de exposicao das camadas normais em 0.5-1 segundo"
+- "Aumentar numero de camadas de base de 4 para 6-8"
+- "Aumentar densidade dos suportes de 50% para 70-80%"
+- "Reduzir velocidade de elevacao de 60mm/min para 30-40mm/min"
+- "Aumentar tempo de exposicao da base de 30s para 45-60s"
+
+Sempre mencione parametros tipicos de resina quando relevante:
+- Espessura de camada (0.05mm, 0.03mm)
+- Tempo de exposicao normal (2-4s) e da base (30-60s)
+- Numero de camadas de base (4-8)
+- Velocidade e altura de elevacao
+- Densidade e espessura de suportes
+
+NAO de dicas genericas como "limpe a plataforma" ou "verifique se esta nivelada"
+a menos que o defeito tenha relacao DIRETA com adesao a base.`
         },
         {
           role: "user",
@@ -444,16 +471,36 @@ REGRAS:
           ]
         }
       ],
-      max_tokens: 400,
+      max_tokens: 500,
     });
 
     const imageDescription = visionResponse.choices[0].message.content;
-    console.log(`✅ [PASSO 1] Descrição da imagem: ${imageDescription.substring(0, 100)}...`);
+    console.log(`✅ [PASSO 1] Descrição da imagem: ${imageDescription.substring(0, 150)}...`);
 
-    // Verificar se a imagem é relacionada a impressão 3D
-    const isUnrelated = imageDescription.toLowerCase().includes('não parece estar relacionada') ||
-                        imageDescription.toLowerCase().includes('não está relacionada') ||
-                        imageDescription.toLowerCase().includes('não é relacionada');
+    // Extrair campos estruturados da resposta do Vision
+    const extractField = (text, fieldName) => {
+      const regex = new RegExp(`${fieldName}:\\s*(.+)`, 'i');
+      const match = text.match(regex);
+      return match ? match[1].trim() : null;
+    };
+
+    const relacionada = extractField(imageDescription, 'Relacionada');
+    const problema = extractField(imageDescription, 'Problema');
+    const confianca = extractField(imageDescription, 'Confianca');
+    const descricao = extractField(imageDescription, 'Descricao');
+    const causas = extractField(imageDescription, 'Causas');
+    const acoes = extractField(imageDescription, 'Acoes');
+
+    console.log(`📊 [VISION] Relacionada: ${relacionada} | Problema: ${problema} | Confiança: ${confianca}`);
+
+    // Verificar se a imagem é relacionada a impressão 3D usando o novo formato estruturado
+    // Fallback para o método antigo se o formato não for reconhecido
+    const isUnrelated = (relacionada && relacionada.toUpperCase() === 'NAO') ||
+                        (!relacionada && (
+                          imageDescription.toLowerCase().includes('imagem nao relacionada') ||
+                          imageDescription.toLowerCase().includes('não parece estar relacionada') ||
+                          imageDescription.toLowerCase().includes('não está relacionada')
+                        ));
 
     if (isUnrelated) {
       console.log('⚠️ Imagem não relacionada a impressão 3D detectada');
