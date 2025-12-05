@@ -16,9 +16,9 @@ const EMBEDDING_DIMENSIONS = 3072; // Dimensao do text-embedding-3-large
 
 // Limiar minimo de relevancia para considerar um documento util
 // Documentos com similaridade abaixo deste valor serao ignorados
-// NOTA: Reduzido de 0.7 para 0.5 para melhorar recall - text-embedding-3-large
-// pode ter scores mais baixos mesmo para documentos relevantes
-const MIN_RELEVANCE_THRESHOLD = 0.5;
+// NOTA: Reduzido de 0.7 para 0.5, e depois para 0.3 para melhorar recall
+// text-embedding-3-large pode ter scores mais baixos mesmo para documentos relevantes
+const MIN_RELEVANCE_THRESHOLD = 0.3;
 
 let lastInitialization = null;
 let documentsCount = 0;
@@ -173,12 +173,20 @@ export async function addDocument(title, content, source = 'suggestion') {
 
   try {
     logRAG(`Adicionando documento: ${title}`, 'INFO');
+    
+    // 🔍 LOG DETALHADO - Inicio
+    console.log(`📝 [ADD-DOC] Titulo: ${title}`);
+    console.log(`📝 [ADD-DOC] Tamanho do conteudo: ${content.length} caracteres`);
+    console.log(`📝 [ADD-DOC] Source: ${source}`);
 
     // Gerar embedding do conteudo
+    console.log(`🔄 [ADD-DOC] Gerando embedding...`);
     const embedding = await generateEmbedding(content);
+    console.log(`✅ [ADD-DOC] Embedding gerado! Dimensao: ${embedding.length}`);
 
     // Inserir no MongoDB
     const collection = getDocumentsCollection();
+    console.log(`💾 [ADD-DOC] Salvando no MongoDB...`);
     const result = await collection.insertOne({
       title,
       content,
@@ -190,6 +198,7 @@ export async function addDocument(title, content, source = 'suggestion') {
     });
 
     documentsCount++;
+    console.log(`✅ [ADD-DOC] Documento salvo! ID: ${result.insertedId}`);
     logRAG(`Documento adicionado com sucesso: ${result.insertedId}`, 'INFO');
 
     return {
@@ -198,6 +207,8 @@ export async function addDocument(title, content, source = 'suggestion') {
       title
     };
   } catch (err) {
+    console.error(`❌ [ADD-DOC] ERRO ao adicionar documento:`, err);
+    console.error(`❌ [ADD-DOC] Stack trace:`, err.stack);
     logRAG(`Erro ao adicionar documento: ${err.message}`, 'ERROR');
     throw err;
   }
