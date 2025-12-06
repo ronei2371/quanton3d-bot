@@ -4,6 +4,7 @@
 
 import OpenAI from 'openai';
 import { getDocumentsCollection, getVisualKnowledgeCollection, isConnected } from './db.js';
+import { rerankDocuments } from './rag-reranker.js'; // ⬅ NOVO: re-ranking inteligente
 
 // Cliente OpenAI para embeddings
 const openai = new OpenAI({
@@ -127,15 +128,41 @@ export async function searchKnowledge(query, topK = 5) {
     // 4. Ordenar por similaridade (maior primeiro)
     results.sort((a, b) => b.similarity - a.similarity);
     
-    // 5. Filtrar por limiar de relevancia (apenas documentos com score >= 0.7)
+    // 5. Filtrar por limiar de relevancia
     const relevantResults = results.filter(r => r.similarity >= MIN_RELEVANCE_THRESHOLD);
-    const topResults = relevantResults.slice(0, topK);
 
-    if (topResults.length === 0) {
-      logRAG(`Nenhum documento com relevancia >= ${MIN_RELEVANCE_THRESHOLD * 100}% encontrado (melhor: ${(results[0]?.similarity * 100 || 0).toFixed(1)}%)`, 'WARN');
-    } else {
-      logRAG(`Encontrados ${topResults.length} documentos relevantes (melhor: ${(topResults[0]?.similarity * 100).toFixed(1)}%)`, 'INFO');
+    if (relevantResults.length === 0) {
+      logRAG(
+        `Nenhum documento com relevancia >= ${MIN_RELEVANCE_THRESHOLD * 100}% encontrado (melhor: ${(results[0]?.similarity * 100 || 0).toFixed(1)}%)`,
+        'WARN'
+      );
+      return [];
     }
+
+    // 6. Re-ranking inteligente com GPT-4o (usa rag-reranker.js)
+    let finalResults = relevantResults;
+    if (relevantResults.length > 1) {
+      try {
+        logRAG(
+          `[RE-RANKING] Aplicando reordenacao inteligente em ${relevantResults.length} documentos`,
+          'INFO'
+        );
+        finalResults = await rerankDocuments(query, relevantResults);
+      } catch (err) {
+        logRAG(
+          `[RE-RANKING] Falha ao reranquear documentos: ${err.message}. Usando ordem original por similaridade.`,
+          'WARN'
+        );
+        finalResults = relevantResults;
+      }
+    }
+
+    const topResults = finalResults.slice(0, topK);
+
+    logRAG(
+      `Encontrados ${topResults.length} documentos relevantes (melhor: ${(topResults[0]?.similarity * 100).toFixed(1)}%)`,
+      'INFO'
+    );
 
     return topResults;
   } catch (err) {
@@ -359,16 +386,28 @@ Acoes: ${visionDescription.acoes || ''}`;
     results.sort((a, b) => b.similarity - a.similarity);
 
     // Log detalhado dos top 3 resultados para diagnostico
-    logRAG(`[VISUAL-RAG] Top 3 similaridades: ${results.slice(0, 3).map(r => `${r.defectType}=${(r.similarity * 100).toFixed(1)}%`).join(', ')}`, 'INFO');
+    logRAG(
+      `[VISUAL-RAG] Top 3 similaridades: ${results
+        .slice(0, 3)
+        .map(r => `${r.defectType}=${(r.similarity * 100).toFixed(1)}%`)
+        .join(', ')}`,
+      'INFO'
+    );
 
     // Filtrar por limiar de relevancia
     const relevantResults = results.filter(r => r.similarity >= VISUAL_MIN_RELEVANCE_THRESHOLD);
     const topResults = relevantResults.slice(0, topK);
 
     if (topResults.length === 0) {
-      logRAG(`[VISUAL-RAG] Nenhum match >= ${VISUAL_MIN_RELEVANCE_THRESHOLD * 100}% (melhor: ${(results[0]?.similarity * 100 || 0).toFixed(1)}% - ${results[0]?.defectType || 'N/A'})`, 'WARN');
+      logRAG(
+        `[VISUAL-RAG] Nenhum match >= ${VISUAL_MIN_RELEVANCE_THRESHOLD * 100}% (melhor: ${(results[0]?.similarity * 100 || 0).toFixed(1)}% - ${results[0]?.defectType || 'N/A'})`,
+        'WARN'
+      );
     } else {
-      logRAG(`[VISUAL-RAG] Match encontrado! ${topResults.length} resultados (melhor: ${(topResults[0]?.similarity * 100).toFixed(1)}% - ${topResults[0]?.defectType})`, 'INFO');
+      logRAG(
+        `[VISUAL-RAG] Match encontrado! ${topResults.length} resultados (melhor: ${(topResults[0]?.similarity * 100).toFixed(1)}% - ${topResults[0]?.defectType})`,
+        'INFO'
+      );
     }
 
     return topResults;
