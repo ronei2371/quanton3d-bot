@@ -283,6 +283,41 @@ export async function deleteDocument(id) {
   }
 }
 
+// Atualizar documento de conhecimento
+export async function updateDocument(id, title, content) {
+  if (!isConnected()) {
+    throw new Error('MongoDB nao conectado');
+  }
+
+  try {
+    const collection = getDocumentsCollection();
+    const { ObjectId } = await import('mongodb');
+    
+    // Gerar novo embedding para o conteudo atualizado
+    const embedding = await generateEmbedding(content);
+    
+    const result = await collection.updateOne(
+      { _id: new ObjectId(id) },
+      { 
+        $set: { 
+          title, 
+          content, 
+          embedding,
+          updatedAt: new Date() 
+        } 
+      }
+    );
+    
+    if (result.modifiedCount > 0) {
+      logRAG(`Documento atualizado: ${id}`, 'INFO');
+    }
+    return { success: result.modifiedCount > 0 };
+  } catch (err) {
+    logRAG(`Erro ao atualizar documento: ${err.message}`, 'ERROR');
+    throw err;
+  }
+}
+
 // Verificar integridade do RAG
 export async function checkRAGIntegrity() {
   if (!isConnected()) {
@@ -524,6 +559,7 @@ export default {
   addDocument,
   listDocuments,
   deleteDocument,
+  updateDocument,
   checkRAGIntegrity,
   getRAGInfo,
   generateEmbedding,

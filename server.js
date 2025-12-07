@@ -8,7 +8,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
 import multer from "multer";
-import { initializeRAG, searchKnowledge, formatContext, addDocument, listDocuments, deleteDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding } from './rag-search.js';
+import { initializeRAG, searchKnowledge, formatContext, addDocument, listDocuments, deleteDocument, updateDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding } from './rag-search.js';
 import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection } from './db.js';
 import { v2 as cloudinary } from 'cloudinary';
 import {
@@ -851,13 +851,16 @@ app.get("/metrics", async (req, res) => {
 
   // Buscar estatisticas de resinas do MongoDB (dados reais dos registros de usuarios)
   const resinMentions = {
-    'Pyroblast+': 0,
-    'Iron 7030': 0,
-    'Spin+': 0,
-    'Spark': 0,
-    'FlexForm': 0,
-    'Castable': 0,
-    'Outra': 0
+    'Low Smell': 0,
+    'Spare': 0,
+    'ALCHEMIST': 0,
+    'IRON': 0,
+    'POSEIDON': 0,
+    'RPG': 0,
+    'Athon ALINHADORES': 0,
+    'Athon DENTAL': 0,
+    'Athon GENGIVA': 0,
+    'Athon WASHABLE': 0
   };
 
   try {
@@ -874,8 +877,6 @@ app.get("/metrics", async (req, res) => {
         const resin = user.resin;
         if (resinMentions.hasOwnProperty(resin)) {
           resinMentions[resin]++;
-        } else {
-          resinMentions['Outra']++;
         }
       });
 
@@ -887,11 +888,41 @@ app.get("/metrics", async (req, res) => {
     userRegistrations.forEach(user => {
       if (user.resin && resinMentions.hasOwnProperty(user.resin)) {
         resinMentions[user.resin]++;
-      } else if (user.resin) {
-        resinMentions['Outra']++;
       }
     });
   }
+
+  // Top Clientes com Duvidas (baseado em nome/email que mais iniciaram conversas)
+  const clientCounts = {};
+  userRegistrations.forEach(user => {
+    const clientKey = user.email || user.name || 'Anonimo';
+    clientCounts[clientKey] = (clientCounts[clientKey] || 0) + 1;
+  });
+  
+  const topClients = Object.entries(clientCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([client, count]) => ({ client, count }));
+
+  // Topicos Mais Acessados (baseado em palavras-chave frequentes nas perguntas)
+  const topicKeywords = {};
+  const stopWords = ['o', 'a', 'os', 'as', 'um', 'uma', 'de', 'da', 'do', 'em', 'no', 'na', 'para', 'com', 'que', 'e', 'ou', 'se', 'por', 'como', 'qual', 'quais', 'minha', 'meu', 'sua', 'seu', 'esta', 'esse', 'isso', 'aqui', 'ali', 'la', 'nao', 'sim', 'muito', 'mais', 'menos', 'bem', 'mal', 'so', 'ja', 'ainda', 'tambem', 'ate', 'sobre', 'entre', 'depois', 'antes', 'quando', 'onde', 'porque', 'pois', 'entao', 'assim', 'agora', 'sempre', 'nunca', 'talvez', 'pode', 'posso', 'tenho', 'tem', 'ter', 'ser', 'esta', 'estou', 'voce', 'vc', 'eu', 'ele', 'ela', 'nos', 'eles', 'elas'];
+  
+  conversationMetrics.forEach(conv => {
+    const words = conv.message.toLowerCase()
+      .replace(/[^\w\s]/g, '')
+      .split(/\s+/)
+      .filter(word => word.length > 3 && !stopWords.includes(word));
+    
+    words.forEach(word => {
+      topicKeywords[word] = (topicKeywords[word] || 0) + 1;
+    });
+  });
+  
+  const topTopics = Object.entries(topicKeywords)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15)
+    .map(([topic, count]) => ({ topic, count }));
 
   res.json({
     success: true,
@@ -907,6 +938,8 @@ app.get("/metrics", async (req, res) => {
       },
       topQuestions,
       resinMentions,
+      topClients,
+      topTopics,
       lastUpdated: new Date().toISOString()
     }
   });
@@ -996,6 +1029,38 @@ app.delete("/api/knowledge/:id", async (req, res) => {
     }
   } catch (err) {
     console.error('❌ Erro ao deletar conhecimento:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Rota para atualizar documento de conhecimento (para admin)
+app.put("/api/knowledge/:id", async (req, res) => {
+  try {
+    const { auth } = req.query;
+    const { id } = req.params;
+    const { title, content } = req.body;
+
+    // Autenticação
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, error: 'Não autorizado' });
+    }
+
+    if (!title || !content) {
+      return res.status(400).json({ success: false, error: 'Titulo e conteudo sao obrigatorios' });
+    }
+
+    console.log(`✏️ [UPDATE-KNOWLEDGE] Atualizando documento: ${id}`);
+
+    const result = await updateDocument(id, title, content);
+
+    if (result.success) {
+      console.log(`✅ [UPDATE-KNOWLEDGE] Documento atualizado com sucesso`);
+      res.json({ success: true, message: 'Documento atualizado com sucesso' });
+    } else {
+      res.status(404).json({ success: false, error: 'Documento não encontrado' });
+    }
+  } catch (err) {
+    console.error('❌ Erro ao atualizar conhecimento:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
@@ -1402,6 +1467,38 @@ app.get("/api/contact", async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Erro ao listar mensagens:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Rota para atualizar status de mensagem (marcar como resolvido)
+app.put("/api/contact/:id", async (req, res) => {
+  try {
+    const { auth } = req.query;
+    const { id } = req.params;
+    const { resolved } = req.body;
+
+    // Autenticacao
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    }
+
+    const { ObjectId } = await import('mongodb');
+    const messagesCollection = getMessagesCollection();
+    
+    const result = await messagesCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { resolved: resolved, resolvedAt: resolved ? new Date() : null } }
+    );
+
+    if (result.modifiedCount > 0) {
+      console.log(`✅ Mensagem ${id} marcada como ${resolved ? 'resolvida' : 'pendente'}`);
+      res.json({ success: true, message: `Mensagem ${resolved ? 'resolvida' : 'reaberta'}` });
+    } else {
+      res.status(404).json({ success: false, error: 'Mensagem nao encontrada' });
+    }
+  } catch (err) {
+    console.error('❌ Erro ao atualizar mensagem:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
