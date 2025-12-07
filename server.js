@@ -2128,6 +2128,102 @@ app.delete("/api/gallery/:id", async (req, res) => {
   }
 });
 
+// PUT /api/gallery/:id - Atualizar entrada da galeria (admin)
+app.put("/api/gallery/:id", async (req, res) => {
+  try {
+    const { auth } = req.query;
+    const { id } = req.params;
+
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    }
+
+    const galleryCollection = getGalleryCollection();
+    const entry = await galleryCollection.findOne({ _id: new ObjectId(id) });
+
+    if (!entry) {
+      return res.status(404).json({ success: false, message: 'Entrada nao encontrada' });
+    }
+
+    // Campos que podem ser atualizados
+    const {
+      name, resin, printer, comment,
+      layerHeight, baseLayers, exposureTime, baseExposureTime,
+      transitionLayers, uvOffDelay,
+      lowerLiftDistance1, lowerLiftDistance2,
+      liftDistance1, liftDistance2,
+      lowerRetractDistance1, lowerRetractDistance2,
+      retractDistance1, retractDistance2,
+      lowerLiftSpeed1, lowerLiftSpeed2,
+      liftSpeed1, liftSpeed2,
+      lowerRetractSpeed1, lowerRetractSpeed2,
+      retractSpeed1, retractSpeed2
+    } = req.body;
+
+    // Atualizar apenas os campos fornecidos
+    const updateData = {
+      updatedAt: new Date()
+    };
+
+    // Campos basicos
+    if (name !== undefined) updateData.name = name;
+    if (resin !== undefined) updateData.resin = resin;
+    if (printer !== undefined) updateData.printer = printer;
+    if (comment !== undefined) updateData.comment = comment;
+
+    // Configuracoes de impressao
+    if (layerHeight !== undefined) updateData.layerHeight = layerHeight;
+    if (baseLayers !== undefined) updateData.baseLayers = baseLayers;
+    if (exposureTime !== undefined) updateData.exposureTime = exposureTime;
+    if (baseExposureTime !== undefined) updateData.baseExposureTime = baseExposureTime;
+    if (transitionLayers !== undefined) updateData.transitionLayers = transitionLayers;
+    if (uvOffDelay !== undefined) updateData.uvOffDelay = uvOffDelay;
+
+    // Distancias de Elevacao
+    if (lowerLiftDistance1 !== undefined) updateData.lowerLiftDistance1 = lowerLiftDistance1;
+    if (lowerLiftDistance2 !== undefined) updateData.lowerLiftDistance2 = lowerLiftDistance2;
+    if (liftDistance1 !== undefined) updateData.liftDistance1 = liftDistance1;
+    if (liftDistance2 !== undefined) updateData.liftDistance2 = liftDistance2;
+
+    // Distancias de Retracao
+    if (lowerRetractDistance1 !== undefined) updateData.lowerRetractDistance1 = lowerRetractDistance1;
+    if (lowerRetractDistance2 !== undefined) updateData.lowerRetractDistance2 = lowerRetractDistance2;
+    if (retractDistance1 !== undefined) updateData.retractDistance1 = retractDistance1;
+    if (retractDistance2 !== undefined) updateData.retractDistance2 = retractDistance2;
+
+    // Velocidades de Elevacao Inferior
+    if (lowerLiftSpeed1 !== undefined) updateData.lowerLiftSpeed1 = lowerLiftSpeed1;
+    if (lowerLiftSpeed2 !== undefined) updateData.lowerLiftSpeed2 = lowerLiftSpeed2;
+
+    // Velocidades de Elevacao Normal
+    if (liftSpeed1 !== undefined) updateData.liftSpeed1 = liftSpeed1;
+    if (liftSpeed2 !== undefined) updateData.liftSpeed2 = liftSpeed2;
+
+    // Velocidades de Retracao Inferior
+    if (lowerRetractSpeed1 !== undefined) updateData.lowerRetractSpeed1 = lowerRetractSpeed1;
+    if (lowerRetractSpeed2 !== undefined) updateData.lowerRetractSpeed2 = lowerRetractSpeed2;
+
+    // Velocidades de Retracao Normal
+    if (retractSpeed1 !== undefined) updateData.retractSpeed1 = retractSpeed1;
+    if (retractSpeed2 !== undefined) updateData.retractSpeed2 = retractSpeed2;
+
+    await galleryCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    );
+
+    console.log(`✏️ [GALERIA] Entrada atualizada: ${id}`);
+
+    res.json({
+      success: true,
+      message: 'Entrada atualizada com sucesso.'
+    });
+  } catch (err) {
+    console.error('❌ [GALERIA] Erro ao atualizar:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ===== FIM DOS ENDPOINTS DA GALERIA =====
 
 // ===== VISUAL RAG - BANCO DE CONHECIMENTO VISUAL =====
