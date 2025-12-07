@@ -241,6 +241,48 @@ export async function addDocument(title, content, source = 'suggestion') {
   }
 }
 
+// Listar todos os documentos de conhecimento (para admin)
+export async function listDocuments() {
+  if (!isConnected()) {
+    throw new Error('MongoDB nao conectado');
+  }
+
+  try {
+    const collection = getDocumentsCollection();
+    const documents = await collection.find(
+      {},
+      { projection: { _id: 1, title: 1, content: 1, source: 1, createdAt: 1 } }
+    ).sort({ createdAt: -1 }).toArray();
+
+    return documents;
+  } catch (err) {
+    logRAG(`Erro ao listar documentos: ${err.message}`, 'ERROR');
+    throw err;
+  }
+}
+
+// Deletar documento de conhecimento
+export async function deleteDocument(id) {
+  if (!isConnected()) {
+    throw new Error('MongoDB nao conectado');
+  }
+
+  try {
+    const collection = getDocumentsCollection();
+    const { ObjectId } = await import('mongodb');
+    const result = await collection.deleteOne({ _id: new ObjectId(id) });
+    
+    if (result.deletedCount > 0) {
+      documentsCount--;
+      logRAG(`Documento deletado: ${id}`, 'INFO');
+    }
+    return { success: result.deletedCount > 0 };
+  } catch (err) {
+    logRAG(`Erro ao deletar documento: ${err.message}`, 'ERROR');
+    throw err;
+  }
+}
+
 // Verificar integridade do RAG
 export async function checkRAGIntegrity() {
   if (!isConnected()) {
@@ -480,6 +522,8 @@ export default {
   searchKnowledge,
   formatContext,
   addDocument,
+  listDocuments,
+  deleteDocument,
   checkRAGIntegrity,
   getRAGInfo,
   generateEmbedding,
