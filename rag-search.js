@@ -4,7 +4,7 @@
 
 import OpenAI from 'openai';
 import { getDocumentsCollection, getVisualKnowledgeCollection, isConnected } from './db.js';
-import { rerankDocuments } from './rag-reranker.js'; // ⬅ NOVO: re-ranking inteligente
+import { rerankDocuments } from './scripts/rag-reranker.js';
 
 // Cliente OpenAI para embeddings
 const openai = new OpenAI({
