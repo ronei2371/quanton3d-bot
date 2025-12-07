@@ -849,19 +849,26 @@ app.get("/metrics", async (req, res) => {
     .slice(0, 10)
     .map(([question, count]) => ({ question, count }));
 
-  // Buscar estatisticas de resinas do MongoDB (dados reais dos registros de usuarios)
-  const resinMentions = {
-    'Low Smell': 0,
-    'Spare': 0,
-    'ALCHEMIST': 0,
-    'IRON': 0,
-    'POSEIDON': 0,
-    'RPG': 0,
-    'Athon ALINHADORES': 0,
-    'Athon DENTAL': 0,
-    'Athon GENGIVA': 0,
-    'Athon WASHABLE': 0
-  };
+    // Buscar estatisticas de resinas do MongoDB (dados reais dos registros de usuarios)
+    // Lista completa: Quanton antigas + Athon novas (16 resinas)
+    const resinMentions = {
+      'Pyroblast+': 0,
+      'Iron': 0,
+      'Iron 7030': 0,
+      'Spin+': 0,
+      'Spark': 0,
+      'FlexForm': 0,
+      'Castable': 0,
+      'Low Smell': 0,
+      'Spare': 0,
+      'ALCHEMIST': 0,
+      'POSEIDON': 0,
+      'RPG': 0,
+      'Athon ALINHADORES': 0,
+      'Athon DENTAL': 0,
+      'Athon GENGIVA': 0,
+      'Athon WASHABLE': 0
+    };
 
   try {
     const messagesCollection = getMessagesCollection();
@@ -945,6 +952,175 @@ app.get("/metrics", async (req, res) => {
   });
 });
 
+// Endpoint para detalhes de clientes por resina (CORRECAO 3)
+// Retorna lista de clientes que usam uma resina especifica e historico de conversas
+app.get("/metrics/resin-details", async (req, res) => {
+  const { auth, resin } = req.query;
+
+  if (auth !== 'quanton3d_admin_secret') {
+    return res.status(401).json({ success: false, message: 'Não autorizado' });
+  }
+
+  if (!resin) {
+    return res.status(400).json({ success: false, error: 'Parametro resin é obrigatorio' });
+  }
+
+  try {
+    // Buscar clientes que usam essa resina do MongoDB
+    const messagesCollection = getMessagesCollection();
+    let customers = [];
+    
+    if (messagesCollection) {
+      const userResinData = await messagesCollection.find({ 
+        type: 'user_registration',
+        resin: resin
+      }).toArray();
+      
+      customers = userResinData.map(user => ({
+        name: user.name || 'Anonimo',
+        email: user.email || '',
+        phone: user.phone || '',
+        printer: user.printer || '',
+        registeredAt: user.registeredAt || user.createdAt
+      }));
+    }
+
+    // Buscar conversas relacionadas a essa resina (em memoria)
+    // Filtra conversas de usuarios que usam essa resina
+    const customerEmails = customers.map(c => c.email).filter(e => e);
+    const customerNames = customers.map(c => c.name).filter(n => n && n !== 'Anonimo');
+    
+    const conversations = conversationMetrics
+      .filter(conv => {
+        // Verifica se a conversa é de um cliente que usa essa resina
+        const matchEmail = conv.userEmail && customerEmails.includes(conv.userEmail);
+        const matchName = conv.userName && customerNames.includes(conv.userName);
+        // Ou se a mensagem menciona a resina
+        const mentionsResin = conv.message && conv.message.toLowerCase().includes(resin.toLowerCase());
+        return matchEmail || matchName || mentionsResin;
+      })
+      .slice(-50) // Ultimas 50 conversas
+      .reverse()
+      .map(conv => ({
+        timestamp: conv.timestamp,
+        customerName: conv.userName || 'Anonimo',
+        email: conv.userEmail || '',
+        userPrompt: conv.message,
+        botReply: conv.reply,
+        questionType: conv.questionType,
+        documentsFound: conv.documentsFound
+      }));
+
+    res.json({
+      success: true,
+      resin,
+      customersCount: customers.length,
+      customers,
+      conversationsCount: conversations.length,
+      conversations
+    });
+  } catch (err) {
+    console.error('❌ Erro ao buscar detalhes da resina:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Endpoint para historico de um cliente especifico (CORRECAO 4)
+// Retorna duvidas, respostas e status de resolucao
+app.get("/metrics/client-history", async (req, res) => {
+  const { auth, clientKey } = req.query;
+
+  if (auth !== 'quanton3d_admin_secret') {
+    return res.status(401).json({ success: false, message: 'Não autorizado' });
+  }
+
+  if (!clientKey) {
+    return res.status(400).json({ success: false, error: 'Parametro clientKey é obrigatorio' });
+  }
+
+  try {
+    // Buscar dados do cliente no MongoDB
+    const messagesCollection = getMessagesCollection();
+    let clientInfo = null;
+    let registrations = [];
+    let contacts = [];
+    
+    if (messagesCollection) {
+      // Buscar registros do cliente
+      const userRegistrations = await messagesCollection.find({ 
+        type: 'user_registration',
+        $or: [
+          { email: clientKey },
+          { name: clientKey }
+        ]
+      }).toArray();
+      
+      if (userRegistrations.length > 0) {
+        const firstReg = userRegistrations[0];
+        clientInfo = {
+          key: clientKey,
+          name: firstReg.name || clientKey,
+          email: firstReg.email || '',
+          phone: firstReg.phone || ''
+        };
+        
+        registrations = userRegistrations.map(reg => ({
+          resin: reg.resin || 'Nao informada',
+          printer: reg.printer || 'Nao informado',
+          registeredAt: reg.registeredAt || reg.createdAt
+        }));
+      }
+      
+      // Buscar mensagens de contato do cliente
+      const contactMessages = await messagesCollection.find({
+        $or: [
+          { email: clientKey },
+          { name: clientKey }
+        ],
+        type: { $ne: 'user_registration' }
+      }).sort({ createdAt: -1 }).limit(20).toArray();
+      
+      contacts = contactMessages.map(msg => ({
+        createdAt: msg.createdAt,
+        message: msg.message || msg.content || '',
+        resolved: msg.resolved || false,
+        resolvedAt: msg.resolvedAt || null
+      }));
+    }
+
+    // Buscar conversas do chat (em memoria)
+    const conversations = conversationMetrics
+      .filter(conv => {
+        const matchEmail = conv.userEmail === clientKey;
+        const matchName = conv.userName === clientKey;
+        return matchEmail || matchName;
+      })
+      .slice(-30) // Ultimas 30 conversas
+      .reverse()
+      .map(conv => ({
+        timestamp: conv.timestamp,
+        prompt: conv.message,
+        reply: conv.reply,
+        questionType: conv.questionType,
+        documentsFound: conv.documentsFound,
+        feedbackAdded: conv.feedbackAdded || false,
+        markedAsBad: conv.markedAsBad || false
+      }));
+
+    res.json({
+      success: true,
+      client: clientInfo || { key: clientKey, name: clientKey, email: '', phone: '' },
+      registrations,
+      contacts,
+      conversations,
+      totalInteractions: registrations.length + contacts.length + conversations.length
+    });
+  } catch (err) {
+    console.error('❌ Erro ao buscar historico do cliente:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Rota para adicionar conhecimento manualmente ao RAG
 // CORRIGIDO: Agora usa addDocument() que salva no MongoDB com embedding
 app.post("/add-knowledge", async (req, res) => {
@@ -980,9 +1156,10 @@ app.post("/add-knowledge", async (req, res) => {
 });
 
 // Rota para listar todos os documentos de conhecimento (para admin)
+// Aceita filtros opcionais: start (data inicio) e end (data fim)
 app.get("/api/knowledge", async (req, res) => {
   try {
-    const { auth } = req.query;
+    const { auth, start, end } = req.query;
 
     // Autenticação
     if (auth !== 'quanton3d_admin_secret') {
@@ -990,8 +1167,22 @@ app.get("/api/knowledge", async (req, res) => {
     }
 
     console.log(`📚 [LIST-KNOWLEDGE] Listando documentos de conhecimento...`);
+    if (start || end) {
+      console.log(`📅 Filtro de data: ${start || 'inicio'} até ${end || 'fim'}`);
+    }
 
-    const documents = await listDocuments();
+    let documents = await listDocuments();
+
+    // Aplicar filtro de data se fornecido
+    if (start || end) {
+      documents = documents.filter(doc => {
+        if (!doc.createdAt) return true;
+        const docDate = new Date(doc.createdAt);
+        if (start && docDate < new Date(start)) return false;
+        if (end && docDate > new Date(end + 'T23:59:59')) return false;
+        return true;
+      });
+    }
 
     console.log(`✅ [LIST-KNOWLEDGE] ${documents.length} documentos encontrados`);
 
