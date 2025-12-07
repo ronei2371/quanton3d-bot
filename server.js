@@ -1781,9 +1781,17 @@ app.post("/api/gallery", galleryUpload.array('images', 2), async (req, res) => {
       // Campos de configuracao de impressao
       layerHeight, baseLayers, exposureTime, baseExposureTime,
       transitionLayers, uvOffDelay,
+      // Distancias de Elevacao
       lowerLiftDistance1, lowerLiftDistance2,
       liftDistance1, liftDistance2,
+      // Distancias de Retracao (NOVO)
+      lowerRetractDistance1, lowerRetractDistance2,
+      retractDistance1, retractDistance2,
+      // Velocidades de Elevacao Inferior (NOVO)
+      lowerLiftSpeed1, lowerLiftSpeed2,
+      // Velocidades de Elevacao Normal
       liftSpeed1, liftSpeed2,
+      // Velocidades de Retracao
       lowerRetractSpeed1, lowerRetractSpeed2,
       retractSpeed1, retractSpeed2
     } = req.body;
@@ -1856,20 +1864,35 @@ app.post("/api/gallery", galleryUpload.array('images', 2), async (req, res) => {
       printer,
       comment: comment || '',
       images: uploadedImages,
-      // Parametros de configuracao de impressao
-      params: {
-        layerHeight: layerHeight || '',
-        baseLayers: baseLayers || '',
-        exposureTime: exposureTime || '',
-        baseExposureTime: baseExposureTime || '',
-        transitionLayers: transitionLayers || '',
-        uvOffDelay: uvOffDelay || '',
-        lowerLiftDistance: { value1: lowerLiftDistance1 || '', value2: lowerLiftDistance2 || '' },
-        liftDistance: { value1: liftDistance1 || '', value2: liftDistance2 || '' },
-        liftSpeed: { value1: liftSpeed1 || '', value2: liftSpeed2 || '' },
-        lowerRetractSpeed: { value1: lowerRetractSpeed1 || '', value2: lowerRetractSpeed2 || '' },
-        retractSpeed: { value1: retractSpeed1 || '', value2: retractSpeed2 || '' }
-      },
+      // Parametros de configuracao de impressao (campos diretos para facilitar exibicao no Admin)
+      layerHeight: layerHeight || '',
+      baseLayers: baseLayers || '',
+      exposureTime: exposureTime || '',
+      baseExposureTime: baseExposureTime || '',
+      transitionLayers: transitionLayers || '',
+      uvOffDelay: uvOffDelay || '',
+      // Distancias de Elevacao
+      lowerLiftDistance1: lowerLiftDistance1 || '',
+      lowerLiftDistance2: lowerLiftDistance2 || '',
+      liftDistance1: liftDistance1 || '',
+      liftDistance2: liftDistance2 || '',
+      // Distancias de Retracao
+      lowerRetractDistance1: lowerRetractDistance1 || '',
+      lowerRetractDistance2: lowerRetractDistance2 || '',
+      retractDistance1: retractDistance1 || '',
+      retractDistance2: retractDistance2 || '',
+      // Velocidades de Elevacao Inferior
+      lowerLiftSpeed1: lowerLiftSpeed1 || '',
+      lowerLiftSpeed2: lowerLiftSpeed2 || '',
+      // Velocidades de Elevacao Normal
+      liftSpeed1: liftSpeed1 || '',
+      liftSpeed2: liftSpeed2 || '',
+      // Velocidades de Retracao Inferior
+      lowerRetractSpeed1: lowerRetractSpeed1 || '',
+      lowerRetractSpeed2: lowerRetractSpeed2 || '',
+      // Velocidades de Retracao Normal
+      retractSpeed1: retractSpeed1 || '',
+      retractSpeed2: retractSpeed2 || '',
       status: 'pending', // pending, approved, rejected
       createdAt: new Date(),
       updatedAt: new Date()
