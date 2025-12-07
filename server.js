@@ -9,7 +9,7 @@ import dotenv from "dotenv";
 import OpenAI from "openai";
 import multer from "multer";
 import { initializeRAG, searchKnowledge, formatContext, addDocument, listDocuments, deleteDocument, updateDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding } from './rag-search.js';
-import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection } from './db.js';
+import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection, getSuggestionsCollection } from './db.js';
 import { v2 as cloudinary } from 'cloudinary';
 import {
   analyzeQuestionType,
@@ -265,6 +265,21 @@ app.post("/suggest-knowledge", async (req, res) => {
       status: "pending"
     };
 
+    // Salvar no MongoDB para persistencia
+    try {
+      const suggestionsCollection = getSuggestionsCollection();
+      if (suggestionsCollection) {
+        await suggestionsCollection.insertOne({
+          ...newSuggestion,
+          createdAt: new Date()
+        });
+        console.log(`💾 Sugestao salva no MongoDB`);
+      }
+    } catch (dbErr) {
+      console.warn('⚠️ Erro ao salvar sugestao no MongoDB:', dbErr.message);
+    }
+
+    // Manter em memoria tambem para compatibilidade
     knowledgeSuggestions.push(newSuggestion);
 
     console.log(`📝 Nova sugestão de conhecimento de ${userName}: ${suggestion.substring(0, 50)}...`);
@@ -666,6 +681,12 @@ IMPORTANTE:
 - Se o problema for "rachadura/quebra", foque em cura e tensoes - NAO em adesao da base.
 - Se o problema for "falha de suportes", foque em configuracao de suportes - NAO em adesao da base.
 - Responda APENAS sobre o defeito identificado.
+
+DIFERENCIACAO DE RESINAS IRON:
+- "Iron" e "Iron 7030" sao resinas DIFERENTES com parametros DIFERENTES.
+- Se o usuario mencionar apenas "Iron" (sem numero), considere a resina Iron padrao.
+- Se o usuario mencionar "Iron 7030" ou "7030", considere a resina Iron 7030 especifica.
+- NUNCA confunda os parametros de uma com a outra.
 
 === CONHECIMENTO QUANTON3D ===
 ${knowledgeContext}
@@ -1257,7 +1278,7 @@ app.put("/api/knowledge/:id", async (req, res) => {
 });
 
 // Rota para listar sugestões (apenas para Ronei)
-app.get("/suggestions", (req, res) => {
+app.get("/suggestions", async (req, res) => {
   const { auth } = req.query;
 
   // Autenticação simples
@@ -1265,7 +1286,28 @@ app.get("/suggestions", (req, res) => {
     return res.status(401).json({ success: false, message: 'Não autorizado' });
   }
 
-  // Retornar sugestões
+  // Tentar carregar do MongoDB primeiro
+  try {
+    const suggestionsCollection = getSuggestionsCollection();
+    if (suggestionsCollection) {
+      const mongoSuggestions = await suggestionsCollection
+        .find({ status: 'pending' })
+        .sort({ createdAt: -1 })
+        .toArray();
+      
+      if (mongoSuggestions.length > 0) {
+        return res.json({
+          success: true,
+          suggestions: mongoSuggestions,
+          count: mongoSuggestions.length
+        });
+      }
+    }
+  } catch (dbErr) {
+    console.warn('⚠️ Erro ao carregar sugestoes do MongoDB:', dbErr.message);
+  }
+
+  // Fallback para memoria
   res.json({
     success: true,
     suggestions: knowledgeSuggestions,
