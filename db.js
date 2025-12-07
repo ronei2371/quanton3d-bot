@@ -84,6 +84,11 @@ export function getVisualKnowledgeCollection() {
   return getDb().collection('visual_knowledge');
 }
 
+// Obter colecao de sugestoes de conhecimento
+export function getSuggestionsCollection() {
+  return getDb().collection('suggestions');
+}
+
 // Fechar conexao (para cleanup)
 export async function closeMongo() {
   if (client) {
@@ -106,6 +111,7 @@ export default {
   getMessagesCollection,
   getGalleryCollection,
   getVisualKnowledgeCollection,
+  getSuggestionsCollection,
   closeMongo,
   isConnected
 };
