@@ -8,7 +8,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
 import multer from "multer";
-import { initializeRAG, searchKnowledge, formatContext, addDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding } from './rag-search.js';
+import { initializeRAG, searchKnowledge, formatContext, addDocument, listDocuments, deleteDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding } from './rag-search.js';
 import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection } from './db.js';
 import { v2 as cloudinary } from 'cloudinary';
 import {
@@ -340,12 +340,13 @@ const registeredUsers = new Map();
 // Rota para registrar usuário
 app.post("/register-user", async (req, res) => {
   try {
-    const { name, phone, email, sessionId } = req.body;
+    const { name, phone, email, sessionId, resin } = req.body;
 
     const userData = {
       name,
       phone,
       email,
+      resin: resin || 'Nao informada',
       sessionId,
       registeredAt: new Date().toISOString()
     };
@@ -355,7 +356,22 @@ app.post("/register-user", async (req, res) => {
     // Adicionar aos registros para métricas
     userRegistrations.push(userData);
 
-    console.log(`👤 Novo usuário registrado: ${name} (${email})`);
+    // Salvar no MongoDB para persistencia e metricas
+    try {
+      const messagesCollection = getMessagesCollection();
+      if (messagesCollection) {
+        await messagesCollection.insertOne({
+          type: 'user_registration',
+          ...userData,
+          createdAt: new Date()
+        });
+        console.log(`💾 Registro de usuario salvo no MongoDB`);
+      }
+    } catch (dbErr) {
+      console.warn('⚠️ Erro ao salvar registro no MongoDB:', dbErr.message);
+    }
+
+    console.log(`👤 Novo usuário registrado: ${name} (${email}) - Resina: ${resin || 'Nao informada'}`);
 
     res.json({ success: true, message: 'Usuário registrado com sucesso!' });
   } catch (err) {
@@ -801,7 +817,7 @@ WhatsApp: (31) 3271-6935`;
 });
 
 // Rota para obter métricas e analytics
-app.get("/metrics", (req, res) => {
+app.get("/metrics", async (req, res) => {
   const { auth } = req.query;
 
   // Autenticação
@@ -809,7 +825,7 @@ app.get("/metrics", (req, res) => {
     return res.status(401).json({ success: false, message: 'Não autorizado' });
   }
 
-  // Calcular estatísticas
+  // Calcular estatísticas em memoria
   const totalConversations = conversationMetrics.length;
   const totalRegistrations = userRegistrations.length;
   const uniqueSessions = new Set(conversationMetrics.map(c => c.sessionId)).size;
@@ -833,45 +849,49 @@ app.get("/metrics", (req, res) => {
     .slice(0, 10)
     .map(([question, count]) => ({ question, count }));
 
-  // Conversas por resina (buscar menções)
+  // Buscar estatisticas de resinas do MongoDB (dados reais dos registros de usuarios)
   const resinMentions = {
     'Pyroblast+': 0,
-    'Iron/Iron 7030': 0,
+    'Iron 7030': 0,
     'Spin+': 0,
     'Spark': 0,
     'FlexForm': 0,
-    'Alchemist': 0,
-    'Poseidon': 0,
-    'LowSmell': 0,
     'Castable': 0,
-    'Outras': 0
+    'Outra': 0
   };
 
-  conversationMetrics.forEach(conv => {
-    // Buscar menções tanto na pergunta quanto na resposta
-    const fullText = (conv.message + ' ' + conv.reply).toLowerCase();
-    let found = false;
+  try {
+    const messagesCollection = getMessagesCollection();
+    if (messagesCollection) {
+      // Buscar todos os registros de usuarios com resina selecionada
+      const userResinData = await messagesCollection.find({ 
+        type: 'user_registration',
+        resin: { $exists: true, $ne: null, $ne: 'Nao informada' }
+      }).toArray();
 
-    Object.keys(resinMentions).forEach(resin => {
-      const resinLower = resin.toLowerCase();
-      // Buscar variações do nome
-      const variations = [
-        resinLower,
-        resinLower.replace('+', ''),
-        resinLower.replace('/', ' '),
-        resinLower.split('/')[0] // Primeiro nome (ex: "iron" de "iron/iron 7030")
-      ];
+      // Contar cada resina
+      userResinData.forEach(user => {
+        const resin = user.resin;
+        if (resinMentions.hasOwnProperty(resin)) {
+          resinMentions[resin]++;
+        } else {
+          resinMentions['Outra']++;
+        }
+      });
 
-      if (variations.some(v => fullText.includes(v))) {
-        resinMentions[resin]++;
-        found = true;
+      console.log(`📊 Estatisticas de resinas carregadas do MongoDB: ${userResinData.length} registros`);
+    }
+  } catch (dbErr) {
+    console.warn('⚠️ Erro ao buscar estatisticas de resinas do MongoDB:', dbErr.message);
+    // Fallback: usar dados em memoria
+    userRegistrations.forEach(user => {
+      if (user.resin && resinMentions.hasOwnProperty(user.resin)) {
+        resinMentions[user.resin]++;
+      } else if (user.resin) {
+        resinMentions['Outra']++;
       }
     });
-
-    if (!found && (fullText.includes('resina') || fullText.includes('material'))) {
-      resinMentions['Outras']++;
-    }
-  });
+  }
 
   res.json({
     success: true,
@@ -922,6 +942,60 @@ app.post("/add-knowledge", async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Erro ao adicionar conhecimento:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Rota para listar todos os documentos de conhecimento (para admin)
+app.get("/api/knowledge", async (req, res) => {
+  try {
+    const { auth } = req.query;
+
+    // Autenticação
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, error: 'Não autorizado' });
+    }
+
+    console.log(`📚 [LIST-KNOWLEDGE] Listando documentos de conhecimento...`);
+
+    const documents = await listDocuments();
+
+    console.log(`✅ [LIST-KNOWLEDGE] ${documents.length} documentos encontrados`);
+
+    res.json({
+      success: true,
+      documents,
+      count: documents.length
+    });
+  } catch (err) {
+    console.error('❌ Erro ao listar conhecimento:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Rota para deletar documento de conhecimento (para admin)
+app.delete("/api/knowledge/:id", async (req, res) => {
+  try {
+    const { auth } = req.query;
+    const { id } = req.params;
+
+    // Autenticação
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, error: 'Não autorizado' });
+    }
+
+    console.log(`🗑️ [DELETE-KNOWLEDGE] Deletando documento: ${id}`);
+
+    const result = await deleteDocument(id);
+
+    if (result.success) {
+      console.log(`✅ [DELETE-KNOWLEDGE] Documento deletado com sucesso`);
+      res.json({ success: true, message: 'Documento deletado com sucesso' });
+    } else {
+      res.status(404).json({ success: false, error: 'Documento não encontrado' });
+    }
+  } catch (err) {
+    console.error('❌ Erro ao deletar conhecimento:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
