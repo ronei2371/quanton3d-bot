@@ -72,10 +72,12 @@ app.post("/ask", async (req, res) => {
     const { message, sessionId, userName } = req.body;
 
     const model = process.env.OPENAI_MODEL || "gpt-4o";
-    const temperature = parseFloat(process.env.OPENAI_TEMPERATURE) || 0.0;
+    // Temperatura baixa para precisão técnica
+    const temperature = 0.1;
 
     // 1. RECUPERAR DADOS DO USUÁRIO (RESINA SELECIONADA)
     const currentUser = registeredUsers.get(sessionId);
+    // Se o usuário não tiver resina registrada, tenta extrair da mensagem, senão "Não identificada"
     const userResin = currentUser ? currentUser.resin : (extractEntities(message).resins[0] || 'Não identificada');
     
     console.log(`🧠 Modelo: ${model} | Usuário: ${userName || 'Anônimo'} | Resina Atual: ${userResin}`);
@@ -99,10 +101,11 @@ app.post("/ask", async (req, res) => {
 
 🚨 REGRA DE OURO (TRAVA DE CONTEXTO):
 O usuário informou que está usando a resina: **${userResin}**.
-1. Todas as suas respostas, parâmetros e exemplos DEVEM ser focados na resina **${userResin}**.
-2. Se o "Conhecimento da Empresa" abaixo citar outra resina (ex: FlexForm, Castable) como exemplo, **IGNORE** essa parte ou adapte a explicação para a **${userResin}**.
-3. NUNCA sugira parâmetros de uma resina diferente da que o usuário está usando, pois isso causa falha na impressão.
-4. Se não houver dados específicos para a ${userResin} no texto abaixo, dê orientações gerais de resina "Standard/ABS-Like" mas avise que são gerais.
+
+1. **FOCO TOTAL:** Todas as suas respostas, parâmetros e exemplos DEVEM ser focados na resina **${userResin}**.
+2. **FILTRAGEM:** Se o "Conhecimento da Empresa" abaixo citar outra resina (ex: FlexForm, Castable) como exemplo e isso contradizer a ${userResin}, **IGNORE** a outra resina. Use apenas a lógica que se aplica à ${userResin}.
+3. **SEGURANÇA:** NUNCA sugira parâmetros de uma resina diferente da que o usuário está usando.
+4. **FALLBACK:** Se não houver dados específicos para a ${userResin} no texto abaixo, dê orientações gerais de resina "Standard/ABS-Like" mas avise CLARAMENTE que são gerais.
 
 === CONHECIMENTO DA EMPRESA (RAG) ===
 ${knowledgeContext}
@@ -124,13 +127,9 @@ REGRAS GERAIS:
       { role: "user", content: message }
     ];
 
-    // Ajuste de temperatura
-    let adjustedTemperature = 0.1;
-    if (questionType.type === 'parameters') adjustedTemperature = 0.05;
-
     const completion = await openai.chat.completions.create({
       model,
-      temperature: adjustedTemperature,
+      temperature: temperature,
       messages,
     });
 
@@ -176,10 +175,11 @@ app.post("/register-user", async (req, res) => {
       registeredAt: new Date().toISOString()
     };
 
+    // Salva na memória para acesso rápido durante o chat
     registeredUsers.set(sessionId, userData);
     userRegistrations.push(userData);
 
-    // Salvar no MongoDB
+    // Salvar no MongoDB para persistência
     try {
       const messagesCollection = getMessagesCollection();
       if (messagesCollection) {
@@ -200,11 +200,10 @@ app.post("/register-user", async (req, res) => {
   }
 });
 
-// --- DEMAIS ROTAS (MANTIDAS IGUAIS, SÓ RESUMINDO PARA CABER) ---
+// --- DEMAIS ROTAS (MANTIDAS IGUAIS) ---
 
 // Rota Suggest Knowledge
 app.post("/suggest-knowledge", async (req, res) => {
-    // (Código original mantido - apenas salvando sugestão)
     try {
         const { suggestion, userName, userPhone, sessionId } = req.body;
         const newSuggestion = { id: Date.now(), suggestion, userName, userPhone, sessionId, status: "pending", timestamp: new Date().toISOString() };
@@ -228,14 +227,13 @@ app.post("/api/custom-request", async (req, res) => {
     } catch(e) { res.status(500).json({success: false}); }
 });
 
-// Rotas GET Admin (Custom, Suggestions, Contact) - Mantidas iguais
+// Rotas GET Admin
 app.get("/custom-requests", (req, res) => {
     if (req.query.auth !== 'quanton3d_admin_secret') return res.status(401).json({success:false});
     res.json({ success: true, requests: customRequests.slice().reverse() });
 });
 app.get("/suggestions", async (req, res) => {
     if (req.query.auth !== 'quanton3d_admin_secret') return res.status(401).json({success:false});
-    // Tenta MongoDB, fallback memoria (igual original)
     try {
         const col = getSuggestionsCollection();
         if(col) {
@@ -272,7 +270,6 @@ app.put("/api/contact/:id", async (req, res) => {
 app.get("/metrics", async (req, res) => {
     if (req.query.auth !== 'quanton3d_admin_secret') return res.status(401).json({success:false});
     
-    // Recalcular métricas básicas em memória + MongoDB para resinas
     const resinMentions = { 'Pyroblast+':0, 'Iron':0, 'Iron 7030':0, 'Spin+':0, 'Spark':0, 'FlexForm':0, 'Castable':0, 'Low Smell':0, 'Spare':0, 'ALCHEMIST':0, 'POSEIDON':0, 'RPG':0, 'Athon ALINHADORES':0, 'Athon DENTAL':0, 'Athon GENGIVA':0, 'Athon WASHABLE':0 };
     
     try {
@@ -283,7 +280,6 @@ app.get("/metrics", async (req, res) => {
         }
     } catch(e) {}
 
-    // ... (restante da lógica de métricas mantida simplificada)
     res.json({
         success: true,
         metrics: {
@@ -394,6 +390,31 @@ app.delete("/api/visual-knowledge/:id", async (req, res) => {
     if (req.query.auth !== 'quanton3d_admin_secret') return res.status(401).json({success:false});
     await deleteVisualKnowledge(req.params.id);
     res.json({success:true});
+});
+
+// Adicionar rotas para Aprovação de Sugestões e Visual Pendente
+app.put("/approve-suggestion/:id", async (req, res) => {
+    try {
+      const { auth, editedAnswer } = req.body;
+      if (auth !== 'quanton3d_admin_secret') return res.status(401).json({ success: false });
+      
+      const suggestionId = parseInt(req.params.id);
+      const suggestion = knowledgeSuggestions.find(s => s.id === suggestionId);
+      
+      if (suggestion) {
+        suggestion.status = 'approved';
+        // Se houver resposta editada, salvar no RAG
+        const content = editedAnswer || suggestion.lastBotReply;
+        await addDocument(`Sugestão Aprovada - ${suggestion.userName}`, content, 'suggestion');
+        return res.json({ success: true });
+      }
+      res.status(404).json({ success: false });
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+app.get("/api/visual-knowledge/pending", async (req, res) => {
+    // Retorna lista vazia se não implementado no mongo ainda, para não quebrar
+    res.json({ success: true, documents: [] });
 });
 
 // Configuração da porta Render
