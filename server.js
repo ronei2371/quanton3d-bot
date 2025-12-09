@@ -1,941 +1,453 @@
-import { useState, useEffect } from 'react'
-import { Card } from '@/components/ui/card.jsx'
-import { Button } from '@/components/ui/button.jsx'
-import { Input } from '@/components/ui/input.jsx'
-import { X, Check, Clock, User, Phone, Calendar, MessageSquare, Users, TrendingUp, BarChart3, BookOpen, Plus, FileText, Beaker, Edit3, Mail, Camera, Image, Loader2, Eye, Trash2, Upload, AlertCircle } from 'lucide-react'
+// =========================
+// 🤖 Quanton3D IA - Servidor Oficial (CORRIGIDO: TRAVA DE CONTEXTO DE RESINA)
+// =========================
 
-// URL Base do Servidor
-const API_URL = 'https://quanton3d-bot-v2.onrender.com';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import OpenAI from "openai";
+import multer from "multer";
+import { initializeRAG, searchKnowledge, formatContext, addDocument, listDocuments, deleteDocument, updateDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge } from './rag-search.js';
+import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection, getSuggestionsCollection } from './db.js';
+import { v2 as cloudinary } from 'cloudinary';
+import {
+  analyzeQuestionType,
+  extractEntities,
+  generateIntelligentContext,
+  learnFromConversation,
+  generateSmartSuggestions,
+  analyzeSentiment,
+  personalizeResponse,
+  calculateIntelligenceMetrics
+} from './ai-intelligence-system.js';
 
-function PendingVisualItemForm({ item, onApprove, onDelete, canDelete }) {
-  const [defectType, setDefectType] = useState('')
-  const [diagnosis, setDiagnosis] = useState('')
-  const [solution, setSolution] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
+dotenv.config();
 
-  const handleApproveClick = async () => {
-    setIsSubmitting(true)
-    try {
-      const success = await onApprove(item._id, defectType, diagnosis, solution)
-      if (success) {
-        setDefectType('')
-        setDiagnosis('')
-        setSolution('')
-      }
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
+// ===== CONFIGURACAO DO CLOUDINARY =====
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
-  return (
-    <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border">
-      <div className="flex gap-4">
-        <img 
-          src={item.imageUrl} 
-          alt="Foto pendente" 
-          className="w-40 h-40 object-cover rounded-lg border flex-shrink-0"
-        />
-        <div className="flex-1 space-y-3">
-          <div className="text-xs text-gray-500">
-            Enviada em: {new Date(item.createdAt).toLocaleString('pt-BR')}
-            {item.userName && <span className="ml-2">| Cliente: {item.userName}</span>}
-          </div>
-          <select
-            value={defectType}
-            onChange={(e) => setDefectType(e.target.value)}
-            className="w-full p-2 border rounded-lg text-sm bg-white dark:bg-gray-600"
-          >
-            <option value="">Selecione o tipo de defeito...</option>
-            <option value="problema de LCD">Problema de LCD / Tela</option>
-            <option value="descolamento da base">Descolamento da base</option>
-            <option value="falha de suportes">Falha de suportes</option>
-            <option value="rachadura/quebra da peca">Rachadura/quebra da peca</option>
-            <option value="falha de adesao entre camadas / delaminacao">Delaminacao</option>
-            <option value="deformacao/warping">Deformacao/warping</option>
-            <option value="problema de superficie/acabamento">Problema de superficie</option>
-            <option value="excesso ou falta de cura">Excesso ou falta de cura</option>
-            <option value="outro">Outro</option>
-          </select>
-          <textarea
-            value={diagnosis}
-            onChange={(e) => setDiagnosis(e.target.value)}
-            placeholder="Diagnostico tecnico..."
-            className="w-full p-2 border rounded-lg text-sm bg-white dark:bg-gray-600 min-h-[60px]"
-          />
-          <textarea
-            value={solution}
-            onChange={(e) => setSolution(e.target.value)}
-            placeholder="Solucao recomendada..."
-            className="w-full p-2 border rounded-lg text-sm bg-white dark:bg-gray-600 min-h-[60px]"
-          />
-          <div className="flex gap-2">
-            <Button 
-              size="sm"
-              onClick={handleApproveClick}
-              disabled={isSubmitting}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <Check className="h-4 w-4 mr-1" />
-              {isSubmitting ? 'Aprovando...' : 'Aprovar e Treinar'}
-            </Button>
-            {canDelete && (
-              <Button 
-                size="sm"
-                variant="outline"
-                onClick={() => onDelete(item._id)}
-                className="text-red-600 border-red-300 hover:bg-red-50"
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Descartar
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+if (process.env.CLOUDINARY_CLOUD_NAME) {
+  console.log('☁️ Cloudinary configurado:', process.env.CLOUDINARY_CLOUD_NAME);
+} else {
+  console.warn('⚠️ Cloudinary nao configurado - galeria de fotos desabilitada');
 }
 
-export function AdminPanel({ onClose }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [accessLevel, setAccessLevel] = useState(null)
-  const [password, setPassword] = useState('')
-  const [activeTab, setActiveTab] = useState('metrics')
-  const [metrics, setMetrics] = useState(null)
-  const [suggestions, setSuggestions] = useState([])
-  const [loading, setLoading] = useState(false)
-  
-  // Knowledge States
-  const [knowledgeTitle, setKnowledgeTitle] = useState('')
-  const [knowledgeContent, setKnowledgeContent] = useState('')
-  const [addingKnowledge, setAddingKnowledge] = useState(false)
-  const [knowledgeDocuments, setKnowledgeDocuments] = useState([])
-  const [knowledgeLoading, setKnowledgeLoading] = useState(false)
-  const [knowledgeDateStart, setKnowledgeDateStart] = useState('')
-  const [knowledgeDateEnd, setKnowledgeDateEnd] = useState('')
-  const [editingKnowledge, setEditingKnowledge] = useState(null)
-  const [editKnowledgeTitle, setEditKnowledgeTitle] = useState('')
-  const [editKnowledgeContent, setEditKnowledgeContent] = useState('')
-  
-  // Custom Requests & Messages
-  const [customRequests, setCustomRequests] = useState([])
-  const [editingSuggestion, setEditingSuggestion] = useState(null)
-  const [editedText, setEditedText] = useState('')
-  const [contactMessages, setContactMessages] = useState([])
-  
-  // Gallery
-  const [galleryEntries, setGalleryEntries] = useState([])
-  const [galleryLoading, setGalleryLoading] = useState(false)
-  const [editingGalleryEntry, setEditingGalleryEntry] = useState(null)
-  const [editGalleryData, setEditGalleryData] = useState({})
-  const [savingGalleryEdit, setSavingGalleryEdit] = useState(false)
+console.log('🔧 Sistema configurado para usar APENAS MongoDB para persistencia');
 
-  // Visual RAG states
-  const [visualKnowledge, setVisualKnowledge] = useState([])
-  const [visualLoading, setVisualLoading] = useState(false)
-  const [visualImage, setVisualImage] = useState(null)
-  const [visualImagePreview, setVisualImagePreview] = useState(null)
-  const [pendingVisualPhotos, setPendingVisualPhotos] = useState([])
-  const [pendingVisualLoading, setPendingVisualLoading] = useState(false)
-  const [visualDefectType, setVisualDefectType] = useState('')
-  const [visualDiagnosis, setVisualDiagnosis] = useState('')
-  const [visualSolution, setVisualSolution] = useState('')
-  const [addingVisual, setAddingVisual] = useState(false)
-  
-  // Details Modals
-  const [selectedResin, setSelectedResin] = useState(null)
-  const [resinDetails, setResinDetails] = useState(null)
-  const [resinDetailsLoading, setResinDetailsLoading] = useState(false)
-  const [selectedClient, setSelectedClient] = useState(null)
-  const [clientHistory, setClientHistory] = useState(null)
-  const [clientHistoryLoading, setClientHistoryLoading] = useState(false)
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-  const ADMIN_PASSWORD = 'quanton3d2024'
-  const TEAM_SECRET = 'suporte_quanton_2025'
-  const isAdmin = accessLevel === 'admin'
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 }
+});
 
-  const handleLogin = () => {
-    if (password === ADMIN_PASSWORD) {
-      setAccessLevel('admin')
-      setIsAuthenticated(true)
-    } else if (password === TEAM_SECRET) {
-      setAccessLevel('support')
-      setIsAuthenticated(true)
-    } else {
-      alert('Senha incorreta!')
-      return
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+const conversationHistory = new Map();
+const knowledgeSuggestions = [];
+const customRequests = [];
+const conversationMetrics = [];
+const userRegistrations = [];
+// Banco de dados de usuários registrados (Sessão -> Dados)
+const registeredUsers = new Map();
+
+// Rota principal
+app.get("/", (req, res) => {
+  res.send("🚀 Quanton3D IA Online! Backend ativo e operacional.");
+});
+
+// Rota de comunicação com o robô (texto)
+app.post("/ask", async (req, res) => {
+  try {
+    const { message, sessionId, userName } = req.body;
+
+    const model = process.env.OPENAI_MODEL || "gpt-4o";
+    const temperature = 0.1;
+
+    // 1. RECUPERAR DADOS DO USUÁRIO (RESINA SELECIONADA)
+    const currentUser = registeredUsers.get(sessionId);
+    const userResin = currentUser ? currentUser.resin : (extractEntities(message).resins[0] || 'Não identificada');
+    
+    console.log(`🧠 Modelo: ${model} | Usuário: ${userName || 'Anônimo'} | Resina Atual: ${userResin}`);
+
+    if (!conversationHistory.has(sessionId)) {
+      conversationHistory.set(sessionId, []);
     }
-    loadAllData()
-  }
+    const history = conversationHistory.get(sessionId);
 
-  const loadAllData = () => {
-    loadMetrics()
-    loadSuggestions()
-    loadCustomRequests()
-    loadContactMessages()
-    loadGalleryEntries()
-    loadVisualKnowledge()
-    loadPendingVisualPhotos()
-    loadKnowledgeDocuments()
-  }
+    // 2. ANÁLISE INTELIGENTE
+    const questionType = analyzeQuestionType(message);
+    const entities = extractEntities(message);
+    const sentiment = analyzeSentiment(message);
 
-  const loadMetrics = async () => {
-    setLoading(true)
-    try {
-      const response = await fetch(`${API_URL}/metrics?auth=quanton3d_admin_secret`)
-      const data = await response.json()
-      setMetrics(data.metrics)
-    } catch (error) {
-      console.error('Erro ao carregar métricas:', error)
-    } finally {
-      setLoading(false)
+    // 3. BUSCAR CONHECIMENTO (RAG)
+    const relevantKnowledge = await searchKnowledge(message, 5);
+    const knowledgeContext = formatContext(relevantKnowledge);
+
+    // 4. CONSTRUIR PROMPT COM "TRAVA DE CONTEXTO"
+    let contextualPrompt = `Você é o assistente oficial da Quanton3D, especialista em resinas UV.
+
+🚨 REGRA DE OURO (TRAVA DE CONTEXTO):
+O usuário informou que está usando a resina: **${userResin}**.
+
+1. **FOCO TOTAL:** Todas as suas respostas, parâmetros e exemplos DEVEM ser focados na resina **${userResin}**.
+2. **FILTRAGEM:** Se o "Conhecimento da Empresa" abaixo citar outra resina (ex: FlexForm, Castable) como exemplo e isso contradizer a ${userResin}, **IGNORE** a outra resina. Use apenas a lógica que se aplica à ${userResin}.
+3. **SEGURANÇA:** NUNCA sugira parâmetros de uma resina diferente da que o usuário está usando.
+4. **FALLBACK:** Se não houver dados específicos para a ${userResin} no texto abaixo, dê orientações gerais de resina "Standard/ABS-Like" mas avise CLARAMENTE que são gerais.
+
+=== CONHECIMENTO DA EMPRESA (RAG) ===
+${knowledgeContext}
+=== FIM DO CONHECIMENTO ===
+
+REGRAS GERAIS:
+- Seja direto, técnico e use no máximo 3 parágrafos.
+- NUNCA indique produtos de outras marcas.
+- Cite FISPQs se falar de segurança.
+`;
+
+    if (userName && userName.toLowerCase().includes('ronei')) {
+      contextualPrompt += "\n\n**ATENÇÃO: Você está falando com Ronei Fonseca, seu criador.**";
     }
-  }
 
-  const loadSuggestions = async () => {
-    try {
-      const response = await fetch(`${API_URL}/suggestions?auth=quanton3d_admin_secret`)
-      const data = await response.json()
-      setSuggestions(data.suggestions || [])
-    } catch (error) {
-      console.error('Erro ao carregar sugestões:', error)
-    }
-  }
+    const messages = [
+      { role: "system", content: contextualPrompt },
+      ...history,
+      { role: "user", content: message }
+    ];
 
-  const loadCustomRequests = async () => {
-    try {
-      const response = await fetch(`${API_URL}/custom-requests?auth=quanton3d_admin_secret`)
-      const data = await response.json()
-      setCustomRequests(data.requests || [])
-    } catch (error) {
-      console.error('Erro ao carregar pedidos customizados:', error)
-    }
-  }
+    const completion = await openai.chat.completions.create({
+      model,
+      temperature: temperature,
+      messages,
+    });
 
-  const loadContactMessages = async () => {
-    try {
-      const response = await fetch(`${API_URL}/api/contact?auth=quanton3d_admin_secret`)
-      const data = await response.json()
-      setContactMessages(data.messages || [])
-    } catch (error) {
-      console.error('Erro ao carregar mensagens de contato:', error)
-    }
-  }
+    let reply = completion.choices[0].message.content;
 
-  const toggleMessageResolved = async (messageId, currentResolved) => {
+    // Atualizar histórico e métricas
+    history.push({ role: "user", content: message });
+    history.push({ role: "assistant", content: reply });
+    if (history.length > 20) history.splice(0, history.length - 20);
+
+    // Salvar métricas
+    conversationMetrics.push({
+      sessionId,
+      userName: currentUser ? currentUser.name : userName,
+      userResin: userResin, // Salvar a resina na métrica
+      message,
+      reply,
+      timestamp: new Date().toISOString(),
+      documentsFound: relevantKnowledge.length
+    });
+
+    res.json({ reply });
+
+  } catch (err) {
+    console.error("❌ Erro na comunicação com a OpenAI:", err);
+    res.status(500).json({
+      reply: "⚠️ Erro ao processar a IA. Tente novamente em instantes.",
+    });
+  }
+});
+
+// Rota para registrar usuário
+app.post("/register-user", async (req, res) => {
+  try {
+    const { name, phone, email, sessionId, resin } = req.body;
+
+    const userData = {
+      name,
+      phone,
+      email,
+      resin: resin || 'Nao informada',
+      sessionId,
+      registeredAt: new Date().toISOString()
+    };
+
+    registeredUsers.set(sessionId, userData);
+    userRegistrations.push(userData);
+
+    // Salvar no MongoDB para persistência
     try {
-      const response = await fetch(`${API_URL}/api/contact/${messageId}?auth=quanton3d_admin_secret`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resolved: !currentResolved })
-      })
-      const data = await response.json()
-      if (data.success) {
-        loadContactMessages()
-      } else {
-        alert('Erro ao atualizar status: ' + data.error)
+      const messagesCollection = getMessagesCollection();
+      if (messagesCollection) {
+        await messagesCollection.insertOne({
+          type: 'user_registration',
+          ...userData,
+          createdAt: new Date()
+        });
       }
-    } catch (error) {
-      console.error('Erro ao atualizar status da mensagem:', error)
-      alert('Erro ao atualizar status da mensagem')
+    } catch (dbErr) {
+      console.warn('Erro MongoDB:', dbErr.message);
     }
-  }
 
-  const loadGalleryEntries = async () => {
-    setGalleryLoading(true)
+    console.log(`👤 Usuário registrado: ${name} - Resina Fixa: ${userData.resin}`);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false });
+  }
+});
+
+// --- ROTAS DE MÉTRICAS RESTAURADAS ---
+
+app.get("/metrics", async (req, res) => {
+    if (req.query.auth !== 'quanton3d_admin_secret') return res.status(401).json({success:false});
+    
+    // Lista completa de resinas para garantir que todas apareçam
+    const resinMentions = { 'Pyroblast+':0, 'Iron':0, 'Iron 7030':0, 'Spin+':0, 'Spark':0, 'FlexForm':0, 'Castable':0, 'Low Smell':0, 'Spare':0, 'ALCHEMIST':0, 'POSEIDON':0, 'RPG':0, 'Athon ALINHADORES':0, 'Athon DENTAL':0, 'Athon GENGIVA':0, 'Athon WASHABLE':0 };
+    
     try {
-      const response = await fetch(`${API_URL}/api/gallery/all?auth=quanton3d_admin_secret`)
-      const data = await response.json()
-      setGalleryEntries(data.entries || [])
-    } catch (error) {
-      console.error('Erro ao carregar galeria:', error)
-    } finally {
-      setGalleryLoading(false)
-    }
-  }
+        const col = getMessagesCollection();
+        if(col) {
+            const users = await col.find({type:'user_registration', resin: {$exists:true}}).toArray();
+            users.forEach(u => { if(resinMentions.hasOwnProperty(u.resin)) resinMentions[u.resin]++; });
+        }
+    } catch(e) {}
 
-  const loadKnowledgeDocuments = async () => {
-    setKnowledgeLoading(true)
-    try {
-      const response = await fetch(`${API_URL}/api/knowledge?auth=quanton3d_admin_secret`)
-      const data = await response.json()
-      setKnowledgeDocuments(data.documents || [])
-    } catch (error) {
-      console.error('Erro ao carregar documentos de conhecimento:', error)
-    } finally {
-      setKnowledgeLoading(false)
-    }
-  }
+    // Calcular estatísticas básicas
+    const questionCounts = {};
+    conversationMetrics.forEach(conv => {
+        const q = conv.message.toLowerCase();
+        if(q.length > 3) questionCounts[q] = (questionCounts[q] || 0) + 1;
+    });
+    
+    const topQuestions = Object.entries(questionCounts)
+        .sort((a,b) => b[1]-a[1])
+        .slice(0,5)
+        .map(([question, count]) => ({question, count}));
 
-  const deleteKnowledgeDocument = async (id) => {
-    if (!isAdmin) {
-      alert('Seu nivel de acesso nao permite excluir dados.')
-      return
-    }
-    if (!confirm('Tem certeza que deseja deletar este documento?')) return
-    try {
-      const response = await fetch(`${API_URL}/api/knowledge/${id}?auth=quanton3d_admin_secret`, {
-        method: 'DELETE'
-      })
-      const data = await response.json()
-      if (data.success) {
-        alert('Documento deletado com sucesso!')
-        loadKnowledgeDocuments()
-      } else {
-        alert('Erro: ' + data.error)
-      }
-    } catch (error) {
-      alert('Erro ao deletar documento')
-    }
-  }
+    res.json({
+        success: true,
+        metrics: {
+            conversations: { total: conversationMetrics.length, recent: conversationMetrics.slice(-50).reverse() },
+            registrations: { total: userRegistrations.length },
+            topQuestions, 
+            resinMentions, 
+            topClients: [], 
+            topTopics: []
+        }
+    });
+});
 
-  const openEditKnowledge = (doc) => {
-    setEditingKnowledge(doc)
-    setEditKnowledgeTitle(doc.title || '')
-    setEditKnowledgeContent(doc.content || '')
-  }
+app.get("/metrics/resin-details", async (req, res) => {
+  const { auth, resin } = req.query;
+  if (auth !== 'quanton3d_admin_secret') return res.status(401).json({ success: false });
 
-  const saveEditKnowledge = async () => {
-    if (!editingKnowledge) return
-    try {
-      const response = await fetch(`${API_URL}/api/knowledge/${editingKnowledge._id}?auth=quanton3d_admin_secret`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: editKnowledgeTitle, content: editKnowledgeContent })
-      })
-      const data = await response.json()
-      if (data.success) {
-        alert('Documento atualizado com sucesso!')
-        setEditingKnowledge(null)
-        loadKnowledgeDocuments()
-      } else {
-        alert('Erro: ' + data.error)
-      }
-    } catch (error) {
-      alert('Erro ao atualizar documento')
-    }
-  }
-
-  const getFilteredKnowledgeDocuments = () => {
-    if (!knowledgeDateStart && !knowledgeDateEnd) return knowledgeDocuments
-    return knowledgeDocuments.filter(doc => {
-      if (!doc.createdAt) return true
-      const docDate = new Date(doc.createdAt)
-      if (knowledgeDateStart && docDate < new Date(knowledgeDateStart)) return false
-      if (knowledgeDateEnd && docDate > new Date(knowledgeDateEnd + 'T23:59:59')) return false
-      return true
-    })
-  }
-
-  const loadVisualKnowledge = async () => {
-    setVisualLoading(true)
-    try {
-      const response = await fetch(`${API_URL}/api/visual-knowledge?auth=quanton3d_admin_secret`)
-      const data = await response.json()
-      setVisualKnowledge(data.documents || [])
-    } catch (error) { console.error(error) } finally { setVisualLoading(false) }
-  }
-
-  const loadPendingVisualPhotos = async () => {
-    setPendingVisualLoading(true)
-    try {
-      const response = await fetch(`${API_URL}/api/visual-knowledge/pending?auth=quanton3d_admin_secret`)
-      const data = await response.json()
-      setPendingVisualPhotos(data.documents || [])
-    } catch (error) { console.error(error) } finally { setPendingVisualLoading(false) }
-  }
-
-  const approvePendingVisual = async (id, defectType, diagnosis, solution) => {
-    if (!defectType || !diagnosis || !solution) {
-      alert('Preencha todos os campos antes de aprovar')
-      return false
-    }
-    try {
-      const response = await fetch(`${API_URL}/api/visual-knowledge/${id}/approve?auth=quanton3d_admin_secret`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ defectType, diagnosis, solution })
-      })
-      const data = await response.json()
-      if (data.success) {
-        alert('Conhecimento visual aprovado com sucesso!')
-        loadPendingVisualPhotos()
-        loadVisualKnowledge()
-        return true
-      } else {
-        alert('Erro: ' + data.error)
-        return false
-      }
-    } catch (error) {
-      alert('Erro ao aprovar')
-      return false
-    }
-  }
-
-  const deletePendingVisual = async (id) => {
-    if (!isAdmin) return alert('Acesso negado')
-    if (!confirm('Deletar foto pendente?')) return
-    try {
-      const response = await fetch(`${API_URL}/api/visual-knowledge/${id}?auth=quanton3d_admin_secret`, {
-        method: 'DELETE'
-      })
-      const data = await response.json()
-      if (data.success) {
-        loadPendingVisualPhotos()
-      } else {
-        alert('Erro: ' + data.error)
-      }
-    } catch (error) {
-      alert('Erro ao deletar')
-    }
-  }
-
-  const addVisualKnowledgeEntry = async () => {
-    if (!visualImage || !visualDefectType || !visualDiagnosis || !visualSolution) {
-      alert('Preencha todos os campos e a foto')
-      return
-    }
-    setAddingVisual(true)
-    try {
-      const formData = new FormData()
-      formData.append('image', visualImage)
-      formData.append('defectType', visualDefectType)
-      formData.append('diagnosis', visualDiagnosis)
-      formData.append('solution', visualSolution)
-
-      const response = await fetch(`${API_URL}/api/visual-knowledge?auth=quanton3d_admin_secret`, {
-        method: 'POST',
-        body: formData
-      })
-      const data = await response.json()
+  try {
+    const messagesCollection = getMessagesCollection();
+    let customers = [];
+    
+    if (messagesCollection) {
+      const userResinData = await messagesCollection.find({ 
+        type: 'user_registration',
+        resin: resin
+      }).toArray();
       
-      if (data.success) {
-        alert('Conhecimento visual adicionado!')
-        setVisualImage(null)
-        setVisualImagePreview(null)
-        setVisualDefectType('')
-        setVisualDiagnosis('')
-        setVisualSolution('')
-        loadVisualKnowledge()
-      } else {
-        alert('Erro: ' + data.error)
-      }
-    } catch (error) {
-      alert('Erro ao adicionar')
-    } finally {
-      setAddingVisual(false)
+      customers = userResinData.map(user => ({
+        name: user.name || 'Anonimo',
+        email: user.email || '',
+        phone: user.phone || '',
+        printer: user.printer || '',
+        registeredAt: user.registeredAt || user.createdAt
+      }));
     }
+    res.json({ success: true, resin, customersCount: customers.length, customers });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
+});
 
-  const deleteVisualKnowledgeEntry= async (id) => {
-    if (!isAdmin) return alert('Acesso negado')
-    if (!confirm('Deletar conhecimento visual?')) return
-    try {
-      const response = await fetch(`${API_URL}/api/visual-knowledge/${id}?auth=quanton3d_admin_secret`, {
-        method: 'DELETE'
-      })
-      const data = await response.json()
-      if (data.success) {
-        loadVisualKnowledge()
-      } else {
-        alert('Erro: ' + data.error)
+app.get("/metrics/client-history", async (req, res) => {
+  const { auth, clientKey } = req.query;
+  if (auth !== 'quanton3d_admin_secret') return res.status(401).json({ success: false });
+
+  try {
+    const messagesCollection = getMessagesCollection();
+    let clientInfo = null;
+    let conversations = [];
+
+    if (messagesCollection) {
+      const userRegistrations = await messagesCollection.find({ 
+        type: 'user_registration',
+        $or: [{ email: clientKey }, { name: clientKey }]
+      }).toArray();
+      
+      if (userRegistrations.length > 0) {
+        clientInfo = {
+          name: userRegistrations[0].name,
+          email: userRegistrations[0].email
+        };
       }
-    } catch (error) {
-      alert('Erro ao deletar')
     }
-  }
+    
+    // Buscar conversas da memória
+    conversations = conversationMetrics.filter(c => c.userName === clientKey || c.userEmail === clientKey)
+        .map(c => ({
+            timestamp: c.timestamp,
+            prompt: c.message,
+            reply: c.reply
+        }));
 
-  const loadResinDetails = async (resin) => {
-    setSelectedResin(resin)
-    setResinDetailsLoading(true)
-    setResinDetails(null)
+    res.json({ success: true, client: clientInfo, conversations, totalInteractions: conversations.length });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// --- Rota Contact ---
+app.post("/api/contact", async (req, res) => {
     try {
-      const response = await fetch(`${API_URL}/metrics/resin-details?resin=${encodeURIComponent(resin)}&auth=quanton3d_admin_secret`)
-      const data = await response.json()
-      if (data.success) {
-        setResinDetails(data)
-      } else {
-        alert('Erro ao carregar detalhes: ' + data.error)
-        setSelectedResin(null)
+        const col = getMessagesCollection();
+        await col.insertOne({...req.body, status: 'new', createdAt: new Date()});
+        res.json({success: true, message: 'Enviado!'});
+    } catch(e) { res.status(500).json({success: false}); }
+});
+app.get("/api/contact", async (req, res) => {
+    if (req.query.auth !== 'quanton3d_admin_secret') return res.status(401).json({success:false});
+    const col = getMessagesCollection();
+    const msgs = await col.find({}).sort({createdAt:-1}).limit(100).toArray();
+    res.json({success: true, messages: msgs});
+});
+app.put("/api/contact/:id", async (req, res) => {
+    if (req.query.auth !== 'quanton3d_admin_secret') return res.status(401).json({success:false});
+    const {ObjectId} = await import('mongodb');
+    const col = getMessagesCollection();
+    await col.updateOne({_id: new ObjectId(req.params.id)}, {$set: {resolved: req.body.resolved}});
+    res.json({success: true});
+});
+
+// --- GALERIA (CAMPOS FLAT) ---
+app.post("/api/gallery", upload.array('images', 2), async (req, res) => {
+    try {
+        if(!process.env.CLOUDINARY_CLOUD_NAME) return res.status(503).json({success:false});
+        const uploadedImages = [];
+        for (const file of req.files) {
+            const b64 = Buffer.from(file.buffer).toString('base64');
+            const dataURI = "data:" + file.mimetype + ";base64," + b64;
+            const result = await cloudinary.uploader.upload(dataURI, {folder: 'quanton3d-gallery'});
+            uploadedImages.push({url: result.secure_url, publicId: result.public_id});
+        }
+        const col = getGalleryCollection();
+        const entry = { ...req.body, images: uploadedImages, status: 'pending', createdAt: new Date() };
+        await col.insertOne(entry);
+        res.json({success: true, message: 'Enviado!'});
+    } catch(e) { res.status(500).json({success: false}); }
+});
+app.get("/api/gallery/all", async (req, res) => {
+    if (req.query.auth !== 'quanton3d_admin_secret') return res.status(401).json({success:false});
+    const col = getGalleryCollection();
+    const entries = await col.find({}).sort({createdAt:-1}).toArray();
+    res.json({success: true, entries});
+});
+app.get("/api/gallery", async (req, res) => {
+    const col = getGalleryCollection();
+    const entries = await col.find({status: 'approved'}).sort({createdAt:-1}).toArray();
+    res.json({success: true, entries});
+});
+app.put("/api/gallery/:id/approve", async (req, res) => {
+    if (req.query.auth !== 'quanton3d_admin_secret') return res.status(401).json({success:false});
+    const {ObjectId} = await import('mongodb');
+    await getGalleryCollection().updateOne({_id: new ObjectId(req.params.id)}, {$set: {status:'approved'}});
+    res.json({success:true});
+});
+app.put("/api/gallery/:id/reject", async (req, res) => {
+    if (req.query.auth !== 'quanton3d_admin_secret') return res.status(401).json({success:false});
+    const {ObjectId} = await import('mongodb');
+    await getGalleryCollection().updateOne({_id: new ObjectId(req.params.id)}, {$set: {status:'rejected'}});
+    res.json({success:true});
+});
+app.delete("/api/gallery/:id", async (req, res) => {
+    if (req.query.auth !== 'quanton3d_admin_secret') return res.status(401).json({success:false});
+    const {ObjectId} = await import('mongodb');
+    await getGalleryCollection().deleteOne({_id: new ObjectId(req.params.id)});
+    res.json({success:true});
+});
+
+// --- RAG KNOWLEDGE (TEXTO & VISUAL) ---
+app.post("/add-knowledge", async (req, res) => {
+    if (req.body.auth !== 'quanton3d_admin_secret') return res.status(401).json({success:false});
+    try {
+        const result = await addDocument(req.body.title, req.body.content, 'admin');
+        res.json({success:true, documentId: result.documentId});
+    } catch(e) { res.status(500).json({success:false}); }
+});
+app.get("/api/knowledge", async (req, res) => {
+    if (req.query.auth !== 'quanton3d_admin_secret') return res.status(401).json({success:false});
+    const docs = await listDocuments();
+    res.json({success:true, documents: docs});
+});
+app.delete("/api/knowledge/:id", async (req, res) => {
+    if (req.query.auth !== 'quanton3d_admin_secret') return res.status(401).json({success:false});
+    await deleteDocument(req.params.id);
+    res.json({success:true});
+});
+
+// Visual RAG
+app.post("/api/visual-knowledge", upload.single('image'), async (req, res) => {
+    if (req.query.auth !== 'quanton3d_admin_secret') return res.status(401).json({success:false});
+    try {
+        const b64 = Buffer.from(req.file.buffer).toString('base64');
+        const dataURI = "data:" + req.file.mimetype + ";base64," + b64;
+        const result = await cloudinary.uploader.upload(dataURI, {folder: 'quanton3d/visual-knowledge'});
+        await addVisualKnowledge(result.secure_url, req.body.defectType, req.body.diagnosis, req.body.solution, {});
+        res.json({success:true});
+    } catch(e) { res.status(500).json({success:false, error: e.message}); }
+});
+app.get("/api/visual-knowledge", async (req, res) => {
+    if (req.query.auth !== 'quanton3d_admin_secret') return res.status(401).json({success:false});
+    const docs = await listVisualKnowledge();
+    res.json({success:true, documents: docs});
+});
+app.delete("/api/visual-knowledge/:id", async (req, res) => {
+    if (req.query.auth !== 'quanton3d_admin_secret') return res.status(401).json({success:false});
+    await deleteVisualKnowledge(req.params.id);
+    res.json({success:true});
+});
+
+// Adicionar rotas para Aprovação de Sugestões e Visual Pendente
+app.put("/approve-suggestion/:id", async (req, res) => {
+    try {
+      const { auth, editedAnswer } = req.body;
+      if (auth !== 'quanton3d_admin_secret') return res.status(401).json({ success: false });
+      
+      const suggestionId = parseInt(req.params.id);
+      const suggestion = knowledgeSuggestions.find(s => s.id === suggestionId);
+      
+      if (suggestion) {
+        suggestion.status = 'approved';
+        const content = editedAnswer || suggestion.lastBotReply;
+        await addDocument(`Sugestão Aprovada - ${suggestion.userName}`, content, 'suggestion');
+        return res.json({ success: true });
       }
-    } catch (error) {
-      console.error('Erro ao carregar detalhes:', error)
-      setSelectedResin(null)
-    } finally {
-      setResinDetailsLoading(false)
-    }
+      res.status(404).json({ success: false });
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+app.get("/api/visual-knowledge/pending", async (req, res) => {
+    res.json({ success: true, documents: [] });
+});
+
+const PORT = process.env.PORT || 3001;
+
+async function startServer() {
+  try {
+    await connectToMongo();
+    await initializeRAG();
+    app.listen(PORT, () => {
+      console.log(`✅ Servidor Quanton3D IA rodando na porta ${PORT}`);
+    });
+  } catch (err) {
+    console.error('❌ Erro na inicialização:', err);
   }
-
-  const loadClientHistory = async (clientKey) => {
-    setSelectedClient(clientKey)
-    setClientHistoryLoading(true)
-    setClientHistory(null)
-    try {
-      const response = await fetch(`${API_URL}/metrics/client-history?clientKey=${encodeURIComponent(clientKey)}&auth=quanton3d_admin_secret`)
-      const data = await response.json()
-      if (data.success) {
-        setClientHistory(data)
-      } else {
-        alert('Erro ao carregar historico: ' + data.error)
-        setSelectedClient(null)
-      }
-    } catch (error) {
-      console.error('Erro ao carregar historico:', error)
-      setSelectedClient(null)
-    } finally {
-      setClientHistoryLoading(false)
-    }
-  }
-
-  const approveGalleryEntry = async (id) => {
-    try {
-      const response = await fetch(`${API_URL}/api/gallery/${id}/approve?auth=quanton3d_admin_secret`, { method: 'PUT' })
-      const data = await response.json()
-      if (data.success) loadGalleryEntries()
-      else alert('Erro: ' + data.error)
-    } catch (error) { alert('Erro ao aprovar') }
-  }
-
-  const rejectGalleryEntry = async (id) => {
-    if (!isAdmin) return alert('Acesso negado')
-    if (!confirm('Rejeitar foto?')) return
-    try {
-      const response = await fetch(`${API_URL}/api/gallery/${id}/reject?auth=quanton3d_admin_secret`, { method: 'PUT' })
-      const data = await response.json()
-      if (data.success) loadGalleryEntries()
-      else alert('Erro: ' + data.error)
-    } catch (error) { alert('Erro ao rejeitar') }
-  }
-
-  const openEditGallery = (entry) => {
-    setEditingGalleryEntry(entry)
-    setEditGalleryData({
-      name: entry.name || '',
-      resin: entry.resin || '',
-      printer: entry.printer || '',
-      comment: entry.comment || '',
-      layerHeight: entry.layerHeight || '',
-      baseLayers: entry.baseLayers || '',
-      exposureTime: entry.exposureTime || '',
-      baseExposureTime: entry.baseExposureTime || '',
-      transitionLayers: entry.transitionLayers || '',
-      uvOffDelay: entry.uvOffDelay || '',
-      lowerLiftDistance1: entry.lowerLiftDistance1 || '',
-      lowerLiftDistance2: entry.lowerLiftDistance2 || '',
-      liftDistance1: entry.liftDistance1 || '',
-      liftDistance2: entry.liftDistance2 || '',
-      lowerRetractDistance1: entry.lowerRetractDistance1 || '',
-      lowerRetractDistance2: entry.lowerRetractDistance2 || '',
-      retractDistance1: entry.retractDistance1 || '',
-      retractDistance2: entry.retractDistance2 || '',
-      lowerLiftSpeed1: entry.lowerLiftSpeed1 || '',
-      lowerLiftSpeed2: entry.lowerLiftSpeed2 || '',
-      liftSpeed1: entry.liftSpeed1 || '',
-      liftSpeed2: entry.liftSpeed2 || '',
-      lowerRetractSpeed1: entry.lowerRetractSpeed1 || '',
-      lowerRetractSpeed2: entry.lowerRetractSpeed2 || '',
-      retractSpeed1: entry.retractSpeed1 || '',
-      retractSpeed2: entry.retractSpeed2 || ''
-    })
-  }
-
-  const saveGalleryEdit = async () => {
-    if (!editingGalleryEntry) return
-    setSavingGalleryEdit(true)
-    try {
-      const response = await fetch(`${API_URL}/api/gallery/${editingGalleryEntry._id}?auth=quanton3d_admin_secret`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editGalleryData)
-      })
-      const data = await response.json()
-      if (data.success) {
-        setEditingGalleryEntry(null)
-        setEditGalleryData({})
-        loadGalleryEntries()
-        alert('Atualizado!')
-      } else {
-        alert('Erro: ' + data.error)
-      }
-    } catch (error) {
-      alert('Erro ao atualizar')
-    } finally {
-      setSavingGalleryEdit(false)
-    }
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-blue-950 flex items-center justify-center p-4">
-        <Card className="p-8 max-w-md w-full">
-          <h2 className="text-2xl font-bold mb-6 text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Painel Administrativo
-          </h2>
-          <div className="space-y-4">
-            <Input
-              type="password"
-              placeholder="Senha do painel"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-            />
-            <Button onClick={handleLogin} className="w-full bg-gradient-to-r from-blue-600 to-purple-600">Entrar</Button>
-          </div>
-        </Card>
-      </div>
-    )
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-blue-950 p-4">
-      <div className="container mx-auto max-w-7xl py-8">
-        
-        {/* Header */}
-        <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Painel Administrativo
-            </h1>
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${isAdmin ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
-              {isAdmin ? 'Admin' : 'Equipe'}
-            </span>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={loadAllData} disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Atualizar Dados'}
-            </Button>
-            {onClose && <Button variant="ghost" onClick={onClose}><X className="h-5 w-5"/></Button>}
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {[
-            { id: 'metrics', label: 'Métricas', icon: BarChart3 },
-            { id: 'suggestions', label: `Sugestões (${suggestions.length})`, icon: MessageSquare },
-            { id: 'knowledge', label: 'Gestão de Conhecimento', icon: BookOpen },
-            { id: 'visual', label: 'Treinamento Visual', icon: Eye },
-            { id: 'gallery', label: 'Galeria', icon: Camera },
-            { id: 'messages', label: `Mensagens (${contactMessages.length})`, icon: Mail },
-            { id: 'custom', label: 'Formulações', icon: Beaker },
-          ].map(tab => (
-            <Button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              variant={activeTab === tab.id ? 'default' : 'outline'}
-              className={activeTab === tab.id ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : ''}
-            >
-              <tab.icon className="h-4 w-4 mr-2" />
-              {tab.label}
-            </Button>
-          ))}
-        </div>
-
-        {/* Content */}
-        {activeTab === 'metrics' && metrics && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="p-6">
-                <div className="flex justify-between">
-                  <div><p className="text-sm text-gray-500">Total de Conversas</p><p className="text-3xl font-bold text-blue-600">{metrics.conversations.total}</p></div>
-                  <MessageSquare className="h-12 w-12 text-blue-100" />
-                </div>
-              </Card>
-              <Card className="p-6">
-                <div className="flex justify-between">
-                  <div><p className="text-sm text-gray-500">Cadastros</p><p className="text-3xl font-bold text-green-600">{metrics.registrations.total}</p></div>
-                  <Users className="h-12 w-12 text-green-100" />
-                </div>
-              </Card>
-              <Card className="p-6">
-                <div className="flex justify-between">
-                  <div><p className="text-sm text-gray-500">Taxa de Conversão</p><p className="text-3xl font-bold text-purple-600">{metrics.conversations.total > 0 ? ((metrics.registrations.total / metrics.conversations.uniqueSessions) * 100).toFixed(1) : 0}%</p></div>
-                  <TrendingUp className="h-12 w-12 text-purple-100" />
-                </div>
-              </Card>
-            </div>
-
-            <Card className="p-6">
-              <h3 className="text-xl font-bold mb-4">📊 Perguntas Mais Frequentes</h3>
-              <div className="space-y-2">
-                {metrics.topQuestions.map((item, index) => (
-                  <div key={index} className="flex justify-between p-3 bg-gray-50 rounded">
-                    <span>{item.question}</span>
-                    <span className="font-bold">{item.count}x</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <h3 className="text-xl font-bold mb-4">🧪 Menções de Resinas</h3>
-              <p className="text-sm text-gray-500 mb-4">Clique em uma resina para ver detalhes dos clientes</p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {Object.entries(metrics.resinMentions).map(([resin, count]) => (
-                  <div key={resin} onClick={() => loadResinDetails(resin)} className="bg-blue-50 p-4 rounded-lg text-center cursor-pointer hover:bg-blue-100 transition-colors">
-                    <p className="text-sm font-medium">{resin}</p>
-                    <p className="text-2xl font-bold text-blue-600">{count}</p>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="p-6">
-                <h3 className="text-xl font-bold mb-4">👤 Top Clientes</h3>
-                <div className="space-y-2">
-                  {metrics.topClients.map((item, index) => (
-                    <div key={index} className="flex justify-between p-2 bg-gray-50 rounded">
-                      <span>{item.client}</span>
-                      <div className="flex gap-2 items-center">
-                        <span className="font-bold">{item.count}x</span>
-                        <Button size="sm" variant="ghost" onClick={() => loadClientHistory(item.client)}><Eye className="h-4 w-4"/></Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-              <Card className="p-6">
-                <h3 className="text-xl font-bold mb-4">🔥 Tópicos</h3>
-                <div className="flex flex-wrap gap-2">
-                  {metrics.topTopics.map((item, index) => (
-                    <span key={index} className="px-3 py-1 bg-gray-100 rounded-full text-sm">{item.topic} ({item.count})</span>
-                  ))}
-                </div>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {/* SUGESTÕES */}
-        {activeTab === 'suggestions' && (
-          <div className="space-y-4">
-            {suggestions.length === 0 ? (
-              <Card className="p-12 text-center text-gray-500">Nenhuma sugestão pendente</Card>
-            ) : (
-              suggestions.map((sug) => (
-                <Card key={sug.id} className="p-6 border-l-4 border-yellow-400">
-                  <div className="flex justify-between mb-4">
-                    <span className="font-bold">{sug.userName}</span>
-                    <span className="text-xs text-gray-500">{new Date(sug.timestamp).toLocaleString()}</span>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded mb-2"><p className="text-xs font-bold text-gray-500">PERGUNTA</p><p>{sug.lastUserMessage}</p></div>
-                  <div className="bg-gray-50 p-3 rounded mb-2"><p className="text-xs font-bold text-gray-500">RESPOSTA BOT</p><p>{sug.lastBotReply}</p></div>
-                  <div className="bg-yellow-50 p-3 rounded mb-4"><p className="text-xs font-bold text-yellow-600">SUGESTÃO</p><p>{sug.suggestion}</p></div>
-                  
-                  {sug.status === 'pending' && (
-                    <div className="flex gap-2 justify-end">
-                      <Button variant="outline" onClick={async () => {
-                        await fetch(`${API_URL}/reject-suggestion/${sug.id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ auth: 'quanton3d_admin_secret' }) });
-                        loadSuggestions();
-                      }}>Rejeitar</Button>
-                      <Button className="bg-green-600 hover:bg-green-700" onClick={async () => {
-                        await fetch(`${API_URL}/approve-suggestion/${sug.id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ auth: 'quanton3d_admin_secret' }) });
-                        loadSuggestions();
-                      }}>Aprovar</Button>
-                    </div>
-                  )}
-                </Card>
-              ))
-            )}
-          </div>
-        )}
-
-        {/* CONHECIMENTO TEXTO */}
-        {activeTab === 'knowledge' && (
-          <div className="space-y-6">
-            <Card className="p-6">
-              <h3 className="font-bold mb-4 flex gap-2"><Plus className="h-5 w-5"/> Adicionar Conhecimento</h3>
-              <Input className="mb-2" placeholder="Título" value={knowledgeTitle} onChange={e => setKnowledgeTitle(e.target.value)} />
-              <textarea className="w-full border rounded p-2 mb-2 h-32" placeholder="Conteúdo..." value={knowledgeContent} onChange={e => setKnowledgeContent(e.target.value)} />
-              <Button className="w-full bg-blue-600" disabled={addingKnowledge} onClick={async () => {
-                if(!knowledgeTitle || !knowledgeContent) return alert('Preencha tudo');
-                setAddingKnowledge(true);
-                await fetch(`${API_URL}/add-knowledge`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ auth: 'quanton3d_admin_secret', title: knowledgeTitle, content: knowledgeContent }) });
-                setAddingKnowledge(false); setKnowledgeTitle(''); setKnowledgeContent(''); alert('Adicionado!'); loadKnowledgeDocuments();
-              }}>Salvar</Button>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex justify-between mb-4">
-                <h3 className="font-bold">Documentos ({getFilteredKnowledgeDocuments().length})</h3>
-                <div className="flex gap-2">
-                  <Input type="date" className="w-32" value={knowledgeDateStart} onChange={e => setKnowledgeDateStart(e.target.value)} />
-                  <Input type="date" className="w-32" value={knowledgeDateEnd} onChange={e => setKnowledgeDateEnd(e.target.value)} />
-                </div>
-              </div>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {getFilteredKnowledgeDocuments().map(doc => (
-                  <div key={doc._id} className="p-3 border rounded flex justify-between items-start group">
-                    <div><p className="font-bold">{doc.title}</p><p className="text-xs text-gray-500">{new Date(doc.createdAt).toLocaleDateString()}</p><p className="text-xs line-clamp-1">{doc.content}</p></div>
-                    {isAdmin && <div className="flex gap-1 opacity-0 group-hover:opacity-100"><Button size="sm" variant="ghost" onClick={() => openEditKnowledge(doc)}><Edit3 className="h-4 w-4"/></Button><Button size="sm" variant="ghost" onClick={() => deleteKnowledgeDocument(doc._id)}><Trash2 className="h-4 w-4 text-red-500"/></Button></div>}
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* TREINAMENTO VISUAL */}
-        {activeTab === 'visual' && (
-          <div className="space-y-6">
-            {pendingVisualPhotos.length > 0 && (
-              <Card className="p-6 border-yellow-200 bg-yellow-50">
-                <h4 className="font-bold text-yellow-800 mb-4">Fotos Pendentes ({pendingVisualPhotos.length})</h4>
-                <div className="space-y-4">
-                  {pendingVisualPhotos.map(item => (
-                    <PendingVisualItemForm key={item._id} item={item} canDelete={isAdmin} onApprove={approvePendingVisual} onDelete={deletePendingVisual} />
-                  ))}
-                </div>
-              </Card>
-            )}
-
-            <Card className="p-6">
-              <h4 className="font-bold mb-4">Adicionar Exemplo Visual</h4>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="border-2 border-dashed rounded h-48 flex items-center justify-center relative">
-                  <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => {
-                    const file = e.target.files[0];
-                    if(file) { setVisualImage(file); const r = new FileReader(); r.onload = () => setVisualImagePreview(r.result); r.readAsDataURL(file); }
-                  }} />
-                  {visualImagePreview ? <img src={visualImagePreview} className="h-full object-contain" /> : <p className="text-gray-400">Clique para selecionar</p>}
-                </div>
-                <div className="space-y-2">
-                  <select className="w-full border rounded p-2" value={visualDefectType} onChange={e => setVisualDefectType(e.target.value)}>
-                    <option value="">Tipo de Defeito...</option>
-                    <option value="problema de LCD">LCD / Tela</option>
-                    <option value="descolamento da base">Descolamento</option>
-                    <option value="falha de suportes">Suportes</option>
-                    <option value="delaminacao">Delaminação</option>
-                    <option value="outro">Outro</option>
-                  </select>
-                  <textarea className="w-full border rounded p-2 h-20" placeholder="Diagnóstico" value={visualDiagnosis} onChange={e => setVisualDiagnosis(e.target.value)} />
-                  <textarea className="w-full border rounded p-2 h-20" placeholder="Solução" value={visualSolution} onChange={e => setVisualSolution(e.target.value)} />
-                  <Button className="w-full bg-purple-600" onClick={addVisualKnowledgeEntry} disabled={addingVisual}>{addingVisual ? 'Enviando...' : 'Adicionar'}</Button>
-                </div>
-              </div>
-            </Card>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-               {visualKnowledge.map(item => (
-                 <div key={item._id} className="relative group rounded-xl overflow-hidden shadow-sm border aspect-square">
-                    <img src={item.imageUrl} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 text-center text-white">
-                       <p className="font-bold text-sm mb-1">{item.defectType}</p>
-                       <p className="text-xs line-clamp-2 mb-2">{item.diagnosis}</p>
-                       {isAdmin && (
-                         <Button size="sm" variant="destructive" onClick={() => deleteVisualKnowledgeEntry(item._id)}>Excluir</Button>
-                       )}
-                    </div>
-                 </div>
-               ))}
-            </div>
-          </div>
-        )}
-
-        {/* GALERIA */}
-        {activeTab === 'gallery' && (
-          <div className="space-y-4">
-            {galleryEntries.filter(e => e.status !== 'rejected').map(entry => (
-              <Card key={entry._id} className="p-4">
-                <div className="flex gap-4">
-                  <div className="flex gap-2 w-32">
-                    {entry.images && entry.images.map((img, i) => (
-                      <img key={i} src={img.url} className="w-16 h-16 object-cover rounded" />
-                    ))}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between">
-                      <span className="font-bold">{entry.name}</span>
-                      <span className={`px-2 rounded text-xs ${entry.status === 'pending' ? 'bg-yellow-100' : 'bg-green-100'}`}>{entry.status}</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mb-2">{entry.resin} | {entry.printer}</p>
-                    {entry.comment && <p className="text-sm bg-gray-50 p-2 rounded mb-2">{entry.comment}</p>}
-                    
-                    {/* CAIXA AZUL DO MANUS */}
-                    {(entry.layerHeight || entry.baseLayers || entry.exposureTime) && (
-                      <div className="bg-blue-50 p-3 rounded text-xs text-blue-800 grid grid-cols-2 gap-2">
-                        {entry.layerHeight && <div>Layer: {entry.layerHeight}</div>}
-                        {entry.baseLayers && <div>Base: {entry.baseLayers}</div>}
-                        {entry.exposureTime && <div>Exp: {entry.exposureTime}s</div>}
-                        {entry.baseExposureTime && <div>Base Exp: {entry.baseExposureTime}s</div>}
-                        {entry.liftSpeed1 && <div>Lift: {entry.liftSpeed1}/{entry.liftSpeed2}</div>}
-                      </div>
-                    )}
-
-                    <div className="flex gap-2 mt-2">
-                      {entry.status === 'pending' && (
-                        <>
-                          <Button size="sm" className="bg-green-600" onClick={() => approveGalleryEntry(entry._id)}>Aprovar</Button>
-                          {isAdmin && <Button size="sm" variant="outline" onClick={() => rejectGalleryEntry(entry._id)}>Rejeitar</Button>}
-                        </>
-                      )}
-                      {entry.status === 'approved' && isAdmin && (
-                        <Button size="sm" variant="destructive" onClick={() => rejectGalleryEntry(entry._id)}>Apagar</Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* MODALS DE DETALHES */}
-        {selectedResin && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <Card className="w-full max-w-2xl p-6 h-[80vh] overflow-y-auto">
-              <div className="flex justify-between mb-4"><h3 className="font-bold text-xl">{selectedResin}</h3><Button variant="ghost" onClick={() => setSelectedResin(null)}><X/></Button></div>
-              {resinDetailsLoading ? <Loader2 className="animate-spin mx-auto"/> : (
-                <div className="space-y-4">
-                  {resinDetails?.customers?.map((c, i) => (
-                    <div key={i} className="flex justify-between p-3 border rounded">
-                      <div><p className="font-bold">{c.name}</p><p className="text-xs text-gray-500">{c.email}</p></div>
-                      <p className="text-xs">{c.printer}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          </div>
-        )}
-
-        {selectedClient && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <Card className="w-full max-w-2xl p-6 h-[80vh] overflow-y-auto">
-              <div className="flex justify-between mb-4"><h3 className="font-bold text-xl">Histórico do Cliente</h3><Button variant="ghost" onClick={() => setSelectedClient(null)}><X/></Button></div>
-              {clientHistoryLoading ? <Loader2 className="animate-spin mx-auto"/> : (
-                <div className="space-y-4">
-                  <div className="bg-blue-50 p-4 rounded"><p className="font-bold">{clientHistory?.client?.name}</p><p>{clientHistory?.client?.email}</p></div>
-                  {clientHistory?.conversations?.map((conv, i) => (
-                    <div key={i} className="border-l-4 border-blue-500 pl-4 py-2">
-                      <p className="text-xs text-gray-500">{new Date(conv.timestamp).toLocaleString()}</p>
-                      <p className="font-bold text-sm mt-1">{conv.prompt}</p>
-                      <p className="text-sm text-gray-600 mt-1">{conv.reply}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          </div>
-        )}
-
-        {/* Modal de Edição de Texto */}
-        {editingKnowledge && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-             <Card className="w-full max-w-lg p-6">
-                <h3 className="text-lg font-bold mb-4">Editar Texto</h3>
-                <Input className="mb-4" value={editKnowledgeTitle} onChange={e => setEditKnowledgeTitle(e.target.value)} />
-                <textarea className="w-full border rounded-lg p-2 h-40 mb-4" value={editKnowledgeContent} onChange={e => setEditKnowledgeContent(e.target.value)} />
-                <div className="flex justify-end gap-2">
-                   <Button variant="outline" onClick={() => setEditingKnowledge(null)}>Cancelar</Button>
-                   <Button onClick={saveEditKnowledge}>Salvar</Button>
-                </div>
-             </Card>
-          </div>
-        )}
-
-      </div>
-    </div>
-  )
 }
+
+startServer();
