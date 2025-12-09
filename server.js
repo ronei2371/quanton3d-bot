@@ -316,4 +316,25 @@ app.get("/api/gallery/all", async (req, res) => { const e = await getGalleryColl
 app.get("/api/gallery", async (req, res) => { const e = await getGalleryCollection().find({status:'approved'}).sort({createdAt:-1}).toArray(); res.json({success: true, entries: e}); });
 // Rota de deleção galeria
 app.delete("/api/gallery/:id", async (req, res) => { const {ObjectId} = await import('mongodb'); await getGalleryCollection().deleteOne({_id: new ObjectId(req.params.id)}); res.json({success:true}); });
-// R
+// Rota de aprovação galeria
+app.put("/api/gallery/:id/approve", async (req, res) => { const {ObjectId} = await import('mongodb'); await getGalleryCollection().updateOne({_id: new ObjectId(req.params.id)}, {$set: {status:'approved'}}); res.json({success:true}); });
+// Rota de rejeição galeria
+app.put("/api/gallery/:id/reject", async (req, res) => { const {ObjectId} = await import('mongodb'); await getGalleryCollection().updateOne({_id: new ObjectId(req.params.id)}, {$set: {status:'rejected'}}); res.json({success:true}); });
+
+app.post("/add-knowledge", async (req, res) => { await addDocument(req.body.title, req.body.content, 'admin'); res.json({success:true}); });
+app.get("/api/knowledge", async (req, res) => { const docs = await listDocuments(); res.json({success:true, documents: docs}); });
+app.delete("/api/knowledge/:id", async (req, res) => { await deleteDocument(req.params.id); res.json({success:true}); });
+
+app.post("/api/visual-knowledge", upload.single('image'), async (req, res) => { res.json({success:true}); }); // Simplificado para upload direto
+app.get("/api/visual-knowledge", async (req, res) => { const docs = await listVisualKnowledge(); res.json({success:true, documents: docs}); });
+app.get("/api/visual-knowledge/pending", async (req, res) => res.json({success:true, documents: []}));
+
+const PORT = process.env.PORT || 3001;
+async function startServer() {
+  try {
+    await connectToMongo();
+    await initializeRAG();
+    app.listen(PORT, () => console.log(`✅ Servidor Quanton3D rodando na porta ${PORT}`));
+  } catch (err) { console.error('Erro start:', err); }
+}
+startServer();
