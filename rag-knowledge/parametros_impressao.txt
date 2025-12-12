@@ -6,12 +6,12 @@ Os valores são pontos de partida - ajustes podem ser necessários conforme ambi
 === PYROBLAST+ (Alta Temperatura) ===
 
 Altura de Camada: 0,05mm
-Exposição Normal: 3-4s
+Exposição Normal: 1.7-2.s
 Retract Speed: 150mm/min
 Lift Speed: 60mm/min
-Exposição Base: 40-50s
+Exposição Base: 25-35s
 Lift Distance: 6-8mm
-Camadas Base: 8-10
+Camadas Base: 5
 Temperatura: 28-32°C
 
 Observações: Resina viscosa, agite bem antes de usar. Pós-cura obrigatória em 60°C por 30min.
@@ -19,23 +19,23 @@ Observações: Resina viscosa, agite bem antes de usar. Pós-cura obrigatória e
 === IRON 7030 (Mecânica) ===
 
 Altura de Camada: 0,05mm
-Tempo de Exposição: 2-6s
+Tempo de Exposição: 1,5-2,2
 Retract Speed: 150mm/min
 Lift Speed: 65mm/min
-Exposição Base: 30-60s
+Exposição Base: 25-35
 Lift Distance: 6-8mm
-Camadas de Base: 8-10
+Camadas de Base: 5
 Temperatura: 28-32°C
 
 === SPIN+ (Fundição/Castable) ===
 
 Altura de Camada: 0,05mm
-Tempo de Exposição: 2-6s
+Tempo de Exposição: 1,5 - 2,2
 Retract Speed: 150mm/min
 Lift Speed: 60mm/min
-Exposição Base: 30-60s
+Exposição Base:30-40s
 Lift Distance: 6-8mm
-Camadas de Base: 8-10
+Camadas de Base: 5
 Temperatura: 28-32°C
 
 Observações: Ideal para joalheria, odontologia (fundição por cera perdida). Queima limpa sem resíduos.
@@ -43,12 +43,11 @@ Observações: Ideal para joalheria, odontologia (fundição por cera perdida). 
 === SPARK (Alta Precisão) ===
 
 Altura de Camada: 0,05mm
-Tempo de Exposição: 2-4s
+Tempo de Exposição: 1,7 - 2,2
 Retract Speed: 150mm/min
 Lift Speed: 60mm/min
-Exposição Base: 30-50s
-Lift Distance: 6-8mm
-Camadas de Base: 8-10
+Exposição Base:25/35
+Camadas de Base: 5
 Temperatura: 28-32°C
 
 === FLEXFORM (Flexível) ===
