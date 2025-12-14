@@ -2829,6 +2829,9 @@ app.put("/api/partners/:id", async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
+    // Remover _id do updateData para evitar erro de campo imutável
+    const { _id, ...dataToUpdate } = updateData;
+    
     const partnersCollection = getPartnersCollection();
     const { ObjectId } = await import('mongodb');
     
@@ -2836,7 +2839,7 @@ app.put("/api/partners/:id", async (req, res) => {
       { _id: new ObjectId(id) },
       { 
         $set: {
-          ...updateData,
+          ...dataToUpdate,
           updatedAt: new Date()
         }
       }
