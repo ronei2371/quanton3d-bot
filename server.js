@@ -626,8 +626,9 @@ a menos que o defeito tenha relacao DIRETA com adesao a base.`
       console.error('⚠️ [VISUAL-RAG] Erro ao buscar conhecimento visual:', visualErr.message);
     }
 
-    // Se encontrou match visual com alta similaridade, usar resposta do Visual RAG
-    if (visualMatch && visualMatch.similarity >= 0.7) {
+    // Se encontrou match visual, usar resposta do Visual RAG
+    // Threshold de 0.35 (35%) para balancear precisao e cobertura
+    if (visualMatch && visualMatch.similarity >= 0.35) {
       console.log('🎯 [VISUAL-RAG] Usando resposta do banco de conhecimento visual!');
       
       const visualReply = formatVisualResponse(visualMatch);

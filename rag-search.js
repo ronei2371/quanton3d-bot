@@ -403,7 +403,9 @@ export function getRAGInfo() {
 
 // Limiar de similaridade para Visual RAG
 // Ajustado de 0.7 para 0.5 para melhor deteccao de problemas visuais
-const VISUAL_MIN_RELEVANCE_THRESHOLD = 0.5;
+// Threshold mais baixo para busca visual (imagens sao mais subjetivas que texto)
+// 0.35 = 35% de similaridade minima
+const VISUAL_MIN_RELEVANCE_THRESHOLD = 0.35;
 
 // Adicionar exemplo visual ao banco de conhecimento
 export async function addVisualKnowledge(imageUrl, defectType, diagnosis, solution, visionDescription) {
