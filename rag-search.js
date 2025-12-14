@@ -17,9 +17,9 @@ const EMBEDDING_DIMENSIONS = 3072; // Dimensao do text-embedding-3-large
 
 // Limiar minimo de relevancia para considerar um documento util
 // Documentos com similaridade abaixo deste valor serao ignorados
-// NOTA: Aumentado de 0.3 para 0.65 para melhorar precisao das respostas
-// text-embedding-3-large com threshold mais alto filtra documentos irrelevantes
-const MIN_RELEVANCE_THRESHOLD = 0.65;
+// NOTA: Ajustado para 0.45 para balancear precisao e cobertura
+// text-embedding-3-large com threshold moderado permite mais resultados relevantes
+const MIN_RELEVANCE_THRESHOLD = 0.45;
 
 let lastInitialization = null;
 let documentsCount = 0;
@@ -73,6 +73,17 @@ export async function generateEmbedding(text) {
   }
 }
 
+// Normalizar texto para melhorar busca
+function normalizeText(text) {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/[^a-z0-9\s]/g, ' ') // Remove pontuação
+    .replace(/\s+/g, ' ') // Remove espaços múltiplos
+    .trim();
+}
+
 // Calcular similaridade de cosseno entre dois vetores
 function cosineSimilarity(a, b) {
   if (!a || !b || a.length !== b.length) {
@@ -118,12 +129,19 @@ export async function searchKnowledge(query, topK = 5) {
     }
 
     // 3. Calcular similaridade com cada documento
-    const results = documents.map(doc => ({
-      id: doc._id.toString(),
-      title: doc.title || 'Sem titulo',
-      content: doc.content,
-      similarity: cosineSimilarity(queryEmbedding, doc.embedding)
-    }));
+    const results = documents.map(doc => {
+      const similarity = cosineSimilarity(queryEmbedding, doc.embedding);
+      return {
+        id: doc._id.toString(),
+        title: doc.title || 'Sem titulo',
+        content: doc.content,
+        similarity
+      };
+    });
+    
+    // Log dos top 3 resultados para debug
+    const top3 = results.sort((a, b) => b.similarity - a.similarity).slice(0, 3);
+    logRAG(`Top 3 documentos: ${top3.map(r => `"${r.title}" (${(r.similarity * 100).toFixed(1)}%)`).join(', ')}`, 'DEBUG');
 
     // 4. Ordenar por similaridade (maior primeiro)
     results.sort((a, b) => b.similarity - a.similarity);
@@ -136,6 +154,28 @@ export async function searchKnowledge(query, topK = 5) {
         `Nenhum documento com relevancia >= ${MIN_RELEVANCE_THRESHOLD * 100}% encontrado (melhor: ${(results[0]?.similarity * 100 || 0).toFixed(1)}%)`,
         'WARN'
       );
+      
+      // FALLBACK: Busca por texto se busca vetorial falhar
+      logRAG('Tentando busca por texto como fallback...', 'INFO');
+      const normalizedQuery = normalizeText(query);
+      const keywords = normalizedQuery.split(' ').filter(w => w.length > 2);
+      
+      const textResults = results
+        .map(doc => {
+          const normalizedContent = normalizeText(doc.content + ' ' + doc.title);
+          const matchCount = keywords.filter(kw => normalizedContent.includes(kw)).length;
+          const textScore = matchCount / keywords.length;
+          return { ...doc, textScore };
+        })
+        .filter(doc => doc.textScore > 0.3)
+        .sort((a, b) => b.textScore - a.textScore)
+        .slice(0, 3);
+      
+      if (textResults.length > 0) {
+        logRAG(`Busca por texto encontrou ${textResults.length} documentos`, 'INFO');
+        return textResults.map(doc => ({ ...doc, similarity: doc.textScore * 0.5 }));
+      }
+      
       return [];
     }
 

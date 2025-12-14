@@ -8,6 +8,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
 import multer from "multer";
+import rateLimit from "express-rate-limit";
 import { initializeRAG, searchKnowledge, formatContext, addDocument, listDocuments, deleteDocument, updateDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding } from './rag-search.js';
 import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection, getSuggestionsCollection } from './db.js';
 import { v2 as cloudinary } from 'cloudinary';
@@ -45,6 +46,35 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Garantir UTF-8 em todas as respostas
+app.use((req, res, next) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  next();
+});
+
+// Rate limiting para prevenir abuso
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // Limite de 100 requisições por IP
+  message: { success: false, message: 'Muitas requisições. Tente novamente em 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Rate limiting mais restrito para rotas de chat (consome OpenAI)
+const chatLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minuto
+  max: 20, // Limite de 20 mensagens por minuto
+  message: { success: false, message: 'Muitas mensagens. Aguarde um momento antes de enviar novamente.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Aplicar rate limiting geral
+app.use('/api/', apiLimiter);
+app.use('/ask', chatLimiter);
+app.use('/ask-with-image', chatLimiter);
 
 // Configuração do multer para upload de imagens
 const storage = multer.memoryStorage();
@@ -242,8 +272,27 @@ REGRAS IMPORTANTES:
 
   } catch (err) {
     console.error("❌ Erro na comunicação com a OpenAI:", err);
-    res.status(500).json({
-      reply: "⚠️ Erro ao processar a IA. Tente novamente em instantes.",
+    
+    // Tratamento de erros específicos
+    let errorMessage = "⚠️ Erro ao processar sua mensagem. Tente novamente em instantes.";
+    let statusCode = 500;
+    
+    if (err.code === 'ECONNREFUSED') {
+      errorMessage = "⚠️ Serviço temporiamente indisponível. Tente novamente em alguns minutos.";
+      statusCode = 503;
+    } else if (err.status === 429) {
+      errorMessage = "⚠️ Limite de uso atingido. Aguarde alguns instantes antes de enviar outra mensagem.";
+      statusCode = 429;
+    } else if (err.status === 401) {
+      errorMessage = "⚠️ Erro de autenticação. Entre em contato com o suporte.";
+      statusCode = 500;
+      console.error("🔑 ERRO CRÍTICO: API Key inválida ou expirada!");
+    }
+    
+    res.status(statusCode).json({
+      success: false,
+      reply: errorMessage,
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
   }
 });
