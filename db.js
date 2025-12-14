@@ -89,6 +89,11 @@ export function getSuggestionsCollection() {
   return getDb().collection('suggestions');
 }
 
+// Obter colecao de parceiros
+export function getPartnersCollection() {
+  return getDb().collection('partners');
+}
+
 // Fechar conexao (para cleanup)
 export async function closeMongo() {
   if (client) {
@@ -112,6 +117,7 @@ export default {
   getGalleryCollection,
   getVisualKnowledgeCollection,
   getSuggestionsCollection,
+  getPartnersCollection,
   closeMongo,
   isConnected
 };

@@ -2716,9 +2716,187 @@ app.get("/api/feedback-stats", async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+// ===== ROTAS DE PARCEIROS =====
 
-// ===== ADICIONAR ESTAS ROTAS NO server.js =====
-// Cole este código ANTES da linha "const PORT = process.env.PORT || 3001;"
+// Listar todos os parceiros ativos
+app.get("/api/partners", async (req, res) => {
+  try {
+    const { auth } = req.query;
+    
+    // Autenticação para admin
+    const isAdmin = auth === 'quanton3d_admin_secret';
+    
+    const partnersCollection = getPartnersCollection();
+    
+    // Se for admin, retorna todos. Se não, apenas ativos
+    const query = isAdmin ? {} : { is_active: true };
+    const partners = await partnersCollection
+      .find(query)
+      .sort({ display_order: 1, createdAt: -1 })
+      .toArray();
+    
+    res.json({
+      success: true,
+      partners
+    });
+  } catch (err) {
+    console.error('❌ Erro ao listar parceiros:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Criar novo parceiro
+app.post("/api/partners", async (req, res) => {
+  try {
+    const { auth } = req.query;
+    
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    }
+    
+    const partnerData = req.body;
+    
+    // Validação
+    if (!partnerData.name || !partnerData.description) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Nome e descrição são obrigatórios' 
+      });
+    }
+    
+    const partnersCollection = getPartnersCollection();
+    
+    const newPartner = {
+      ...partnerData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    const result = await partnersCollection.insertOne(newPartner);
+    
+    console.log(`✅ Novo parceiro criado: ${partnerData.name}`);
+    
+    res.json({
+      success: true,
+      partner: { ...newPartner, _id: result.insertedId }
+    });
+  } catch (err) {
+    console.error('❌ Erro ao criar parceiro:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Atualizar parceiro
+app.put("/api/partners/:id", async (req, res) => {
+  try {
+    const { auth } = req.query;
+    
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    }
+    
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    const partnersCollection = getPartnersCollection();
+    const { ObjectId } = await import('mongodb');
+    
+    const result = await partnersCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { 
+        $set: {
+          ...updateData,
+          updatedAt: new Date()
+        }
+      }
+    );
+    
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Parceiro não encontrado' });
+    }
+    
+    console.log(`✅ Parceiro atualizado: ${id}`);
+    
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ Erro ao atualizar parceiro:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Excluir parceiro
+app.delete("/api/partners/:id", async (req, res) => {
+  try {
+    const { auth } = req.query;
+    
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    }
+    
+    const { id } = req.params;
+    const partnersCollection = getPartnersCollection();
+    const { ObjectId } = await import('mongodb');
+    
+    const result = await partnersCollection.deleteOne({ _id: new ObjectId(id) });
+    
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Parceiro não encontrado' });
+    }
+    
+    console.log(`✅ Parceiro excluído: ${id}`);
+    
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ Erro ao excluir parceiro:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Upload de imagem de parceiro
+app.post("/api/partners/upload-image", upload.single('image'), async (req, res) => {
+  try {
+    const { auth } = req.query;
+    
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    }
+    
+    const imageFile = req.file;
+    
+    if (!imageFile) {
+      return res.status(400).json({ success: false, message: 'Nenhuma imagem foi enviada' });
+    }
+    
+    // Upload para Cloudinary
+    const cloudinaryResult = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'quanton3d/partners',
+          resource_type: 'image',
+          transformation: [{ width: 1200, height: 1200, crop: 'limit' }]
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      uploadStream.end(imageFile.buffer);
+    });
+    
+    console.log(`✅ Imagem de parceiro enviada: ${cloudinaryResult.secure_url}`);
+    
+    res.json({
+      success: true,
+      imageUrl: cloudinaryResult.secure_url
+    });
+  } catch (err) {
+    console.error('❌ Erro ao fazer upload de imagem:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ===== FIM DAS ROTAS DE PARCEIROS =====
+
 // Configuração da porta Render
 const PORT = process.env.PORT || 3001;
 
