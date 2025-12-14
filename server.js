@@ -8,7 +8,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
 import multer from "multer";
-import rateLimit from "express-rate-limit";
+// import rateLimit from "express-rate-limit"; // REMOVIDO - causando erro ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
 import { initializeRAG, searchKnowledge, formatContext, addDocument, listDocuments, deleteDocument, updateDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding } from './rag-search.js';
 import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection, getSuggestionsCollection, getPartnersCollection } from './db.js';
 import { v2 as cloudinary } from 'cloudinary';
@@ -53,28 +53,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Rate limiting para prevenir abuso
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // Limite de 100 requisições por IP
-  message: { success: false, message: 'Muitas requisições. Tente novamente em 15 minutos.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Rate limiting mais restrito para rotas de chat (consome OpenAI)
-const chatLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minuto
-  max: 20, // Limite de 20 mensagens por minuto
-  message: { success: false, message: 'Muitas mensagens. Aguarde um momento antes de enviar novamente.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Aplicar rate limiting geral
-app.use('/api/', apiLimiter);
-app.use('/ask', chatLimiter);
-app.use('/ask-with-image', chatLimiter);
+// Rate limiting REMOVIDO - causava erro ERR_ERL_UNEXPECTED_X_FORWARDED_FOR no Render
+// TODO: Reimplementar com configuração correta para proxy reverso
 
 // Configuração do multer para upload de imagens
 const storage = multer.memoryStorage();
@@ -626,6 +606,52 @@ a menos que o defeito tenha relacao DIRETA com adesao a base.`
       console.error('⚠️ [VISUAL-RAG] Erro ao buscar conhecimento visual:', visualErr.message);
     }
 
+    // ======================================================
+    // 📸 SALVAR FOTO AUTOMATICAMENTE PARA TREINAMENTO
+    // SEMPRE salva a foto como pendente para o admin revisar
+    // ======================================================
+    try {
+      const registeredUser = registeredUsers.get(sessionId);
+      const collection = getVisualKnowledgeCollection();
+      
+      // Upload da imagem para Cloudinary (usando base64 do imageFile)
+      const cloudinaryResult = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'quanton3d/visual-knowledge-pending',
+            resource_type: 'image',
+            transformation: [{ width: 800, height: 800, crop: 'limit' }]
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        uploadStream.end(imageFile.buffer);
+      });
+
+      const pendingDoc = {
+        imageUrl: cloudinaryResult.secure_url,
+        status: 'pending',
+        source: 'auto',
+        userName: registeredUser ? registeredUser.name : (userName || 'Anônimo'),
+        userPhone: registeredUser ? registeredUser.phone : null,
+        lastUserMessage: message || null,
+        autoAnalysis: imageDescription,
+        defectType: null,
+        diagnosis: '',
+        solution: '',
+        embedding: null,
+        createdAt: new Date()
+      };
+
+      await collection.insertOne(pendingDoc);
+      console.log(`📸 [AUTO-SAVE] Foto salva automaticamente para revisão do admin`);
+    } catch (pendingErr) {
+      console.error('⚠️ [AUTO-SAVE] Erro ao salvar foto pendente:', pendingErr.message);
+      // Não interrompe o fluxo principal se falhar
+    }
+
     // Se encontrou match visual, usar resposta do Visual RAG
     // Threshold de 0.35 (35%) para balancear precisao e cobertura
     if (visualMatch && visualMatch.similarity >= 0.35) {
@@ -774,52 +800,7 @@ Não encontrei uma solução específica para esse problema no banco de conhecim
 
 WhatsApp: (31) 3271-6935`;
 
-      // ======================================================
-      // 📸 SALVAR FOTO AUTOMATICAMENTE PARA TREINAMENTO
-      // Quando o bot não encontra solução, salva a foto como pendente
-      // para o admin adicionar o conhecimento depois
-      // ======================================================
-      try {
-        const registeredUser = registeredUsers.get(sessionId);
-        const collection = getVisualKnowledgeCollection();
-        
-        // Upload da imagem para Cloudinary (usando base64 do imageFile)
-        const cloudinaryResult = await new Promise((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            {
-              folder: 'quanton3d/visual-knowledge-pending',
-              resource_type: 'image',
-              transformation: [{ width: 800, height: 800, crop: 'limit' }]
-            },
-            (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            }
-          );
-          uploadStream.end(imageFile.buffer);
-        });
-
-        const pendingDoc = {
-          imageUrl: cloudinaryResult.secure_url,
-          status: 'pending',
-          source: 'auto',
-          userName: registeredUser ? registeredUser.name : (userName || 'Anonimo'),
-          userPhone: registeredUser ? registeredUser.phone : null,
-          lastUserMessage: message || null,
-          autoAnalysis: imageDescription,
-          defectType: null,
-          diagnosis: '',
-          solution: '',
-          embedding: null,
-          createdAt: new Date()
-        };
-
-        await collection.insertOne(pendingDoc);
-        console.log(`📸 [VISUAL-RAG] Foto salva automaticamente para treinamento`);
-      } catch (pendingErr) {
-        console.error('⚠️ Erro ao salvar foto pendente:', pendingErr.message);
-        // Não interrompe o fluxo principal se falhar
-      }
+      // Foto já foi salva automaticamente no início do processamento (linha ~609)
     }
 
     // ======================================================
