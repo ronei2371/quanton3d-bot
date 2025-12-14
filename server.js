@@ -10,7 +10,7 @@ import OpenAI from "openai";
 import multer from "multer";
 import rateLimit from "express-rate-limit";
 import { initializeRAG, searchKnowledge, formatContext, addDocument, listDocuments, deleteDocument, updateDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding } from './rag-search.js';
-import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection, getSuggestionsCollection } from './db.js';
+import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection, getSuggestionsCollection, getPartnersCollection } from './db.js';
 import { v2 as cloudinary } from 'cloudinary';
 import {
   analyzeQuestionType,
