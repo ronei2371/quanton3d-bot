@@ -3139,11 +3139,19 @@ app.get("/params/stats", (req, res) => {
 
 // ===== ROTAS ADMIN PARA PARÂMETROS =====
 
+// Helper function to get admin auth from body or query (for consistency)
+function getAdminAuth(req) {
+  return req.body?.auth || req.query?.auth;
+}
+
+const ADMIN_SECRET = 'quanton3d_admin_secret';
+
 // POST /params/resins - Adicionar nova resina (admin)
 app.post("/params/resins", (req, res) => {
-  const { auth, name } = req.body;
+  const auth = getAdminAuth(req);
+  const { name } = req.body;
   
-  if (auth !== 'quanton3d_admin_secret') {
+  if (auth !== ADMIN_SECRET) {
     return res.status(401).json({ success: false, error: 'Não autorizado' });
   }
   
@@ -3169,9 +3177,9 @@ app.post("/params/resins", (req, res) => {
 
 // DELETE /params/resins/:id - Remover resina (admin)
 app.delete("/params/resins/:id", (req, res) => {
-  const { auth } = req.query;
+  const auth = getAdminAuth(req);
   
-  if (auth !== 'quanton3d_admin_secret') {
+  if (auth !== ADMIN_SECRET) {
     return res.status(401).json({ success: false, error: 'Não autorizado' });
   }
   
@@ -3193,9 +3201,10 @@ app.delete("/params/resins/:id", (req, res) => {
 
 // POST /params/printers - Adicionar nova impressora (admin)
 app.post("/params/printers", (req, res) => {
-  const { auth, brand, model } = req.body;
+  const auth = getAdminAuth(req);
+  const { brand, model } = req.body;
   
-  if (auth !== 'quanton3d_admin_secret') {
+  if (auth !== ADMIN_SECRET) {
     return res.status(401).json({ success: false, error: 'Não autorizado' });
   }
   
@@ -3223,9 +3232,9 @@ app.post("/params/printers", (req, res) => {
 
 // DELETE /params/printers/:id - Remover impressora (admin)
 app.delete("/params/printers/:id", (req, res) => {
-  const { auth } = req.query;
+  const auth = getAdminAuth(req);
   
-  if (auth !== 'quanton3d_admin_secret') {
+  if (auth !== ADMIN_SECRET) {
     return res.status(401).json({ success: false, error: 'Não autorizado' });
   }
   
@@ -3247,9 +3256,10 @@ app.delete("/params/printers/:id", (req, res) => {
 
 // POST /params/profiles - Adicionar/Atualizar perfil (admin)
 app.post("/params/profiles", (req, res) => {
-  const { auth, resinId, printerId, params, status } = req.body;
+  const auth = getAdminAuth(req);
+  const { resinId, printerId, params, status } = req.body;
   
-  if (auth !== 'quanton3d_admin_secret') {
+  if (auth !== ADMIN_SECRET) {
     return res.status(401).json({ success: false, error: 'Não autorizado' });
   }
   
@@ -3296,9 +3306,9 @@ app.post("/params/profiles", (req, res) => {
 
 // DELETE /params/profiles/:id - Remover perfil (admin)
 app.delete("/params/profiles/:id", (req, res) => {
-  const { auth } = req.query;
+  const auth = getAdminAuth(req);
   
-  if (auth !== 'quanton3d_admin_secret') {
+  if (auth !== ADMIN_SECRET) {
     return res.status(401).json({ success: false, error: 'Não autorizado' });
   }
   
