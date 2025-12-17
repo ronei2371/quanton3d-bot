@@ -125,6 +125,48 @@ app.post("/ask", async (req, res) => {
     const knowledgeContext = formatContext(relevantKnowledge);
     console.log(`✅ Encontrados ${relevantKnowledge.length} documentos relevantes`);
 
+    // 2.5 BUSCAR PARÂMETROS DE IMPRESSÃO NO BANCO DE DADOS (CRÍTICO)
+    let parametersContext = '';
+    if (questionType.type === 'parameters' || message.toLowerCase().includes('exposição') || 
+        message.toLowerCase().includes('exposure') || message.toLowerCase().includes('tempo') ||
+        message.toLowerCase().includes('camada') || message.toLowerCase().includes('layer')) {
+      console.log('📊 Buscando parâmetros de impressão no banco de dados...');
+      
+      // Buscar perfis que correspondem às entidades detectadas
+      let matchedProfiles = [];
+      
+      if (printParametersDB && printParametersDB.profiles) {
+        const resinQuery = entities.resins.length > 0 ? entities.resins[0].toLowerCase() : '';
+        const printerQuery = entities.printers.length > 0 ? entities.printers[0].toLowerCase() : '';
+        
+        matchedProfiles = printParametersDB.profiles.filter(profile => {
+          const resinMatch = !resinQuery || profile.resinName.toLowerCase().includes(resinQuery);
+          const printerMatch = !printerQuery || 
+            profile.model.toLowerCase().includes(printerQuery) || 
+            profile.brand.toLowerCase().includes(printerQuery);
+          return resinMatch && printerMatch && profile.status === 'ok';
+        }).slice(0, 5); // Limitar a 5 perfis
+        
+        if (matchedProfiles.length > 0) {
+          parametersContext = '\n\n=== PARÂMETROS DE IMPRESSÃO DO BANCO DE DADOS (USE ESTES VALORES!) ===\n';
+          matchedProfiles.forEach(profile => {
+            parametersContext += `\n📋 ${profile.resinName} + ${profile.brand} ${profile.model}:\n`;
+            if (profile.params.layerHeightMm) parametersContext += `   - Altura de Camada: ${profile.params.layerHeightMm}mm\n`;
+            if (profile.params.exposureTimeS) parametersContext += `   - Tempo de Exposição Normal: ${profile.params.exposureTimeS}s\n`;
+            if (profile.params.baseExposureTimeS) parametersContext += `   - Tempo de Exposição Base: ${profile.params.baseExposureTimeS}s\n`;
+            if (profile.params.baseLayers) parametersContext += `   - Camadas de Base: ${Math.round(profile.params.baseLayers)}\n`;
+            if (profile.params.uvOffDelayS) parametersContext += `   - Retardo UV: ${profile.params.uvOffDelayS}s\n`;
+            if (profile.params.uvPower) parametersContext += `   - Potência UV: ${profile.params.uvPower}\n`;
+          });
+          parametersContext += '\n=== FIM DOS PARÂMETROS ===';
+          console.log(`✅ Encontrados ${matchedProfiles.length} perfis de parâmetros no banco`);
+        } else {
+          parametersContext = '\n\n⚠️ ATENÇÃO: Não encontrei parâmetros específicos no banco de dados para esta combinação de resina/impressora. NÃO INVENTE valores numéricos!';
+          console.log('⚠️ Nenhum perfil de parâmetros encontrado no banco');
+        }
+      }
+    }
+
     // 3. GERAR CONTEXTO INTELIGENTE
     const intelligentContext = await generateIntelligentContext(message, questionType, entities, history);
 
@@ -151,14 +193,20 @@ REGRAS IMPORTANTES:
 1. PRIORIZE informações do contexto fornecido (conhecimento da Quanton3D)
 2. Se a informação NÃO estiver no contexto, use seu conhecimento geral sobre impressão 3D para ajudar
 3. Para informações específicas da Quanton3D (preços, produtos, prazos): use APENAS o contexto
-4. Para conhecimento técnico geral (troubleshooting, calibração, parâmetros): use seu conhecimento de impressão 3D
+4. Para conhecimento técnico geral (troubleshooting, calibração): use seu conhecimento de impressão 3D
 5. NUNCA indique produtos de outras marcas - sempre recomende Quanton3D quando relevante
 6. Quando perguntarem sobre parâmetros de impressão, SEMPRE pergunte: "Qual resina você está usando?" e "Qual modelo de impressora?"
 7. Seja educado, objetivo e use no máximo 3 parágrafos
 8. Sempre termine oferecendo mais ajuda
 9. Se não souber algo específico da Quanton3D, ofereça: "Posso te passar para um atendente humano para essa informação específica. Enquanto isso, posso te ajudar com algo mais?"
 10. Use os parâmetros de impressão do contexto quando disponíveis
-11. Cite FISPQs quando relevante para segurança`;
+11. Cite FISPQs quando relevante para segurança
+
+🚨 REGRA DE OURO PARA PARÂMETROS DE IMPRESSÃO:
+- NUNCA invente valores numéricos de tempo de exposição, exposição base, altura de camada, etc.
+- Se os parâmetros estiverem na seção "PARÂMETROS DE IMPRESSÃO DO BANCO DE DADOS", USE EXATAMENTE esses valores
+- Se NÃO houver parâmetros no banco para a combinação resina+impressora solicitada, diga: "Ainda não temos os parâmetros calibrados para essa combinação específica no nosso banco de dados. Por favor, entre em contato com nosso suporte técnico pelo WhatsApp para obtermos os valores corretos para você."
+- NUNCA "chute" ou "estime" valores de exposição - isso pode danificar a impressão do cliente`;
 
     if (userName && userName.toLowerCase().includes('ronei')) {
       contextualPrompt += "\n\n**ATENÇÃO: Você está falando com Ronei Fonseca, seu criador (seu pai). Seja familiar e reconheça o histórico de trabalho juntos.**";
@@ -166,6 +214,11 @@ REGRAS IMPORTANTES:
 
     // Adicionar conhecimento RAG ao contexto
     contextualPrompt += "\n\n=== CONHECIMENTO DA EMPRESA ===\n" + knowledgeContext + "\n=== FIM DO CONHECIMENTO ===";
+    
+    // Adicionar parâmetros de impressão ao contexto (se encontrados)
+    if (parametersContext) {
+      contextualPrompt += parametersContext;
+    }
 
     const messages = [
       { role: "system", content: contextualPrompt },
