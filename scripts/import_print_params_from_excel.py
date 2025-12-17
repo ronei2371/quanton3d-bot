@@ -90,27 +90,50 @@ def parse_sheet(df: pd.DataFrame, sheet_name: str) -> List[Dict[str, Any]]:
     header_row = None
     column_mapping = {}
     
-    # Standard column names we're looking for
-    standard_columns = {
-        'MARCA IMPRESSORA': 'brand',
-        'MODELO': 'model',
-        'ALTURA CAMADA': 'layerHeightMm',
-        'CAMADAS DE BASE': 'baseLayers',
-        'TEMPO EXPOSIÇÃO': 'exposureTimeS',
-        'TEMPO EXPOSICAO': 'exposureTimeS',
-        'TEMPO EXPOSIÇÃO BASE': 'baseExposureTimeS',
-        'TEMPO EXPOSICAO BASE': 'baseExposureTimeS',
-        'RETARDO DESLIGAR UV': 'uvOffDelayS',
-        'RETARDO DESL. UV BASE': 'uvOffDelayBaseS',
-        'DESCANSO ANTES DA ELEVAÇÃO': 'restBeforeLiftS',
-        'DESCANSO ANTES DA ELEVACAO': 'restBeforeLiftS',
-        'DESCANSO APÓS A ELEVAÇÃO': 'restAfterLiftS',
-        'DESCANSO APOS A ELEVACAO': 'restAfterLiftS',
-        'DESCANSO APÓS A RETRAÇÃO': 'restAfterRetractS',
-        'DESCANSO APOS A RETRACAO': 'restAfterRetractS',
-        'POTÊNCIA UV': 'uvPower',
-        'POTENCIA UV': 'uvPower',
-    }
+    # Column mapping function - checks more specific patterns first to avoid substring collisions
+    def map_column_name(col_name: str) -> Optional[str]:
+        """Map a column header to a parameter name, checking specific patterns first."""
+        col_upper = col_name.upper().strip()
+        
+        # Direct/exact matches first
+        if col_upper in ['MARCA IMPRESSORA', 'MARCA']:
+            return 'brand'
+        if col_upper == 'MODELO':
+            return 'model'
+        if col_upper in ['ALTURA CAMADA', 'ALTURA DE CAMADA', 'LAYER HEIGHT']:
+            return 'layerHeightMm'
+        if col_upper in ['CAMADAS DE BASE', 'CAMADAS BASE', 'BASE LAYERS', 'BOTTOM LAYERS']:
+            return 'baseLayers'
+        
+        # IMPORTANT: Check BASE/BOTTOM exposure BEFORE normal exposure (substring collision fix)
+        if any(x in col_upper for x in ['EXPOSIÇÃO BASE', 'EXPOSICAO BASE', 'BASE EXPOSURE', 'BOTTOM EXPOSURE', 'TEMPO EXPOSIÇÃO BASE', 'TEMPO EXPOSICAO BASE']):
+            return 'baseExposureTimeS'
+        
+        # Normal exposure (only after ruling out base exposure)
+        if any(x in col_upper for x in ['TEMPO EXPOSIÇÃO', 'TEMPO EXPOSICAO', 'NORMAL EXPOSURE', 'LAYER TIME', 'EXPOSURE TIME']):
+            if 'BASE' not in col_upper and 'BOTTOM' not in col_upper:
+                return 'exposureTimeS'
+        
+        # UV delay columns - check BASE first
+        if any(x in col_upper for x in ['RETARDO DESL. UV BASE', 'RETARDO DESLIGAR UV BASE', 'UV OFF DELAY BASE']):
+            return 'uvOffDelayBaseS'
+        if any(x in col_upper for x in ['RETARDO DESLIGAR UV', 'RETARDO DESL. UV', 'UV OFF DELAY']):
+            if 'BASE' not in col_upper:
+                return 'uvOffDelayS'
+        
+        # Rest/delay columns
+        if any(x in col_upper for x in ['DESCANSO ANTES DA ELEVAÇÃO', 'DESCANSO ANTES DA ELEVACAO', 'REST BEFORE LIFT']):
+            return 'restBeforeLiftS'
+        if any(x in col_upper for x in ['DESCANSO APÓS A ELEVAÇÃO', 'DESCANSO APOS A ELEVACAO', 'REST AFTER LIFT']):
+            return 'restAfterLiftS'
+        if any(x in col_upper for x in ['DESCANSO APÓS A RETRAÇÃO', 'DESCANSO APOS A RETRACAO', 'REST AFTER RETRACT']):
+            return 'restAfterRetractS'
+        
+        # UV Power
+        if any(x in col_upper for x in ['POTÊNCIA UV', 'POTENCIA UV', 'UV POWER']):
+            return 'uvPower'
+        
+        return None
     
     for idx, row in df.iterrows():
         row_values = [str(v).strip() if not pd.isna(v) else '' for v in row.values]
@@ -129,11 +152,17 @@ def parse_sheet(df: pd.DataFrame, sheet_name: str) -> List[Dict[str, Any]]:
             header_row = idx
             column_mapping = {}
             for col_idx, col_name in enumerate(row_values):
-                col_upper = col_name.upper().strip()
-                for std_name, mapped_name in standard_columns.items():
-                    if std_name in col_upper:
-                        column_mapping[col_idx] = mapped_name
-                        break
+                mapped = map_column_name(col_name)
+                if mapped:
+                    column_mapping[col_idx] = mapped
+            
+            # Validation: ensure we found both exposure columns
+            mapped_params = set(column_mapping.values())
+            if 'exposureTimeS' not in mapped_params:
+                print(f"  WARNING: 'exposureTimeS' (normal exposure) not found in header row!")
+            if 'baseExposureTimeS' not in mapped_params:
+                print(f"  WARNING: 'baseExposureTimeS' (base exposure) not found in header row!")
+            
             continue
         
         # Skip empty rows
@@ -341,6 +370,41 @@ def main():
         print(f"  - {printer['brand']} {printer['model']} ({printer['id']})")
     if len(printers) > 10:
         print(f"  ... and {len(printers) - 10} more")
+    
+    # DEBUG: Print example profiles for validation
+    print("\n=== DEBUG: EXAMPLE PROFILES FOR VALIDATION ===")
+    
+    # Find IRON resin profiles with MARS or PHOTON printers
+    example_profiles = []
+    for p in all_profiles:
+        resin_lower = p['resinName'].lower()
+        model_lower = p['model'].lower()
+        # Look for IRON + MARS or IRON + PHOTON CLASSICA
+        if 'iron' in resin_lower and ('mars' in model_lower or 'photon' in model_lower):
+            example_profiles.append(p)
+    
+    # Show first 3 examples
+    for p in example_profiles[:3]:
+        print(f"\n--- {p['resinName']} + {p['brand']} {p['model']} ---")
+        print(f"  Profile ID: {p['id']}")
+        print(f"  Status: {p['status']}")
+        print(f"  Parameters:")
+        print(f"    layerHeightMm: {p['params'].get('layerHeightMm')} (raw: {p['raw'].get('layerHeightMm', '')})")
+        print(f"    baseLayers: {p['params'].get('baseLayers')} (raw: {p['raw'].get('baseLayers', '')})")
+        print(f"    exposureTimeS: {p['params'].get('exposureTimeS')} (raw: {p['raw'].get('exposureTimeS', '')})")
+        print(f"    baseExposureTimeS: {p['params'].get('baseExposureTimeS')} (raw: {p['raw'].get('baseExposureTimeS', '')})")
+        print(f"    uvOffDelayS: {p['params'].get('uvOffDelayS')} (raw: {p['raw'].get('uvOffDelayS', '')})")
+        print(f"    restBeforeLiftS: {p['params'].get('restBeforeLiftS')} (raw: {p['raw'].get('restBeforeLiftS', '')})")
+        print(f"    restAfterLiftS: {p['params'].get('restAfterLiftS')} (raw: {p['raw'].get('restAfterLiftS', '')})")
+        print(f"    restAfterRetractS: {p['params'].get('restAfterRetractS')} (raw: {p['raw'].get('restAfterRetractS', '')})")
+        print(f"    uvPower: {p['params'].get('uvPower')} (raw: {p['raw'].get('uvPower', '')})")
+    
+    if not example_profiles:
+        print("  No IRON + MARS/PHOTON profiles found for validation")
+    
+    print("\n=== VALIDATION CHECK ===")
+    print("Expected for IRON + PHOTON CLASSICA: exposureTimeS=6.5, baseExposureTimeS=55")
+    print("If these values are swapped or blank, the column mapping is still incorrect!")
 
 if __name__ == "__main__":
     main()
