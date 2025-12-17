@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: quanton3d-bot
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o
+      - key: OPENAI_TEMPERATURE
+        value: "0.0"
+      - key: PORT
+        value: "10000"
