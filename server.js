@@ -8,6 +8,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
 import multer from "multer";
+import fs from 'fs';
+import path from 'path';
 // import rateLimit from "express-rate-limit"; // REMOVIDO - causando erro ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
 import { initializeRAG, searchKnowledge, formatContext, addDocument, listDocuments, deleteDocument, updateDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding } from './rag-search.js';
 import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection, getSuggestionsCollection, getPartnersCollection } from './db.js';
@@ -2930,6 +2932,391 @@ app.post("/api/partners/upload-image", upload.single('image'), async (req, res) 
 });
 
 // ===== FIM DAS ROTAS DE PARCEIROS =====
+
+// ===== API DE PARÂMETROS DE IMPRESSÃO =====
+
+// Carregar banco de dados de parâmetros
+let printParametersDB = null;
+let printParametersRAG = null;
+
+function loadPrintParameters() {
+  try {
+    const dbPath = path.join(process.cwd(), 'data', 'print-parameters-db.json');
+    const ragPath = path.join(process.cwd(), 'data', 'print-parameters-rag.json');
+    
+    if (fs.existsSync(dbPath)) {
+      printParametersDB = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+      console.log(`✅ Banco de parâmetros carregado: ${printParametersDB.stats.totalProfiles} perfis`);
+    } else {
+      console.log('⚠️ Arquivo de parâmetros não encontrado');
+      printParametersDB = { resins: [], printers: [], profiles: [], stats: {} };
+    }
+    
+    if (fs.existsSync(ragPath)) {
+      printParametersRAG = JSON.parse(fs.readFileSync(ragPath, 'utf-8'));
+      console.log(`✅ RAG de parâmetros carregado: ${printParametersRAG.length} chunks`);
+    } else {
+      printParametersRAG = [];
+    }
+  } catch (err) {
+    console.error('❌ Erro ao carregar parâmetros:', err);
+    printParametersDB = { resins: [], printers: [], profiles: [], stats: {} };
+    printParametersRAG = [];
+  }
+}
+
+function savePrintParameters() {
+  try {
+    const dbPath = path.join(process.cwd(), 'data', 'print-parameters-db.json');
+    const ragPath = path.join(process.cwd(), 'data', 'print-parameters-rag.json');
+    
+    // Atualizar timestamp
+    printParametersDB.generatedAt = new Date().toISOString();
+    
+    // Recalcular stats
+    printParametersDB.stats = {
+      totalProfiles: printParametersDB.profiles.length,
+      totalResins: printParametersDB.resins.length,
+      totalPrinters: printParametersDB.printers.length,
+      okProfiles: printParametersDB.profiles.filter(p => p.status === 'ok').length,
+      comingSoonProfiles: printParametersDB.profiles.filter(p => p.status === 'coming_soon').length
+    };
+    
+    fs.writeFileSync(dbPath, JSON.stringify(printParametersDB, null, 2), 'utf-8');
+    
+    // Regenerar RAG digest
+    printParametersRAG = printParametersDB.profiles.map(profile => {
+      let text;
+      if (profile.status === 'coming_soon') {
+        text = `Resina ${profile.resinName} | Impressora ${profile.brand} ${profile.model}: Parâmetros em breve.`;
+      } else {
+        const params = profile.params;
+        const parts = [];
+        if (params.layerHeightMm != null) parts.push(`altura de camada=${params.layerHeightMm}mm`);
+        if (params.baseLayers != null) parts.push(`camadas de base=${Math.round(params.baseLayers)}`);
+        if (params.exposureTimeS != null) parts.push(`tempo de exposição=${params.exposureTimeS}s`);
+        if (params.baseExposureTimeS != null) parts.push(`exposição base=${params.baseExposureTimeS}s`);
+        if (params.uvOffDelayS != null) parts.push(`retardo UV=${params.uvOffDelayS}s`);
+        if (params.restBeforeLiftS != null) parts.push(`descanso antes elevação=${params.restBeforeLiftS}s`);
+        if (params.restAfterLiftS != null) parts.push(`descanso após elevação=${params.restAfterLiftS}s`);
+        if (params.restAfterRetractS != null) parts.push(`descanso após retração=${params.restAfterRetractS}s`);
+        if (params.uvPower != null) parts.push(`potência UV=${params.uvPower}`);
+        text = `Resina ${profile.resinName} | Impressora ${profile.brand} ${profile.model}: ${parts.join(', ')}`;
+      }
+      return {
+        id: profile.id,
+        resin: profile.resinName,
+        printer: `${profile.brand} ${profile.model}`,
+        text,
+        status: profile.status
+      };
+    });
+    
+    fs.writeFileSync(ragPath, JSON.stringify(printParametersRAG, null, 2), 'utf-8');
+    console.log('💾 Parâmetros salvos com sucesso');
+  } catch (err) {
+    console.error('❌ Erro ao salvar parâmetros:', err);
+  }
+}
+
+// Carregar parâmetros ao iniciar
+loadPrintParameters();
+
+// GET /params/resins - Listar todas as resinas
+app.get("/params/resins", (req, res) => {
+  res.json({
+    success: true,
+    resins: printParametersDB.resins,
+    count: printParametersDB.resins.length
+  });
+});
+
+// GET /params/printers - Listar todas as impressoras
+app.get("/params/printers", (req, res) => {
+  const { resinId } = req.query;
+  
+  if (resinId) {
+    // Filtrar impressoras que têm perfil para esta resina
+    const printerIds = new Set(
+      printParametersDB.profiles
+        .filter(p => p.resinId === resinId)
+        .map(p => p.printerId)
+    );
+    const filteredPrinters = printParametersDB.printers.filter(p => printerIds.has(p.id));
+    res.json({
+      success: true,
+      printers: filteredPrinters,
+      count: filteredPrinters.length
+    });
+  } else {
+    res.json({
+      success: true,
+      printers: printParametersDB.printers,
+      count: printParametersDB.printers.length
+    });
+  }
+});
+
+// GET /params/profiles - Buscar perfis com filtros
+app.get("/params/profiles", (req, res) => {
+  const { resinId, printerId, status } = req.query;
+  
+  let profiles = printParametersDB.profiles;
+  
+  if (resinId) {
+    profiles = profiles.filter(p => p.resinId === resinId);
+  }
+  if (printerId) {
+    profiles = profiles.filter(p => p.printerId === printerId);
+  }
+  if (status) {
+    profiles = profiles.filter(p => p.status === status);
+  }
+  
+  res.json({
+    success: true,
+    profiles,
+    count: profiles.length
+  });
+});
+
+// GET /params/profile/:id - Buscar perfil específico
+app.get("/params/profile/:id", (req, res) => {
+  const profile = printParametersDB.profiles.find(p => p.id === req.params.id);
+  
+  if (!profile) {
+    return res.status(404).json({ success: false, error: 'Perfil não encontrado' });
+  }
+  
+  res.json({ success: true, profile });
+});
+
+// GET /params/rag - Endpoint RAG para chatbot
+app.get("/params/rag", (req, res) => {
+  const { resinId, printerId, query } = req.query;
+  
+  let chunks = printParametersRAG;
+  
+  if (resinId) {
+    const resin = printParametersDB.resins.find(r => r.id === resinId);
+    if (resin) {
+      chunks = chunks.filter(c => c.resin === resin.name);
+    }
+  }
+  
+  if (printerId) {
+    const printer = printParametersDB.printers.find(p => p.id === printerId);
+    if (printer) {
+      chunks = chunks.filter(c => c.printer === `${printer.brand} ${printer.model}`);
+    }
+  }
+  
+  if (query) {
+    const queryLower = query.toLowerCase();
+    chunks = chunks.filter(c => 
+      c.text.toLowerCase().includes(queryLower) ||
+      c.resin.toLowerCase().includes(queryLower) ||
+      c.printer.toLowerCase().includes(queryLower)
+    );
+  }
+  
+  res.json({
+    success: true,
+    chunks,
+    count: chunks.length,
+    context: chunks.map(c => c.text).join('\n')
+  });
+});
+
+// GET /params/stats - Estatísticas do banco de parâmetros
+app.get("/params/stats", (req, res) => {
+  res.json({
+    success: true,
+    stats: printParametersDB.stats,
+    generatedAt: printParametersDB.generatedAt
+  });
+});
+
+// ===== ROTAS ADMIN PARA PARÂMETROS =====
+
+// POST /params/resins - Adicionar nova resina (admin)
+app.post("/params/resins", (req, res) => {
+  const { auth, name } = req.body;
+  
+  if (auth !== 'quanton3d_admin_secret') {
+    return res.status(401).json({ success: false, error: 'Não autorizado' });
+  }
+  
+  if (!name) {
+    return res.status(400).json({ success: false, error: 'Nome da resina é obrigatório' });
+  }
+  
+  const id = name.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  
+  if (printParametersDB.resins.find(r => r.id === id)) {
+    return res.status(400).json({ success: false, error: 'Resina já existe' });
+  }
+  
+  const newResin = { id, name, sourceSheet: 'Admin Panel' };
+  printParametersDB.resins.push(newResin);
+  savePrintParameters();
+  
+  console.log(`✅ Nova resina adicionada: ${name}`);
+  res.json({ success: true, resin: newResin });
+});
+
+// DELETE /params/resins/:id - Remover resina (admin)
+app.delete("/params/resins/:id", (req, res) => {
+  const { auth } = req.query;
+  
+  if (auth !== 'quanton3d_admin_secret') {
+    return res.status(401).json({ success: false, error: 'Não autorizado' });
+  }
+  
+  const resinId = req.params.id;
+  const resinIndex = printParametersDB.resins.findIndex(r => r.id === resinId);
+  
+  if (resinIndex === -1) {
+    return res.status(404).json({ success: false, error: 'Resina não encontrada' });
+  }
+  
+  // Remover resina e todos os perfis associados
+  printParametersDB.resins.splice(resinIndex, 1);
+  printParametersDB.profiles = printParametersDB.profiles.filter(p => p.resinId !== resinId);
+  savePrintParameters();
+  
+  console.log(`🗑️ Resina removida: ${resinId}`);
+  res.json({ success: true, message: 'Resina removida com sucesso' });
+});
+
+// POST /params/printers - Adicionar nova impressora (admin)
+app.post("/params/printers", (req, res) => {
+  const { auth, brand, model } = req.body;
+  
+  if (auth !== 'quanton3d_admin_secret') {
+    return res.status(401).json({ success: false, error: 'Não autorizado' });
+  }
+  
+  if (!brand || !model) {
+    return res.status(400).json({ success: false, error: 'Marca e modelo são obrigatórios' });
+  }
+  
+  const slugify = (text) => text.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  
+  const id = `${slugify(brand)}__${slugify(model)}`;
+  
+  if (printParametersDB.printers.find(p => p.id === id)) {
+    return res.status(400).json({ success: false, error: 'Impressora já existe' });
+  }
+  
+  const newPrinter = { id, brand, model };
+  printParametersDB.printers.push(newPrinter);
+  savePrintParameters();
+  
+  console.log(`✅ Nova impressora adicionada: ${brand} ${model}`);
+  res.json({ success: true, printer: newPrinter });
+});
+
+// DELETE /params/printers/:id - Remover impressora (admin)
+app.delete("/params/printers/:id", (req, res) => {
+  const { auth } = req.query;
+  
+  if (auth !== 'quanton3d_admin_secret') {
+    return res.status(401).json({ success: false, error: 'Não autorizado' });
+  }
+  
+  const printerId = req.params.id;
+  const printerIndex = printParametersDB.printers.findIndex(p => p.id === printerId);
+  
+  if (printerIndex === -1) {
+    return res.status(404).json({ success: false, error: 'Impressora não encontrada' });
+  }
+  
+  // Remover impressora e todos os perfis associados
+  printParametersDB.printers.splice(printerIndex, 1);
+  printParametersDB.profiles = printParametersDB.profiles.filter(p => p.printerId !== printerId);
+  savePrintParameters();
+  
+  console.log(`🗑️ Impressora removida: ${printerId}`);
+  res.json({ success: true, message: 'Impressora removida com sucesso' });
+});
+
+// POST /params/profiles - Adicionar/Atualizar perfil (admin)
+app.post("/params/profiles", (req, res) => {
+  const { auth, resinId, printerId, params, status } = req.body;
+  
+  if (auth !== 'quanton3d_admin_secret') {
+    return res.status(401).json({ success: false, error: 'Não autorizado' });
+  }
+  
+  if (!resinId || !printerId) {
+    return res.status(400).json({ success: false, error: 'resinId e printerId são obrigatórios' });
+  }
+  
+  const resin = printParametersDB.resins.find(r => r.id === resinId);
+  const printer = printParametersDB.printers.find(p => p.id === printerId);
+  
+  if (!resin) {
+    return res.status(404).json({ success: false, error: 'Resina não encontrada' });
+  }
+  if (!printer) {
+    return res.status(404).json({ success: false, error: 'Impressora não encontrada' });
+  }
+  
+  const profileId = `${resinId}__${printerId}`;
+  const existingIndex = printParametersDB.profiles.findIndex(p => p.id === profileId);
+  
+  const profile = {
+    id: profileId,
+    resinId,
+    resinName: resin.name,
+    printerId,
+    brand: printer.brand,
+    model: printer.model,
+    params: params || {},
+    raw: {},
+    status: status || 'ok'
+  };
+  
+  if (existingIndex !== -1) {
+    printParametersDB.profiles[existingIndex] = profile;
+    console.log(`✏️ Perfil atualizado: ${profileId}`);
+  } else {
+    printParametersDB.profiles.push(profile);
+    console.log(`✅ Novo perfil adicionado: ${profileId}`);
+  }
+  
+  savePrintParameters();
+  res.json({ success: true, profile });
+});
+
+// DELETE /params/profiles/:id - Remover perfil (admin)
+app.delete("/params/profiles/:id", (req, res) => {
+  const { auth } = req.query;
+  
+  if (auth !== 'quanton3d_admin_secret') {
+    return res.status(401).json({ success: false, error: 'Não autorizado' });
+  }
+  
+  const profileId = req.params.id;
+  const profileIndex = printParametersDB.profiles.findIndex(p => p.id === profileId);
+  
+  if (profileIndex === -1) {
+    return res.status(404).json({ success: false, error: 'Perfil não encontrado' });
+  }
+  
+  printParametersDB.profiles.splice(profileIndex, 1);
+  savePrintParameters();
+  
+  console.log(`🗑️ Perfil removido: ${profileId}`);
+  res.json({ success: true, message: 'Perfil removido com sucesso' });
+});
+
+// ===== FIM DAS ROTAS DE PARÂMETROS =====
 
 // Configuração da porta Render
 const PORT = process.env.PORT || 3001;
