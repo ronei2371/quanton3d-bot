@@ -1292,7 +1292,7 @@ app.post("/admin/knowledge/import", async (req, res) => {
       return res.status(401).json({ success: false, error: 'Não autorizado' });
     }
 
-    const docsPayload = Array.isArray(req.body?.documents)
+    let docsPayload = Array.isArray(req.body?.documents)
       ? req.body.documents
       : Array.isArray(req.body)
         ? req.body
@@ -1304,6 +1304,49 @@ app.post("/admin/knowledge/import", async (req, res) => {
       return numeric.length > 0 ? numeric : null;
     };
 
+    let collectionCleared = false;
+    const ensureCollectionCleared = async () => {
+      if (collectionCleared) return null;
+      const cleanupResult = await clearKnowledgeCollection();
+      collectionCleared = true;
+      console.log(`[IMPORT-KNOWLEDGE] Coleção limpa antes do import: ${cleanupResult.deleted} registros removidos.`);
+      return cleanupResult;
+    };
+
+    if (!Array.isArray(docsPayload) || docsPayload.length === 0) {
+      const kbPath = path.join(process.cwd(), 'kb_index.json');
+
+      try {
+        if (!fs.existsSync(kbPath)) {
+          return res.status(400).json({
+            success: false,
+            error: 'Arquivo kb_index.json não encontrado e o corpo da requisição está vazio'
+          });
+        }
+
+        await ensureCollectionCleared();
+
+        const fileContent = await fs.promises.readFile(kbPath, 'utf-8');
+        const parsed = JSON.parse(fileContent);
+
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          return res.status(400).json({
+            success: false,
+            error: 'Arquivo kb_index.json não contém um array de documentos válido'
+          });
+        }
+
+        docsPayload = parsed;
+        console.log(`[IMPORT-KNOWLEDGE] Corpo vazio; usando kb_index.json com ${docsPayload.length} documentos.`);
+      } catch (err) {
+        console.error('[IMPORT-KNOWLEDGE] Falha ao carregar kb_index.json:', err);
+        return res.status(500).json({
+          success: false,
+          error: 'Falha ao carregar kb_index.json ou arquivo inexistente'
+        });
+      }
+    }
+
     if (!Array.isArray(docsPayload) || docsPayload.length === 0) {
       return res.status(400).json({
         success: false,
@@ -1313,8 +1356,7 @@ app.post("/admin/knowledge/import", async (req, res) => {
 
     console.log(`[IMPORT-KNOWLEDGE] Recebidos ${docsPayload.length} documentos para importação`);
 
-    const cleanupResult = await clearKnowledgeCollection();
-    console.log(`[IMPORT-KNOWLEDGE] Coleção limpa antes do import: ${cleanupResult.deleted} registros removidos.`);
+    await ensureCollectionCleared();
 
     const imported = [];
     const errors = [];
