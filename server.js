@@ -11,7 +11,7 @@ import multer from "multer";
 import fs from 'fs';
 import path from 'path';
 // import rateLimit from "express-rate-limit"; // REMOVIDO - causando erro ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
-import { initializeRAG, searchKnowledge, formatContext, addDocument, listDocuments, deleteDocument, updateDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding } from './rag-search.js';
+import { initializeRAG, searchKnowledge, formatContext, addDocument, listDocuments, deleteDocument, updateDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding, clearKnowledgeCollection } from './rag-search.js';
 import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection, getSuggestionsCollection, getPartnersCollection, getDocumentsCollection } from './db.js';
 import { v2 as cloudinary } from 'cloudinary';
 import {
@@ -1312,6 +1312,9 @@ app.post("/admin/knowledge/import", async (req, res) => {
     }
 
     console.log(`[IMPORT-KNOWLEDGE] Recebidos ${docsPayload.length} documentos para importação`);
+
+    const cleanupResult = await clearKnowledgeCollection();
+    console.log(`[IMPORT-KNOWLEDGE] Coleção limpa antes do import: ${cleanupResult.deleted} registros removidos.`);
 
     const imported = [];
     const errors = [];

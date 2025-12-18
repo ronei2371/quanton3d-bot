@@ -17,9 +17,8 @@ const EMBEDDING_DIMENSIONS = 3072; // Dimensao do text-embedding-3-large
 
 // Limiar minimo de relevancia para considerar um documento util
 // Documentos com similaridade abaixo deste valor serao ignorados
-// NOTA: Ajustado para 0.45 para balancear precisao e cobertura
-// text-embedding-3-large com threshold moderado permite mais resultados relevantes
-const MIN_RELEVANCE_THRESHOLD = 0.45;
+// NOTA: Ajustado para 0.8 (80%) para priorizar somente documentos altamente relevantes
+const MIN_RELEVANCE_THRESHOLD = 0.8;
 
 let lastInitialization = null;
 let documentsCount = 0;
@@ -113,6 +112,10 @@ export async function searchKnowledge(query, topK = 5) {
   try {
     logRAG(`Buscando conhecimento para: "${query.substring(0, 50)}..."`, 'INFO');
 
+    const normalizedQuery = normalizeText(query);
+    const lcdDiagnosticKeywords = ['listras', 'luz constante'];
+    const hasLcdSymptom = lcdDiagnosticKeywords.some(keyword => normalizedQuery.includes(keyword));
+
     // 1. Gerar embedding da pergunta
     const queryEmbedding = await generateEmbedding(query);
 
@@ -120,7 +123,7 @@ export async function searchKnowledge(query, topK = 5) {
     const collection = getDocumentsCollection();
     const documents = await collection.find(
       { embedding: { $exists: true, $ne: [] } },
-      { projection: { _id: 1, title: 1, content: 1, embedding: 1 } }
+      { projection: { _id: 1, title: 1, content: 1, embedding: 1, tags: 1 } }
     ).toArray();
 
     if (documents.length === 0) {
@@ -131,11 +134,18 @@ export async function searchKnowledge(query, topK = 5) {
     // 3. Calcular similaridade com cada documento
     const results = documents.map(doc => {
       const similarity = cosineSimilarity(queryEmbedding, doc.embedding);
+      const tags = Array.isArray(doc.tags) ? doc.tags : [];
+
+      const boostedSimilarity = hasLcdSymptom && tags.some(tag => String(tag).toLowerCase() === 'hardware:lcd_check')
+        ? Math.min(1, similarity + 0.1)
+        : similarity;
+
       return {
         id: doc._id.toString(),
         title: doc.title || 'Sem titulo',
         content: doc.content,
-        similarity
+        tags,
+        similarity: boostedSimilarity
       };
     });
     
@@ -230,6 +240,26 @@ export function formatContext(results) {
   context += 'NAO invente informacoes que nao estejam no contexto.\n\n';
 
   return context;
+}
+
+// Limpar toda a coleção de conhecimento (usado antes de importações em lote)
+export async function clearKnowledgeCollection() {
+  if (!isConnected()) {
+    throw new Error('MongoDB nao conectado');
+  }
+
+  try {
+    const collection = getDocumentsCollection();
+    const result = await collection.deleteMany({});
+    documentsCount = 0;
+
+    logRAG(`Colecao de conhecimento limpa antes de importacao (removidos ${result.deletedCount} documentos)`, 'WARN');
+
+    return { success: true, deleted: result.deletedCount };
+  } catch (err) {
+    logRAG(`Erro ao limpar colecao de conhecimento: ${err.message}`, 'ERROR');
+    throw err;
+  }
 }
 
 // Adicionar novo documento ao RAG (usado na aprovacao de sugestoes)
