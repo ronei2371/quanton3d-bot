@@ -125,6 +125,8 @@ async function importDocuments({ dryRun, limit }) {
       filter: { legacyId: doc.legacyId },
       update: {
         $set: doc,
+        $setOnInsert: { createdAt: new Date() },
+        $currentDate: { updatedAt: true },
       },
       upsert: true,
     },
