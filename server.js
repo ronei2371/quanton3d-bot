@@ -1313,11 +1313,9 @@ app.post("/admin/knowledge/import", async (req, res) => {
 
     console.log(`[IMPORT-KNOWLEDGE] Recebidos ${docsPayload.length} documentos para importação`);
 
-    const cleanupResult = await clearKnowledgeCollection();
-    console.log(`[IMPORT-KNOWLEDGE] Coleção limpa antes do import: ${cleanupResult.deleted} registros removidos.`);
-
     const imported = [];
     const errors = [];
+    const validatedDocs = [];
 
     for (let i = 0; i < docsPayload.length; i++) {
       const item = docsPayload[i] || {};
@@ -1331,14 +1329,33 @@ app.post("/admin/knowledge/import", async (req, res) => {
       if (!title || !content) {
         const error = 'Título e conteúdo são obrigatórios';
         errors.push({ index: i, title: title || '(sem título)', error });
-        console.warn(`[IMPORT-KNOWLEDGE] Documento ${i + 1} ignorado: ${error}`);
+        console.warn(`[IMPORT-KNOWLEDGE] Documento ${i + 1} inválido: ${error}`);
         continue;
       }
 
+      validatedDocs.push({ title, content, tags, source, legacyId, embedding, originalIndex: i });
+    }
+
+    if (errors.length > 0) {
+      console.warn('[IMPORT-KNOWLEDGE] Importação abortada por payload inválido; coleção preservada.');
+      return res.status(400).json({
+        success: false,
+        imported: 0,
+        errors,
+        error: 'Importação cancelada porque um ou mais documentos são inválidos'
+      });
+    }
+
+    const cleanupResult = await clearKnowledgeCollection();
+    console.log(`[IMPORT-KNOWLEDGE] Coleção limpa antes do import: ${cleanupResult.deleted} registros removidos.`);
+
+    for (let i = 0; i < validatedDocs.length; i++) {
+      const { title, content, tags, source, legacyId, embedding, originalIndex } = validatedDocs[i];
+
       try {
-        console.log(`[IMPORT-KNOWLEDGE] (${i + 1}/${docsPayload.length}) Importando: ${title}`);
-        if (Array.isArray(item.embedding) && !embedding) {
-          console.warn(`[IMPORT-KNOWLEDGE] Embedding inválido no documento ${i + 1}; será gerado automaticamente.`);
+        console.log(`[IMPORT-KNOWLEDGE] (${i + 1}/${validatedDocs.length}) Importando: ${title}`);
+        if (Array.isArray(docsPayload[originalIndex].embedding) && !embedding) {
+          console.warn(`[IMPORT-KNOWLEDGE] Embedding inválido no documento ${originalIndex + 1}; será gerado automaticamente.`);
         }
 
         const result = await addDocument(
@@ -1352,10 +1369,10 @@ app.post("/admin/knowledge/import", async (req, res) => {
             ...(embedding ? { embedding } : {})
           }
         );
-        imported.push({ index: i, title, documentId: result.documentId.toString() });
+        imported.push({ index: originalIndex, title, documentId: result.documentId.toString() });
       } catch (err) {
         console.error(`[IMPORT-KNOWLEDGE] Falha ao importar "${title}": ${err.message}`);
-        errors.push({ index: i, title, error: err.message });
+        errors.push({ index: originalIndex, title, error: err.message });
       }
     }
 
