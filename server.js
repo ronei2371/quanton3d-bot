@@ -1292,6 +1292,16 @@ app.post("/admin/knowledge/import", async (req, res) => {
       return res.status(401).json({ success: false, error: 'Não autorizado' });
     }
 
+    const bodyIsEmpty = () => {
+      if (!req.body) return true;
+      if (typeof req.body === 'string') return req.body.trim().length === 0;
+      if (Buffer.isBuffer(req.body)) return req.body.length === 0;
+      if (typeof req.body === 'object') {
+        return Object.keys(req.body).length === 0;
+      }
+      return false;
+    };
+
     let docsPayload = Array.isArray(req.body?.documents)
       ? req.body.documents
       : Array.isArray(req.body)
@@ -1313,7 +1323,7 @@ app.post("/admin/knowledge/import", async (req, res) => {
       return cleanupResult;
     };
 
-    if (!Array.isArray(docsPayload) || docsPayload.length === 0) {
+    if (bodyIsEmpty() || !Array.isArray(docsPayload) || docsPayload.length === 0) {
       const kbPath = path.join(process.cwd(), 'kb_index.json');
 
       try {
