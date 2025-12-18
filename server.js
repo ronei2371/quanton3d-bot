@@ -27,6 +27,13 @@ import {
 
 dotenv.config();
 
+const ADMIN_SECRET = process.env.ADMIN_SECRET || 'quanton3d_admin_secret';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+if (!OPENAI_API_KEY) {
+  console.warn('⚠️  OPENAI_API_KEY não configurada - chamadas de IA irão falhar até definir a variável.');
+}
+
 // ===== CONFIGURACAO DO CLOUDINARY =====
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -67,8 +74,10 @@ const upload = multer({
 
 // Conexão com a OpenAI
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: OPENAI_API_KEY,
 });
+
+const isAdminAuthorized = (token) => token === ADMIN_SECRET || token === 'quanton3d_admin_secret';
 
 // Histórico de conversas por sessão
 const conversationHistory = new Map();
@@ -2675,7 +2684,7 @@ app.post("/api/add-knowledge-from-feedback", async (req, res) => {
     const { auth, title, content, conversationId, originalQuestion, originalReply } = req.body;
 
     // Autenticação
-    if (auth !== process.env.ADMIN_SECRET || auth !== 'quanton3d_admin_secret') {
+    if (!isAdminAuthorized(auth)) {
       return res.status(401).json({ success: false, message: 'Não autorizado' });
     }
 
@@ -2741,7 +2750,7 @@ app.put("/api/mark-bad-response/:index", async (req, res) => {
     const index = parseInt(req.params.index);
 
     // Autenticação
-    if (auth !== process.env.ADMIN_SECRET || auth !== 'quanton3d_admin_secret') {
+    if (!isAdminAuthorized(auth)) {
       return res.status(401).json({ success: false, message: 'Não autorizado' });
     }
 
@@ -2772,7 +2781,7 @@ app.get("/api/feedback-stats", async (req, res) => {
     const { auth } = req.query;
 
     // Autenticação
-    if (auth !== process.env.ADMIN_SECRET || auth !== 'quanton3d_admin_secret') {
+    if (!isAdminAuthorized(auth)) {
       return res.status(401).json({ success: false, message: 'Não autorizado' });
     }
 
@@ -3144,8 +3153,14 @@ async function searchKnowledgeWithPrintParams(query, entities, questionType, top
   return results;
 }
 
-// GET /params/resins - Listar todas as resinas
+// GET /params/resins - Listar todas as resinas (protegido por token admin)
 app.get("/params/resins", (req, res) => {
+  const auth = req.query?.auth;
+
+  if (!isAdminAuthorized(auth)) {
+    return res.status(401).json({ success: false, error: 'Não autorizado' });
+  }
+
   res.json({
     success: true,
     resins: printParametersDB.resins,
@@ -3266,14 +3281,12 @@ function getAdminAuth(req) {
   return req.body?.auth || req.query?.auth;
 }
 
-const ADMIN_SECRET = 'quanton3d_admin_secret';
-
 // POST /params/resins - Adicionar nova resina (admin)
 app.post("/params/resins", (req, res) => {
   const auth = getAdminAuth(req);
   const { name } = req.body;
-  
-  if (auth !== ADMIN_SECRET) {
+
+  if (!isAdminAuthorized(auth)) {
     return res.status(401).json({ success: false, error: 'Não autorizado' });
   }
   
@@ -3300,8 +3313,8 @@ app.post("/params/resins", (req, res) => {
 // DELETE /params/resins/:id - Remover resina (admin)
 app.delete("/params/resins/:id", (req, res) => {
   const auth = getAdminAuth(req);
-  
-  if (auth !== ADMIN_SECRET) {
+
+  if (!isAdminAuthorized(auth)) {
     return res.status(401).json({ success: false, error: 'Não autorizado' });
   }
   
@@ -3325,8 +3338,8 @@ app.delete("/params/resins/:id", (req, res) => {
 app.post("/params/printers", (req, res) => {
   const auth = getAdminAuth(req);
   const { brand, model } = req.body;
-  
-  if (auth !== ADMIN_SECRET) {
+
+  if (!isAdminAuthorized(auth)) {
     return res.status(401).json({ success: false, error: 'Não autorizado' });
   }
   
@@ -3355,8 +3368,8 @@ app.post("/params/printers", (req, res) => {
 // DELETE /params/printers/:id - Remover impressora (admin)
 app.delete("/params/printers/:id", (req, res) => {
   const auth = getAdminAuth(req);
-  
-  if (auth !== ADMIN_SECRET) {
+
+  if (!isAdminAuthorized(auth)) {
     return res.status(401).json({ success: false, error: 'Não autorizado' });
   }
   
@@ -3380,8 +3393,8 @@ app.delete("/params/printers/:id", (req, res) => {
 app.post("/params/profiles", (req, res) => {
   const auth = getAdminAuth(req);
   const { resinId, printerId, params, status } = req.body;
-  
-  if (auth !== ADMIN_SECRET) {
+
+  if (!isAdminAuthorized(auth)) {
     return res.status(401).json({ success: false, error: 'Não autorizado' });
   }
   
@@ -3429,8 +3442,8 @@ app.post("/params/profiles", (req, res) => {
 // DELETE /params/profiles/:id - Remover perfil (admin)
 app.delete("/params/profiles/:id", (req, res) => {
   const auth = getAdminAuth(req);
-  
-  if (auth !== ADMIN_SECRET) {
+
+  if (!isAdminAuthorized(auth)) {
     return res.status(401).json({ success: false, error: 'Não autorizado' });
   }
   

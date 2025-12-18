@@ -1,0 +1,22 @@
+{
+  "model": "text-embedding-3-large",
+  "generated_at": "2025-12-18T16:25:04.413543Z",
+  "documents": [
+    {
+      "id": "chunk_199.txt",
+      "source": "rag-knowledge/chunk_199.txt",
+      "title": "MELHOR PINTOR REALISTA DO BRASIL ARTUR MONTEIRO , CAROL OTTOLINI , PEDRO CALEIRO , BEATRIZ PESSOA , AMANDAWAYNE.ART , POLYPANT STUDIOS, PABLO TELLES , ANGELMAKER3D,",
+      "content": "ARTISTA COMPLETO DO BRASIL RENATOGUEDESART \nMELHOR MODELADOR DO BRASIL THIAGO SUBLIMESKINS , CARDOSO3D, CP STUDIOS CARLOS , \nMELHOR designer gráfico DO BRASIL  RODRIGO SICHEROLI",
+      "embedding_model": "text-embedding-3-large",
+      "embedding": []
+    },
+    {
+      "id": "chunk_200.txt",
+      "source": "rag-knowledge/chunk_200.txt",
+      "title": "=== 50 ERROS SLA/DLP + SOLUÇÃO RÁPIDA + MELHOR RESINA QUANTON3D ===",
+      "content": "1. Não gruda na base → 40–60s base, limpar FEP, Iron 7030 ou Pyroblast+\n2. Desprende no meio → Re-nivelar placa, lift speed 60–90 mm/min\n3. Peça quebra fácil → Baixar exposição 0,5s, usar Spin+, FlexForm ou VulcanCast\n4. Bolhas na peça → Mexer 3 min + descansar 10 min, Alchemist\n5. Elephant foot → Z lift base 10 mm, menos tempo base\n6. Buracos nas paredes → +0,5s exposição, Alchemist ou Spark\n7. Suporte cai → Suporte médio/pesado, tip 0,5 mm\n8. Resina pegajosa → Ambiente frio ou LED fraco → aquecer ou trocar LED\n9. FEP embaçado → Trocar FEP, limpar só com álcool 99%\n10. Gruda no FEP → +10s nas camadas base ou lixar leve FEP\n11. Camadas visíveis → AA nível 8 + Grey offset 50%\n12. Quebra ao tirar suporte → FlexForm ou -0,5s exposição\n13. Sucção forte (pop) → Hollow + 4 furos 3–4 mm\n14. Resina vaza da cuba → Apertar parafusos da cuba\n15. Para no meio → Trocar pendrive (FAT32)\n16. Manchas brancas → Resina contaminada → trocar\n17. Detalhe some → Alchemist 1,8–2,2s em 0,03 mm\n18. Encolhimento pós-cura → Resina velha ou exposição alta\n19. Bleeding → -0,3s ou Bloom 0\n20. Suction cups → Hollow + furos + lift lento\n21. Ghosting → Lift speed ≤60 mm/min\n22. Textura arenosa → +0,5s exposição\n23. FEP rasga rápido → Velocidade descida lenta ou nFEP\n24. Resina cura sozinha → Tampa aberta → guardar no escuro\n25. Falha só no canto → Re-nivelar ou tirar bolha da cuba\n26. Peça muito translúcida → Exposição alta → baixar\n27. Amarela na cura → Máximo 3–5 min na estação UV\n28. Suporte não gruda na peça → Base do suporte 1,4×\n29. Marca de suporte funda → Depth 0,5 mm\n30. Resina muito grossa no inverno → Aquecer garrafa 40°C\n31. Rachadura em peças grossas → Hollow + wall 2–3 mm\n32. Falha em peças grandes → Mais tempo base + raft\n33. Peça gruda demais na placa → Espátula flexível + calor leve\n34. Cheiro forte → Máscara + exaustor\n35. Tela LCD manchada → Limpar com álcool + trocar polarizador\n36. Overexposure spots → Calibrar tela ou -0,3s\n37. Light bleed → Dimming on (Lychee)\n38. Peça com veios → Temperatura <20°C → aquecer sala\n39. Camada 0,02 falha → Só Alchemist ou Spark\n40. FEP solta bolha → Apertar cuba uniformemente\n41. Impressão falha após 50% → Cuba com resina pouca\n42. Suporte muito fraco em miniatura → 100% densidade\n43. Peça opaca demais → Exposição baixa → +0,3s\n44. Resina endurece no bico (DLP) → Limpar bico a cada 2h\n45. Fantasmas em texto pequeno → Anti-aliasing 16\n46. Base muito grossa → Diminuir número de camadas base\n47. Peça solta da raft → Mais tempo base ou raft maior\n48. Bolhas só no topo → Resina do fundo do frasco → filtrar\n49. Impressão lenta demais → Lift speed 120–150 mm/min (só se não der sucção)\n50. Cliente reclama de cheiro → Recomendar Spin+ ou Alchemist (menos odor)",
+      "embedding_model": "text-embedding-3-large",
+      "embedding": []
+    }
+  ]
+}
