@@ -121,9 +121,9 @@ app.post("/ask", async (req, res) => {
 
     // 2. BUSCAR CONHECIMENTO RELEVANTE (RAG INTELIGENTE)
     console.log('🔍 Buscando conhecimento relevante...');
-    const relevantKnowledge = await searchKnowledge(message, 5); // Aumentado para 5 documentos
+    const relevantKnowledge = await searchKnowledgeWithPrintParams(message, entities, questionType, 5);
     const knowledgeContext = formatContext(relevantKnowledge);
-    console.log(`✅ Encontrados ${relevantKnowledge.length} documentos relevantes`);
+    console.log(`✅ Encontrados ${relevantKnowledge.length} documentos relevantes (incluindo RAG de parâmetros se aplicável)`);
 
     // 2.5 BUSCAR PARÂMETROS DE IMPRESSÃO NO BANCO DE DADOS (CRÍTICO)
     let parametersContext = '';
@@ -773,7 +773,7 @@ a menos que o defeito tenha relacao DIRETA com adesao a base.`
     let knowledgeContext = '';
     
     try {
-      relevantKnowledge = await searchKnowledge(combinedText, 5);
+      relevantKnowledge = await searchKnowledgeWithPrintParams(combinedText, entities, questionType, 5);
       knowledgeContext = formatContext(relevantKnowledge);
       console.log(`✅ [PASSO 2] Encontrados ${relevantKnowledge.length} documentos relevantes`);
     } catch (ragError) {
@@ -3074,6 +3074,75 @@ function savePrintParameters() {
 
 // Carregar parâmetros ao iniciar
 loadPrintParameters();
+
+// ===== BUSCA INTELIGENTE DE CONHECIMENTO (COM RAG LOCAL DE PARÂMETROS) =====
+
+function isParameterQuestion(questionType, text) {
+  const lowered = text.toLowerCase();
+  return questionType.type === 'parameters' ||
+    lowered.includes('exposição') || lowered.includes('exposure') ||
+    lowered.includes('tempo') || lowered.includes('camada') || lowered.includes('layer');
+}
+
+function findParameterRAGChunks(query, entities, limit = 5) {
+  if (!printParametersRAG || printParametersRAG.length === 0) {
+    console.log('⚠️ RAG local de parâmetros vazio - verifique print-parameters-rag.json');
+    return [];
+  }
+
+  const normalizedQuery = query.toLowerCase();
+  const resinTerms = entities?.resins?.map(r => r.toLowerCase()) || [];
+  const printerTerms = entities?.printers?.map(p => p.toLowerCase()) || [];
+  const keywords = ['exposi', 'camada', 'layer', 'tempo', 'resina'];
+
+  const scored = printParametersRAG.map(chunk => {
+    let score = 0;
+    const chunkResin = chunk.resin?.toLowerCase() || '';
+    const chunkPrinter = chunk.printer?.toLowerCase() || '';
+    const chunkText = chunk.text?.toLowerCase() || '';
+
+    if (resinTerms.some(r => chunkResin.includes(r))) score += 3;
+    if (printerTerms.some(p => chunkPrinter.includes(p))) score += 2;
+    if (normalizedQuery.includes(chunkResin)) score += 2;
+    if (normalizedQuery.includes(chunkPrinter)) score += 2;
+    if (keywords.some(k => normalizedQuery.includes(k) || chunkText.includes(k))) score += 1;
+
+    return { ...chunk, score };
+  }).filter(chunk => chunk.score > 0);
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, limit);
+}
+
+async function searchKnowledgeWithPrintParams(query, entities, questionType, topK = 5) {
+  const results = [];
+
+  if (isParameterQuestion(questionType, query)) {
+    const parameterChunks = findParameterRAGChunks(query, entities, topK);
+    if (parameterChunks.length > 0) {
+      console.log(`📑 RAG local de parâmetros retornou ${parameterChunks.length} chunks relevantes`);
+      parameterChunks.forEach(chunk => {
+        results.push({
+          id: `params-${chunk.id}`,
+          title: `Parâmetros ${chunk.resin} - ${chunk.printer}`,
+          content: chunk.text,
+          similarity: 0.99 // Priorizar dados locais de parâmetros
+        });
+      });
+    } else {
+      console.log('⚠️ Nenhum chunk relevante encontrado em print-parameters-rag.json');
+    }
+  }
+
+  try {
+    const ragResults = await searchKnowledge(query, topK);
+    results.push(...ragResults);
+  } catch (err) {
+    console.error('❌ Erro ao buscar conhecimento principal:', err.message);
+  }
+
+  return results;
+}
 
 // GET /params/resins - Listar todas as resinas
 app.get("/params/resins", (req, res) => {
