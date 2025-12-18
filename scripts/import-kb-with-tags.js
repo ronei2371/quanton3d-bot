@@ -43,11 +43,19 @@ function loadKbIndex() {
     throw new Error(`Arquivo kb_index.json não encontrado em ${KB_INDEX_PATH}`);
   }
   const raw = fs.readFileSync(KB_INDEX_PATH, 'utf-8');
-  const parsed = JSON.parse(raw);
-  const documents = Array.isArray(parsed?.documents) ? parsed.documents : parsed;
+  const parsed = JSON.parse(raw.replace(/\s+$/u, ''));
+  const documents = Array.isArray(parsed)
+    ? parsed
+    : Array.isArray(parsed?.documents)
+      ? parsed.documents
+      : Array.isArray(parsed?.data)
+        ? parsed.data
+        : Object.values(parsed || {}).find(Array.isArray) || null;
+
   if (!Array.isArray(documents)) {
-    throw new Error('Formato do kb_index.json inválido: campo "documents" ausente.');
+    throw new Error('Formato do kb_index.json inválido: arquivo não contém um array de documentos.');
   }
+
   return documents;
 }
 
