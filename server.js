@@ -78,6 +78,12 @@ const openai = new OpenAI({
 });
 
 const isAdminAuthorized = (token) => token === ADMIN_SECRET || token === 'quanton3d_admin_secret';
+const extractAdminToken = (req) => {
+  const bearer = (req.headers.authorization || '').startsWith('Bearer ')
+    ? req.headers.authorization.slice(7)
+    : null;
+  return req.headers['x-admin-secret'] || req.headers['x-admin-token'] || bearer || req.body?.auth || req.query?.auth;
+};
 
 // Histórico de conversas por sessão
 const conversationHistory = new Map();
@@ -1267,6 +1273,152 @@ app.post("/add-knowledge", async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Erro ao adicionar conhecimento:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Rota administrativa para importação em lote de conhecimento
+app.post("/admin/knowledge/import", async (req, res) => {
+  try {
+    const adminToken = extractAdminToken(req);
+
+    if (!isAdminAuthorized(adminToken)) {
+      return res.status(401).json({ success: false, error: 'Não autorizado' });
+    }
+
+    const docsPayload = Array.isArray(req.body?.documents)
+      ? req.body.documents
+      : Array.isArray(req.body)
+        ? req.body
+        : null;
+
+    if (!Array.isArray(docsPayload) || docsPayload.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Payload deve ser um array de documentos com title, content, tags e source opcional'
+      });
+    }
+
+    console.log(`[IMPORT-KNOWLEDGE] Recebidos ${docsPayload.length} documentos para importação`);
+
+    const imported = [];
+    const errors = [];
+
+    for (let i = 0; i < docsPayload.length; i++) {
+      const item = docsPayload[i] || {};
+      const title = String(item.title || '').trim();
+      const content = String(item.content || '').trim();
+      const tags = Array.isArray(item.tags) ? item.tags : [];
+      const source = item.source || 'admin_import';
+
+      if (!title || !content) {
+        const error = 'Título e conteúdo são obrigatórios';
+        errors.push({ index: i, title: title || '(sem título)', error });
+        console.warn(`[IMPORT-KNOWLEDGE] Documento ${i + 1} ignorado: ${error}`);
+        continue;
+      }
+
+      try {
+        console.log(`[IMPORT-KNOWLEDGE] (${i + 1}/${docsPayload.length}) Importando: ${title}`);
+        const result = await addDocument(title, content, source, tags);
+        imported.push({ index: i, title, documentId: result.documentId.toString() });
+      } catch (err) {
+        console.error(`[IMPORT-KNOWLEDGE] Falha ao importar "${title}": ${err.message}`);
+        errors.push({ index: i, title, error: err.message });
+      }
+    }
+
+    console.log(`[IMPORT-KNOWLEDGE] Finalizado. Sucesso: ${imported.length}, Erros: ${errors.length}`);
+
+    res.json({
+      success: errors.length === 0,
+      imported: imported.length,
+      errors,
+      documents: imported
+    });
+  } catch (err) {
+    console.error('[IMPORT-KNOWLEDGE] Erro geral na importação:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Rota administrativa para listar conhecimento com filtros e paginação
+app.get("/admin/knowledge/list", async (req, res) => {
+  try {
+    const adminToken = extractAdminToken(req);
+
+    if (!isAdminAuthorized(adminToken)) {
+      return res.status(401).json({ success: false, error: 'Não autorizado' });
+    }
+
+    const { tag, resin, printer, search } = req.query;
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
+    const skip = (page - 1) * limit;
+
+    const filters = {};
+    const tagFilter = tag || resin || printer;
+    if (tagFilter) {
+      filters.tags = { $elemMatch: { $regex: tagFilter, $options: 'i' } };
+    }
+    if (search) {
+      filters.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { content: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const collection = getDocumentsCollection();
+    const total = await collection.countDocuments(filters);
+    const documents = await collection.find(
+      filters,
+      { projection: { title: 1, tags: 1, source: 1, createdAt: 1 } }
+    )
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    console.log(`📚 [LIST-KNOWLEDGE] Filtros: tag=${tagFilter || '---'} | search=${search || '---'} | total=${total}`);
+
+    res.json({
+      success: true,
+      documents,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 1
+      }
+    });
+  } catch (err) {
+    console.error('❌ [LIST-KNOWLEDGE] Erro ao listar conhecimento:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Rota administrativa para remover conhecimento individual
+app.delete("/admin/knowledge/:id", async (req, res) => {
+  try {
+    const adminToken = extractAdminToken(req);
+    const { id } = req.params;
+
+    if (!isAdminAuthorized(adminToken)) {
+      return res.status(401).json({ success: false, error: 'Não autorizado' });
+    }
+
+    console.log(`🗑️ [DELETE-KNOWLEDGE] Solicitado delete do documento ${id}`);
+
+    const result = await deleteDocument(id);
+
+    if (result.success) {
+      console.log(`[DELETE-KNOWLEDGE] Documento ${id} removido`);
+      return res.json({ success: true, message: 'Documento deletado com sucesso' });
+    }
+
+    res.status(404).json({ success: false, error: 'Documento não encontrado' });
+  } catch (err) {
+    console.error('❌ [DELETE-KNOWLEDGE] Erro ao deletar conhecimento:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });

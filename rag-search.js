@@ -233,7 +233,7 @@ export function formatContext(results) {
 }
 
 // Adicionar novo documento ao RAG (usado na aprovacao de sugestoes)
-export async function addDocument(title, content, source = 'suggestion') {
+export async function addDocument(title, content, source = 'suggestion', tags = []) {
   if (!isConnected()) {
     throw new Error('MongoDB nao conectado');
   }
@@ -245,6 +245,10 @@ export async function addDocument(title, content, source = 'suggestion') {
     console.log(`📝 [ADD-DOC] Titulo: ${title}`);
     console.log(`📝 [ADD-DOC] Tamanho do conteudo: ${content.length} caracteres`);
     console.log(`📝 [ADD-DOC] Source: ${source}`);
+    const normalizedTags = Array.isArray(tags)
+      ? tags.map(t => String(t).trim()).filter(Boolean)
+      : [];
+    console.log(`📝 [ADD-DOC] Tags: ${normalizedTags.join(', ') || 'nenhuma'}`);
 
     // Gerar embedding do conteudo
     console.log(`🔄 [ADD-DOC] Gerando embedding...`);
@@ -258,6 +262,7 @@ export async function addDocument(title, content, source = 'suggestion') {
       title,
       content,
       source,
+      tags: normalizedTags,
       embedding,
       embeddingModel: EMBEDDING_MODEL,
       createdAt: new Date(),
@@ -291,7 +296,7 @@ export async function listDocuments() {
     const collection = getDocumentsCollection();
     const documents = await collection.find(
       {},
-      { projection: { _id: 1, title: 1, content: 1, source: 1, createdAt: 1 } }
+      { projection: { _id: 1, title: 1, content: 1, source: 1, tags: 1, createdAt: 1 } }
     ).sort({ createdAt: -1 }).toArray();
 
     return documents;
