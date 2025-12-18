@@ -19,7 +19,8 @@ const DEFAULT_URI =
 const DB_NAME = 'quanton3d';
 const COLLECTION_NAME = process.env.KB_IMPORT_COLLECTION || 'documents';
 const KB_INDEX_PATH = process.env.KB_INDEX_PATH || path.join(process.cwd(), 'kb_index.json');
-const BATCH_SIZE = 50;
+const BATCH_SIZE = 100;
+const BATCH_DELAY_MS = 1000;
 
 // Regras básicas para geração de tags contextuais.
 const TAG_RULES = [
@@ -102,17 +103,38 @@ function removeTimestamps(doc) {
   return sanitized;
 }
 
-async function importDocuments({ dryRun, limit }) {
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function importDocuments({ dryRun, limit, onStart, onProgress, respondImmediately }) {
   const kbDocs = loadKbIndex();
   const slice = typeof limit === 'number' ? kbDocs.slice(0, limit) : kbDocs;
   console.log(`Encontrados ${kbDocs.length} documentos no kb_index.json (${slice.length} serão processados).`);
 
-  const mongoDocs = slice.map(toMongoDocument).map(removeTimestamps);
+  const totalBatches = Math.ceil(slice.length / BATCH_SIZE);
+  let responder = typeof respondImmediately === 'function' ? respondImmediately : null;
+  const notifyStart = () => {
+    if (!responder) return;
+    try {
+      responder({ ok: true, status: 'OK', totalDocuments: slice.length, totalBatches, message: 'Processamento iniciado em segundo plano' });
+    } catch (error) {
+      console.error('Falha ao enviar resposta imediata ao navegador:', error.message);
+    }
+    responder = null;
+  };
+
+  notifyStart();
+
+  if (typeof onStart === 'function') {
+    onStart({ totalDocuments: slice.length, totalBatches });
+  }
+
+  const processedCount = slice.length;
+  const sampleDoc = slice[0] ? removeTimestamps(toMongoDocument(slice[0])) : null;
 
   if (dryRun) {
     console.log('Modo dry-run: nenhuma escrita no MongoDB. Exemplo de documento:');
-    console.dir(mongoDocs[0], { depth: null });
-    return { processed: mongoDocs.length, inserted: 0, updated: 0, dryRun: true };
+    console.dir(sampleDoc, { depth: null });
+    return { processed: processedCount, inserted: 0, updated: 0, dryRun: true };
   }
 
   console.log('Conectando ao MongoDB...');
@@ -121,26 +143,29 @@ async function importDocuments({ dryRun, limit }) {
   const db = client.db(DB_NAME);
   const collection = db.collection(COLLECTION_NAME);
 
-  const operations = mongoDocs.map(doc => ({
-    updateOne: {
-      filter: { legacyId: doc.legacyId },
-      update: {
-        $set: doc,
-      },
-      upsert: true,
-    },
-  }));
-
-  console.log(`Enviando ${operations.length} operações de upsert para a coleção ${COLLECTION_NAME} em lotes de ${BATCH_SIZE}...`);
-
-  const totalBatches = Math.ceil(operations.length / BATCH_SIZE);
+  console.log(
+    `Enviando ${processedCount} operações de upsert para a coleção ${COLLECTION_NAME} em lotes de ${BATCH_SIZE}...`
+  );
   let inserted = 0;
   let updated = 0;
 
   for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
     const start = batchIndex * BATCH_SIZE;
-    const batch = operations.slice(start, start + BATCH_SIZE);
-    const result = await collection.bulkWrite(batch, { ordered: false });
+    const docsBatch = slice
+      .slice(start, start + BATCH_SIZE)
+      .map(toMongoDocument)
+      .map(removeTimestamps);
+    const operations = docsBatch.map(doc => ({
+      updateOne: {
+        filter: { legacyId: doc.legacyId },
+        update: {
+          $set: doc,
+        },
+        upsert: true,
+      },
+    }));
+
+    const result = await collection.bulkWrite(operations, { ordered: false });
 
     const batchInserted = result.upsertedCount || 0;
     const batchUpdated = (result.modifiedCount || 0) + (result.matchedCount || 0) - batchInserted;
@@ -148,12 +173,23 @@ async function importDocuments({ dryRun, limit }) {
     inserted += batchInserted;
     updated += batchUpdated;
 
-    console.log(`Lote ${batchIndex + 1}/${totalBatches} concluído (${batch.length} documentos). Inseridos: ${batchInserted}, Atualizados: ${batchUpdated}.`);
+    const progressMessage = `Lote ${batchIndex + 1} de ${totalBatches} concluído`;
+    console.log(
+      `${progressMessage} (${docsBatch.length} documentos). Inseridos: ${batchInserted}, Atualizados: ${batchUpdated}.`
+    );
+
+    if (typeof onProgress === 'function') {
+      onProgress({ batch: batchIndex + 1, totalBatches, batchInserted, batchUpdated });
+    }
+
+    if (batchIndex < totalBatches - 1) {
+      await sleep(BATCH_DELAY_MS);
+    }
   }
 
   await client.close();
 
-  return { processed: mongoDocs.length, inserted, updated, dryRun: false };
+  return { processed: processedCount, inserted, updated, dryRun: false };
 }
 
 (async () => {
