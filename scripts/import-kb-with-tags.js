@@ -85,7 +85,6 @@ function buildTags(doc) {
 }
 
 function toMongoDocument(doc) {
-  const now = new Date();
   return {
     legacyId: doc.id,
     title: doc.title || doc.id,
@@ -94,9 +93,12 @@ function toMongoDocument(doc) {
     tags: buildTags(doc),
     embedding: doc.embedding || [],
     embeddingModel: doc.embedding_model || doc.embeddingModel || 'text-embedding-3-large',
-    createdAt: now,
-    updatedAt: now,
   };
+}
+
+function removeTimestamps(doc) {
+  const { createdAt, updatedAt, ...sanitized } = doc;
+  return sanitized;
 }
 
 async function importDocuments({ dryRun, limit }) {
@@ -104,7 +106,7 @@ async function importDocuments({ dryRun, limit }) {
   const slice = typeof limit === 'number' ? kbDocs.slice(0, limit) : kbDocs;
   console.log(`Encontrados ${kbDocs.length} documentos no kb_index.json (${slice.length} serão processados).`);
 
-  const mongoDocs = slice.map(toMongoDocument);
+  const mongoDocs = slice.map(toMongoDocument).map(removeTimestamps);
 
   if (dryRun) {
     console.log('Modo dry-run: nenhuma escrita no MongoDB. Exemplo de documento:');
@@ -122,8 +124,7 @@ async function importDocuments({ dryRun, limit }) {
     updateOne: {
       filter: { legacyId: doc.legacyId },
       update: {
-        $set: { ...doc, updatedAt: new Date() },
-        $setOnInsert: { createdAt: doc.createdAt },
+        $set: doc,
       },
       upsert: true,
     },
