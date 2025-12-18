@@ -316,16 +316,21 @@ export async function addDocument(title, content, source = 'suggestion', tags = 
       ...(options.legacyId ? { legacyId: options.legacyId } : {})
     };
 
+    const sanitizedDocument = { ...baseDocument };
+    delete sanitizedDocument.createdAt;
+    delete sanitizedDocument.updatedAt;
+
     let documentId = null;
     let inserted = false;
 
     if (options.upsert && options.legacyId) {
       const existing = await collection.findOne({ legacyId: options.legacyId }, { projection: { _id: 1, createdAt: 1 } });
+      const createdAtValue = existing?.createdAt || baseDocument.createdAt;
       const result = await collection.updateOne(
         { legacyId: options.legacyId },
         {
-          $set: { ...baseDocument, createdAt: existing?.createdAt || baseDocument.createdAt },
-          $setOnInsert: { createdAt: existing?.createdAt || baseDocument.createdAt }
+          $set: { ...sanitizedDocument, updatedAt: baseDocument.updatedAt },
+          $setOnInsert: { createdAt: createdAtValue }
         },
         { upsert: true }
       );
