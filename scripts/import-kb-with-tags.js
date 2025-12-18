@@ -19,6 +19,7 @@ const DEFAULT_URI =
 const DB_NAME = 'quanton3d';
 const COLLECTION_NAME = process.env.KB_IMPORT_COLLECTION || 'documents';
 const KB_INDEX_PATH = process.env.KB_INDEX_PATH || path.join(process.cwd(), 'kb_index.json');
+const BATCH_SIZE = 50;
 
 // Regras básicas para geração de tags contextuais.
 const TAG_RULES = [
@@ -130,12 +131,27 @@ async function importDocuments({ dryRun, limit }) {
     },
   }));
 
-  console.log(`Enviando ${operations.length} operações de upsert para a coleção ${COLLECTION_NAME}...`);
-  const result = await collection.bulkWrite(operations, { ordered: false });
-  await client.close();
+  console.log(`Enviando ${operations.length} operações de upsert para a coleção ${COLLECTION_NAME} em lotes de ${BATCH_SIZE}...`);
 
-  const inserted = result.upsertedCount || 0;
-  const updated = (result.modifiedCount || 0) + (result.matchedCount || 0) - inserted;
+  const totalBatches = Math.ceil(operations.length / BATCH_SIZE);
+  let inserted = 0;
+  let updated = 0;
+
+  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
+    const start = batchIndex * BATCH_SIZE;
+    const batch = operations.slice(start, start + BATCH_SIZE);
+    const result = await collection.bulkWrite(batch, { ordered: false });
+
+    const batchInserted = result.upsertedCount || 0;
+    const batchUpdated = (result.modifiedCount || 0) + (result.matchedCount || 0) - batchInserted;
+
+    inserted += batchInserted;
+    updated += batchUpdated;
+
+    console.log(`Lote ${batchIndex + 1}/${totalBatches} concluído (${batch.length} documentos). Inseridos: ${batchInserted}, Atualizados: ${batchUpdated}.`);
+  }
+
+  await client.close();
 
   return { processed: mongoDocs.length, inserted, updated, dryRun: false };
 }
