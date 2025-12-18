@@ -27,12 +27,16 @@ import {
 
 dotenv.config();
 
-const ADMIN_SECRET = process.env.ADMIN_SECRET || 'quanton3d_admin_secret';
+const ADMIN_API_TOKEN = process.env.ADMIN_API_TOKEN || process.env.ADMIN_SECRET || 'quanton3d_admin_secret';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const RAG_EMBEDDING_MODEL = 'text-embedding-3-large';
+const RAG_EMBEDDING_MODEL = process.env.RAG_EMBEDDING_MODEL || 'text-embedding-3-large';
 
 if (!OPENAI_API_KEY) {
   console.warn('⚠️  OPENAI_API_KEY não configurada - chamadas de IA irão falhar até definir a variável.');
+}
+
+if (!process.env.ADMIN_API_TOKEN && !process.env.ADMIN_SECRET) {
+  console.warn('⚠️  ADMIN_API_TOKEN não configurado - usando token padrão apenas para ambientes locais.');
 }
 
 // ===== CONFIGURACAO DO CLOUDINARY =====
@@ -78,14 +82,7 @@ const openai = new OpenAI({
   apiKey: OPENAI_API_KEY,
 });
 
-const isAdminAuthorized = (token) => token === ADMIN_SECRET || token === 'quanton3d_admin_secret';
-const extractAdminToken = (req) => {
-  const bearer = (req.headers.authorization || '').startsWith('Bearer ')
-    ? req.headers.authorization.slice(7)
-    : null;
-  return req.headers['x-admin-secret'] || req.headers['x-admin-token'] || bearer || req.body?.auth || req.query?.auth;
-};
-
+const isAdminAuthorized = (token) => token === ADMIN_API_TOKEN;
 const extractAdminToken = (req) => {
   const authHeader = req.headers.authorization || '';
   const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
@@ -1251,90 +1248,6 @@ app.get("/metrics/client-history", async (req, res) => {
   } catch (err) {
     console.error('❌ Erro ao buscar historico do cliente:', err);
     res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// Rota para adicionar conhecimento manualmente ao RAG
-// CORRIGIDO: Agora usa addDocument() que salva no MongoDB com embedding
-app.post("/admin/knowledge/import", async (req, res) => {
-  const adminToken = extractAdminToken(req);
-
-  if (!isAdminAuthorized(adminToken)) {
-    return res.status(401).json({ success: false, error: 'Não autorizado' });
-  }
-
-  const items = Array.isArray(req.body) ? req.body : req.body?.items;
-
-  if (!Array.isArray(items) || items.length === 0) {
-    console.log('[IMPORT-KNOWLEDGE] Payload vazio ou inválido');
-    return res.status(400).json({ success: false, error: 'Lista de itens para importação é obrigatória' });
-  }
-
-  const validationErrors = [];
-
-  items.forEach((item, index) => {
-    const title = item?.title;
-    const content = item?.content;
-    const tags = item?.tags;
-
-    if (!title || typeof title !== 'string' || !title.trim()) {
-      validationErrors.push({ index, field: 'title', message: 'Título é obrigatório' });
-    }
-
-    if (!content || typeof content !== 'string' || !content.trim()) {
-      validationErrors.push({ index, field: 'content', message: 'Conteúdo é obrigatório' });
-    }
-
-    if (tags && !Array.isArray(tags)) {
-      validationErrors.push({ index, field: 'tags', message: 'Tags deve ser uma lista de strings' });
-    }
-  });
-
-  if (validationErrors.length > 0) {
-    console.log(`[IMPORT-KNOWLEDGE] Falha de validação em ${validationErrors.length} itens`);
-    return res.status(400).json({ success: false, error: 'Validação falhou', details: validationErrors });
-  }
-
-  try {
-    console.log(`[IMPORT-KNOWLEDGE] Iniciando importação de ${items.length} documentos`);
-    const collection = getDocumentsCollection();
-    const documentsToInsert = [];
-
-    for (let index = 0; index < items.length; index++) {
-      const item = items[index];
-      const title = item.title.trim();
-      const content = item.content.trim();
-      const source = typeof item.source === 'string' && item.source.trim() ? item.source.trim() : 'admin_import';
-      const tags = (Array.isArray(item.tags) ? item.tags : [])
-        .map(tag => (typeof tag === 'string' ? tag.trim() : ''))
-        .filter(Boolean);
-
-      console.log(`[IMPORT-KNOWLEDGE] (${index + 1}/${items.length}) Gerando embedding para "${title}"`);
-      const embedding = await generateEmbedding(content);
-
-      documentsToInsert.push({
-        title,
-        content,
-        source,
-        tags,
-        embedding,
-        embeddingModel: RAG_EMBEDDING_MODEL,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-    }
-
-    const insertResult = await collection.insertMany(documentsToInsert);
-    console.log(`[IMPORT-KNOWLEDGE] Importação concluída com ${insertResult.insertedCount} documentos`);
-
-    return res.json({
-      success: true,
-      inserted: insertResult.insertedCount,
-      documentIds: Object.values(insertResult.insertedIds).map(id => id.toString())
-    });
-  } catch (err) {
-    console.error(`[IMPORT-KNOWLEDGE] Erro ao importar conhecimento: ${err.message}`);
-    return res.status(500).json({ success: false, error: 'Erro ao importar conhecimento', details: err.message });
   }
 });
 
