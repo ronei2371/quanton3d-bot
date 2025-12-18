@@ -72,7 +72,10 @@ def build_index(
 
     if not dry_run:
         if OpenAI is None:
-            raise SystemExit("Biblioteca `openai` não instalada. Execute `pip install openai`.\n" "Use --dry-run para testar sem API.")
+            raise SystemExit(
+                "Biblioteca `openai` não instalada. Execute `pip install -r requirements.txt`\n"
+                "Use --dry-run para testar sem API."
+            )
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise SystemExit("OPENAI_API_KEY não configurada no ambiente.")
