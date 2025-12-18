@@ -1337,16 +1337,24 @@ app.post("/admin/knowledge/import", async (req, res) => {
         await ensureCollectionCleared();
 
         const fileContent = await fs.promises.readFile(kbPath, 'utf-8');
-        const parsed = JSON.parse(fileContent);
+        const sanitizedContent = fileContent.replace(/\s+$/u, '');
+        const parsed = JSON.parse(sanitizedContent);
+        const docsFromFile = Array.isArray(parsed)
+          ? parsed
+          : Array.isArray(parsed?.documents)
+            ? parsed.documents
+            : Array.isArray(parsed?.data)
+              ? parsed.data
+              : Object.values(parsed || {}).find(Array.isArray) || null;
 
-        if (!Array.isArray(parsed) || parsed.length === 0) {
+        if (!Array.isArray(docsFromFile) || docsFromFile.length === 0) {
           return res.status(400).json({
             success: false,
             error: 'Arquivo kb_index.json não contém um array de documentos válido'
           });
         }
 
-        docsPayload = parsed;
+        docsPayload = docsFromFile;
         console.log(`[IMPORT-KNOWLEDGE] Corpo vazio; usando kb_index.json com ${docsPayload.length} documentos.`);
       } catch (err) {
         console.error('[IMPORT-KNOWLEDGE] Falha ao carregar kb_index.json:', err);
