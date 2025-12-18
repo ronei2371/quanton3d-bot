@@ -1298,6 +1298,12 @@ app.post("/admin/knowledge/import", async (req, res) => {
         ? req.body
         : null;
 
+    const normalizeEmbedding = (candidate) => {
+      if (!Array.isArray(candidate)) return null;
+      const numeric = candidate.map(value => Number(value)).filter(value => Number.isFinite(value));
+      return numeric.length > 0 ? numeric : null;
+    };
+
     if (!Array.isArray(docsPayload) || docsPayload.length === 0) {
       return res.status(400).json({
         success: false,
@@ -1316,6 +1322,8 @@ app.post("/admin/knowledge/import", async (req, res) => {
       const content = String(item.content || '').trim();
       const tags = Array.isArray(item.tags) ? item.tags : [];
       const source = item.source || 'admin_import';
+      const legacyId = item.id || item.legacyId || null;
+      const embedding = normalizeEmbedding(item.embedding);
 
       if (!title || !content) {
         const error = 'Título e conteúdo são obrigatórios';
@@ -1326,7 +1334,21 @@ app.post("/admin/knowledge/import", async (req, res) => {
 
       try {
         console.log(`[IMPORT-KNOWLEDGE] (${i + 1}/${docsPayload.length}) Importando: ${title}`);
-        const result = await addDocument(title, content, source, tags);
+        if (Array.isArray(item.embedding) && !embedding) {
+          console.warn(`[IMPORT-KNOWLEDGE] Embedding inválido no documento ${i + 1}; será gerado automaticamente.`);
+        }
+
+        const result = await addDocument(
+          title,
+          content,
+          source,
+          tags,
+          {
+            legacyId,
+            upsert: Boolean(legacyId),
+            ...(embedding ? { embedding } : {})
+          }
+        );
         imported.push({ index: i, title, documentId: result.documentId.toString() });
       } catch (err) {
         console.error(`[IMPORT-KNOWLEDGE] Falha ao importar "${title}": ${err.message}`);

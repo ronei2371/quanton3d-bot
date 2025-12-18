@@ -233,7 +233,7 @@ export function formatContext(results) {
 }
 
 // Adicionar novo documento ao RAG (usado na aprovacao de sugestoes)
-export async function addDocument(title, content, source = 'suggestion', tags = []) {
+export async function addDocument(title, content, source = 'suggestion', tags = [], options = {}) {
   if (!isConnected()) {
     throw new Error('MongoDB nao conectado');
   }
@@ -250,32 +250,74 @@ export async function addDocument(title, content, source = 'suggestion', tags = 
       : [];
     console.log(`📝 [ADD-DOC] Tags: ${normalizedTags.join(', ') || 'nenhuma'}`);
 
-    // Gerar embedding do conteudo
-    console.log(`🔄 [ADD-DOC] Gerando embedding...`);
-    const embedding = await generateEmbedding(content);
-    console.log(`✅ [ADD-DOC] Embedding gerado! Dimensao: ${embedding.length}`);
+    const providedEmbedding = Array.isArray(options.embedding) && options.embedding.length > 0
+      ? options.embedding.map(value => Number(value)).filter(value => Number.isFinite(value))
+      : null;
+
+    if (providedEmbedding && providedEmbedding.length !== options.embedding.length) {
+      console.warn('⚠️ [ADD-DOC] Embedding informado contém valores inválidos e foi normalizado.');
+    }
+
+    // Gerar ou reaproveitar embedding do conteudo
+    let embedding;
+    if (providedEmbedding && providedEmbedding.length > 0) {
+      embedding = providedEmbedding;
+      console.log(`🔄 [ADD-DOC] Usando embedding fornecido (${embedding.length} dimensoes)`);
+    } else {
+      console.log(`🔄 [ADD-DOC] Gerando embedding...`);
+      embedding = await generateEmbedding(content);
+      console.log(`✅ [ADD-DOC] Embedding gerado! Dimensao: ${embedding.length}`);
+    }
 
     // Inserir no MongoDB
     const collection = getDocumentsCollection();
     console.log(`💾 [ADD-DOC] Salvando no MongoDB...`);
-    const result = await collection.insertOne({
+
+    const now = new Date();
+    const baseDocument = {
       title,
       content,
       source,
       tags: normalizedTags,
       embedding,
       embeddingModel: EMBEDDING_MODEL,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
+      createdAt: now,
+      updatedAt: now,
+      ...(options.legacyId ? { legacyId: options.legacyId } : {})
+    };
 
-    documentsCount++;
-    console.log(`✅ [ADD-DOC] Documento salvo! ID: ${result.insertedId}`);
-    logRAG(`Documento adicionado com sucesso: ${result.insertedId}`, 'INFO');
+    let documentId = null;
+    let inserted = false;
+
+    if (options.upsert && options.legacyId) {
+      const existing = await collection.findOne({ legacyId: options.legacyId }, { projection: { _id: 1, createdAt: 1 } });
+      const result = await collection.updateOne(
+        { legacyId: options.legacyId },
+        {
+          $set: { ...baseDocument, createdAt: existing?.createdAt || baseDocument.createdAt },
+          $setOnInsert: { createdAt: existing?.createdAt || baseDocument.createdAt }
+        },
+        { upsert: true }
+      );
+
+      documentId = existing?._id || result.upsertedId || options.legacyId;
+      inserted = Boolean(result.upsertedId);
+    } else {
+      const result = await collection.insertOne(baseDocument);
+      documentId = result.insertedId;
+      inserted = true;
+    }
+
+    if (inserted) {
+      documentsCount++;
+    }
+
+    console.log(`✅ [ADD-DOC] Documento salvo! ID: ${documentId}`);
+    logRAG(`Documento adicionado com sucesso: ${documentId}`, 'INFO');
 
     return {
       success: true,
-      documentId: result.insertedId,
+      documentId,
       title
     };
   } catch (err) {
