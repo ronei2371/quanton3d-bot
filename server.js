@@ -3398,7 +3398,7 @@ async function searchKnowledgeWithPrintParams(query, entities, questionType, top
 
 // GET /params/resins - Listar todas as resinas (protegido por token admin)
 app.get("/params/resins", (req, res) => {
-  const auth = req.query?.auth;
+  const auth = getAdminAuth(req);
 
   if (!isAdminAuthorized(auth)) {
     return res.status(401).json({ success: false, error: 'Não autorizado' });
@@ -3440,9 +3440,9 @@ app.get("/params/printers", (req, res) => {
 // GET /params/profiles - Buscar perfis com filtros
 app.get("/params/profiles", (req, res) => {
   const { resinId, printerId, status } = req.query;
-  
+
   let profiles = printParametersDB.profiles;
-  
+
   if (resinId) {
     profiles = profiles.filter(p => p.resinId === resinId);
   }
@@ -3452,11 +3452,28 @@ app.get("/params/profiles", (req, res) => {
   if (status) {
     profiles = profiles.filter(p => p.status === status);
   }
-  
+
+  const total = profiles.length;
+  const hasPagination = req.query.page != null || req.query.limit != null;
+  let page = 1;
+  let limit = null;
+
+  if (hasPagination) {
+    page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const parsedLimit = parseInt(req.query.limit, 10);
+    limit = Number.isFinite(parsedLimit) ? Math.max(parsedLimit, 1) : 50;
+    const start = (page - 1) * limit;
+    profiles = profiles.slice(start, start + limit);
+  }
+
   res.json({
     success: true,
     profiles,
-    count: profiles.length
+    count: profiles.length,
+    total,
+    page,
+    limit,
+    totalPages: limit ? Math.ceil(total / limit) : 1
   });
 });
 
@@ -3521,7 +3538,7 @@ app.get("/params/stats", (req, res) => {
 
 // Helper function to get admin auth from body or query (for consistency)
 function getAdminAuth(req) {
-  return req.body?.auth || req.query?.auth;
+  return req.body?.auth || req.query?.auth || extractAdminToken(req);
 }
 
 // POST /params/resins - Adicionar nova resina (admin)
