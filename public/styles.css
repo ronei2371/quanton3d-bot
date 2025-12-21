@@ -245,10 +245,11 @@ button.ghost {
 
 .quick-actions {
   display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 8px;
   justify-content: center;
-  margin-top: 120px;
+  margin-top: 240px;
   padding: 24px 0 40px;
 }
 
