@@ -3474,14 +3474,8 @@ async function searchKnowledgeWithPrintParams(query, entities, questionType, top
   return results;
 }
 
-// GET /params/resins - Listar todas as resinas (protegido por token admin)
+// GET /params/resins - Listar todas as resinas
 app.get("/params/resins", (req, res) => {
-  const auth = getAdminAuth(req);
-
-  if (!isAdminAuthorized(auth)) {
-    return res.status(401).json({ success: false, error: 'Não autorizado' });
-  }
-
   res.json({
     success: true,
     resins: printParametersDB.resins,
@@ -3492,6 +3486,7 @@ app.get("/params/resins", (req, res) => {
 // GET /params/printers - Listar todas as impressoras
 app.get("/params/printers", (req, res) => {
   const { resinId } = req.query;
+  const allPrinters = printParametersDB.printers;
   
   if (resinId) {
     // Filtrar impressoras que têm perfil para esta resina
@@ -3503,14 +3498,16 @@ app.get("/params/printers", (req, res) => {
     const filteredPrinters = printParametersDB.printers.filter(p => printerIds.has(p.id));
     res.json({
       success: true,
-      printers: filteredPrinters,
-      count: filteredPrinters.length
+      printers: allPrinters,
+      count: allPrinters.length,
+      matchingPrinters: filteredPrinters,
+      matchingCount: filteredPrinters.length
     });
   } else {
     res.json({
       success: true,
-      printers: printParametersDB.printers,
-      count: printParametersDB.printers.length
+      printers: allPrinters,
+      count: allPrinters.length
     });
   }
 });
