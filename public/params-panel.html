@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Painel de Parâmetros • Quanton3D</title>
+    <style>
+      :root {
+        --electric-blue: #2f80ff;
+        --electric-blue-dark: #1e5ed6;
+        --electric-blue-soft: rgba(47, 128, 255, 0.12);
+        --bg: #f4f7fb;
+        --card: #ffffff;
+        --text: #0f172a;
+        --muted: #5f6b7a;
+        --border: #e2e8f0;
+        --ok: #16a34a;
+        --soon: #1e63d6;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 32px 20px 60px;
+      }
+
+      header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      header h1 {
+        font-size: 28px;
+        margin: 0 0 6px;
+      }
+
+      header p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .stats {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .stat-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px 16px;
+        min-width: 140px;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+      }
+
+      .stat-card span {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 6px;
+      }
+
+      .stat-card strong {
+        font-size: 20px;
+      }
+
+      .filters {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 16px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+      }
+
+      .filters label {
+        font-size: 12px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 6px;
+        display: block;
+      }
+
+      .filters select,
+      .filters input {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #fff;
+        font-size: 14px;
+      }
+
+      .actions-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+
+      .btn {
+        border: none;
+        background: var(--electric-blue);
+        color: #fff;
+        padding: 10px 16px;
+        font-weight: 600;
+        font-size: 14px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+        box-shadow: 0 10px 16px rgba(47, 128, 255, 0.2);
+      }
+
+      .btn.secondary {
+        background: transparent;
+        color: var(--electric-blue);
+        border: 1px solid var(--electric-blue);
+        box-shadow: none;
+      }
+
+      .btn:hover {
+        background: var(--electric-blue-dark);
+        transform: translateY(-1px);
+      }
+
+      .btn.secondary:hover {
+        background: var(--electric-blue-soft);
+        color: var(--electric-blue-dark);
+      }
+
+      .table-wrap {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 18px 32px rgba(15, 23, 42, 0.08);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 10px;
+        padding: 6px 16px 16px;
+      }
+
+      thead th {
+        background: var(--electric-blue);
+        color: #fff;
+        text-align: left;
+        padding: 14px 12px;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      thead th:first-child {
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+      }
+
+      thead th:last-child {
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
+      }
+
+      tbody tr {
+        background: #fff;
+        box-shadow: 0 12px 20px rgba(15, 23, 42, 0.05);
+      }
+
+      tbody td {
+        padding: 12px;
+        font-size: 14px;
+        border-top: 1px solid transparent;
+        border-bottom: 1px solid transparent;
+      }
+
+      tbody tr td:first-child {
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+      }
+
+      tbody tr td:last-child {
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        border: 1px solid transparent;
+      }
+
+      .status.ok {
+        background: rgba(22, 163, 74, 0.12);
+        color: var(--ok);
+        border-color: rgba(22, 163, 74, 0.3);
+      }
+
+      .status.coming {
+        background: var(--electric-blue-soft);
+        color: var(--soon);
+        border-color: rgba(47, 128, 255, 0.35);
+      }
+
+      .params {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .params span {
+        background: #f1f5f9;
+        padding: 4px 8px;
+        border-radius: 8px;
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .action-buttons .btn {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+
+      .pagination {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 12px 16px 16px;
+        align-items: center;
+        flex-wrap: wrap;
+        color: var(--muted);
+      }
+
+      .pagination span {
+        font-size: 13px;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 24px;
+        color: var(--muted);
+      }
+
+      @media (max-width: 900px) {
+        table {
+          display: block;
+          padding: 0;
+        }
+
+        thead {
+          display: none;
+        }
+
+        tbody,
+        tbody tr,
+        tbody td {
+          display: block;
+          width: 100%;
+        }
+
+        tbody tr {
+          margin: 14px 16px;
+          border-radius: 16px;
+        }
+
+        tbody td {
+          padding: 10px 14px;
+          border-radius: 0;
+        }
+
+        tbody td::before {
+          content: attr(data-label);
+          display: block;
+          font-size: 11px;
+          color: var(--muted);
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          margin-bottom: 4px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <div>
+          <h1>Painel de Parâmetros Quanton3D</h1>
+          <p>Filtros inteligentes para navegar pelos 458 perfis com clareza em qualquer tela.</p>
+        </div>
+        <div class="stats" id="stats"></div>
+      </header>
+
+      <section class="filters">
+        <div>
+          <label for="resin-select">Resina</label>
+          <select id="resin-select">
+            <option value="">Todas as resinas</option>
+          </select>
+        </div>
+        <div>
+          <label for="printer-select">Impressora</label>
+          <select id="printer-select">
+            <option value="">Todas as impressoras</option>
+          </select>
+        </div>
+        <div>
+          <label for="status-select">Status</label>
+          <select id="status-select">
+            <option value="">Todos</option>
+            <option value="ok">Ativo</option>
+            <option value="coming_soon">Em Breve</option>
+          </select>
+        </div>
+        <div>
+          <label for="search-input">Busca rápida</label>
+          <input id="search-input" type="text" placeholder="Resina, marca ou modelo" />
+        </div>
+      </section>
+
+      <div class="actions-bar">
+        <div id="count-info">Carregando perfis...</div>
+        <div>
+          <button class="btn" id="refresh-button">Atualizar</button>
+          <button class="btn secondary" id="clear-button">Limpar filtros</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Resina</th>
+              <th>Impressora</th>
+              <th>Parâmetros</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="profiles-body"></tbody>
+        </table>
+        <div class="empty-state" id="empty-state" hidden>Nenhum perfil encontrado.</div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE = window.location.origin;
+      const state = {
+        resins: [],
+        printers: [],
+        profiles: [],
+        page: 1,
+        limit: 25,
+        total: 0
+      };
+
+      const resinSelect = document.getElementById("resin-select");
+      const printerSelect = document.getElementById("printer-select");
+      const statusSelect = document.getElementById("status-select");
+      const searchInput = document.getElementById("search-input");
+      const profilesBody = document.getElementById("profiles-body");
+      const countInfo = document.getElementById("count-info");
+      const emptyState = document.getElementById("empty-state");
+      const pagination = document.getElementById("pagination");
+
+      const statusLabels = {
+        ok: "Ativo",
+        coming_soon: "Em Breve"
+      };
+
+      const formatParams = (params = {}) => {
+        const entries = [
+          ["Camada", params.layerHeightMm && `${params.layerHeightMm}mm`],
+          ["Exposição", params.exposureTimeS && `${params.exposureTimeS}s`],
+          ["Base", params.baseExposureTimeS && `${params.baseExposureTimeS}s`],
+          ["Cam. base", params.baseLayers && Math.round(params.baseLayers)],
+          ["UV", params.uvPower || null]
+        ].filter(([, value]) => value);
+
+        return entries.length
+          ? entries.map(([label, value]) => `<span>${label}: ${value}</span>`).join("")
+          : "<span>Parâmetros em revisão</span>";
+      };
+
+      const renderProfiles = () => {
+        const search = searchInput.value.trim().toLowerCase();
+        const filtered = state.profiles.filter((profile) => {
+          if (!search) return true;
+          return (
+            profile.resinName.toLowerCase().includes(search) ||
+            profile.brand.toLowerCase().includes(search) ||
+            profile.model.toLowerCase().includes(search)
+          );
+        });
+
+        profilesBody.innerHTML = "";
+        emptyState.hidden = filtered.length > 0;
+
+        filtered.forEach((profile) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td data-label="Resina">${profile.resinName}</td>
+            <td data-label="Impressora">${profile.brand} ${profile.model}</td>
+            <td data-label="Parâmetros">
+              <div class="params">${formatParams(profile.params)}</div>
+            </td>
+            <td data-label="Status">
+              <span class="status ${profile.status === "coming_soon" ? "coming" : "ok"}">
+                ${statusLabels[profile.status] || "Ativo"}
+              </span>
+            </td>
+            <td data-label="Ações">
+              <div class="action-buttons">
+                <button class="btn" data-copy="${profile.id}">Copiar</button>
+                <button class="btn secondary" data-detail="${profile.id}">Detalhes</button>
+              </div>
+            </td>
+          `;
+          profilesBody.appendChild(row);
+        });
+      };
+
+      const renderPagination = () => {
+        const totalPages = Math.max(Math.ceil(state.total / state.limit), 1);
+        pagination.innerHTML = `
+          <span>Página ${state.page} de ${totalPages}</span>
+          <button class="btn secondary" ${state.page === 1 ? "disabled" : ""} id="prev-page">Anterior</button>
+          <button class="btn" ${state.page >= totalPages ? "disabled" : ""} id="next-page">Próxima</button>
+        `;
+
+        const prevButton = document.getElementById("prev-page");
+        const nextButton = document.getElementById("next-page");
+
+        if (prevButton) {
+          prevButton.addEventListener("click", () => {
+            if (state.page > 1) {
+              state.page -= 1;
+              loadProfiles();
+            }
+          });
+        }
+
+        if (nextButton) {
+          nextButton.addEventListener("click", () => {
+            const totalPagesCalc = Math.ceil(state.total / state.limit);
+            if (state.page < totalPagesCalc) {
+              state.page += 1;
+              loadProfiles();
+            }
+          });
+        }
+      };
+
+      const updateCount = () => {
+        countInfo.textContent = `${state.total} perfis encontrados`;
+      };
+
+      const loadStats = async () => {
+        try {
+          const response = await fetch(`${API_BASE}/params/stats`);
+          const data = await response.json();
+          if (!data.success) return;
+
+          const stats = data.stats;
+          const statsEl = document.getElementById("stats");
+          statsEl.innerHTML = `
+            <div class="stat-card">
+              <span>Resinas</span>
+              <strong>${stats.totalResins}</strong>
+            </div>
+            <div class="stat-card">
+              <span>Impressoras</span>
+              <strong>${stats.totalPrinters}</strong>
+            </div>
+            <div class="stat-card">
+              <span>Perfis</span>
+              <strong>${stats.totalProfiles}</strong>
+            </div>
+            <div class="stat-card">
+              <span>Em Breve</span>
+              <strong>${stats.comingSoonProfiles}</strong>
+            </div>
+          `;
+        } catch (error) {
+          console.error("Erro ao carregar estatísticas", error);
+        }
+      };
+
+      const loadResins = async () => {
+        const response = await fetch(`${API_BASE}/params/resins`);
+        const data = await response.json();
+        if (!data.success) return;
+        state.resins = data.resins;
+        resinSelect.innerHTML = `<option value="">Todas as resinas</option>` +
+          data.resins.map((resin) => `<option value="${resin.id}">${resin.name}</option>`).join("");
+      };
+
+      const loadPrinters = async (resinId = "") => {
+        const response = await fetch(
+          resinId ? `${API_BASE}/params/printers?resinId=${resinId}` : `${API_BASE}/params/printers`
+        );
+        const data = await response.json();
+        if (!data.success) return;
+        const printers = resinId ? data.matchingPrinters : data.printers;
+        state.printers = printers;
+        printerSelect.innerHTML = `<option value="">Todas as impressoras</option>` +
+          printers.map((printer) => `<option value="${printer.id}">${printer.brand} ${printer.model}</option>`).join("");
+      };
+
+      const loadProfiles = async () => {
+        const params = new URLSearchParams();
+        if (resinSelect.value) params.append("resinId", resinSelect.value);
+        if (printerSelect.value) params.append("printerId", printerSelect.value);
+        if (statusSelect.value) params.append("status", statusSelect.value);
+        params.append("page", state.page);
+        params.append("limit", state.limit);
+
+        const response = await fetch(`${API_BASE}/params/profiles?${params.toString()}`);
+        const data = await response.json();
+        if (!data.success) return;
+        state.profiles = data.profiles;
+        state.total = data.total;
+        updateCount();
+        renderProfiles();
+        renderPagination();
+      };
+
+      const resetFilters = () => {
+        resinSelect.value = "";
+        printerSelect.value = "";
+        statusSelect.value = "";
+        searchInput.value = "";
+        state.page = 1;
+        loadPrinters();
+        loadProfiles();
+      };
+
+      document.getElementById("refresh-button").addEventListener("click", () => {
+        loadProfiles();
+        loadStats();
+      });
+
+      document.getElementById("clear-button").addEventListener("click", resetFilters);
+
+      resinSelect.addEventListener("change", () => {
+        state.page = 1;
+        loadPrinters(resinSelect.value);
+        loadProfiles();
+      });
+
+      printerSelect.addEventListener("change", () => {
+        state.page = 1;
+        loadProfiles();
+      });
+
+      statusSelect.addEventListener("change", () => {
+        state.page = 1;
+        loadProfiles();
+      });
+
+      searchInput.addEventListener("input", () => {
+        renderProfiles();
+      });
+
+      profilesBody.addEventListener("click", async (event) => {
+        const copyId = event.target.getAttribute("data-copy");
+        const detailId = event.target.getAttribute("data-detail");
+        if (copyId) {
+          const profile = state.profiles.find((item) => item.id === copyId);
+          if (!profile) return;
+          const text = `Resina: ${profile.resinName}\nImpressora: ${profile.brand} ${profile.model}\nStatus: ${statusLabels[profile.status] || "Ativo"}\nParâmetros: ${Object.entries(profile.params || {})
+            .map(([key, value]) => `${key}: ${value}`)
+            .join(", ")}`;
+          await navigator.clipboard.writeText(text);
+          event.target.textContent = "Copiado!";
+          setTimeout(() => {
+            event.target.textContent = "Copiar";
+          }, 1500);
+        }
+
+        if (detailId) {
+          const profile = state.profiles.find((item) => item.id === detailId);
+          if (!profile) return;
+          alert(
+            `${profile.resinName} • ${profile.brand} ${profile.model}\n\nParâmetros:\n${JSON.stringify(
+              profile.params,
+              null,
+              2
+            )}`
+          );
+        }
+      });
+
+      loadStats();
+      loadResins();
+      loadPrinters();
+      loadProfiles();
+    </script>
+  </body>
+</html>
