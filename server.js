@@ -1253,10 +1253,11 @@ app.get("/metrics/client-history", async (req, res) => {
 
 app.post("/add-knowledge", async (req, res) => {
   try {
-    const { auth, title, content } = req.body;
+    const { title, content } = req.body;
+    const auth = extractAdminToken(req);
 
     // Autenticação
-    if (auth !== 'quanton3d_admin_secret') {
+    if (!isAdminAuthorized(auth)) {
       return res.status(401).json({ success: false, error: 'Não autorizado' });
     }
 
@@ -2017,7 +2018,7 @@ app.post("/api/contact", async (req, res) => {
 // Rota para listar mensagens de contato (admin)
 app.get("/api/contact", async (req, res) => {
   try {
-    const { auth } = req.query;
+    const { auth, startDate, endDate, resolved } = req.query;
 
     // Autenticacao
     if (auth !== 'quanton3d_admin_secret') {
@@ -2025,8 +2026,33 @@ app.get("/api/contact", async (req, res) => {
     }
 
     const messagesCollection = getMessagesCollection();
+    const query = {};
+
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) {
+        const start = new Date(startDate);
+        if (!Number.isNaN(start.valueOf())) {
+          query.createdAt.$gte = start;
+        }
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        if (!Number.isNaN(end.valueOf())) {
+          query.createdAt.$lte = end;
+        }
+      }
+      if (Object.keys(query.createdAt).length === 0) {
+        delete query.createdAt;
+      }
+    }
+
+    if (resolved !== undefined) {
+      query.resolved = resolved === 'true';
+    }
+
     const messages = await messagesCollection
-      .find({})
+      .find(query)
       .sort({ createdAt: -1 })
       .limit(100)
       .toArray();
@@ -2059,7 +2085,13 @@ app.put("/api/contact/:id", async (req, res) => {
     
     const result = await messagesCollection.updateOne(
       { _id: new ObjectId(id) },
-      { $set: { resolved: resolved, resolvedAt: resolved ? new Date() : null } }
+      {
+        $set: {
+          resolved: resolved,
+          resolvedAt: resolved ? new Date() : null,
+          updatedAt: new Date()
+        }
+      }
     );
 
     if (result.modifiedCount > 0) {
@@ -2477,6 +2509,7 @@ app.put("/api/gallery/:id", async (req, res) => {
     }
 
     const galleryCollection = getGalleryCollection();
+    const { ObjectId } = await import('mongodb');
     const entry = await galleryCollection.findOne({ _id: new ObjectId(id) });
 
     if (!entry) {
@@ -2710,6 +2743,51 @@ app.get("/api/visual-knowledge", async (req, res) => {
     });
   } catch (err) {
     console.error('❌ [VISUAL-RAG] Erro ao listar conhecimento visual:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// PUT /api/visual-knowledge/:id - Atualizar conhecimento visual (admin)
+app.put("/api/visual-knowledge/:id", async (req, res) => {
+  try {
+    const { auth } = req.query;
+    const { id } = req.params;
+    const { defectType, diagnosis, solution } = req.body;
+
+    if (auth !== 'quanton3d_admin_secret') {
+      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    }
+
+    if (defectType === undefined && diagnosis === undefined && solution === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nenhum campo para atualizar'
+      });
+    }
+
+    const { ObjectId } = await import('mongodb');
+    const visualCollection = getVisualKnowledgeCollection();
+    const updateData = { updatedAt: new Date() };
+
+    if (defectType !== undefined) updateData.defectType = defectType;
+    if (diagnosis !== undefined) updateData.diagnosis = diagnosis;
+    if (solution !== undefined) updateData.solution = solution;
+
+    const result = await visualCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Registro nao encontrado' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Conhecimento visual atualizado com sucesso.'
+    });
+  } catch (err) {
+    console.error('❌ [VISUAL-RAG] Erro ao atualizar conhecimento visual:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
