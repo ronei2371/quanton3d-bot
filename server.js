@@ -10,6 +10,7 @@ import OpenAI from "openai";
 import multer from "multer";
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from "url";
 // import rateLimit from "express-rate-limit"; // REMOVIDO - causando erro ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
 import { initializeRAG, searchKnowledge, formatContext, addDocument, listDocuments, deleteDocument, updateDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding, clearKnowledgeCollection } from './rag-search.js';
 import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection, getSuggestionsCollection, getPartnersCollection, getDocumentsCollection } from './db.js';
@@ -26,6 +27,10 @@ import {
 } from './ai-intelligence-system.js';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const publicDir = path.join(__dirname, 'public');
 
 const ADMIN_API_TOKEN = process.env.ADMIN_API_TOKEN || process.env.ADMIN_SECRET || 'quanton3d_admin_secret';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -60,6 +65,7 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use('/public', express.static(publicDir));
 
 // Garantir UTF-8 em todas as respostas
 app.use((req, res, next) => {
@@ -110,6 +116,11 @@ const siteVisits = [];
 // Rota principal de teste
 app.get("/", (req, res) => {
   res.send("🚀 Quanton3D IA Online! Backend ativo e operacional.");
+});
+
+// Painel de parâmetros (UI)
+app.get("/params-panel", (req, res) => {
+  res.sendFile(path.join(publicDir, 'params-panel.html'));
 });
 
 // Rota de comunicação com o robô (texto)
