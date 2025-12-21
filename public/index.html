@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quanton3D IA • Home</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Quanton3D IA</p>
+          <h1>Central de respostas da IA</h1>
+          <p class="subtitle">
+            Pergunte e acompanhe a resposta em tempo real. O assistente prioriza contexto
+            técnico e orientações oficiais da Quanton3D.
+          </p>
+        </div>
+        <div class="brand">
+          <span class="brand-mark">Q</span>
+          <span class="brand-name">Quanton3D</span>
+        </div>
+      </header>
+
+      <section class="response-area" aria-label="Resposta do bot">
+        <div class="response-header">
+          <span class="badge">BOT RESPONDE</span>
+          <span class="status" id="response-status">Aguardando sua pergunta</span>
+        </div>
+        <div class="response-text" id="response-text" aria-live="polite"></div>
+      </section>
+
+      <section class="interaction-block">
+        <div class="robot-card">
+          <div class="robot-media" aria-live="polite">
+            <img
+              id="elio-image"
+              src="/elio.png"
+              alt="Elio, assistente da Quanton3D"
+              class="robot-image"
+            />
+            <video
+              id="elio-video"
+              class="robot-video"
+              muted
+              loop
+              playsinline
+              preload="auto"
+            >
+              <source src="/elio-pensando.mp4" type="video/mp4" />
+            </video>
+          </div>
+          <div class="robot-info">
+            <h2>Envie sua pergunta</h2>
+            <p>
+              Digite sua dúvida abaixo. Enquanto o Elio processa, o avatar entra em modo
+              de pensamento.
+            </p>
+          </div>
+        </div>
+
+        <form id="ask-form" class="ask-form">
+          <label for="user-input">Sua mensagem</label>
+          <textarea
+            id="user-input"
+            name="message"
+            placeholder="Ex.: Qual o tempo de exposição ideal para a resina 70/30?"
+            rows="4"
+            required
+          ></textarea>
+          <div class="action-row">
+            <button type="submit" class="primary">Enviar pergunta</button>
+            <button type="button" class="secondary" id="clear-response">Limpar resposta</button>
+            <button type="button" class="ghost" id="copy-response">Copiar resposta</button>
+          </div>
+        </form>
+
+        <div class="quick-actions">
+          <button class="chip" data-prompt="Quais parâmetros recomendados para resina rígida?">
+            Parâmetros de resina rígida
+          </button>
+          <button class="chip" data-prompt="Como evitar falhas de adesão na primeira camada?">
+            Falhas na primeira camada
+          </button>
+          <button class="chip" data-prompt="Qual resina Quanton3D é indicada para odontologia?">
+            Resina para odontologia
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <script src="/main.js"></script>
+  </body>
+</html>
