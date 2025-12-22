@@ -14,11 +14,19 @@ const ParametrosSchema = new mongoose.Schema({
     baseExposureTime: String,
     transitionLayers: String,
     uvOffDelay: String,
+    lowerLiftDistance: {
+      value1: String,
+      value2: String
+    },
     liftDistance: {
       value1: String,
       value2: String
     },
     liftSpeed: {
+      value1: String,
+      value2: String
+    },
+    lowerRetractSpeed: {
       value1: String,
       value2: String
     },

@@ -2,6 +2,13 @@
 // Gerencia conexao unica com o banco de dados
 
 import { MongoClient } from 'mongodb';
+import mongoose from 'mongoose';
+import {
+  Parametros,
+  Sugestoes,
+  Conversas,
+  Metricas
+} from './models/schemas.js';
 
 // URI do MongoDB (OBRIGATORIO via variavel de ambiente)
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -14,6 +21,7 @@ if (!MONGODB_URI) {
 
 let client = null;
 let db = null;
+let mongooseConnected = false;
 
 // Conectar ao MongoDB
 export async function connectToMongo() {
@@ -24,6 +32,11 @@ export async function connectToMongo() {
 
   try {
     console.log('[MongoDB] Conectando ao banco de dados...');
+    if (!mongooseConnected) {
+      await mongoose.connect(MONGODB_URI, { dbName: DB_NAME });
+      mongooseConnected = true;
+      console.log('[MongoDB] Conexao Mongoose estabelecida');
+    }
     client = new MongoClient(MONGODB_URI);
     await client.connect();
     db = client.db(DB_NAME);
@@ -111,6 +124,11 @@ export async function closeMongo() {
     db = null;
     console.log('[MongoDB] Conexao fechada');
   }
+  if (mongooseConnected) {
+    await mongoose.disconnect();
+    mongooseConnected = false;
+    console.log('[MongoDB] Conexao Mongoose fechada');
+  }
 }
 
 // Verificar status da conexao
@@ -128,6 +146,17 @@ export default {
   getSuggestionsCollection,
   getPartnersCollection,
   getPrintParametersCollection,
+  Parametros,
+  Sugestoes,
+  Conversas,
+  Metricas,
   closeMongo,
   isConnected
+};
+
+export {
+  Parametros,
+  Sugestoes,
+  Conversas,
+  Metricas
 };
