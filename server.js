@@ -13,7 +13,7 @@ import path from 'path';
 import { fileURLToPath } from "url";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
-// import rateLimit from "express-rate-limit"; // REMOVIDO - causando erro ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
+import rateLimit from "express-rate-limit";
 import { initializeRAG, searchKnowledge, formatContext, addDocument, listDocuments, deleteDocument, updateDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding, clearKnowledgeCollection } from './rag-search.js';
 import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection, getPartnersCollection, getDocumentsCollection, Parametros, Sugestoes } from './db.js';
 import { v2 as cloudinary } from 'cloudinary';
@@ -35,6 +35,7 @@ const __dirname = path.dirname(__filename);
 const publicDir = path.join(__dirname, 'public');
 
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const RAG_EMBEDDING_MODEL = process.env.RAG_EMBEDDING_MODEL || 'text-embedding-3-large';
@@ -73,6 +74,7 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
 console.log('🔧 Sistema configurado para usar APENAS MongoDB para persistencia');
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -84,26 +86,163 @@ app.use((req, res, next) => {
   next();
 });
 
-// Login administrativo com JWT
-app.post("/admin/login", (req, res) => {
-  if (!ADMIN_SECRET || !ADMIN_JWT_SECRET) {
-    return res.status(500).json({ success: false, message: 'Configuração de admin não disponível.' });
-  }
-
-  const { password } = req.body || {};
-  if (!password) {
-    return res.status(400).json({ success: false, message: 'Senha obrigatória.' });
-  }
-  if (password !== ADMIN_SECRET) {
-    return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
-  }
-
-  const token = jwt.sign({ role: 'admin' }, ADMIN_JWT_SECRET, { expiresIn: '30m' });
-  return res.json({ success: true, token, expiresIn: 1800 });
+const authRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Muitas tentativas. Tente novamente em 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
-// Rate limiting REMOVIDO - causava erro ERR_ERL_UNEXPECTED_X_FORWARDED_FOR no Render
-// TODO: Reimplementar com configuração correta para proxy reverso
+const generateToken = (username, role = 'admin') => jwt.sign(
+  {
+    username,
+    role,
+    iat: Math.floor(Date.now() / 1000)
+  },
+  ADMIN_JWT_SECRET,
+  {
+    algorithm: 'HS256',
+    expiresIn: '24h'
+  }
+);
+
+const authenticateJWT = (req, res, next) => {
+  if (!ADMIN_JWT_SECRET) {
+    return res.status(500).json({ error: 'ADMIN_JWT_SECRET não configurado.' });
+  }
+  const authHeader = req.headers.authorization || '';
+  if (!authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      error: 'Token não fornecido',
+      code: 'NO_TOKEN'
+    });
+  }
+
+  const token = authHeader.slice(7);
+  if (!token || token.length > 500) {
+    return res.status(401).json({
+      error: 'Token inválido',
+      code: 'MALFORMED_TOKEN'
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(token, ADMIN_JWT_SECRET, {
+      algorithms: ['HS256'],
+      maxAge: '24h',
+      clockTolerance: 30
+    });
+
+    if (!decoded.username || !decoded.role) {
+      return res.status(403).json({
+        error: 'Token com payload inválido',
+        code: 'INVALID_PAYLOAD'
+      });
+    }
+
+    req.user = {
+      username: decoded.username,
+      role: decoded.role,
+      iat: decoded.iat,
+      exp: decoded.exp
+    };
+
+    return next();
+  } catch (err) {
+    console.error('[JWT Error]', err.name, err.message);
+
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        error: 'Token expirado',
+        code: 'TOKEN_EXPIRED',
+        expiredAt: err.expiredAt
+      });
+    }
+
+    if (err.name === 'JsonWebTokenError') {
+      return res.status(403).json({
+        error: 'Token inválido',
+        code: 'INVALID_TOKEN'
+      });
+    }
+
+    return res.status(403).json({
+      error: 'Falha na autenticação',
+      code: 'AUTH_FAILED'
+    });
+  }
+};
+
+const requireRole = (...allowedRoles) => (req, res, next) => {
+  if (!req.user || !allowedRoles.includes(req.user.role)) {
+    return res.status(403).json({
+      error: 'Acesso negado. Permissões insuficientes.',
+      code: 'FORBIDDEN',
+      required: allowedRoles
+    });
+  }
+  return next();
+};
+
+const isAdminTokenValid = (req) => {
+  if (!ADMIN_JWT_SECRET) {
+    return false;
+  }
+  const authHeader = req.headers.authorization || '';
+  if (!authHeader.startsWith('Bearer ')) {
+    return false;
+  }
+  const token = authHeader.slice(7);
+  if (!token || token.length > 500) {
+    return false;
+  }
+  try {
+    const decoded = jwt.verify(token, ADMIN_JWT_SECRET, {
+      algorithms: ['HS256'],
+      maxAge: '24h',
+      clockTolerance: 30
+    });
+    return Boolean(decoded?.role);
+  } catch (err) {
+    return false;
+  }
+};
+
+// Login administrativo com JWT
+app.post("/admin/login", authRateLimiter, async (req, res) => {
+  if (!ADMIN_SECRET || !ADMIN_JWT_SECRET) {
+    return res.status(500).json({ error: 'Configuração de admin não disponível.' });
+  }
+
+  const { username, password } = req.body || {};
+  if (!username || !password) {
+    return res.status(400).json({
+      error: 'Credenciais incompletas',
+      code: 'MISSING_CREDENTIALS'
+    });
+  }
+
+  const usernameMatch = username === ADMIN_USERNAME;
+  const passwordMatch = password === ADMIN_SECRET;
+
+  if (!usernameMatch || !passwordMatch) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return res.status(401).json({
+      error: 'Credenciais inválidas',
+      code: 'INVALID_CREDENTIALS'
+    });
+  }
+
+  const token = generateToken(username, 'admin');
+  console.log(`[AUTH] Login bem-sucedido: ${username} - ${new Date().toISOString()}`);
+
+  return res.json({
+    token,
+    expiresIn: '24h',
+    user: { username, role: 'admin' }
+  });
+});
 
 // Configuração do multer para upload de imagens
 const storage = multer.memoryStorage();
@@ -116,40 +255,6 @@ const upload = multer({
 const openai = new OpenAI({
   apiKey: OPENAI_API_KEY,
 });
-
-const authenticateJWT = (req, res, next) => {
-  if (!ADMIN_JWT_SECRET) {
-    return res.status(500).json({ success: false, message: 'ADMIN_JWT_SECRET não configurado.' });
-  }
-  const authHeader = req.headers.authorization || '';
-  if (!authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, message: 'Token Bearer não fornecido.' });
-  }
-  const token = authHeader.slice(7);
-  try {
-    req.admin = jwt.verify(token, ADMIN_JWT_SECRET);
-    return next();
-  } catch (err) {
-    return res.status(401).json({ success: false, message: 'Token inválido ou expirado.' });
-  }
-};
-
-const isAdminTokenValid = (req) => {
-  if (!ADMIN_JWT_SECRET) {
-    return false;
-  }
-  const authHeader = req.headers.authorization || '';
-  if (!authHeader.startsWith('Bearer ')) {
-    return false;
-  }
-  const token = authHeader.slice(7);
-  try {
-    jwt.verify(token, ADMIN_JWT_SECRET);
-    return true;
-  } catch (err) {
-    return false;
-  }
-};
 
 // Histórico de conversas por sessão
 const conversationHistory = new Map();
@@ -489,7 +594,7 @@ app.post("/api/custom-request", async (req, res) => {
 });
 
 // Rota para listar pedidos customizados (admin)
-app.get("/custom-requests", authenticateJWT, (req, res) => {
+app.get("/custom-requests", authenticateJWT, requireRole('admin'), (req, res) => {
   // Retornar pedidos customizados (mais recentes primeiro)
   res.json({
     success: true,
@@ -990,7 +1095,7 @@ WhatsApp: (31) 3271-6935`;
 });
 
 // Rota para obter métricas e analytics
-app.get("/metrics", authenticateJWT, async (req, res) => {
+app.get("/metrics", authenticateJWT, requireRole('admin'), async (req, res) => {
   // Calcular estatísticas em memoria
   const totalConversations = conversationMetrics.length;
   const totalRegistrations = userRegistrations.length;
@@ -1120,7 +1225,7 @@ app.get("/metrics", authenticateJWT, async (req, res) => {
 
 // Endpoint para detalhes de clientes por resina (CORRECAO 3)
 // Retorna lista de clientes que usam uma resina especifica e historico de conversas
-app.get("/metrics/resin-details", authenticateJWT, async (req, res) => {
+app.get("/metrics/resin-details", authenticateJWT, requireRole('admin'), async (req, res) => {
   const { resin } = req.query;
 
   if (!resin) {
@@ -1189,7 +1294,7 @@ app.get("/metrics/resin-details", authenticateJWT, async (req, res) => {
 
 // Endpoint para historico de um cliente especifico (CORRECAO 4)
 // Retorna duvidas, respostas e status de resolucao
-app.get("/metrics/client-history", authenticateJWT, async (req, res) => {
+app.get("/metrics/client-history", authenticateJWT, requireRole('admin'), async (req, res) => {
   const { clientKey } = req.query;
 
   if (!clientKey) {
@@ -1279,7 +1384,7 @@ app.get("/metrics/client-history", authenticateJWT, async (req, res) => {
   }
 });
 
-app.post("/add-knowledge", authenticateJWT, async (req, res) => {
+app.post("/add-knowledge", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { title, content } = req.body;
 
@@ -1307,7 +1412,7 @@ app.post("/add-knowledge", authenticateJWT, async (req, res) => {
 });
 
 // Rota administrativa para importação em lote de conhecimento
-app.post("/admin/knowledge/import", authenticateJWT, async (req, res) => {
+app.post("/admin/knowledge/import", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const bodyIsEmpty = () => {
       if (!req.body) return true;
@@ -1451,7 +1556,7 @@ app.post("/admin/knowledge/import", authenticateJWT, async (req, res) => {
 });
 
 // Rota administrativa para listar conhecimento com filtros e paginação
-app.get("/admin/knowledge/list", authenticateJWT, async (req, res) => {
+app.get("/admin/knowledge/list", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { tag, resin, printer, search } = req.query;
     const page = Math.max(parseInt(req.query.page) || 1, 1);
@@ -1500,7 +1605,7 @@ app.get("/admin/knowledge/list", authenticateJWT, async (req, res) => {
 });
 
 // Rota administrativa para remover conhecimento individual
-app.delete("/admin/knowledge/:id", authenticateJWT, async (req, res) => {
+app.delete("/admin/knowledge/:id", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -1522,7 +1627,7 @@ app.delete("/admin/knowledge/:id", authenticateJWT, async (req, res) => {
 
 // Rota para listar todos os documentos de conhecimento (para admin)
 // Aceita filtros opcionais: start (data inicio) e end (data fim)
-app.get("/api/knowledge", authenticateJWT, async (req, res) => {
+app.get("/api/knowledge", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { start, end } = req.query;
 
@@ -1558,7 +1663,7 @@ app.get("/api/knowledge", authenticateJWT, async (req, res) => {
 });
 
 // Rota para deletar documento de conhecimento (para admin)
-app.delete("/api/knowledge/:id", authenticateJWT, async (req, res) => {
+app.delete("/api/knowledge/:id", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -1579,7 +1684,7 @@ app.delete("/api/knowledge/:id", authenticateJWT, async (req, res) => {
 });
 
 // Rota para atualizar documento de conhecimento (para admin)
-app.put("/api/knowledge/:id", authenticateJWT, async (req, res) => {
+app.put("/api/knowledge/:id", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content } = req.body;
@@ -1605,7 +1710,7 @@ app.put("/api/knowledge/:id", authenticateJWT, async (req, res) => {
 });
 
 // Rota para listar sugestões (apenas para Ronei)
-app.get("/suggestions", authenticateJWT, async (req, res) => {
+app.get("/suggestions", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const mongoSuggestions = await Sugestoes.find({ status: 'pending' })
       .sort({ createdAt: -1 })
@@ -1637,7 +1742,7 @@ function logOperation(operation, details) {
 }
 
 // Rota para aprovar sugestão (com suporte a edição da resposta)
-app.put("/approve-suggestion/:id", authenticateJWT, async (req, res) => {
+app.put("/approve-suggestion/:id", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { editedAnswer } = req.body;
     const suggestionId = req.params.id;
@@ -1741,7 +1846,7 @@ ${suggestion.suggestion}`;
 });
 
 // Rota para rejeitar sugestão
-app.put("/reject-suggestion/:id", authenticateJWT, async (req, res) => {
+app.put("/reject-suggestion/:id", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { reason } = req.body;
     const suggestionId = req.params.id;
@@ -1809,7 +1914,7 @@ app.put("/reject-suggestion/:id", authenticateJWT, async (req, res) => {
 });
 
 // Rota para verificar integridade do RAG
-app.get("/rag-status", authenticateJWT, async (req, res) => {
+app.get("/rag-status", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const knowledgeDir = path.join(process.cwd(), 'rag-knowledge');
     const files = fs.readdirSync(knowledgeDir).filter(f => f.endsWith('.txt'));
@@ -1849,7 +1954,7 @@ app.get("/rag-status", authenticateJWT, async (req, res) => {
 });
 
 // Rota para estatísticas de inteligência
-app.get("/intelligence-stats", authenticateJWT, (req, res) => {
+app.get("/intelligence-stats", authenticateJWT, requireRole('admin'), (req, res) => {
   try {
     // Filtrar conversas com métricas de inteligência
     const intelligentConversations = conversationMetrics.filter(conv => conv.questionType);
@@ -1982,7 +2087,7 @@ app.post("/api/contact", async (req, res) => {
 });
 
 // Rota para listar mensagens de contato (admin)
-app.get("/api/contact", authenticateJWT, async (req, res) => {
+app.get("/api/contact", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { startDate, endDate, resolved } = req.query;
 
@@ -2030,7 +2135,7 @@ app.get("/api/contact", authenticateJWT, async (req, res) => {
 });
 
 // Rota para atualizar status de mensagem (marcar como resolvido)
-app.put("/api/contact/:id", authenticateJWT, async (req, res) => {
+app.put("/api/contact/:id", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
     const { resolved } = req.body;
@@ -2258,7 +2363,7 @@ app.get("/api/gallery", async (req, res) => {
 });
 
 // GET /api/gallery/pending - Listar fotos pendentes (admin)
-app.get("/api/gallery/pending", authenticateJWT, async (req, res) => {
+app.get("/api/gallery/pending", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const galleryCollection = getGalleryCollection();
     const entries = await galleryCollection
@@ -2278,7 +2383,7 @@ app.get("/api/gallery/pending", authenticateJWT, async (req, res) => {
 });
 
 // GET /api/gallery/all - Listar todas as fotos (admin)
-app.get("/api/gallery/all", authenticateJWT, async (req, res) => {
+app.get("/api/gallery/all", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const galleryCollection = getGalleryCollection();
     const entries = await galleryCollection
@@ -2299,7 +2404,7 @@ app.get("/api/gallery/all", authenticateJWT, async (req, res) => {
 });
 
 // PUT /api/gallery/:id/approve - Aprovar foto (admin)
-app.put("/api/gallery/:id/approve", authenticateJWT, async (req, res) => {
+app.put("/api/gallery/:id/approve", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -2334,7 +2439,7 @@ app.put("/api/gallery/:id/approve", authenticateJWT, async (req, res) => {
 });
 
 // PUT /api/gallery/:id/reject - Rejeitar foto (admin)
-app.put("/api/gallery/:id/reject", authenticateJWT, async (req, res) => {
+app.put("/api/gallery/:id/reject", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -2385,7 +2490,7 @@ app.put("/api/gallery/:id/reject", authenticateJWT, async (req, res) => {
 });
 
 // DELETE /api/gallery/:id - Deletar foto (admin)
-app.delete("/api/gallery/:id", authenticateJWT, async (req, res) => {
+app.delete("/api/gallery/:id", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -2427,7 +2532,7 @@ app.delete("/api/gallery/:id", authenticateJWT, async (req, res) => {
 });
 
 // PUT /api/gallery/:id - Atualizar entrada da galeria (admin)
-app.put("/api/gallery/:id", authenticateJWT, async (req, res) => {
+app.put("/api/gallery/:id", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -2524,7 +2629,7 @@ app.put("/api/gallery/:id", authenticateJWT, async (req, res) => {
 // Permite admin treinar o bot com fotos de problemas + diagnostico + solucao
 
 // POST /api/visual-knowledge - Adicionar conhecimento visual (admin)
-app.post("/api/visual-knowledge", authenticateJWT, upload.single('image'), async (req, res) => {
+app.post("/api/visual-knowledge", authenticateJWT, requireRole('admin'), upload.single('image'), async (req, res) => {
   try {
     const { defectType, diagnosis, solution } = req.body;
     const imageFile = req.file;
@@ -2644,7 +2749,7 @@ Acoes: <1-2 acoes praticas ESPECIFICAS>`
 });
 
 // GET /api/visual-knowledge - Listar conhecimentos visuais (admin)
-app.get("/api/visual-knowledge", authenticateJWT, async (req, res) => {
+app.get("/api/visual-knowledge", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const documents = await listVisualKnowledge();
 
@@ -2660,7 +2765,7 @@ app.get("/api/visual-knowledge", authenticateJWT, async (req, res) => {
 });
 
 // PUT /api/visual-knowledge/:id - Atualizar conhecimento visual (admin)
-app.put("/api/visual-knowledge/:id", authenticateJWT, async (req, res) => {
+app.put("/api/visual-knowledge/:id", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
     const { defectType, diagnosis, solution } = req.body;
@@ -2700,7 +2805,7 @@ app.put("/api/visual-knowledge/:id", authenticateJWT, async (req, res) => {
 });
 
 // DELETE /api/visual-knowledge/:id - Deletar conhecimento visual (admin)
-app.delete("/api/visual-knowledge/:id", authenticateJWT, async (req, res) => {
+app.delete("/api/visual-knowledge/:id", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -2742,7 +2847,7 @@ app.delete("/api/visual-knowledge/:id", authenticateJWT, async (req, res) => {
 });
 
 // GET /api/visual-knowledge/pending - Listar fotos pendentes para treinamento (admin)
-app.get("/api/visual-knowledge/pending", authenticateJWT, async (req, res) => {
+app.get("/api/visual-knowledge/pending", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const collection = getVisualKnowledgeCollection();
     const documents = await collection
@@ -2762,7 +2867,7 @@ app.get("/api/visual-knowledge/pending", authenticateJWT, async (req, res) => {
 });
 
 // PUT /api/visual-knowledge/:id/approve - Aprovar foto pendente e adicionar conhecimento (admin)
-app.put("/api/visual-knowledge/:id/approve", authenticateJWT, async (req, res) => {
+app.put("/api/visual-knowledge/:id/approve", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
     const { defectType, diagnosis, solution } = req.body;
@@ -2891,7 +2996,7 @@ app.post("/api/visual-knowledge/pending", upload.single('image'), async (req, re
 // Adicionar no server.js - NOVAS ROTAS
 
 // Rota para adicionar conhecimento baseado em feedback
-app.post("/api/add-knowledge-from-feedback", authenticateJWT, async (req, res) => {
+app.post("/api/add-knowledge-from-feedback", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { title, content, conversationId, originalQuestion, originalReply } = req.body;
 
@@ -2951,7 +3056,7 @@ RESPOSTA ANTERIOR (INCORRETA): ${originalReply ? originalReply.substring(0, 200)
 });
 
 // Rota para marcar conversa como "resposta ruim"
-app.put("/api/mark-bad-response/:index", authenticateJWT, async (req, res) => {
+app.put("/api/mark-bad-response/:index", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { reason } = req.body;
     const index = parseInt(req.params.index);
@@ -2978,7 +3083,7 @@ app.put("/api/mark-bad-response/:index", authenticateJWT, async (req, res) => {
 });
 
 // Rota para obter estatísticas de feedback
-app.get("/api/feedback-stats", authenticateJWT, async (req, res) => {
+app.get("/api/feedback-stats", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const totalConversations = conversationMetrics.length;
     const conversationsWithFeedback = conversationMetrics.filter(c => c.feedbackAdded).length;
@@ -3033,7 +3138,7 @@ app.get("/api/partners", async (req, res) => {
 });
 
 // Criar novo parceiro
-app.post("/api/partners", authenticateJWT, async (req, res) => {
+app.post("/api/partners", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     
     const partnerData = req.body;
@@ -3069,7 +3174,7 @@ app.post("/api/partners", authenticateJWT, async (req, res) => {
 });
 
 // Atualizar parceiro
-app.put("/api/partners/:id", authenticateJWT, async (req, res) => {
+app.put("/api/partners/:id", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -3104,7 +3209,7 @@ app.put("/api/partners/:id", authenticateJWT, async (req, res) => {
 });
 
 // Excluir parceiro
-app.delete("/api/partners/:id", authenticateJWT, async (req, res) => {
+app.delete("/api/partners/:id", authenticateJWT, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
     const partnersCollection = getPartnersCollection();
@@ -3126,7 +3231,7 @@ app.delete("/api/partners/:id", authenticateJWT, async (req, res) => {
 });
 
 // Upload de imagem de parceiro
-app.post("/api/partners/upload-image", authenticateJWT, upload.single('image'), async (req, res) => {
+app.post("/api/partners/upload-image", authenticateJWT, requireRole('admin'), upload.single('image'), async (req, res) => {
   try {
     const imageFile = req.file;
     
@@ -3553,7 +3658,7 @@ app.get("/params/stats", (req, res) => {
 // ===== ROTAS ADMIN PARA PARÂMETROS =====
 
 // POST /params/resins - Adicionar nova resina (admin)
-app.post("/params/resins", authenticateJWT, async (req, res) => {
+app.post("/params/resins", authenticateJWT, requireRole('admin'), async (req, res) => {
   const { name } = req.body;
   
   if (!name) {
@@ -3577,7 +3682,7 @@ app.post("/params/resins", authenticateJWT, async (req, res) => {
 });
 
 // DELETE /params/resins/:id - Remover resina (admin)
-app.delete("/params/resins/:id", authenticateJWT, async (req, res) => {
+app.delete("/params/resins/:id", authenticateJWT, requireRole('admin'), async (req, res) => {
   const resinId = req.params.id;
   const resinIndex = printParametersDB.resins.findIndex(r => r.id === resinId);
   
@@ -3595,7 +3700,7 @@ app.delete("/params/resins/:id", authenticateJWT, async (req, res) => {
 });
 
 // POST /params/printers - Adicionar nova impressora (admin)
-app.post("/params/printers", authenticateJWT, async (req, res) => {
+app.post("/params/printers", authenticateJWT, requireRole('admin'), async (req, res) => {
   const { brand, model } = req.body;
   
   if (!brand || !model) {
@@ -3621,7 +3726,7 @@ app.post("/params/printers", authenticateJWT, async (req, res) => {
 });
 
 // DELETE /params/printers/:id - Remover impressora (admin)
-app.delete("/params/printers/:id", authenticateJWT, async (req, res) => {
+app.delete("/params/printers/:id", authenticateJWT, requireRole('admin'), async (req, res) => {
   const printerId = req.params.id;
   const printerIndex = printParametersDB.printers.findIndex(p => p.id === printerId);
   
@@ -3639,7 +3744,7 @@ app.delete("/params/printers/:id", authenticateJWT, async (req, res) => {
 });
 
 // POST /params/profiles - Adicionar/Atualizar perfil (admin)
-app.post("/params/profiles", authenticateJWT, async (req, res) => {
+app.post("/params/profiles", authenticateJWT, requireRole('admin'), async (req, res) => {
   const { resinId, printerId, params, status } = req.body;
   
   if (!resinId || !printerId) {
@@ -3684,7 +3789,7 @@ app.post("/params/profiles", authenticateJWT, async (req, res) => {
 });
 
 // DELETE /params/profiles/:id - Remover perfil (admin)
-app.delete("/params/profiles/:id", authenticateJWT, async (req, res) => {
+app.delete("/params/profiles/:id", authenticateJWT, requireRole('admin'), async (req, res) => {
   const profileId = req.params.id;
   const profileIndex = printParametersDB.profiles.findIndex(p => p.id === profileId);
   
