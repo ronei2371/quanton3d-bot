@@ -12,11 +12,11 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from "url";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 // import rateLimit from "express-rate-limit"; // REMOVIDO - causando erro ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
 import { initializeRAG, searchKnowledge, formatContext, addDocument, listDocuments, deleteDocument, updateDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding, clearKnowledgeCollection } from './rag-search.js';
-import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection, getSuggestionsCollection, getPartnersCollection, getDocumentsCollection, getPrintParametersCollection } from './db.js';
+import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection, getPartnersCollection, getDocumentsCollection, Parametros, Sugestoes } from './db.js';
 import { v2 as cloudinary } from 'cloudinary';
-import { attachAdminSecurity } from "./admin/security.js";
 import {
   analyzeQuestionType,
   extractEntities,
@@ -35,11 +35,16 @@ const __dirname = path.dirname(__filename);
 const publicDir = path.join(__dirname, 'public');
 
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
+const ADMIN_SECRET = process.env.ADMIN_SECRET;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const RAG_EMBEDDING_MODEL = process.env.RAG_EMBEDDING_MODEL || 'text-embedding-3-large';
 
 if (!ADMIN_JWT_SECRET) {
   console.error('❌ ADMIN_JWT_SECRET não configurado - configure no Render para autenticar o painel admin.');
+}
+
+if (!ADMIN_SECRET) {
+  console.error('❌ ADMIN_SECRET não configurado - configure no Render para login administrativo.');
 }
 
 if (!process.env.MONGODB_URI) {
@@ -72,12 +77,29 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use('/public', express.static(publicDir));
-attachAdminSecurity(app);
 
 // Garantir UTF-8 em todas as respostas
 app.use((req, res, next) => {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   next();
+});
+
+// Login administrativo com JWT
+app.post("/admin/login", (req, res) => {
+  if (!ADMIN_SECRET || !ADMIN_JWT_SECRET) {
+    return res.status(500).json({ success: false, message: 'Configuração de admin não disponível.' });
+  }
+
+  const { password } = req.body || {};
+  if (!password) {
+    return res.status(400).json({ success: false, message: 'Senha obrigatória.' });
+  }
+  if (password !== ADMIN_SECRET) {
+    return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
+  }
+
+  const token = jwt.sign({ role: 'admin' }, ADMIN_JWT_SECRET, { expiresIn: '30m' });
+  return res.json({ success: true, token, expiresIn: 1800 });
 });
 
 // Rate limiting REMOVIDO - causava erro ERR_ERL_UNEXPECTED_X_FORWARDED_FOR no Render
@@ -95,19 +117,32 @@ const openai = new OpenAI({
   apiKey: OPENAI_API_KEY,
 });
 
-const extractAdminToken = (req) => {
+const authenticateJWT = (req, res, next) => {
+  if (!ADMIN_JWT_SECRET) {
+    return res.status(500).json({ success: false, message: 'ADMIN_JWT_SECRET não configurado.' });
+  }
   const authHeader = req.headers.authorization || '';
-  return authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Token Bearer não fornecido.' });
+  }
+  const token = authHeader.slice(7);
+  try {
+    req.admin = jwt.verify(token, ADMIN_JWT_SECRET);
+    return next();
+  } catch (err) {
+    return res.status(401).json({ success: false, message: 'Token inválido ou expirado.' });
+  }
 };
 
-const isAdminAuthorized = (req) => {
+const isAdminTokenValid = (req) => {
   if (!ADMIN_JWT_SECRET) {
     return false;
   }
-  const token = extractAdminToken(req);
-  if (!token) {
+  const authHeader = req.headers.authorization || '';
+  if (!authHeader.startsWith('Bearer ')) {
     return false;
   }
+  const token = authHeader.slice(7);
   try {
     jwt.verify(token, ADMIN_JWT_SECRET);
     return true;
@@ -116,19 +151,10 @@ const isAdminAuthorized = (req) => {
   }
 };
 
-const ensureAdminAuthorized = (req, res) => {
-  if (!isAdminAuthorized(req)) {
-    res.status(401).json({ success: false, message: 'Não autorizado' });
-    return false;
-  }
-  return true;
-};
-
 // Histórico de conversas por sessão
 const conversationHistory = new Map();
 
 // Sugestões de conhecimento e pedidos customizados pendentes (em memoria - persistidos via MongoDB)
-const knowledgeSuggestions = [];
 const customRequests = [];
 
 // Métricas e Analytics (em memoria - persistidos via MongoDB)
@@ -397,35 +423,23 @@ app.post("/suggest-knowledge", async (req, res) => {
     const { suggestion, userName, userPhone, sessionId, lastBotReply, lastUserMessage } = req.body;
 
     const newSuggestion = {
-      id: Date.now(),
+      userId: sessionId || userName || 'anon',
       suggestion,
       userName,
       userPhone,
-      sessionId,
+      sessionId: sessionId || 'unknown',
       lastUserMessage: lastUserMessage || 'N/A',
       lastBotReply: lastBotReply || 'N/A',
       timestamp: new Date().toISOString(),
       status: "pending"
     };
 
-    // Salvar no MongoDB para persistencia
-    try {
-      const suggestionsCollection = getSuggestionsCollection();
-      if (suggestionsCollection) {
-        await suggestionsCollection.insertOne({
-          ...newSuggestion,
-          createdAt: new Date()
-        });
-        console.log(`💾 Sugestao salva no MongoDB`);
-      }
-    } catch (dbErr) {
-      console.warn('⚠️ Erro ao salvar sugestao no MongoDB:', dbErr.message);
-    }
+    const savedSuggestion = await Sugestoes.create({
+      ...newSuggestion,
+      createdAt: new Date()
+    });
 
-    // Manter em memoria tambem para compatibilidade
-    knowledgeSuggestions.push(newSuggestion);
-
-    console.log(`📝 Nova sugestão de conhecimento de ${userName}: ${suggestion.substring(0, 50)}...`);
+    console.log(`📝 Nova sugestão de conhecimento de ${userName}: ${suggestion.substring(0, 50)}... (${savedSuggestion._id})`);
 
     res.json({
       success: true,
@@ -475,11 +489,7 @@ app.post("/api/custom-request", async (req, res) => {
 });
 
 // Rota para listar pedidos customizados (admin)
-app.get("/custom-requests", (req, res) => {
-  if (!ensureAdminAuthorized(req, res)) {
-    return;
-  }
-
+app.get("/custom-requests", authenticateJWT, (req, res) => {
   // Retornar pedidos customizados (mais recentes primeiro)
   res.json({
     success: true,
@@ -980,11 +990,7 @@ WhatsApp: (31) 3271-6935`;
 });
 
 // Rota para obter métricas e analytics
-app.get("/metrics", async (req, res) => {
-  if (!ensureAdminAuthorized(req, res)) {
-    return;
-  }
-
+app.get("/metrics", authenticateJWT, async (req, res) => {
   // Calcular estatísticas em memoria
   const totalConversations = conversationMetrics.length;
   const totalRegistrations = userRegistrations.length;
@@ -1114,12 +1120,8 @@ app.get("/metrics", async (req, res) => {
 
 // Endpoint para detalhes de clientes por resina (CORRECAO 3)
 // Retorna lista de clientes que usam uma resina especifica e historico de conversas
-app.get("/metrics/resin-details", async (req, res) => {
+app.get("/metrics/resin-details", authenticateJWT, async (req, res) => {
   const { resin } = req.query;
-
-  if (!ensureAdminAuthorized(req, res)) {
-    return;
-  }
 
   if (!resin) {
     return res.status(400).json({ success: false, error: 'Parametro resin é obrigatorio' });
@@ -1187,12 +1189,8 @@ app.get("/metrics/resin-details", async (req, res) => {
 
 // Endpoint para historico de um cliente especifico (CORRECAO 4)
 // Retorna duvidas, respostas e status de resolucao
-app.get("/metrics/client-history", async (req, res) => {
+app.get("/metrics/client-history", authenticateJWT, async (req, res) => {
   const { clientKey } = req.query;
-
-  if (!ensureAdminAuthorized(req, res)) {
-    return;
-  }
 
   if (!clientKey) {
     return res.status(400).json({ success: false, error: 'Parametro clientKey é obrigatorio' });
@@ -1281,12 +1279,9 @@ app.get("/metrics/client-history", async (req, res) => {
   }
 });
 
-app.post("/add-knowledge", async (req, res) => {
+app.post("/add-knowledge", authenticateJWT, async (req, res) => {
   try {
     const { title, content } = req.body;
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
 
     if (!title || !content) {
       return res.status(400).json({ success: false, error: 'Título e conteúdo são obrigatórios' });
@@ -1312,12 +1307,8 @@ app.post("/add-knowledge", async (req, res) => {
 });
 
 // Rota administrativa para importação em lote de conhecimento
-app.post("/admin/knowledge/import", async (req, res) => {
+app.post("/admin/knowledge/import", authenticateJWT, async (req, res) => {
   try {
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
-
     const bodyIsEmpty = () => {
       if (!req.body) return true;
       if (typeof req.body === 'string') return req.body.trim().length === 0;
@@ -1460,12 +1451,8 @@ app.post("/admin/knowledge/import", async (req, res) => {
 });
 
 // Rota administrativa para listar conhecimento com filtros e paginação
-app.get("/admin/knowledge/list", async (req, res) => {
+app.get("/admin/knowledge/list", authenticateJWT, async (req, res) => {
   try {
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
-
     const { tag, resin, printer, search } = req.query;
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
@@ -1513,13 +1500,9 @@ app.get("/admin/knowledge/list", async (req, res) => {
 });
 
 // Rota administrativa para remover conhecimento individual
-app.delete("/admin/knowledge/:id", async (req, res) => {
+app.delete("/admin/knowledge/:id", authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
-
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
 
     console.log(`🗑️ [DELETE-KNOWLEDGE] Solicitado delete do documento ${id}`);
 
@@ -1539,13 +1522,9 @@ app.delete("/admin/knowledge/:id", async (req, res) => {
 
 // Rota para listar todos os documentos de conhecimento (para admin)
 // Aceita filtros opcionais: start (data inicio) e end (data fim)
-app.get("/api/knowledge", async (req, res) => {
+app.get("/api/knowledge", authenticateJWT, async (req, res) => {
   try {
     const { start, end } = req.query;
-
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
 
     console.log(`📚 [LIST-KNOWLEDGE] Listando documentos de conhecimento...`);
     if (start || end) {
@@ -1579,13 +1558,9 @@ app.get("/api/knowledge", async (req, res) => {
 });
 
 // Rota para deletar documento de conhecimento (para admin)
-app.delete("/api/knowledge/:id", async (req, res) => {
+app.delete("/api/knowledge/:id", authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
-
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
 
     console.log(`🗑️ [DELETE-KNOWLEDGE] Deletando documento: ${id}`);
 
@@ -1604,14 +1579,10 @@ app.delete("/api/knowledge/:id", async (req, res) => {
 });
 
 // Rota para atualizar documento de conhecimento (para admin)
-app.put("/api/knowledge/:id", async (req, res) => {
+app.put("/api/knowledge/:id", authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content } = req.body;
-
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
 
     if (!title || !content) {
       return res.status(400).json({ success: false, error: 'Titulo e conteudo sao obrigatorios' });
@@ -1634,38 +1605,27 @@ app.put("/api/knowledge/:id", async (req, res) => {
 });
 
 // Rota para listar sugestões (apenas para Ronei)
-app.get("/suggestions", async (req, res) => {
-  if (!ensureAdminAuthorized(req, res)) {
-    return;
-  }
-
-  // Tentar carregar do MongoDB primeiro
+app.get("/suggestions", authenticateJWT, async (req, res) => {
   try {
-    const suggestionsCollection = getSuggestionsCollection();
-    if (suggestionsCollection) {
-      const mongoSuggestions = await suggestionsCollection
-        .find({ status: 'pending' })
-        .sort({ createdAt: -1 })
-        .toArray();
-      
-      if (mongoSuggestions.length > 0) {
-        return res.json({
-          success: true,
-          suggestions: mongoSuggestions,
-          count: mongoSuggestions.length
-        });
-      }
-    }
+    const mongoSuggestions = await Sugestoes.find({ status: 'pending' })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const suggestions = mongoSuggestions.map((suggestion) => ({
+      ...suggestion,
+      id: suggestion.id || suggestion._id?.toString(),
+      timestamp: suggestion.timestamp || suggestion.createdAt
+    }));
+
+    return res.json({
+      success: true,
+      suggestions,
+      count: suggestions.length
+    });
   } catch (dbErr) {
     console.warn('⚠️ Erro ao carregar sugestoes do MongoDB:', dbErr.message);
+    return res.status(500).json({ success: false, error: 'Erro ao carregar sugestoes' });
   }
-
-  // Fallback para memoria
-  res.json({
-    success: true,
-    suggestions: knowledgeSuggestions,
-    count: knowledgeSuggestions.length
-  });
 });
 
 // ===== NOVAS ROTAS DE APROVAÇÃO =====
@@ -1677,26 +1637,22 @@ function logOperation(operation, details) {
 }
 
 // Rota para aprovar sugestão (com suporte a edição da resposta)
-app.put("/approve-suggestion/:id", async (req, res) => {
+app.put("/approve-suggestion/:id", authenticateJWT, async (req, res) => {
   try {
     const { editedAnswer } = req.body;
-    const suggestionId = parseInt(req.params.id);
+    const suggestionId = req.params.id;
+    const isObjectId = mongoose.Types.ObjectId.isValid(suggestionId);
+    const suggestionFilter = isObjectId ? { _id: suggestionId } : { id: parseInt(suggestionId, 10) };
 
     console.log(`🔍 Tentativa de aprovação da sugestão ID: ${suggestionId}`);
 
-    if (!ensureAdminAuthorized(req, res)) {
-      console.log('❌ Tentativa de acesso não autorizado');
-      return;
-    }
-
     // Encontrar sugestão
-    const suggestionIndex = knowledgeSuggestions.findIndex(s => s.id === suggestionId);
-    if (suggestionIndex === -1) {
+    const suggestion = await Sugestoes.findOne(suggestionFilter).lean();
+    if (!suggestion) {
       console.log(`❌ Sugestão ${suggestionId} não encontrada`);
       return res.status(404).json({ success: false, message: 'Sugestão não encontrada' });
     }
 
-    const suggestion = knowledgeSuggestions[suggestionIndex];
     console.log(`📝 Aprovando sugestão de ${suggestion.userName}: ${suggestion.suggestion.substring(0, 50)}...`);
 
     // Usar resposta editada pelo admin se fornecida, senão usar resposta original do bot
@@ -1734,10 +1690,18 @@ ${suggestion.suggestion}`;
     console.log(`✅ Documento adicionado ao MongoDB: ${addResult.documentId}`);
 
     // Atualizar status da sugestão
-    knowledgeSuggestions[suggestionIndex].status = 'approved';
-    knowledgeSuggestions[suggestionIndex].approvedAt = new Date().toISOString();
-    knowledgeSuggestions[suggestionIndex].documentId = addResult.documentId.toString();
-    knowledgeSuggestions[suggestionIndex].approvedBy = 'admin';
+    const approvedAt = new Date();
+    await Sugestoes.updateOne(
+      suggestionFilter,
+      {
+        $set: {
+          status: 'approved',
+          approvedAt,
+          approvedBy: 'admin',
+          documentId: addResult.documentId.toString()
+        }
+      }
+    );
 
     console.log('✅ Conhecimento integrado ao RAG com sucesso!');
 
@@ -1756,7 +1720,7 @@ ${suggestion.suggestion}`;
       message: 'Sugestão aprovada e conhecimento adicionado ao MongoDB com sucesso!',
       documentId: addResult.documentId.toString(),
       suggestionId,
-      approvedAt: new Date().toISOString()
+      approvedAt: approvedAt.toISOString()
     });
   } catch (err) {
     console.error(`❌ Erro ao aprovar sugestão ${req.params.id}:`, err);
@@ -1777,33 +1741,37 @@ ${suggestion.suggestion}`;
 });
 
 // Rota para rejeitar sugestão
-app.put("/reject-suggestion/:id", async (req, res) => {
+app.put("/reject-suggestion/:id", authenticateJWT, async (req, res) => {
   try {
     const { reason } = req.body;
-    const suggestionId = parseInt(req.params.id);
+    const suggestionId = req.params.id;
+    const isObjectId = mongoose.Types.ObjectId.isValid(suggestionId);
+    const suggestionFilter = isObjectId ? { _id: suggestionId } : { id: parseInt(suggestionId, 10) };
 
     console.log(`🔍 Tentativa de rejeição da sugestão ID: ${suggestionId}`);
 
-    if (!ensureAdminAuthorized(req, res)) {
-      console.log('❌ Tentativa de acesso não autorizado');
-      return;
-    }
-
     // Encontrar sugestão
-    const suggestionIndex = knowledgeSuggestions.findIndex(s => s.id === suggestionId);
-    if (suggestionIndex === -1) {
+    const suggestion = await Sugestoes.findOne(suggestionFilter).lean();
+    if (!suggestion) {
       console.log(`❌ Sugestão ${suggestionId} não encontrada`);
       return res.status(404).json({ success: false, message: 'Sugestão não encontrada' });
     }
 
-    const suggestion = knowledgeSuggestions[suggestionIndex];
     console.log(`❌ Rejeitando sugestão de ${suggestion.userName}: ${suggestion.suggestion.substring(0, 50)}...`);
 
     // Atualizar status da sugestão
-    knowledgeSuggestions[suggestionIndex].status = 'rejected';
-    knowledgeSuggestions[suggestionIndex].rejectedAt = new Date().toISOString();
-    knowledgeSuggestions[suggestionIndex].rejectionReason = reason || 'Não especificado';
-    knowledgeSuggestions[suggestionIndex].rejectedBy = 'admin';
+    const rejectedAt = new Date();
+    await Sugestoes.updateOne(
+      suggestionFilter,
+      {
+        $set: {
+          status: 'rejected',
+          rejectedAt,
+          rejectedBy: 'admin',
+          rejectionReason: reason || 'Não especificado'
+        }
+      }
+    );
 
     // Log da operação
     logOperation('REJECT_SUGGESTION', {
@@ -1819,7 +1787,7 @@ app.put("/reject-suggestion/:id", async (req, res) => {
       success: true,
       message: 'Sugestão rejeitada com sucesso!',
       suggestionId,
-      rejectedAt: new Date().toISOString(),
+      rejectedAt: rejectedAt.toISOString(),
       reason: reason || 'Não especificado'
     });
   } catch (err) {
@@ -1841,12 +1809,8 @@ app.put("/reject-suggestion/:id", async (req, res) => {
 });
 
 // Rota para verificar integridade do RAG
-app.get("/rag-status", async (req, res) => {
+app.get("/rag-status", authenticateJWT, async (req, res) => {
   try {
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
-
     const knowledgeDir = path.join(process.cwd(), 'rag-knowledge');
     const files = fs.readdirSync(knowledgeDir).filter(f => f.endsWith('.txt'));
     const dbPath = path.join(process.cwd(), 'embeddings-database.json');
@@ -1885,12 +1849,8 @@ app.get("/rag-status", async (req, res) => {
 });
 
 // Rota para estatísticas de inteligência
-app.get("/intelligence-stats", (req, res) => {
+app.get("/intelligence-stats", authenticateJWT, (req, res) => {
   try {
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
-
     // Filtrar conversas com métricas de inteligência
     const intelligentConversations = conversationMetrics.filter(conv => conv.questionType);
 
@@ -2022,13 +1982,9 @@ app.post("/api/contact", async (req, res) => {
 });
 
 // Rota para listar mensagens de contato (admin)
-app.get("/api/contact", async (req, res) => {
+app.get("/api/contact", authenticateJWT, async (req, res) => {
   try {
     const { startDate, endDate, resolved } = req.query;
-
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
 
     const messagesCollection = getMessagesCollection();
     const query = {};
@@ -2074,14 +2030,10 @@ app.get("/api/contact", async (req, res) => {
 });
 
 // Rota para atualizar status de mensagem (marcar como resolvido)
-app.put("/api/contact/:id", async (req, res) => {
+app.put("/api/contact/:id", authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
     const { resolved } = req.body;
-
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
 
     const { ObjectId } = await import('mongodb');
     const messagesCollection = getMessagesCollection();
@@ -2306,12 +2258,8 @@ app.get("/api/gallery", async (req, res) => {
 });
 
 // GET /api/gallery/pending - Listar fotos pendentes (admin)
-app.get("/api/gallery/pending", async (req, res) => {
+app.get("/api/gallery/pending", authenticateJWT, async (req, res) => {
   try {
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
-
     const galleryCollection = getGalleryCollection();
     const entries = await galleryCollection
       .find({ status: 'pending' })
@@ -2330,12 +2278,8 @@ app.get("/api/gallery/pending", async (req, res) => {
 });
 
 // GET /api/gallery/all - Listar todas as fotos (admin)
-app.get("/api/gallery/all", async (req, res) => {
+app.get("/api/gallery/all", authenticateJWT, async (req, res) => {
   try {
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
-
     const galleryCollection = getGalleryCollection();
     const entries = await galleryCollection
       .find({})
@@ -2355,13 +2299,9 @@ app.get("/api/gallery/all", async (req, res) => {
 });
 
 // PUT /api/gallery/:id/approve - Aprovar foto (admin)
-app.put("/api/gallery/:id/approve", async (req, res) => {
+app.put("/api/gallery/:id/approve", authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
-
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
 
     const galleryCollection = getGalleryCollection();
     const { ObjectId } = await import('mongodb');
@@ -2394,13 +2334,9 @@ app.put("/api/gallery/:id/approve", async (req, res) => {
 });
 
 // PUT /api/gallery/:id/reject - Rejeitar foto (admin)
-app.put("/api/gallery/:id/reject", async (req, res) => {
+app.put("/api/gallery/:id/reject", authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
-
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
 
     const galleryCollection = getGalleryCollection();
     const { ObjectId } = await import('mongodb');
@@ -2449,13 +2385,9 @@ app.put("/api/gallery/:id/reject", async (req, res) => {
 });
 
 // DELETE /api/gallery/:id - Deletar foto (admin)
-app.delete("/api/gallery/:id", async (req, res) => {
+app.delete("/api/gallery/:id", authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
-
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
 
     const galleryCollection = getGalleryCollection();
     const { ObjectId } = await import('mongodb');
@@ -2495,13 +2427,9 @@ app.delete("/api/gallery/:id", async (req, res) => {
 });
 
 // PUT /api/gallery/:id - Atualizar entrada da galeria (admin)
-app.put("/api/gallery/:id", async (req, res) => {
+app.put("/api/gallery/:id", authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
-
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
 
     const galleryCollection = getGalleryCollection();
     const { ObjectId } = await import('mongodb');
@@ -2596,14 +2524,10 @@ app.put("/api/gallery/:id", async (req, res) => {
 // Permite admin treinar o bot com fotos de problemas + diagnostico + solucao
 
 // POST /api/visual-knowledge - Adicionar conhecimento visual (admin)
-app.post("/api/visual-knowledge", upload.single('image'), async (req, res) => {
+app.post("/api/visual-knowledge", authenticateJWT, upload.single('image'), async (req, res) => {
   try {
     const { defectType, diagnosis, solution } = req.body;
     const imageFile = req.file;
-
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
 
     if (!imageFile) {
       return res.status(400).json({ success: false, message: 'Imagem obrigatoria' });
@@ -2720,12 +2644,8 @@ Acoes: <1-2 acoes praticas ESPECIFICAS>`
 });
 
 // GET /api/visual-knowledge - Listar conhecimentos visuais (admin)
-app.get("/api/visual-knowledge", async (req, res) => {
+app.get("/api/visual-knowledge", authenticateJWT, async (req, res) => {
   try {
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
-
     const documents = await listVisualKnowledge();
 
     res.json({
@@ -2740,14 +2660,10 @@ app.get("/api/visual-knowledge", async (req, res) => {
 });
 
 // PUT /api/visual-knowledge/:id - Atualizar conhecimento visual (admin)
-app.put("/api/visual-knowledge/:id", async (req, res) => {
+app.put("/api/visual-knowledge/:id", authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
     const { defectType, diagnosis, solution } = req.body;
-
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
 
     if (defectType === undefined && diagnosis === undefined && solution === undefined) {
       return res.status(400).json({
@@ -2784,13 +2700,9 @@ app.put("/api/visual-knowledge/:id", async (req, res) => {
 });
 
 // DELETE /api/visual-knowledge/:id - Deletar conhecimento visual (admin)
-app.delete("/api/visual-knowledge/:id", async (req, res) => {
+app.delete("/api/visual-knowledge/:id", authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
-
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
 
     // Buscar documento para deletar imagem do Cloudinary
     const collection = getVisualKnowledgeCollection();
@@ -2830,12 +2742,8 @@ app.delete("/api/visual-knowledge/:id", async (req, res) => {
 });
 
 // GET /api/visual-knowledge/pending - Listar fotos pendentes para treinamento (admin)
-app.get("/api/visual-knowledge/pending", async (req, res) => {
+app.get("/api/visual-knowledge/pending", authenticateJWT, async (req, res) => {
   try {
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
-
     const collection = getVisualKnowledgeCollection();
     const documents = await collection
       .find({ status: 'pending' })
@@ -2854,14 +2762,10 @@ app.get("/api/visual-knowledge/pending", async (req, res) => {
 });
 
 // PUT /api/visual-knowledge/:id/approve - Aprovar foto pendente e adicionar conhecimento (admin)
-app.put("/api/visual-knowledge/:id/approve", async (req, res) => {
+app.put("/api/visual-knowledge/:id/approve", authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
     const { defectType, diagnosis, solution } = req.body;
-
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
 
     if (!defectType || !diagnosis || !solution) {
       return res.status(400).json({ 
@@ -2987,13 +2891,9 @@ app.post("/api/visual-knowledge/pending", upload.single('image'), async (req, re
 // Adicionar no server.js - NOVAS ROTAS
 
 // Rota para adicionar conhecimento baseado em feedback
-app.post("/api/add-knowledge-from-feedback", async (req, res) => {
+app.post("/api/add-knowledge-from-feedback", authenticateJWT, async (req, res) => {
   try {
     const { title, content, conversationId, originalQuestion, originalReply } = req.body;
-
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
 
     if (!title || !content) {
       return res.status(400).json({ 
@@ -3051,14 +2951,10 @@ RESPOSTA ANTERIOR (INCORRETA): ${originalReply ? originalReply.substring(0, 200)
 });
 
 // Rota para marcar conversa como "resposta ruim"
-app.put("/api/mark-bad-response/:index", async (req, res) => {
+app.put("/api/mark-bad-response/:index", authenticateJWT, async (req, res) => {
   try {
     const { reason } = req.body;
     const index = parseInt(req.params.index);
-
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
 
     if (index < 0 || index >= conversationMetrics.length) {
       return res.status(404).json({ success: false, message: 'Conversa não encontrada' });
@@ -3082,12 +2978,8 @@ app.put("/api/mark-bad-response/:index", async (req, res) => {
 });
 
 // Rota para obter estatísticas de feedback
-app.get("/api/feedback-stats", async (req, res) => {
+app.get("/api/feedback-stats", authenticateJWT, async (req, res) => {
   try {
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
-
     const totalConversations = conversationMetrics.length;
     const conversationsWithFeedback = conversationMetrics.filter(c => c.feedbackAdded).length;
     const badResponses = conversationMetrics.filter(c => c.markedAsBad).length;
@@ -3119,7 +3011,7 @@ app.get("/api/feedback-stats", async (req, res) => {
 // Listar todos os parceiros ativos
 app.get("/api/partners", async (req, res) => {
   try {
-    const isAdmin = isAdminAuthorized(req);
+    const isAdmin = isAdminTokenValid(req);
     
     const partnersCollection = getPartnersCollection();
     
@@ -3141,11 +3033,8 @@ app.get("/api/partners", async (req, res) => {
 });
 
 // Criar novo parceiro
-app.post("/api/partners", async (req, res) => {
+app.post("/api/partners", authenticateJWT, async (req, res) => {
   try {
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
     
     const partnerData = req.body;
     
@@ -3180,12 +3069,8 @@ app.post("/api/partners", async (req, res) => {
 });
 
 // Atualizar parceiro
-app.put("/api/partners/:id", async (req, res) => {
+app.put("/api/partners/:id", authenticateJWT, async (req, res) => {
   try {
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
-    
     const { id } = req.params;
     const updateData = req.body;
     
@@ -3219,12 +3104,8 @@ app.put("/api/partners/:id", async (req, res) => {
 });
 
 // Excluir parceiro
-app.delete("/api/partners/:id", async (req, res) => {
+app.delete("/api/partners/:id", authenticateJWT, async (req, res) => {
   try {
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
-    
     const { id } = req.params;
     const partnersCollection = getPartnersCollection();
     const { ObjectId } = await import('mongodb');
@@ -3245,12 +3126,8 @@ app.delete("/api/partners/:id", async (req, res) => {
 });
 
 // Upload de imagem de parceiro
-app.post("/api/partners/upload-image", upload.single('image'), async (req, res) => {
+app.post("/api/partners/upload-image", authenticateJWT, upload.single('image'), async (req, res) => {
   try {
-    if (!ensureAdminAuthorized(req, res)) {
-      return;
-    }
-    
     const imageFile = req.file;
     
     if (!imageFile) {
@@ -3324,8 +3201,7 @@ const buildPrintParametersRAG = (profiles) => (
 
 async function loadPrintParameters() {
   try {
-    const collection = getPrintParametersCollection();
-    const record = await collection.findOne({ _id: 'print_parameters' });
+    const record = await Parametros.collection.findOne({ _id: 'print_parameters' });
 
     if (record?.data) {
       printParametersDB = record.data;
@@ -3362,8 +3238,7 @@ async function savePrintParameters() {
 
     printParametersRAG = buildPrintParametersRAG(printParametersDB.profiles);
 
-    const collection = getPrintParametersCollection();
-    await collection.updateOne(
+    await Parametros.collection.updateOne(
       { _id: 'print_parameters' },
       {
         $set: {
@@ -3588,12 +3463,8 @@ app.get("/params/stats", (req, res) => {
 // ===== ROTAS ADMIN PARA PARÂMETROS =====
 
 // POST /params/resins - Adicionar nova resina (admin)
-app.post("/params/resins", async (req, res) => {
+app.post("/params/resins", authenticateJWT, async (req, res) => {
   const { name } = req.body;
-
-  if (!ensureAdminAuthorized(req, res)) {
-    return;
-  }
   
   if (!name) {
     return res.status(400).json({ success: false, error: 'Nome da resina é obrigatório' });
@@ -3616,11 +3487,7 @@ app.post("/params/resins", async (req, res) => {
 });
 
 // DELETE /params/resins/:id - Remover resina (admin)
-app.delete("/params/resins/:id", async (req, res) => {
-  if (!ensureAdminAuthorized(req, res)) {
-    return;
-  }
-  
+app.delete("/params/resins/:id", authenticateJWT, async (req, res) => {
   const resinId = req.params.id;
   const resinIndex = printParametersDB.resins.findIndex(r => r.id === resinId);
   
@@ -3638,12 +3505,8 @@ app.delete("/params/resins/:id", async (req, res) => {
 });
 
 // POST /params/printers - Adicionar nova impressora (admin)
-app.post("/params/printers", async (req, res) => {
+app.post("/params/printers", authenticateJWT, async (req, res) => {
   const { brand, model } = req.body;
-
-  if (!ensureAdminAuthorized(req, res)) {
-    return;
-  }
   
   if (!brand || !model) {
     return res.status(400).json({ success: false, error: 'Marca e modelo são obrigatórios' });
@@ -3668,11 +3531,7 @@ app.post("/params/printers", async (req, res) => {
 });
 
 // DELETE /params/printers/:id - Remover impressora (admin)
-app.delete("/params/printers/:id", async (req, res) => {
-  if (!ensureAdminAuthorized(req, res)) {
-    return;
-  }
-  
+app.delete("/params/printers/:id", authenticateJWT, async (req, res) => {
   const printerId = req.params.id;
   const printerIndex = printParametersDB.printers.findIndex(p => p.id === printerId);
   
@@ -3690,12 +3549,8 @@ app.delete("/params/printers/:id", async (req, res) => {
 });
 
 // POST /params/profiles - Adicionar/Atualizar perfil (admin)
-app.post("/params/profiles", async (req, res) => {
+app.post("/params/profiles", authenticateJWT, async (req, res) => {
   const { resinId, printerId, params, status } = req.body;
-
-  if (!ensureAdminAuthorized(req, res)) {
-    return;
-  }
   
   if (!resinId || !printerId) {
     return res.status(400).json({ success: false, error: 'resinId e printerId são obrigatórios' });
@@ -3739,11 +3594,7 @@ app.post("/params/profiles", async (req, res) => {
 });
 
 // DELETE /params/profiles/:id - Remover perfil (admin)
-app.delete("/params/profiles/:id", async (req, res) => {
-  if (!ensureAdminAuthorized(req, res)) {
-    return;
-  }
-  
+app.delete("/params/profiles/:id", authenticateJWT, async (req, res) => {
   const profileId = req.params.id;
   const profileIndex = printParametersDB.profiles.findIndex(p => p.id === profileId);
   
