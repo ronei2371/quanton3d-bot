@@ -11,9 +11,10 @@ import multer from "multer";
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from "url";
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
-// import rateLimit from "express-rate-limit"; // REMOVIDO - causando erro ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
+import rateLimit from "express-rate-limit";
 import { initializeRAG, searchKnowledge, formatContext, addDocument, listDocuments, deleteDocument, updateDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding, clearKnowledgeCollection } from './rag-search.js';
 import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection, getPartnersCollection, getDocumentsCollection, Parametros, Sugestoes } from './db.js';
 import { v2 as cloudinary } from 'cloudinary';
@@ -73,6 +74,7 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
 console.log('🔧 Sistema configurado para usar APENAS MongoDB para persistencia');
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -85,7 +87,15 @@ app.use((req, res, next) => {
 });
 
 // Login administrativo com JWT
-app.post("/admin/login", (req, res) => {
+const adminLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { success: false, message: 'Muitas tentativas. Aguarde 15 minutos antes de tentar novamente.' }
+});
+
+app.post("/admin/login", adminLoginLimiter, (req, res) => {
   if (!ADMIN_SECRET || !ADMIN_JWT_SECRET) {
     return res.status(500).json({ success: false, message: 'Configuração de admin não disponível.' });
   }
@@ -98,12 +108,16 @@ app.post("/admin/login", (req, res) => {
     return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
   }
 
-  const token = jwt.sign({ role: 'admin' }, ADMIN_JWT_SECRET, { expiresIn: '30m' });
-  return res.json({ success: true, token, expiresIn: 1800 });
+  const token = jwt.sign({ role: 'admin' }, ADMIN_JWT_SECRET, { expiresIn: '24h', algorithm: 'HS256' });
+  return res.json({ success: true, token, expiresIn: 86400 });
 });
 
-// Rate limiting REMOVIDO - causava erro ERR_ERL_UNEXPECTED_X_FORWARDED_FOR no Render
-// TODO: Reimplementar com configuração correta para proxy reverso
+const buildDedupeKey = (...parts) => {
+  const normalized = parts
+    .filter(part => part !== undefined && part !== null)
+    .map(part => (typeof part === 'string' ? part.trim() : JSON.stringify(part)));
+  return crypto.createHash('sha256').update(normalized.join('|')).digest('hex');
+};
 
 // Configuração do multer para upload de imagens
 const storage = multer.memoryStorage();
@@ -127,7 +141,11 @@ const authenticateJWT = (req, res, next) => {
   }
   const token = authHeader.slice(7);
   try {
-    req.admin = jwt.verify(token, ADMIN_JWT_SECRET);
+    const payload = jwt.verify(token, ADMIN_JWT_SECRET, { algorithms: ['HS256'] });
+    if (!payload || payload.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Token sem permissao de admin.' });
+    }
+    req.admin = payload;
     return next();
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Token inválido ou expirado.' });
@@ -144,12 +162,38 @@ const isAdminTokenValid = (req) => {
   }
   const token = authHeader.slice(7);
   try {
-    jwt.verify(token, ADMIN_JWT_SECRET);
-    return true;
+    const payload = jwt.verify(token, ADMIN_JWT_SECRET, { algorithms: ['HS256'] });
+    return payload?.role === 'admin';
   } catch (err) {
     return false;
   }
 };
+
+// Rota de health check (servidor + MongoDB)
+app.get("/health", async (req, res) => {
+  const status = {
+    status: 'OK',
+    uptime: process.uptime(),
+    mongodb: 'disconnected',
+    timestamp: Date.now()
+  };
+
+  try {
+    if (mongoose.connection?.db) {
+      await mongoose.connection.db.admin().ping();
+      status.mongodb = 'connected';
+      return res.json(status);
+    }
+    status.status = 'UNHEALTHY';
+    return res.status(503).json(status);
+  } catch (err) {
+    return res.status(503).json({
+      ...status,
+      status: 'UNHEALTHY',
+      error: err.message
+    });
+  }
+});
 
 // Histórico de conversas por sessão
 const conversationHistory = new Map();
@@ -422,22 +466,37 @@ app.post("/suggest-knowledge", async (req, res) => {
   try {
     const { suggestion, userName, userPhone, sessionId, lastBotReply, lastUserMessage } = req.body;
 
-    const newSuggestion = {
-      userId: sessionId || userName || 'anon',
-      suggestion,
-      userName,
-      userPhone,
+  const newSuggestion = {
+    userId: sessionId || userName || 'anon',
+    suggestion,
+    userName,
+    userPhone,
       sessionId: sessionId || 'unknown',
       lastUserMessage: lastUserMessage || 'N/A',
       lastBotReply: lastBotReply || 'N/A',
-      timestamp: new Date().toISOString(),
-      status: "pending"
-    };
+    timestamp: new Date().toISOString(),
+    status: "pending"
+  };
 
-    const savedSuggestion = await Sugestoes.create({
-      ...newSuggestion,
-      createdAt: new Date()
-    });
+    const dedupeKey = buildDedupeKey(
+      'suggestion',
+      sessionId || userName || 'anon',
+      suggestion,
+      lastUserMessage || '',
+      lastBotReply || ''
+    );
+
+    const savedSuggestion = await Sugestoes.findOneAndUpdate(
+      { dedupeKey },
+      {
+        $setOnInsert: {
+          ...newSuggestion,
+          createdAt: new Date(),
+          dedupeKey
+        }
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
     console.log(`📝 Nova sugestão de conhecimento de ${userName}: ${suggestion.substring(0, 50)}... (${savedSuggestion._id})`);
 
@@ -525,11 +584,27 @@ app.post("/register-user", async (req, res) => {
     try {
       const messagesCollection = getMessagesCollection();
       if (messagesCollection) {
-        await messagesCollection.insertOne({
-          type: 'user_registration',
-          ...userData,
-          createdAt: new Date()
-        });
+        const dedupeKey = buildDedupeKey('user_registration', sessionId || email || phone || name || 'anon');
+        await messagesCollection.findOneAndUpdate(
+          { type: 'user_registration', dedupeKey },
+          {
+            $set: {
+              name,
+              phone,
+              email,
+              resin: resin || 'Nao informada',
+              sessionId,
+              updatedAt: new Date()
+            },
+            $setOnInsert: {
+              type: 'user_registration',
+              registeredAt: userData.registeredAt,
+              createdAt: new Date(),
+              dedupeKey
+            }
+          },
+          { upsert: true, returnDocument: 'after' }
+        );
         console.log(`💾 Registro de usuario salvo no MongoDB`);
       }
     } catch (dbErr) {
@@ -765,8 +840,18 @@ a menos que o defeito tenha relacao DIRETA com adesao a base.`
         embedding: null,
         createdAt: new Date()
       };
+      const dedupeKey = buildDedupeKey(
+        'visual_pending_auto',
+        pendingDoc.imageUrl,
+        pendingDoc.userName,
+        pendingDoc.lastUserMessage
+      );
 
-      await collection.insertOne(pendingDoc);
+      await collection.findOneAndUpdate(
+        { dedupeKey },
+        { $setOnInsert: { ...pendingDoc, dedupeKey } },
+        { upsert: true, returnDocument: 'after' }
+      );
       console.log(`📸 [AUTO-SAVE] Foto salva automaticamente para revisão do admin`);
     } catch (pendingErr) {
       console.error('⚠️ [AUTO-SAVE] Erro ao salvar foto pendente:', pendingErr.message);
@@ -1954,13 +2039,19 @@ app.post("/api/contact", async (req, res) => {
       updatedAt: new Date()
     };
 
-    const result = await messagesCollection.insertOne(contactMessage);
+    const dedupeKey = buildDedupeKey('contact', contactMessage.email, contactMessage.phone, contactMessage.message);
+    const result = await messagesCollection.findOneAndUpdate(
+      { type: 'contact', dedupeKey },
+      { $setOnInsert: { ...contactMessage, type: 'contact', dedupeKey } },
+      { upsert: true, returnDocument: 'after' }
+    );
 
-    console.log(`✅ Mensagem salva no MongoDB: ${result.insertedId}`);
+    const savedMessageId = result.value?._id?.toString() || null;
+    console.log(`✅ Mensagem salva no MongoDB: ${savedMessageId || 'existente'}`);
 
     // Log da operacao
     logOperation('CONTACT_MESSAGE', {
-      messageId: result.insertedId.toString(),
+      messageId: savedMessageId,
       name: contactMessage.name,
       hasEmail: !!email,
       hasPhone: !!phone,
@@ -1970,7 +2061,7 @@ app.post("/api/contact", async (req, res) => {
     res.json({
       success: true,
       message: 'Mensagem enviada com sucesso! Entraremos em contato em breve.',
-      messageId: result.insertedId.toString()
+      messageId: savedMessageId
     });
   } catch (err) {
     console.error('❌ Erro ao salvar mensagem de contato:', err);
@@ -2200,14 +2291,28 @@ app.post("/api/gallery", galleryUpload.array('images', 2), async (req, res) => {
       updatedAt: new Date()
     };
 
-    const result = await galleryCollection.insertOne(galleryEntry);
+    const dedupeKey = buildDedupeKey(
+      'gallery',
+      galleryEntry.name,
+      galleryEntry.resin,
+      galleryEntry.printer,
+      galleryEntry.comment,
+      uploadedImages.map(img => img.publicId).join(',')
+    );
 
-    console.log(`✅ [GALERIA] Entrada salva: ${result.insertedId}`);
+    const result = await galleryCollection.findOneAndUpdate(
+      { dedupeKey },
+      { $setOnInsert: { ...galleryEntry, dedupeKey } },
+      { upsert: true, returnDocument: 'after' }
+    );
+
+    const entryId = result.value?._id?.toString() || null;
+    console.log(`✅ [GALERIA] Entrada salva: ${entryId || 'existente'}`);
 
     res.json({
       success: true,
       message: 'Fotos enviadas com sucesso! Aguarde aprovacao do administrador.',
-      entryId: result.insertedId.toString()
+      entryId
     });
   } catch (err) {
     console.error('❌ [GALERIA] Erro ao salvar:', err);
@@ -2869,15 +2974,26 @@ app.post("/api/visual-knowledge/pending", upload.single('image'), async (req, re
       embedding: null,
       createdAt: new Date()
     };
+    const dedupeKey = buildDedupeKey(
+      'visual_pending_user',
+      pendingDoc.imageUrl,
+      pendingDoc.userName,
+      pendingDoc.lastUserMessage
+    );
 
-    const result = await collection.insertOne(pendingDoc);
+    const result = await collection.findOneAndUpdate(
+      { dedupeKey },
+      { $setOnInsert: { ...pendingDoc, dedupeKey } },
+      { upsert: true, returnDocument: 'after' }
+    );
 
-    console.log(`✅ [VISUAL-RAG] Foto pendente salva: ${result.insertedId}`);
+    const documentId = result.value?._id?.toString() || null;
+    console.log(`✅ [VISUAL-RAG] Foto pendente salva: ${documentId || 'existente'}`);
 
     res.json({
       success: true,
       message: 'Foto salva para treinamento',
-      documentId: result.insertedId.toString()
+      documentId
     });
   } catch (err) {
     console.error('❌ [VISUAL-RAG] Erro ao salvar foto pendente:', err);
@@ -3048,19 +3164,29 @@ app.post("/api/partners", authenticateJWT, async (req, res) => {
     
     const partnersCollection = getPartnersCollection();
     
-    const newPartner = {
-      ...partnerData,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+    const dedupeKey = buildDedupeKey('partner', partnerData.name, partnerData.website || partnerData.url || '');
+    const now = new Date();
+    const result = await partnersCollection.findOneAndUpdate(
+      { dedupeKey },
+      {
+        $set: {
+          ...partnerData,
+          updatedAt: now
+        },
+        $setOnInsert: {
+          createdAt: now,
+          dedupeKey
+        }
+      },
+      { upsert: true, returnDocument: 'after' }
+    );
     
-    const result = await partnersCollection.insertOne(newPartner);
-    
+    const partner = result.value;
     console.log(`✅ Novo parceiro criado: ${partnerData.name}`);
     
     res.json({
       success: true,
-      partner: { ...newPartner, _id: result.insertedId }
+      partner
     });
   } catch (err) {
     console.error('❌ Erro ao criar parceiro:', err);
