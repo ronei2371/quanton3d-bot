@@ -3199,6 +3199,96 @@ const buildPrintParametersRAG = (profiles) => (
   })
 );
 
+function getLegacySuggestionsFile() {
+  const candidates = [
+    path.join(__dirname, 'data', 'suggestions.json'),
+    path.join(__dirname, 'knowledge', 'suggestions.json'),
+    path.join(__dirname, 'suggestions.json')
+  ];
+
+  return candidates.find(candidate => fs.existsSync(candidate)) || null;
+}
+
+function normalizeLegacySuggestions(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw?.suggestions)) return raw.suggestions;
+  if (Array.isArray(raw?.data)) return raw.data;
+  return [];
+}
+
+async function importOldData() {
+  try {
+    const printParametersCount = await Parametros.collection.countDocuments();
+    if (printParametersCount === 0) {
+      const printParametersFile = path.join(__dirname, 'data', 'resins_extracted.json');
+      if (!fs.existsSync(printParametersFile)) {
+        console.warn('⚠️ Arquivo data/resins_extracted.json não encontrado para importação.');
+      } else {
+        const rawData = JSON.parse(fs.readFileSync(printParametersFile, 'utf-8'));
+        if (!Array.isArray(rawData?.profiles)) {
+          console.warn('⚠️ Estrutura inválida em data/resins_extracted.json: profiles ausente.');
+        } else {
+          rawData.generatedAt = new Date().toISOString();
+          rawData.stats = {
+            totalProfiles: rawData.profiles.length,
+            totalResins: rawData.resins?.length || 0,
+            totalPrinters: rawData.printers?.length || 0,
+            okProfiles: rawData.profiles.filter(p => p.status === 'ok').length,
+            comingSoonProfiles: rawData.profiles.filter(p => p.status === 'coming_soon').length
+          };
+
+          const rag = buildPrintParametersRAG(rawData.profiles);
+
+          await Parametros.collection.updateOne(
+            { _id: 'print_parameters' },
+            {
+              $set: {
+                data: rawData,
+                rag,
+                updatedAt: new Date()
+              }
+            },
+            { upsert: true }
+          );
+
+          console.log(`✅ Importação inicial: ${rawData.profiles.length} perfis adicionados.`);
+        }
+      }
+    } else {
+      console.log('ℹ️ Coleção print_parameters já possui dados, importação ignorada.');
+    }
+
+    const suggestionsCount = await Sugestoes.collection.countDocuments();
+    if (suggestionsCount === 0) {
+      const suggestionsFile = getLegacySuggestionsFile();
+      if (!suggestionsFile) {
+        console.warn('⚠️ Nenhum arquivo de sugestões antigo encontrado para importação.');
+        return;
+      }
+
+      const rawSuggestions = JSON.parse(fs.readFileSync(suggestionsFile, 'utf-8'));
+      const suggestions = normalizeLegacySuggestions(rawSuggestions);
+
+      if (suggestions.length === 0) {
+        console.warn('⚠️ Arquivo de sugestões antigo vazio, importação ignorada.');
+        return;
+      }
+
+      const normalized = suggestions.map(suggestion => ({
+        ...suggestion,
+        createdAt: suggestion.createdAt || suggestion.timestamp || new Date()
+      }));
+
+      await Sugestoes.collection.insertMany(normalized, { ordered: false });
+      console.log(`✅ Importação inicial: ${normalized.length} sugestões adicionadas.`);
+    } else {
+      console.log('ℹ️ Coleção suggestions já possui dados, importação ignorada.');
+    }
+  } catch (err) {
+    console.error('❌ Erro ao importar dados antigos:', err);
+  }
+}
+
 async function loadPrintParameters() {
   try {
     const record = await Parametros.collection.findOne({ _id: 'print_parameters' });
@@ -3620,6 +3710,9 @@ async function startServer() {
     console.log('🚀 Conectando ao MongoDB...');
     await connectToMongo();
     console.log('✅ MongoDB conectado com sucesso!');
+
+    console.log('🚀 Importando dados antigos (se necessário)...');
+    await importOldData();
 
     console.log('🚀 Carregando parâmetros de impressão...');
     await loadPrintParameters();
