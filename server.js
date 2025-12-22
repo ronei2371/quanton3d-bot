@@ -12,6 +12,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from "url";
 import jwt from "jsonwebtoken";
+import { randomUUID } from "crypto";
 import mongoose from "mongoose";
 import rateLimit from "express-rate-limit";
 import { initializeRAG, searchKnowledge, formatContext, addDocument, listDocuments, deleteDocument, updateDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding, clearKnowledgeCollection } from './rag-search.js';
@@ -36,11 +37,16 @@ const publicDir = path.join(__dirname, 'public');
 
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
+const ADMIN_JWT_ISSUER = process.env.ADMIN_JWT_ISSUER || "quanton3d-admin";
+const ADMIN_JWT_AUDIENCE = process.env.ADMIN_JWT_AUDIENCE || "quanton3d-admin-panel";
+const ADMIN_JWT_ALGORITHM = process.env.ADMIN_JWT_ALGORITHM || "HS256";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const RAG_EMBEDDING_MODEL = process.env.RAG_EMBEDDING_MODEL || 'text-embedding-3-large';
 
 if (!ADMIN_JWT_SECRET) {
   console.error('❌ ADMIN_JWT_SECRET não configurado - configure no Render para autenticar o painel admin.');
+} else if (ADMIN_JWT_SECRET.length < 32) {
+  console.warn('⚠️  ADMIN_JWT_SECRET com menos de 32 caracteres - recomenda-se um segredo mais forte.');
 }
 
 if (!ADMIN_SECRET) {
@@ -107,7 +113,17 @@ app.post("/admin/login", loginLimiter, (req, res) => {
     return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
   }
 
-  const token = jwt.sign({ role: 'admin' }, ADMIN_JWT_SECRET, { expiresIn: '30m' });
+  const token = jwt.sign(
+    { role: 'admin' },
+    ADMIN_JWT_SECRET,
+    {
+      expiresIn: '30m',
+      issuer: ADMIN_JWT_ISSUER,
+      audience: ADMIN_JWT_AUDIENCE,
+      algorithm: ADMIN_JWT_ALGORITHM,
+      jwtid: randomUUID()
+    }
+  );
   return res.json({ success: true, token, expiresIn: 1800 });
 });
 
@@ -159,12 +175,23 @@ const authenticateJWT = (req, res, next) => {
     return res.status(500).json({ success: false, message: 'ADMIN_JWT_SECRET não configurado.' });
   }
   const authHeader = req.headers.authorization || '';
-  if (!authHeader.startsWith('Bearer ')) {
+  if (!authHeader.toLowerCase().startsWith('bearer ')) {
     return res.status(401).json({ success: false, message: 'Token Bearer não fornecido.' });
   }
-  const token = authHeader.slice(7);
+  const token = authHeader.slice(7).trim();
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Token Bearer não fornecido.' });
+  }
   try {
-    req.admin = jwt.verify(token, ADMIN_JWT_SECRET);
+    const payload = jwt.verify(token, ADMIN_JWT_SECRET, {
+      issuer: ADMIN_JWT_ISSUER,
+      audience: ADMIN_JWT_AUDIENCE,
+      algorithms: [ADMIN_JWT_ALGORITHM]
+    });
+    if (payload?.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Token sem privilégios de admin.' });
+    }
+    req.admin = payload;
     return next();
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Token inválido ou expirado.' });
@@ -176,13 +203,20 @@ const isAdminTokenValid = (req) => {
     return false;
   }
   const authHeader = req.headers.authorization || '';
-  if (!authHeader.startsWith('Bearer ')) {
+  if (!authHeader.toLowerCase().startsWith('bearer ')) {
     return false;
   }
-  const token = authHeader.slice(7);
+  const token = authHeader.slice(7).trim();
+  if (!token) {
+    return false;
+  }
   try {
-    jwt.verify(token, ADMIN_JWT_SECRET);
-    return true;
+    const payload = jwt.verify(token, ADMIN_JWT_SECRET, {
+      issuer: ADMIN_JWT_ISSUER,
+      audience: ADMIN_JWT_AUDIENCE,
+      algorithms: [ADMIN_JWT_ALGORITHM]
+    });
+    return payload?.role === 'admin';
   } catch (err) {
     return false;
   }
