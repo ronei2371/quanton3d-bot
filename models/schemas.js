@@ -39,6 +39,9 @@ const ParametrosSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 }, { collection: 'print_parameters' });
 
+ParametrosSchema.index({ resin: 1, printer: 1, createdAt: -1 });
+ParametrosSchema.index({ sessionId: 1, createdAt: -1 });
+
 // Schema de Sugestões
 const SugestoesSchema = new mongoose.Schema({
   userId: { type: String, required: true },
@@ -63,6 +66,9 @@ const SugestoesSchema = new mongoose.Schema({
   rejectionReason: String,
   documentId: String
 }, { collection: 'suggestions' });
+
+SugestoesSchema.index({ status: 1, createdAt: -1 });
+SugestoesSchema.index({ sessionId: 1, createdAt: -1 });
 
 // Schema de Conversas (Histórico)
 const ConversasSchema = new mongoose.Schema({
@@ -91,6 +97,9 @@ const ConversasSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
+ConversasSchema.index({ sessionId: 1, createdAt: -1 });
+ConversasSchema.index({ userEmail: 1, createdAt: -1 });
+
 // Schema de Métricas
 const MetricasSchema = new mongoose.Schema({
   sessionId: { type: String, required: true, index: true },
@@ -115,6 +124,9 @@ const MetricasSchema = new mongoose.Schema({
   markedAsBad: Boolean,
   badResponseReason: String
 });
+
+MetricasSchema.index({ sessionId: 1, timestamp: -1 });
+MetricasSchema.index({ userEmail: 1, timestamp: -1 });
 
 const Parametros = mongoose.model('Parametros', ParametrosSchema);
 const Sugestoes = mongoose.model('Sugestoes', SugestoesSchema);
