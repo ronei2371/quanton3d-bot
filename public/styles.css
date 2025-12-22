@@ -248,8 +248,9 @@ button.ghost {
   flex-direction: row;
   flex-wrap: wrap;
   gap: 8px;
-  justify-content: center;
-  margin-top: 240px;
+  justify-content: flex-start;
+  align-items: flex-start;
+  margin-top: 250px;
   padding: 24px 0 40px;
 }
 
