@@ -386,7 +386,7 @@
         printers: [],
         profiles: [],
         page: 1,
-        limit: 25,
+        limit: null,
         total: 0
       };
 
@@ -457,6 +457,10 @@
       };
 
       const renderPagination = () => {
+        if (!state.limit) {
+          pagination.innerHTML = "";
+          return;
+        }
         const totalPages = Math.max(Math.ceil(state.total / state.limit), 1);
         pagination.innerHTML = `
           <span>Página ${state.page} de ${totalPages}</span>
@@ -548,8 +552,10 @@
         if (resinSelect.value) params.append("resinId", resinSelect.value);
         if (printerSelect.value) params.append("printerId", printerSelect.value);
         if (statusSelect.value) params.append("status", statusSelect.value);
-        params.append("page", state.page);
-        params.append("limit", state.limit);
+        if (state.limit) {
+          params.append("page", state.page);
+          params.append("limit", state.limit);
+        }
 
         const response = await fetch(`${API_BASE}/params/profiles?${params.toString()}`);
         const data = await response.json();

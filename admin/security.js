@@ -3,9 +3,9 @@
 // Drop-in de segurança (login JWT, rotas admin protegidas e SSE).
 // Por quê: tirar senha do HTML, limitar brute-force e proteger painel.
 // =====================================================================
-const jwt = require("jsonwebtoken");
-const rateLimit = require("express-rate-limit");
-const cors = require("cors");
+import jwt from "jsonwebtoken";
+import rateLimit from "express-rate-limit";
+import cors from "cors";
 
 function allowListFromEnv(v){ return (v||"").split(",").map(s=>s.trim()).filter(Boolean); }
 function issueToken(secret){ return jwt.sign({ role: "admin" }, secret, { expiresIn: "30m" }); }
@@ -82,7 +82,7 @@ function attachAdminSecurity(app){
   console.log("[admin] Rotas: /admin/login, /admin/feedback, /admin/stream");
 }
 
-module.exports = { attachAdminSecurity };
+export { attachAdminSecurity };
 
 
 // =====================================================================
