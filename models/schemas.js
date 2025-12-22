@@ -37,7 +37,7 @@ const ParametrosSchema = new mongoose.Schema({
   },
   createdAt: { type: Date, default: Date.now, index: true },
   updatedAt: { type: Date, default: Date.now }
-});
+}, { collection: 'print_parameters' });
 
 // Schema de Sugestões
 const SugestoesSchema = new mongoose.Schema({
@@ -62,7 +62,7 @@ const SugestoesSchema = new mongoose.Schema({
   rejectedAt: Date,
   rejectionReason: String,
   documentId: String
-});
+}, { collection: 'suggestions' });
 
 // Schema de Conversas (Histórico)
 const ConversasSchema = new mongoose.Schema({
