@@ -47,6 +47,7 @@ const SugestoesSchema = new mongoose.Schema({
   userId: { type: String, required: true },
   sessionId: { type: String, required: true },
   suggestion: { type: String, required: true },
+  dedupeKey: { type: String, index: true },
   userName: String,
   userPhone: String,
   userEmail: String,
