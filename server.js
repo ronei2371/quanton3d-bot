@@ -65,8 +65,13 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
-app.use(express.static(publicDir));
 app.use('/public', express.static(publicDir));
+
+// Garantir UTF-8 em todas as respostas
+app.use((req, res, next) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  next();
+});
 
 // Rate limiting REMOVIDO - causava erro ERR_ERL_UNEXPECTED_X_FORWARDED_FOR no Render
 // TODO: Reimplementar com configuração correta para proxy reverso
@@ -110,7 +115,7 @@ const siteVisits = [];
 
 // Rota principal de teste
 app.get("/", (req, res) => {
-  res.sendFile(path.join(publicDir, 'index.html'));
+  res.send("🚀 Quanton3D IA Online! Backend ativo e operacional.");
 });
 
 // Painel de parâmetros (UI)
