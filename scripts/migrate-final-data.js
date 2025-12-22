@@ -15,43 +15,11 @@ const PRINT_PARAMETERS_COLLECTION = 'print_parameters';
 const SUGGESTIONS_COLLECTION = 'suggestions';
 
 const PRINT_PARAMETERS_FILE = path.join(process.cwd(), 'data', 'resins_extracted.json');
-const SUGGESTIONS_FILE = path.join(process.cwd(), 'knowledge', 'suggestions.json');
-const PRINT_PARAMETERS_RAG_FILE = path.join(process.cwd(), 'data', 'print-parameters-rag.json');
 
 function ensureFileExists(filePath) {
   if (!fs.existsSync(filePath)) {
     throw new Error(`Arquivo nao encontrado: ${filePath}`);
   }
-}
-
-function buildPrintParametersRAG(profiles) {
-  return profiles.map(profile => {
-    let text;
-    if (profile.status === 'coming_soon') {
-      text = `Resina ${profile.resinName} | Impressora ${profile.brand} ${profile.model}: Parâmetros em breve.`;
-    } else {
-      const params = profile.params || {};
-      const parts = [];
-      if (params.layerHeightMm != null) parts.push(`altura de camada=${params.layerHeightMm}mm`);
-      if (params.baseLayers != null) parts.push(`camadas de base=${Math.round(params.baseLayers)}`);
-      if (params.exposureTimeS != null) parts.push(`tempo de exposição=${params.exposureTimeS}s`);
-      if (params.baseExposureTimeS != null) parts.push(`exposição base=${params.baseExposureTimeS}s`);
-      if (params.uvOffDelayS != null) parts.push(`retardo UV=${params.uvOffDelayS}s`);
-      if (params.restBeforeLiftS != null) parts.push(`descanso antes elevação=${params.restBeforeLiftS}s`);
-      if (params.restAfterLiftS != null) parts.push(`descanso após elevação=${params.restAfterLiftS}s`);
-      if (params.restAfterRetractS != null) parts.push(`descanso após retração=${params.restAfterRetractS}s`);
-      if (params.uvPower != null) parts.push(`potência UV=${params.uvPower}`);
-      text = `Resina ${profile.resinName} | Impressora ${profile.brand} ${profile.model}: ${parts.join(', ')}`;
-    }
-
-    return {
-      id: profile.id,
-      resin: profile.resinName,
-      printer: `${profile.brand} ${profile.model}`,
-      text,
-      status: profile.status
-    };
-  });
 }
 
 function loadPrintParameters() {
@@ -65,22 +33,21 @@ function loadPrintParameters() {
   return data;
 }
 
-function loadPrintParametersRAG(profiles) {
-  if (fs.existsSync(PRINT_PARAMETERS_RAG_FILE)) {
-    const rag = JSON.parse(fs.readFileSync(PRINT_PARAMETERS_RAG_FILE, 'utf-8'));
-    if (Array.isArray(rag) && rag.length > 0) {
-      return rag;
-    }
-  }
-
-  return buildPrintParametersRAG(profiles);
-}
-
 function normalizeSuggestions(raw) {
   if (Array.isArray(raw)) return raw;
   if (Array.isArray(raw?.suggestions)) return raw.suggestions;
   if (Array.isArray(raw?.data)) return raw.data;
   return [];
+}
+
+function getSuggestionsFile() {
+  const candidates = [
+    path.join(process.cwd(), 'knowledge', 'suggestions.json'),
+    path.join(process.cwd(), 'data', 'suggestions.json'),
+    path.join(process.cwd(), 'suggestions.json')
+  ];
+
+  return candidates.find(candidate => fs.existsSync(candidate)) || null;
 }
 
 function resolveSuggestionFilter(suggestion) {
@@ -107,37 +74,41 @@ async function migratePrintParameters(db) {
 
   const printParameters = loadPrintParameters();
   const profilesCount = printParameters.profiles.length;
-  const ragChunks = loadPrintParametersRAG(printParameters.profiles);
+  const profileOperations = printParameters.profiles.map(profile => ({
+    updateOne: {
+      filter: { id: profile.id },
+      update: {
+        $set: {
+          ...profile,
+          updatedAt: new Date()
+        },
+        $setOnInsert: {
+          createdAt: new Date()
+        }
+      },
+      upsert: true
+    }
+  }));
 
-  printParameters.generatedAt = new Date().toISOString();
-  printParameters.stats = {
-    totalProfiles: profilesCount,
-    totalResins: printParameters.resins?.length || 0,
-    totalPrinters: printParameters.printers?.length || 0,
-    okProfiles: printParameters.profiles.filter(p => p.status === 'ok').length,
-    comingSoonProfiles: printParameters.profiles.filter(p => p.status === 'coming_soon').length
-  };
+  if (profileOperations.length > 0) {
+    const result = await db
+      .collection(PRINT_PARAMETERS_COLLECTION)
+      .bulkWrite(profileOperations, { ordered: false });
+    console.log(`✅ Perfis importados/atualizados: ${result.upsertedCount}/${profilesCount}`);
+  }
 
-  await db.collection(PRINT_PARAMETERS_COLLECTION).updateOne(
-    { _id: 'print_parameters' },
-    {
-      $set: {
-        data: printParameters,
-        rag: ragChunks,
-        updatedAt: new Date()
-      }
-    },
-    { upsert: true }
-  );
-
-  console.log(`✅ Perfis importados: ${profilesCount}`);
 }
 
 async function migrateSuggestions(db) {
   console.log('[2/3] Importando sugestoes...');
 
-  ensureFileExists(SUGGESTIONS_FILE);
-  const raw = JSON.parse(fs.readFileSync(SUGGESTIONS_FILE, 'utf-8'));
+  const suggestionsFile = getSuggestionsFile();
+  if (!suggestionsFile) {
+    console.log('⚠️ Nenhum arquivo de sugestoes encontrado para importar.');
+    return;
+  }
+
+  const raw = JSON.parse(fs.readFileSync(suggestionsFile, 'utf-8'));
   const suggestions = normalizeSuggestions(raw);
 
   if (suggestions.length === 0) {
