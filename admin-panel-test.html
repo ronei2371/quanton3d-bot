@@ -148,6 +148,7 @@
         </div>
 
         <div class="login">
+            <input id="admin-username" type="text" placeholder="Usuário admin">
             <input id="admin-password" type="password" placeholder="Senha admin">
             <button class="btn btn-refresh" onclick="login()">Entrar</button>
             <span id="login-status" class="suggestion-meta"></span>
@@ -182,6 +183,7 @@
         const AUTH_TOKEN_KEY = 'quanton3d_admin_token';
         let authToken = localStorage.getItem(AUTH_TOKEN_KEY) || '';
         const loginStatus = document.getElementById('login-status');
+        const usernameInput = document.getElementById('admin-username');
         const passwordInput = document.getElementById('admin-password');
 
         const setAuthToken = (token) => {
@@ -197,23 +199,24 @@
 
         async function login() {
             try {
+                const username = usernameInput.value.trim();
                 const password = passwordInput.value;
-                if (!password) {
-                    showMessage('Informe a senha de admin.', 'error');
+                if (!username || !password) {
+                    showMessage('Informe usuário e senha de admin.', 'error');
                     return;
                 }
                 const response = await fetch(`${API_BASE}/admin/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password })
+                    body: JSON.stringify({ username, password })
                 });
                 const data = await response.json();
-                if (!data.success) {
+                if (!response.ok) {
                     setAuthToken('');
-                    showMessage(data.message || 'Falha no login.', 'error');
+                    showMessage(data.error || 'Falha no login.', 'error');
                     return;
                 }
-                setAuthToken(data.token);
+                setAuthToken(data.token || '');
                 showMessage('Login realizado com sucesso!', 'success');
                 await Promise.all([checkRAGStatus(), checkIntelligenceStats(), loadSuggestions()]);
             } catch (error) {
