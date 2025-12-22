@@ -23,6 +23,18 @@ let client = null;
 let db = null;
 let mongooseConnected = false;
 
+async function ensureMongoIndexes() {
+  try {
+    await Parametros.createIndexes();
+    await Sugestoes.createIndexes();
+    await Conversas.createIndexes();
+    await Metricas.createIndexes();
+    console.log('[MongoDB] Indices garantidos para Parametros, Sugestoes, Conversas e Metricas');
+  } catch (err) {
+    console.warn('[MongoDB] Falha ao criar indices:', err.message);
+  }
+}
+
 // Conectar ao MongoDB
 export async function connectToMongo() {
   if (db) {
@@ -59,6 +71,8 @@ export async function connectToMongo() {
       await db.createCollection('print_parameters');
       console.log('[MongoDB] Colecao "print_parameters" criada');
     }
+
+    await ensureMongoIndexes();
     
     return db;
   } catch (err) {
