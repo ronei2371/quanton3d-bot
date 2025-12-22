@@ -13,7 +13,7 @@ import path from 'path';
 import { fileURLToPath } from "url";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
-// import rateLimit from "express-rate-limit"; // REMOVIDO - causando erro ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
+import rateLimit from "express-rate-limit";
 import { initializeRAG, searchKnowledge, formatContext, addDocument, listDocuments, deleteDocument, updateDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding, clearKnowledgeCollection } from './rag-search.js';
 import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection, getPartnersCollection, getDocumentsCollection, Parametros, Sugestoes } from './db.js';
 import { v2 as cloudinary } from 'cloudinary';
@@ -73,6 +73,7 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
 console.log('🔧 Sistema configurado para usar APENAS MongoDB para persistencia');
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -85,7 +86,15 @@ app.use((req, res, next) => {
 });
 
 // Login administrativo com JWT
-app.post("/admin/login", (req, res) => {
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { success: false, message: 'Muitas tentativas. Tente novamente em alguns minutos.' }
+});
+
+app.post("/admin/login", loginLimiter, (req, res) => {
   if (!ADMIN_SECRET || !ADMIN_JWT_SECRET) {
     return res.status(500).json({ success: false, message: 'Configuração de admin não disponível.' });
   }
@@ -102,8 +111,36 @@ app.post("/admin/login", (req, res) => {
   return res.json({ success: true, token, expiresIn: 1800 });
 });
 
-// Rate limiting REMOVIDO - causava erro ERR_ERL_UNEXPECTED_X_FORWARDED_FOR no Render
-// TODO: Reimplementar com configuração correta para proxy reverso
+// Rate limiting reativado com suporte a proxy reverso (Render)
+
+// Healthcheck de servidor + MongoDB
+app.get("/health", async (req, res) => {
+  const mongoState = mongoose.connection.readyState;
+  const mongoConnected = mongoState === 1;
+  let mongoPing = false;
+
+  if (mongoConnected && mongoose.connection.db) {
+    try {
+      await mongoose.connection.db.admin().ping();
+      mongoPing = true;
+    } catch (err) {
+      mongoPing = false;
+    }
+  }
+
+  const healthy = mongoConnected && mongoPing;
+
+  res.status(healthy ? 200 : 503).json({
+    status: healthy ? 'ok' : 'degraded',
+    server: 'ok',
+    mongo: {
+      connected: mongoConnected,
+      ping: mongoPing,
+      state: mongoState
+    },
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Configuração do multer para upload de imagens
 const storage = multer.memoryStorage();
