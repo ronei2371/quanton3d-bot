@@ -42,6 +42,10 @@ export async function connectToMongo() {
       await db.createCollection('messages');
       console.log('[MongoDB] Colecao "messages" criada');
     }
+    if (!collectionNames.includes('print_parameters')) {
+      await db.createCollection('print_parameters');
+      console.log('[MongoDB] Colecao "print_parameters" criada');
+    }
     
     return db;
   } catch (err) {
@@ -94,6 +98,11 @@ export function getPartnersCollection() {
   return getDb().collection('partners');
 }
 
+// Obter colecao de parametros de impressao
+export function getPrintParametersCollection() {
+  return getDb().collection('print_parameters');
+}
+
 // Fechar conexao (para cleanup)
 export async function closeMongo() {
   if (client) {
@@ -118,6 +127,7 @@ export default {
   getVisualKnowledgeCollection,
   getSuggestionsCollection,
   getPartnersCollection,
+  getPrintParametersCollection,
   closeMongo,
   isConnected
 };

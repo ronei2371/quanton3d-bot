@@ -11,10 +11,12 @@ import multer from "multer";
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from "url";
+import jwt from "jsonwebtoken";
 // import rateLimit from "express-rate-limit"; // REMOVIDO - causando erro ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
 import { initializeRAG, searchKnowledge, formatContext, addDocument, listDocuments, deleteDocument, updateDocument, addVisualKnowledge, searchVisualKnowledge, formatVisualResponse, listVisualKnowledge, deleteVisualKnowledge, generateEmbedding, clearKnowledgeCollection } from './rag-search.js';
-import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection, getSuggestionsCollection, getPartnersCollection, getDocumentsCollection } from './db.js';
+import { connectToMongo, getMessagesCollection, getGalleryCollection, getVisualKnowledgeCollection, getSuggestionsCollection, getPartnersCollection, getDocumentsCollection, getPrintParametersCollection } from './db.js';
 import { v2 as cloudinary } from 'cloudinary';
+import { attachAdminSecurity } from "./admin/security.js";
 import {
   analyzeQuestionType,
   extractEntities,
@@ -32,16 +34,20 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicDir = path.join(__dirname, 'public');
 
-const ADMIN_API_TOKEN = process.env.ADMIN_API_TOKEN || process.env.ADMIN_SECRET || 'quanton3d_admin_secret';
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const RAG_EMBEDDING_MODEL = process.env.RAG_EMBEDDING_MODEL || 'text-embedding-3-large';
 
-if (!OPENAI_API_KEY) {
-  console.warn('⚠️  OPENAI_API_KEY não configurada - chamadas de IA irão falhar até definir a variável.');
+if (!ADMIN_JWT_SECRET) {
+  console.error('❌ ADMIN_JWT_SECRET não configurado - configure no Render para autenticar o painel admin.');
 }
 
-if (!process.env.ADMIN_API_TOKEN && !process.env.ADMIN_SECRET) {
-  console.warn('⚠️  ADMIN_API_TOKEN não configurado - usando token padrão apenas para ambientes locais.');
+if (!process.env.MONGODB_URI) {
+  console.error('❌ MONGODB_URI não configurado - configure no Render para habilitar persistência no MongoDB.');
+}
+
+if (!OPENAI_API_KEY) {
+  console.warn('⚠️  OPENAI_API_KEY não configurada - chamadas de IA irão falhar até definir a variável.');
 }
 
 // ===== CONFIGURACAO DO CLOUDINARY =====
@@ -66,6 +72,7 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use('/public', express.static(publicDir));
+attachAdminSecurity(app);
 
 // Garantir UTF-8 em todas as respostas
 app.use((req, res, next) => {
@@ -88,15 +95,33 @@ const openai = new OpenAI({
   apiKey: OPENAI_API_KEY,
 });
 
-const isAdminAuthorized = (token) => token === ADMIN_API_TOKEN;
 const extractAdminToken = (req) => {
   const authHeader = req.headers.authorization || '';
-  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  const headerToken = req.headers['x-admin-secret'] || req.headers['x-admin-token'];
-  const queryToken = req.query?.auth;
-  const bodyToken = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body.auth : null;
+  return authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+};
 
-  return headerToken || bearerToken || queryToken || bodyToken;
+const isAdminAuthorized = (req) => {
+  if (!ADMIN_JWT_SECRET) {
+    return false;
+  }
+  const token = extractAdminToken(req);
+  if (!token) {
+    return false;
+  }
+  try {
+    jwt.verify(token, ADMIN_JWT_SECRET);
+    return true;
+  } catch (err) {
+    return false;
+  }
+};
+
+const ensureAdminAuthorized = (req, res) => {
+  if (!isAdminAuthorized(req)) {
+    res.status(401).json({ success: false, message: 'Não autorizado' });
+    return false;
+  }
+  return true;
 };
 
 // Histórico de conversas por sessão
@@ -451,11 +476,8 @@ app.post("/api/custom-request", async (req, res) => {
 
 // Rota para listar pedidos customizados (admin)
 app.get("/custom-requests", (req, res) => {
-  const { auth } = req.query;
-
-  // Autenticação
-  if (auth !== 'quanton3d_admin_secret') {
-    return res.status(401).json({ success: false, message: 'Não autorizado' });
+  if (!ensureAdminAuthorized(req, res)) {
+    return;
   }
 
   // Retornar pedidos customizados (mais recentes primeiro)
@@ -959,11 +981,8 @@ WhatsApp: (31) 3271-6935`;
 
 // Rota para obter métricas e analytics
 app.get("/metrics", async (req, res) => {
-  const { auth } = req.query;
-
-  // Autenticação
-  if (auth !== 'quanton3d_admin_secret') {
-    return res.status(401).json({ success: false, message: 'Não autorizado' });
+  if (!ensureAdminAuthorized(req, res)) {
+    return;
   }
 
   // Calcular estatísticas em memoria
@@ -1096,10 +1115,10 @@ app.get("/metrics", async (req, res) => {
 // Endpoint para detalhes de clientes por resina (CORRECAO 3)
 // Retorna lista de clientes que usam uma resina especifica e historico de conversas
 app.get("/metrics/resin-details", async (req, res) => {
-  const { auth, resin } = req.query;
+  const { resin } = req.query;
 
-  if (auth !== 'quanton3d_admin_secret') {
-    return res.status(401).json({ success: false, message: 'Não autorizado' });
+  if (!ensureAdminAuthorized(req, res)) {
+    return;
   }
 
   if (!resin) {
@@ -1169,10 +1188,10 @@ app.get("/metrics/resin-details", async (req, res) => {
 // Endpoint para historico de um cliente especifico (CORRECAO 4)
 // Retorna duvidas, respostas e status de resolucao
 app.get("/metrics/client-history", async (req, res) => {
-  const { auth, clientKey } = req.query;
+  const { clientKey } = req.query;
 
-  if (auth !== 'quanton3d_admin_secret') {
-    return res.status(401).json({ success: false, message: 'Não autorizado' });
+  if (!ensureAdminAuthorized(req, res)) {
+    return;
   }
 
   if (!clientKey) {
@@ -1265,11 +1284,8 @@ app.get("/metrics/client-history", async (req, res) => {
 app.post("/add-knowledge", async (req, res) => {
   try {
     const { title, content } = req.body;
-    const auth = extractAdminToken(req);
-
-    // Autenticação
-    if (!isAdminAuthorized(auth)) {
-      return res.status(401).json({ success: false, error: 'Não autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     if (!title || !content) {
@@ -1298,10 +1314,8 @@ app.post("/add-knowledge", async (req, res) => {
 // Rota administrativa para importação em lote de conhecimento
 app.post("/admin/knowledge/import", async (req, res) => {
   try {
-    const adminToken = extractAdminToken(req);
-
-    if (!isAdminAuthorized(adminToken)) {
-      return res.status(401).json({ success: false, error: 'Não autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     const bodyIsEmpty = () => {
@@ -1448,10 +1462,8 @@ app.post("/admin/knowledge/import", async (req, res) => {
 // Rota administrativa para listar conhecimento com filtros e paginação
 app.get("/admin/knowledge/list", async (req, res) => {
   try {
-    const adminToken = extractAdminToken(req);
-
-    if (!isAdminAuthorized(adminToken)) {
-      return res.status(401).json({ success: false, error: 'Não autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     const { tag, resin, printer, search } = req.query;
@@ -1503,11 +1515,10 @@ app.get("/admin/knowledge/list", async (req, res) => {
 // Rota administrativa para remover conhecimento individual
 app.delete("/admin/knowledge/:id", async (req, res) => {
   try {
-    const adminToken = extractAdminToken(req);
     const { id } = req.params;
 
-    if (!isAdminAuthorized(adminToken)) {
-      return res.status(401).json({ success: false, error: 'Não autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     console.log(`🗑️ [DELETE-KNOWLEDGE] Solicitado delete do documento ${id}`);
@@ -1530,11 +1541,10 @@ app.delete("/admin/knowledge/:id", async (req, res) => {
 // Aceita filtros opcionais: start (data inicio) e end (data fim)
 app.get("/api/knowledge", async (req, res) => {
   try {
-    const { auth, start, end } = req.query;
+    const { start, end } = req.query;
 
-    // Autenticação
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, error: 'Não autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     console.log(`📚 [LIST-KNOWLEDGE] Listando documentos de conhecimento...`);
@@ -1571,12 +1581,10 @@ app.get("/api/knowledge", async (req, res) => {
 // Rota para deletar documento de conhecimento (para admin)
 app.delete("/api/knowledge/:id", async (req, res) => {
   try {
-    const { auth } = req.query;
     const { id } = req.params;
 
-    // Autenticação
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, error: 'Não autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     console.log(`🗑️ [DELETE-KNOWLEDGE] Deletando documento: ${id}`);
@@ -1598,13 +1606,11 @@ app.delete("/api/knowledge/:id", async (req, res) => {
 // Rota para atualizar documento de conhecimento (para admin)
 app.put("/api/knowledge/:id", async (req, res) => {
   try {
-    const { auth } = req.query;
     const { id } = req.params;
     const { title, content } = req.body;
 
-    // Autenticação
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, error: 'Não autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     if (!title || !content) {
@@ -1629,11 +1635,8 @@ app.put("/api/knowledge/:id", async (req, res) => {
 
 // Rota para listar sugestões (apenas para Ronei)
 app.get("/suggestions", async (req, res) => {
-  const { auth } = req.query;
-
-  // Autenticação simples
-  if (auth !== 'quanton3d_admin_secret') {
-    return res.status(401).json({ success: false, message: 'Não autorizado' });
+  if (!ensureAdminAuthorized(req, res)) {
+    return;
   }
 
   // Tentar carregar do MongoDB primeiro
@@ -1676,15 +1679,14 @@ function logOperation(operation, details) {
 // Rota para aprovar sugestão (com suporte a edição da resposta)
 app.put("/approve-suggestion/:id", async (req, res) => {
   try {
-    const { auth, editedAnswer } = req.body;
+    const { editedAnswer } = req.body;
     const suggestionId = parseInt(req.params.id);
 
     console.log(`🔍 Tentativa de aprovação da sugestão ID: ${suggestionId}`);
 
-    // Autenticação
-    if (auth !== 'quanton3d_admin_secret') {
+    if (!ensureAdminAuthorized(req, res)) {
       console.log('❌ Tentativa de acesso não autorizado');
-      return res.status(401).json({ success: false, message: 'Não autorizado' });
+      return;
     }
 
     // Encontrar sugestão
@@ -1777,15 +1779,14 @@ ${suggestion.suggestion}`;
 // Rota para rejeitar sugestão
 app.put("/reject-suggestion/:id", async (req, res) => {
   try {
-    const { auth, reason } = req.body;
+    const { reason } = req.body;
     const suggestionId = parseInt(req.params.id);
 
     console.log(`🔍 Tentativa de rejeição da sugestão ID: ${suggestionId}`);
 
-    // Autenticação
-    if (auth !== 'quanton3d_admin_secret') {
+    if (!ensureAdminAuthorized(req, res)) {
       console.log('❌ Tentativa de acesso não autorizado');
-      return res.status(401).json({ success: false, message: 'Não autorizado' });
+      return;
     }
 
     // Encontrar sugestão
@@ -1842,11 +1843,8 @@ app.put("/reject-suggestion/:id", async (req, res) => {
 // Rota para verificar integridade do RAG
 app.get("/rag-status", async (req, res) => {
   try {
-    const { auth } = req.query;
-
-    // Autenticação
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     const knowledgeDir = path.join(process.cwd(), 'rag-knowledge');
@@ -1889,11 +1887,8 @@ app.get("/rag-status", async (req, res) => {
 // Rota para estatísticas de inteligência
 app.get("/intelligence-stats", (req, res) => {
   try {
-    const { auth } = req.query;
-
-    // Autenticação
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     // Filtrar conversas com métricas de inteligência
@@ -2029,11 +2024,10 @@ app.post("/api/contact", async (req, res) => {
 // Rota para listar mensagens de contato (admin)
 app.get("/api/contact", async (req, res) => {
   try {
-    const { auth, startDate, endDate, resolved } = req.query;
+    const { startDate, endDate, resolved } = req.query;
 
-    // Autenticacao
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     const messagesCollection = getMessagesCollection();
@@ -2082,13 +2076,11 @@ app.get("/api/contact", async (req, res) => {
 // Rota para atualizar status de mensagem (marcar como resolvido)
 app.put("/api/contact/:id", async (req, res) => {
   try {
-    const { auth } = req.query;
     const { id } = req.params;
     const { resolved } = req.body;
 
-    // Autenticacao
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     const { ObjectId } = await import('mongodb');
@@ -2316,10 +2308,8 @@ app.get("/api/gallery", async (req, res) => {
 // GET /api/gallery/pending - Listar fotos pendentes (admin)
 app.get("/api/gallery/pending", async (req, res) => {
   try {
-    const { auth } = req.query;
-
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     const galleryCollection = getGalleryCollection();
@@ -2342,10 +2332,8 @@ app.get("/api/gallery/pending", async (req, res) => {
 // GET /api/gallery/all - Listar todas as fotos (admin)
 app.get("/api/gallery/all", async (req, res) => {
   try {
-    const { auth } = req.query;
-
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     const galleryCollection = getGalleryCollection();
@@ -2369,11 +2357,10 @@ app.get("/api/gallery/all", async (req, res) => {
 // PUT /api/gallery/:id/approve - Aprovar foto (admin)
 app.put("/api/gallery/:id/approve", async (req, res) => {
   try {
-    const { auth } = req.query;
     const { id } = req.params;
 
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     const galleryCollection = getGalleryCollection();
@@ -2409,11 +2396,10 @@ app.put("/api/gallery/:id/approve", async (req, res) => {
 // PUT /api/gallery/:id/reject - Rejeitar foto (admin)
 app.put("/api/gallery/:id/reject", async (req, res) => {
   try {
-    const { auth } = req.query;
     const { id } = req.params;
 
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     const galleryCollection = getGalleryCollection();
@@ -2465,11 +2451,10 @@ app.put("/api/gallery/:id/reject", async (req, res) => {
 // DELETE /api/gallery/:id - Deletar foto (admin)
 app.delete("/api/gallery/:id", async (req, res) => {
   try {
-    const { auth } = req.query;
     const { id } = req.params;
 
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     const galleryCollection = getGalleryCollection();
@@ -2512,11 +2497,10 @@ app.delete("/api/gallery/:id", async (req, res) => {
 // PUT /api/gallery/:id - Atualizar entrada da galeria (admin)
 app.put("/api/gallery/:id", async (req, res) => {
   try {
-    const { auth } = req.query;
     const { id } = req.params;
 
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     const galleryCollection = getGalleryCollection();
@@ -2614,12 +2598,11 @@ app.put("/api/gallery/:id", async (req, res) => {
 // POST /api/visual-knowledge - Adicionar conhecimento visual (admin)
 app.post("/api/visual-knowledge", upload.single('image'), async (req, res) => {
   try {
-    const { auth } = req.query;
     const { defectType, diagnosis, solution } = req.body;
     const imageFile = req.file;
 
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     if (!imageFile) {
@@ -2739,10 +2722,8 @@ Acoes: <1-2 acoes praticas ESPECIFICAS>`
 // GET /api/visual-knowledge - Listar conhecimentos visuais (admin)
 app.get("/api/visual-knowledge", async (req, res) => {
   try {
-    const { auth } = req.query;
-
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     const documents = await listVisualKnowledge();
@@ -2761,12 +2742,11 @@ app.get("/api/visual-knowledge", async (req, res) => {
 // PUT /api/visual-knowledge/:id - Atualizar conhecimento visual (admin)
 app.put("/api/visual-knowledge/:id", async (req, res) => {
   try {
-    const { auth } = req.query;
     const { id } = req.params;
     const { defectType, diagnosis, solution } = req.body;
 
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     if (defectType === undefined && diagnosis === undefined && solution === undefined) {
@@ -2806,11 +2786,10 @@ app.put("/api/visual-knowledge/:id", async (req, res) => {
 // DELETE /api/visual-knowledge/:id - Deletar conhecimento visual (admin)
 app.delete("/api/visual-knowledge/:id", async (req, res) => {
   try {
-    const { auth } = req.query;
     const { id } = req.params;
 
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     // Buscar documento para deletar imagem do Cloudinary
@@ -2853,10 +2832,8 @@ app.delete("/api/visual-knowledge/:id", async (req, res) => {
 // GET /api/visual-knowledge/pending - Listar fotos pendentes para treinamento (admin)
 app.get("/api/visual-knowledge/pending", async (req, res) => {
   try {
-    const { auth } = req.query;
-
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     const collection = getVisualKnowledgeCollection();
@@ -2879,12 +2856,11 @@ app.get("/api/visual-knowledge/pending", async (req, res) => {
 // PUT /api/visual-knowledge/:id/approve - Aprovar foto pendente e adicionar conhecimento (admin)
 app.put("/api/visual-knowledge/:id/approve", async (req, res) => {
   try {
-    const { auth } = req.query;
     const { id } = req.params;
     const { defectType, diagnosis, solution } = req.body;
 
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Nao autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     if (!defectType || !diagnosis || !solution) {
@@ -3013,11 +2989,10 @@ app.post("/api/visual-knowledge/pending", upload.single('image'), async (req, re
 // Rota para adicionar conhecimento baseado em feedback
 app.post("/api/add-knowledge-from-feedback", async (req, res) => {
   try {
-    const { auth, title, content, conversationId, originalQuestion, originalReply } = req.body;
+    const { title, content, conversationId, originalQuestion, originalReply } = req.body;
 
-    // Autenticação
-    if (!isAdminAuthorized(auth)) {
-      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     if (!title || !content) {
@@ -3078,12 +3053,11 @@ RESPOSTA ANTERIOR (INCORRETA): ${originalReply ? originalReply.substring(0, 200)
 // Rota para marcar conversa como "resposta ruim"
 app.put("/api/mark-bad-response/:index", async (req, res) => {
   try {
-    const { auth, reason } = req.body;
+    const { reason } = req.body;
     const index = parseInt(req.params.index);
 
-    // Autenticação
-    if (!isAdminAuthorized(auth)) {
-      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     if (index < 0 || index >= conversationMetrics.length) {
@@ -3110,11 +3084,8 @@ app.put("/api/mark-bad-response/:index", async (req, res) => {
 // Rota para obter estatísticas de feedback
 app.get("/api/feedback-stats", async (req, res) => {
   try {
-    const { auth } = req.query;
-
-    // Autenticação
-    if (!isAdminAuthorized(auth)) {
-      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
 
     const totalConversations = conversationMetrics.length;
@@ -3148,10 +3119,7 @@ app.get("/api/feedback-stats", async (req, res) => {
 // Listar todos os parceiros ativos
 app.get("/api/partners", async (req, res) => {
   try {
-    const { auth } = req.query;
-    
-    // Autenticação para admin
-    const isAdmin = auth === 'quanton3d_admin_secret';
+    const isAdmin = isAdminAuthorized(req);
     
     const partnersCollection = getPartnersCollection();
     
@@ -3175,10 +3143,8 @@ app.get("/api/partners", async (req, res) => {
 // Criar novo parceiro
 app.post("/api/partners", async (req, res) => {
   try {
-    const { auth } = req.query;
-    
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
     
     const partnerData = req.body;
@@ -3216,10 +3182,8 @@ app.post("/api/partners", async (req, res) => {
 // Atualizar parceiro
 app.put("/api/partners/:id", async (req, res) => {
   try {
-    const { auth } = req.query;
-    
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
     
     const { id } = req.params;
@@ -3257,10 +3221,8 @@ app.put("/api/partners/:id", async (req, res) => {
 // Excluir parceiro
 app.delete("/api/partners/:id", async (req, res) => {
   try {
-    const { auth } = req.query;
-    
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
     
     const { id } = req.params;
@@ -3285,10 +3247,8 @@ app.delete("/api/partners/:id", async (req, res) => {
 // Upload de imagem de parceiro
 app.post("/api/partners/upload-image", upload.single('image'), async (req, res) => {
   try {
-    const { auth } = req.query;
-    
-    if (auth !== 'quanton3d_admin_secret') {
-      return res.status(401).json({ success: false, message: 'Não autorizado' });
+    if (!ensureAdminAuthorized(req, res)) {
+      return;
     }
     
     const imageFile = req.file;
@@ -3330,44 +3290,68 @@ app.post("/api/partners/upload-image", upload.single('image'), async (req, res) 
 // ===== API DE PARÂMETROS DE IMPRESSÃO =====
 
 // Carregar banco de dados de parâmetros
-let printParametersDB = null;
-let printParametersRAG = null;
+let printParametersDB = { resins: [], printers: [], profiles: [], stats: {}, generatedAt: null };
+let printParametersRAG = [];
 
-function loadPrintParameters() {
-  try {
-    const dbPath = path.join(process.cwd(), 'data', 'print-parameters-db.json');
-    const ragPath = path.join(process.cwd(), 'data', 'print-parameters-rag.json');
-    
-    if (fs.existsSync(dbPath)) {
-      printParametersDB = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
-      console.log(`✅ Banco de parâmetros carregado: ${printParametersDB.stats.totalProfiles} perfis`);
+const buildPrintParametersRAG = (profiles) => (
+  profiles.map(profile => {
+    let text;
+    if (profile.status === 'coming_soon') {
+      text = `Resina ${profile.resinName} | Impressora ${profile.brand} ${profile.model}: Parâmetros em breve.`;
     } else {
-      console.log('⚠️ Arquivo de parâmetros não encontrado');
-      printParametersDB = { resins: [], printers: [], profiles: [], stats: {} };
+      const params = profile.params;
+      const parts = [];
+      if (params.layerHeightMm != null) parts.push(`altura de camada=${params.layerHeightMm}mm`);
+      if (params.baseLayers != null) parts.push(`camadas de base=${Math.round(params.baseLayers)}`);
+      if (params.exposureTimeS != null) parts.push(`tempo de exposição=${params.exposureTimeS}s`);
+      if (params.baseExposureTimeS != null) parts.push(`exposição base=${params.baseExposureTimeS}s`);
+      if (params.uvOffDelayS != null) parts.push(`retardo UV=${params.uvOffDelayS}s`);
+      if (params.restBeforeLiftS != null) parts.push(`descanso antes elevação=${params.restBeforeLiftS}s`);
+      if (params.restAfterLiftS != null) parts.push(`descanso após elevação=${params.restAfterLiftS}s`);
+      if (params.restAfterRetractS != null) parts.push(`descanso após retração=${params.restAfterRetractS}s`);
+      if (params.uvPower != null) parts.push(`potência UV=${params.uvPower}`);
+      text = `Resina ${profile.resinName} | Impressora ${profile.brand} ${profile.model}: ${parts.join(', ')}`;
     }
-    
-    if (fs.existsSync(ragPath)) {
-      printParametersRAG = JSON.parse(fs.readFileSync(ragPath, 'utf-8'));
+    return {
+      id: profile.id,
+      resin: profile.resinName,
+      printer: `${profile.brand} ${profile.model}`,
+      text,
+      status: profile.status
+    };
+  })
+);
+
+async function loadPrintParameters() {
+  try {
+    const collection = getPrintParametersCollection();
+    const record = await collection.findOne({ _id: 'print_parameters' });
+
+    if (record?.data) {
+      printParametersDB = record.data;
+      console.log(`✅ Banco de parâmetros carregado: ${printParametersDB.stats?.totalProfiles || 0} perfis`);
+    } else {
+      console.log('⚠️ Banco de parâmetros não encontrado no MongoDB');
+      printParametersDB = { resins: [], printers: [], profiles: [], stats: {}, generatedAt: null };
+    }
+
+    if (Array.isArray(record?.rag) && record.rag.length > 0) {
+      printParametersRAG = record.rag;
       console.log(`✅ RAG de parâmetros carregado: ${printParametersRAG.length} chunks`);
     } else {
-      printParametersRAG = [];
+      printParametersRAG = buildPrintParametersRAG(printParametersDB.profiles || []);
     }
   } catch (err) {
-    console.error('❌ Erro ao carregar parâmetros:', err);
-    printParametersDB = { resins: [], printers: [], profiles: [], stats: {} };
+    console.error('❌ Erro ao carregar parâmetros do MongoDB:', err);
+    printParametersDB = { resins: [], printers: [], profiles: [], stats: {}, generatedAt: null };
     printParametersRAG = [];
   }
 }
 
-function savePrintParameters() {
+async function savePrintParameters() {
   try {
-    const dbPath = path.join(process.cwd(), 'data', 'print-parameters-db.json');
-    const ragPath = path.join(process.cwd(), 'data', 'print-parameters-rag.json');
-    
-    // Atualizar timestamp
     printParametersDB.generatedAt = new Date().toISOString();
-    
-    // Recalcular stats
+
     printParametersDB.stats = {
       totalProfiles: printParametersDB.profiles.length,
       totalResins: printParametersDB.resins.length,
@@ -3375,46 +3359,27 @@ function savePrintParameters() {
       okProfiles: printParametersDB.profiles.filter(p => p.status === 'ok').length,
       comingSoonProfiles: printParametersDB.profiles.filter(p => p.status === 'coming_soon').length
     };
-    
-    fs.writeFileSync(dbPath, JSON.stringify(printParametersDB, null, 2), 'utf-8');
-    
-    // Regenerar RAG digest
-    printParametersRAG = printParametersDB.profiles.map(profile => {
-      let text;
-      if (profile.status === 'coming_soon') {
-        text = `Resina ${profile.resinName} | Impressora ${profile.brand} ${profile.model}: Parâmetros em breve.`;
-      } else {
-        const params = profile.params;
-        const parts = [];
-        if (params.layerHeightMm != null) parts.push(`altura de camada=${params.layerHeightMm}mm`);
-        if (params.baseLayers != null) parts.push(`camadas de base=${Math.round(params.baseLayers)}`);
-        if (params.exposureTimeS != null) parts.push(`tempo de exposição=${params.exposureTimeS}s`);
-        if (params.baseExposureTimeS != null) parts.push(`exposição base=${params.baseExposureTimeS}s`);
-        if (params.uvOffDelayS != null) parts.push(`retardo UV=${params.uvOffDelayS}s`);
-        if (params.restBeforeLiftS != null) parts.push(`descanso antes elevação=${params.restBeforeLiftS}s`);
-        if (params.restAfterLiftS != null) parts.push(`descanso após elevação=${params.restAfterLiftS}s`);
-        if (params.restAfterRetractS != null) parts.push(`descanso após retração=${params.restAfterRetractS}s`);
-        if (params.uvPower != null) parts.push(`potência UV=${params.uvPower}`);
-        text = `Resina ${profile.resinName} | Impressora ${profile.brand} ${profile.model}: ${parts.join(', ')}`;
-      }
-      return {
-        id: profile.id,
-        resin: profile.resinName,
-        printer: `${profile.brand} ${profile.model}`,
-        text,
-        status: profile.status
-      };
-    });
-    
-    fs.writeFileSync(ragPath, JSON.stringify(printParametersRAG, null, 2), 'utf-8');
+
+    printParametersRAG = buildPrintParametersRAG(printParametersDB.profiles);
+
+    const collection = getPrintParametersCollection();
+    await collection.updateOne(
+      { _id: 'print_parameters' },
+      {
+        $set: {
+          data: printParametersDB,
+          rag: printParametersRAG,
+          updatedAt: new Date()
+        }
+      },
+      { upsert: true }
+    );
+
     console.log('💾 Parâmetros salvos com sucesso');
   } catch (err) {
-    console.error('❌ Erro ao salvar parâmetros:', err);
+    console.error('❌ Erro ao salvar parâmetros no MongoDB:', err);
   }
 }
-
-// Carregar parâmetros ao iniciar
-loadPrintParameters();
 
 // ===== BUSCA INTELIGENTE DE CONHECIMENTO (COM RAG LOCAL DE PARÂMETROS) =====
 
@@ -3622,18 +3587,12 @@ app.get("/params/stats", (req, res) => {
 
 // ===== ROTAS ADMIN PARA PARÂMETROS =====
 
-// Helper function to get admin auth from body or query (for consistency)
-function getAdminAuth(req) {
-  return req.body?.auth || req.query?.auth || extractAdminToken(req);
-}
-
 // POST /params/resins - Adicionar nova resina (admin)
-app.post("/params/resins", (req, res) => {
-  const auth = getAdminAuth(req);
+app.post("/params/resins", async (req, res) => {
   const { name } = req.body;
 
-  if (!isAdminAuthorized(auth)) {
-    return res.status(401).json({ success: false, error: 'Não autorizado' });
+  if (!ensureAdminAuthorized(req, res)) {
+    return;
   }
   
   if (!name) {
@@ -3650,18 +3609,16 @@ app.post("/params/resins", (req, res) => {
   
   const newResin = { id, name, sourceSheet: 'Admin Panel' };
   printParametersDB.resins.push(newResin);
-  savePrintParameters();
+  await savePrintParameters();
   
   console.log(`✅ Nova resina adicionada: ${name}`);
   res.json({ success: true, resin: newResin });
 });
 
 // DELETE /params/resins/:id - Remover resina (admin)
-app.delete("/params/resins/:id", (req, res) => {
-  const auth = getAdminAuth(req);
-
-  if (!isAdminAuthorized(auth)) {
-    return res.status(401).json({ success: false, error: 'Não autorizado' });
+app.delete("/params/resins/:id", async (req, res) => {
+  if (!ensureAdminAuthorized(req, res)) {
+    return;
   }
   
   const resinId = req.params.id;
@@ -3674,19 +3631,18 @@ app.delete("/params/resins/:id", (req, res) => {
   // Remover resina e todos os perfis associados
   printParametersDB.resins.splice(resinIndex, 1);
   printParametersDB.profiles = printParametersDB.profiles.filter(p => p.resinId !== resinId);
-  savePrintParameters();
+  await savePrintParameters();
   
   console.log(`🗑️ Resina removida: ${resinId}`);
   res.json({ success: true, message: 'Resina removida com sucesso' });
 });
 
 // POST /params/printers - Adicionar nova impressora (admin)
-app.post("/params/printers", (req, res) => {
-  const auth = getAdminAuth(req);
+app.post("/params/printers", async (req, res) => {
   const { brand, model } = req.body;
 
-  if (!isAdminAuthorized(auth)) {
-    return res.status(401).json({ success: false, error: 'Não autorizado' });
+  if (!ensureAdminAuthorized(req, res)) {
+    return;
   }
   
   if (!brand || !model) {
@@ -3705,18 +3661,16 @@ app.post("/params/printers", (req, res) => {
   
   const newPrinter = { id, brand, model };
   printParametersDB.printers.push(newPrinter);
-  savePrintParameters();
+  await savePrintParameters();
   
   console.log(`✅ Nova impressora adicionada: ${brand} ${model}`);
   res.json({ success: true, printer: newPrinter });
 });
 
 // DELETE /params/printers/:id - Remover impressora (admin)
-app.delete("/params/printers/:id", (req, res) => {
-  const auth = getAdminAuth(req);
-
-  if (!isAdminAuthorized(auth)) {
-    return res.status(401).json({ success: false, error: 'Não autorizado' });
+app.delete("/params/printers/:id", async (req, res) => {
+  if (!ensureAdminAuthorized(req, res)) {
+    return;
   }
   
   const printerId = req.params.id;
@@ -3729,19 +3683,18 @@ app.delete("/params/printers/:id", (req, res) => {
   // Remover impressora e todos os perfis associados
   printParametersDB.printers.splice(printerIndex, 1);
   printParametersDB.profiles = printParametersDB.profiles.filter(p => p.printerId !== printerId);
-  savePrintParameters();
+  await savePrintParameters();
   
   console.log(`🗑️ Impressora removida: ${printerId}`);
   res.json({ success: true, message: 'Impressora removida com sucesso' });
 });
 
 // POST /params/profiles - Adicionar/Atualizar perfil (admin)
-app.post("/params/profiles", (req, res) => {
-  const auth = getAdminAuth(req);
+app.post("/params/profiles", async (req, res) => {
   const { resinId, printerId, params, status } = req.body;
 
-  if (!isAdminAuthorized(auth)) {
-    return res.status(401).json({ success: false, error: 'Não autorizado' });
+  if (!ensureAdminAuthorized(req, res)) {
+    return;
   }
   
   if (!resinId || !printerId) {
@@ -3781,16 +3734,14 @@ app.post("/params/profiles", (req, res) => {
     console.log(`✅ Novo perfil adicionado: ${profileId}`);
   }
   
-  savePrintParameters();
+  await savePrintParameters();
   res.json({ success: true, profile });
 });
 
 // DELETE /params/profiles/:id - Remover perfil (admin)
-app.delete("/params/profiles/:id", (req, res) => {
-  const auth = getAdminAuth(req);
-
-  if (!isAdminAuthorized(auth)) {
-    return res.status(401).json({ success: false, error: 'Não autorizado' });
+app.delete("/params/profiles/:id", async (req, res) => {
+  if (!ensureAdminAuthorized(req, res)) {
+    return;
   }
   
   const profileId = req.params.id;
@@ -3801,7 +3752,7 @@ app.delete("/params/profiles/:id", (req, res) => {
   }
   
   printParametersDB.profiles.splice(profileIndex, 1);
-  savePrintParameters();
+  await savePrintParameters();
   
   console.log(`🗑️ Perfil removido: ${profileId}`);
   res.json({ success: true, message: 'Perfil removido com sucesso' });
@@ -3818,6 +3769,10 @@ async function startServer() {
     console.log('🚀 Conectando ao MongoDB...');
     await connectToMongo();
     console.log('✅ MongoDB conectado com sucesso!');
+
+    console.log('🚀 Carregando parâmetros de impressão...');
+    await loadPrintParameters();
+    console.log('✅ Parâmetros de impressão carregados com sucesso!');
 
     console.log('🚀 Inicializando sistema RAG...');
     await initializeRAG();
