@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2025-12-17T13:32:00.098746Z",
+  "generatedAt": "2025-12-23T04:43:21.638224Z",
   "units": {
     "time": "s",
     "layerHeight": "mm"
@@ -9,8 +9,8 @@
     "totalProfiles": 458,
     "totalResins": 16,
     "totalPrinters": 32,
-    "okProfiles": 356,
-    "comingSoonProfiles": 102
+    "okProfiles": 357,
+    "comingSoonProfiles": 101
   },
   "resins": [
     {
@@ -411,7 +411,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.9",
+        "exposureTimeS": "1,9",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -439,19 +439,19 @@
         "restBeforeLiftS": 1.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 1.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.9",
+        "exposureTimeS": "1,9",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
         "restBeforeLiftS": "1s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "1s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -472,7 +472,7 @@
         "restBeforeLiftS": 1.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 1.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -484,7 +484,7 @@
         "restBeforeLiftS": "1s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "1s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -510,7 +510,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.9",
+        "exposureTimeS": "1,9",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -543,7 +543,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "10",
-        "exposureTimeS": "2.1",
+        "exposureTimeS": "2,1",
         "baseExposureTimeS": "45",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -580,9 +580,9 @@
         "baseExposureTimeS": "25",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
-        "restBeforeLiftS": "0.5",
+        "restBeforeLiftS": "0,5",
         "restAfterLiftS": "0s",
-        "restAfterRetractS": "0.5",
+        "restAfterRetractS": "0,5",
         "uvPower": ""
       },
       "status": "ok"
@@ -738,7 +738,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.8",
+        "exposureTimeS": "1,8",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "6",
@@ -769,7 +769,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.9",
+        "exposureTimeS": "1,9",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -800,7 +800,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.9",
+        "exposureTimeS": "1,9",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -862,7 +862,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "7",
-        "exposureTimeS": "2.5",
+        "exposureTimeS": "2,5",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -893,7 +893,7 @@
       "raw": {
         "layerHeightMm": "0.00mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.8",
+        "exposureTimeS": "1,8",
         "baseExposureTimeS": "25",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
@@ -924,13 +924,13 @@
       "raw": {
         "layerHeightMm": "0.00mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.3",
+        "exposureTimeS": "1,3",
         "baseExposureTimeS": "22",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
-        "restBeforeLiftS": "0.5",
+        "restBeforeLiftS": "0,5",
         "restAfterLiftS": "0s",
-        "restAfterRetractS": "0.5"
+        "restAfterRetractS": "0,5"
       },
       "status": "ok"
     },
@@ -1017,7 +1017,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "2.1",
+        "exposureTimeS": "2,1",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -1110,7 +1110,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "8",
-        "exposureTimeS": "2.5",
+        "exposureTimeS": "2,5",
         "baseExposureTimeS": "45",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -1141,7 +1141,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "10",
-        "exposureTimeS": "2.5",
+        "exposureTimeS": "2,5",
         "baseExposureTimeS": "45",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "6",
@@ -1172,7 +1172,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "2.5",
+        "exposureTimeS": "2,5",
         "baseExposureTimeS": "40",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -1364,7 +1364,7 @@
         "restBeforeLiftS": 1.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 1.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -1376,7 +1376,7 @@
         "restBeforeLiftS": "1s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "1s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -1397,7 +1397,7 @@
         "restBeforeLiftS": 1.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 1.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -1409,7 +1409,7 @@
         "restBeforeLiftS": "1s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "1s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -1505,9 +1505,9 @@
         "baseExposureTimeS": "25",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
-        "restBeforeLiftS": "0.5",
+        "restBeforeLiftS": "0,5",
         "restAfterLiftS": "0s",
-        "restAfterRetractS": "0.5",
+        "restAfterRetractS": "0,5",
         "uvPower": ""
       },
       "status": "ok"
@@ -1818,7 +1818,7 @@
       "raw": {
         "layerHeightMm": "0.00mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.8",
+        "exposureTimeS": "1,8",
         "baseExposureTimeS": "30",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
@@ -1849,13 +1849,13 @@
       "raw": {
         "layerHeightMm": "0.00mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.3",
+        "exposureTimeS": "1,3",
         "baseExposureTimeS": "22",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
-        "restBeforeLiftS": "0.5",
+        "restBeforeLiftS": "0,5",
         "restAfterLiftS": "0s",
-        "restAfterRetractS": "0.5"
+        "restAfterRetractS": "0,5"
       },
       "status": "ok"
     },
@@ -2066,7 +2066,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.8",
+        "exposureTimeS": "1,8",
         "baseExposureTimeS": "45",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "6",
@@ -2283,7 +2283,7 @@
         "restBeforeLiftS": 1.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 1.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -2295,7 +2295,7 @@
         "restBeforeLiftS": "1s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "1s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -2316,7 +2316,7 @@
         "restBeforeLiftS": 1.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 1.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -2328,7 +2328,7 @@
         "restBeforeLiftS": "1s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "1s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -2354,7 +2354,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.6",
+        "exposureTimeS": "1,6",
         "baseExposureTimeS": "25",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -2387,7 +2387,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "7",
-        "exposureTimeS": "1.6",
+        "exposureTimeS": "1,6",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -2420,13 +2420,13 @@
       "raw": {
         "layerHeightMm": "0.00mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.5",
+        "exposureTimeS": "1,5",
         "baseExposureTimeS": "20",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
-        "restBeforeLiftS": "0.5",
+        "restBeforeLiftS": "0,5",
         "restAfterLiftS": "0s",
-        "restAfterRetractS": "0.5",
+        "restAfterRetractS": "0,5",
         "uvPower": ""
       },
       "status": "ok"
@@ -2551,7 +2551,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "10",
-        "exposureTimeS": "6.1",
+        "exposureTimeS": "6,1",
         "baseExposureTimeS": "60",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -2582,7 +2582,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.55",
+        "exposureTimeS": "1,55",
         "baseExposureTimeS": "25",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -2613,7 +2613,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.6",
+        "exposureTimeS": "1,6",
         "baseExposureTimeS": "25",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -2675,7 +2675,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.6",
+        "exposureTimeS": "1,6",
         "baseExposureTimeS": "30",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -2706,7 +2706,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.9",
+        "exposureTimeS": "1,9",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -2735,9 +2735,9 @@
         "restAfterRetractS": 1.0
       },
       "raw": {
-        "layerHeightMm": "0.05",
+        "layerHeightMm": "0,05",
         "baseLayers": "6",
-        "exposureTimeS": "1.5",
+        "exposureTimeS": "1,5",
         "baseExposureTimeS": "20",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
@@ -2766,15 +2766,15 @@
         "restAfterRetractS": 0.5
       },
       "raw": {
-        "layerHeightMm": "0.05",
+        "layerHeightMm": "0,05",
         "baseLayers": "6",
-        "exposureTimeS": "1.15",
+        "exposureTimeS": "1,15",
         "baseExposureTimeS": "15",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
-        "restBeforeLiftS": "0.5",
+        "restBeforeLiftS": "0,5",
         "restAfterLiftS": "0s",
-        "restAfterRetractS": "0.5"
+        "restAfterRetractS": "0,5"
       },
       "status": "ok"
     },
@@ -3180,7 +3180,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "7",
-        "exposureTimeS": "1.9",
+        "exposureTimeS": "1,9",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -3208,19 +3208,19 @@
         "restBeforeLiftS": 1.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 1.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.7",
+        "exposureTimeS": "1,7",
         "baseExposureTimeS": "40s",
         "uvOffDelayS": "1s",
         "uvOffDelayBaseS": "1s",
         "restBeforeLiftS": "1s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "1s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -3241,19 +3241,19 @@
         "restBeforeLiftS": 1.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 1.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.7",
+        "exposureTimeS": "1,7",
         "baseExposureTimeS": "35s",
         "uvOffDelayS": "1s",
         "uvOffDelayBaseS": "1s",
         "restBeforeLiftS": "1s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "1s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -3279,7 +3279,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.9",
+        "exposureTimeS": "1,9",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -3312,7 +3312,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "8",
-        "exposureTimeS": "2.1",
+        "exposureTimeS": "2,1",
         "baseExposureTimeS": "45",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -3345,7 +3345,7 @@
       "raw": {
         "layerHeightMm": "0.00mm",
         "baseLayers": "6",
-        "exposureTimeS": "2.1",
+        "exposureTimeS": "2,1",
         "baseExposureTimeS": "20",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
@@ -3538,7 +3538,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.95",
+        "exposureTimeS": "1,95",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -3631,7 +3631,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "7",
-        "exposureTimeS": "2.2",
+        "exposureTimeS": "2,2",
         "baseExposureTimeS": "40",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -3660,7 +3660,7 @@
         "restAfterRetractS": 1.0
       },
       "raw": {
-        "layerHeightMm": "0.05",
+        "layerHeightMm": "0,05",
         "baseLayers": "6",
         "exposureTimeS": "2",
         "baseExposureTimeS": "25",
@@ -3691,15 +3691,15 @@
         "restAfterRetractS": 0.5
       },
       "raw": {
-        "layerHeightMm": "0.05",
+        "layerHeightMm": "0,05",
         "baseLayers": "6",
-        "exposureTimeS": "1.3",
+        "exposureTimeS": "1,3",
         "baseExposureTimeS": "22",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
-        "restBeforeLiftS": "0.5",
+        "restBeforeLiftS": "0,5",
         "restAfterLiftS": "0s",
-        "restAfterRetractS": "0.5"
+        "restAfterRetractS": "0,5"
       },
       "status": "ok"
     },
@@ -3848,7 +3848,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "2.1",
+        "exposureTimeS": "2,1",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "6",
@@ -3879,7 +3879,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "8",
-        "exposureTimeS": "2.1",
+        "exposureTimeS": "2,1",
         "baseExposureTimeS": "45",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -3910,7 +3910,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "8",
-        "exposureTimeS": "2.5",
+        "exposureTimeS": "2,5",
         "baseExposureTimeS": "45",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "6",
@@ -3941,7 +3941,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "8",
-        "exposureTimeS": "2.2",
+        "exposureTimeS": "2,2",
         "baseExposureTimeS": "40",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "6",
@@ -4133,7 +4133,7 @@
         "restBeforeLiftS": 1.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 1.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -4145,7 +4145,7 @@
         "restBeforeLiftS": "1s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "1s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -4166,7 +4166,7 @@
         "restBeforeLiftS": 1.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 1.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -4178,7 +4178,7 @@
         "restBeforeLiftS": "1s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "1s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -4204,7 +4204,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "7",
-        "exposureTimeS": "2.3",
+        "exposureTimeS": "2,3",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -4237,7 +4237,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "7",
-        "exposureTimeS": "2.4",
+        "exposureTimeS": "2,4",
         "baseExposureTimeS": "45",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -4268,9 +4268,9 @@
         "uvPower": null
       },
       "raw": {
-        "layerHeightMm": "0.05",
+        "layerHeightMm": "0,05",
         "baseLayers": "6",
-        "exposureTimeS": "2.1",
+        "exposureTimeS": "2,1",
         "baseExposureTimeS": "25",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
@@ -4432,7 +4432,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.75",
+        "exposureTimeS": "1,75",
         "baseExposureTimeS": "30",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -4463,7 +4463,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.8",
+        "exposureTimeS": "1,8",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -4494,7 +4494,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.85",
+        "exposureTimeS": "1,85",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -4556,7 +4556,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "7",
-        "exposureTimeS": "2.5",
+        "exposureTimeS": "2,5",
         "baseExposureTimeS": "40",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -4618,13 +4618,13 @@
       "raw": {
         "layerHeightMm": "0.00mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.4",
+        "exposureTimeS": "1,4",
         "baseExposureTimeS": "20",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
-        "restBeforeLiftS": "0.5",
+        "restBeforeLiftS": "0,5",
         "restAfterLiftS": "0s",
-        "restAfterRetractS": "0.5"
+        "restAfterRetractS": "0,5"
       },
       "status": "ok"
     },
@@ -4711,7 +4711,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "8",
-        "exposureTimeS": "2.2",
+        "exposureTimeS": "2,2",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -4773,7 +4773,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.9",
+        "exposureTimeS": "1,9",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -4835,7 +4835,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "8",
-        "exposureTimeS": "2.2",
+        "exposureTimeS": "2,2",
         "baseExposureTimeS": "40",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "6",
@@ -4866,7 +4866,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "8",
-        "exposureTimeS": "2.2",
+        "exposureTimeS": "2,2",
         "baseExposureTimeS": "40",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -5058,7 +5058,7 @@
         "restBeforeLiftS": 1.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 1.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -5070,7 +5070,7 @@
         "restBeforeLiftS": "1s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "1s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -5091,7 +5091,7 @@
         "restBeforeLiftS": 1.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 1.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -5103,7 +5103,7 @@
         "restBeforeLiftS": "1s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "1s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -5129,7 +5129,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.7",
+        "exposureTimeS": "1,7",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -5162,7 +5162,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "8",
-        "exposureTimeS": "2.2",
+        "exposureTimeS": "2,2",
         "baseExposureTimeS": "45",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -5388,7 +5388,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "7",
-        "exposureTimeS": "1.8",
+        "exposureTimeS": "1,8",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -5481,7 +5481,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "2.2",
+        "exposureTimeS": "2,2",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -5636,7 +5636,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "8",
-        "exposureTimeS": "2.2",
+        "exposureTimeS": "2,2",
         "baseExposureTimeS": "40",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -5729,7 +5729,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "7",
-        "exposureTimeS": "2.2",
+        "exposureTimeS": "2,2",
         "baseExposureTimeS": "45",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -5791,7 +5791,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "7",
-        "exposureTimeS": "2.2",
+        "exposureTimeS": "2,2",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -5983,7 +5983,7 @@
         "restBeforeLiftS": 1.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 1.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -5995,7 +5995,7 @@
         "restBeforeLiftS": "1s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "1s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -6016,7 +6016,7 @@
         "restBeforeLiftS": 1.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 1.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -6028,7 +6028,7 @@
         "restBeforeLiftS": "1s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "1s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -6054,7 +6054,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.75",
+        "exposureTimeS": "1,75",
         "baseExposureTimeS": "25",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -6140,29 +6140,29 @@
       "model": "PHOTON MONO M5S PRO",
       "params": {
         "layerHeightMm": null,
-        "baseLayers": null,
-        "exposureTimeS": null,
-        "baseExposureTimeS": null,
-        "uvOffDelayS": null,
-        "uvOffDelayBaseS": null,
-        "restBeforeLiftS": null,
-        "restAfterLiftS": null,
+        "baseLayers": 5.0,
+        "exposureTimeS": 1.5,
+        "baseExposureTimeS": 28.0,
+        "uvOffDelayS": 1.0,
+        "uvOffDelayBaseS": 0.0,
+        "restBeforeLiftS": 0.0,
+        "restAfterLiftS": 0.0,
         "restAfterRetractS": null,
         "uvPower": null
       },
       "raw": {
         "layerHeightMm": "",
-        "baseLayers": "",
-        "exposureTimeS": "",
-        "baseExposureTimeS": "",
-        "uvOffDelayS": "",
-        "uvOffDelayBaseS": "",
-        "restBeforeLiftS": "",
-        "restAfterLiftS": "",
+        "baseLayers": "5",
+        "exposureTimeS": "1,5s",
+        "baseExposureTimeS": "28",
+        "uvOffDelayS": "1s",
+        "uvOffDelayBaseS": "0s",
+        "restBeforeLiftS": "0",
+        "restAfterLiftS": "0s",
         "restAfterRetractS": "",
         "uvPower": ""
       },
-      "status": "coming_soon"
+      "status": "ok"
     },
     {
       "id": "spark__anycubic__photon_mono_m7_pro",
@@ -6313,7 +6313,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.65",
+        "exposureTimeS": "1,65",
         "baseExposureTimeS": "25",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "6",
@@ -6406,7 +6406,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.75",
+        "exposureTimeS": "1,75",
         "baseExposureTimeS": "20",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -6437,7 +6437,7 @@
       "raw": {
         "layerHeightMm": "0.00mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.8",
+        "exposureTimeS": "1,8",
         "baseExposureTimeS": "25",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
@@ -6468,13 +6468,13 @@
       "raw": {
         "layerHeightMm": "0.00mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.35",
+        "exposureTimeS": "1,35",
         "baseExposureTimeS": "20",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
-        "restBeforeLiftS": "0.5",
+        "restBeforeLiftS": "0,5",
         "restAfterLiftS": "0s",
-        "restAfterRetractS": "0.5"
+        "restAfterRetractS": "0,5"
       },
       "status": "ok"
     },
@@ -6561,7 +6561,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.55",
+        "exposureTimeS": "1,55",
         "baseExposureTimeS": "30",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -6592,7 +6592,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "10",
-        "exposureTimeS": "5.5",
+        "exposureTimeS": "5,5",
         "baseExposureTimeS": "55",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "6",
@@ -6623,7 +6623,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.5",
+        "exposureTimeS": "1,5",
         "baseExposureTimeS": "25",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "6",
@@ -6654,7 +6654,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "10",
-        "exposureTimeS": "1.8",
+        "exposureTimeS": "1,8",
         "baseExposureTimeS": "30",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -6685,7 +6685,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.7",
+        "exposureTimeS": "1,7",
         "baseExposureTimeS": "30",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "6",
@@ -6716,7 +6716,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.65",
+        "exposureTimeS": "1,65",
         "baseExposureTimeS": "30",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "6",
@@ -6802,7 +6802,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "baseLayers": 6.0,
-        "exposureTimeS": null,
+        "exposureTimeS": 1.2,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 0.5,
         "uvOffDelayBaseS": 2.0,
@@ -6814,7 +6814,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "2024-02-01 00:00:00",
+        "exposureTimeS": "1.2",
         "baseExposureTimeS": "8",
         "uvOffDelayS": "0.5",
         "uvOffDelayBaseS": "2",
@@ -6835,7 +6835,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "baseLayers": 6.0,
-        "exposureTimeS": null,
+        "exposureTimeS": 1.2,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 0.5,
         "uvOffDelayBaseS": 2.0,
@@ -6847,7 +6847,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "2024-02-01 00:00:00",
+        "exposureTimeS": "1.2",
         "baseExposureTimeS": "8",
         "uvOffDelayS": "0.5",
         "uvOffDelayBaseS": "2",
@@ -6868,7 +6868,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "baseLayers": 6.0,
-        "exposureTimeS": null,
+        "exposureTimeS": 1.3,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 0.5,
         "uvOffDelayBaseS": 2.0,
@@ -6880,9 +6880,9 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "2024-03-01 00:00:00",
+        "exposureTimeS": "1.3",
         "baseExposureTimeS": "8",
-        "uvOffDelayS": "0.5",
+        "uvOffDelayS": "0,5",
         "uvOffDelayBaseS": "2",
         "restBeforeLiftS": "0s",
         "restAfterLiftS": "0s",
@@ -6908,19 +6908,19 @@
         "restBeforeLiftS": 0.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 0.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.3",
+        "exposureTimeS": "1,3",
         "baseExposureTimeS": "8",
-        "uvOffDelayS": "0.5",
+        "uvOffDelayS": "0,5",
         "uvOffDelayBaseS": "2",
         "restBeforeLiftS": "0s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "0s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -6941,19 +6941,19 @@
         "restBeforeLiftS": 0.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 0.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.2",
+        "exposureTimeS": "1,2",
         "baseExposureTimeS": "7",
-        "uvOffDelayS": "0.5",
+        "uvOffDelayS": "0,5",
         "uvOffDelayBaseS": "2",
         "restBeforeLiftS": "0s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "0s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -6979,9 +6979,9 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.3",
+        "exposureTimeS": "1,3",
         "baseExposureTimeS": "8",
-        "uvOffDelayS": "0.5",
+        "uvOffDelayS": "0,5",
         "uvOffDelayBaseS": "2",
         "restBeforeLiftS": "0s",
         "restAfterLiftS": "0s",
@@ -7012,9 +7012,9 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.4",
+        "exposureTimeS": "1,4",
         "baseExposureTimeS": "9",
-        "uvOffDelayS": "0.5",
+        "uvOffDelayS": "0,5",
         "uvOffDelayBaseS": "2",
         "restBeforeLiftS": "0s",
         "restAfterLiftS": "0s",
@@ -7045,9 +7045,9 @@
       "raw": {
         "layerHeightMm": "0.00mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.3",
+        "exposureTimeS": "1,3",
         "baseExposureTimeS": "9",
-        "uvOffDelayS": "0.5",
+        "uvOffDelayS": "0,5",
         "uvOffDelayBaseS": "2",
         "restBeforeLiftS": "0s",
         "restAfterLiftS": "0s",
@@ -7196,7 +7196,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "baseLayers": 6.0,
-        "exposureTimeS": null,
+        "exposureTimeS": 2.3,
         "baseExposureTimeS": 32.0,
         "uvOffDelayS": 5.0,
         "uvOffDelayBaseS": 1.0,
@@ -7207,7 +7207,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "2024-03-02 00:00:00",
+        "exposureTimeS": "2.3",
         "baseExposureTimeS": "32",
         "uvOffDelayS": "5",
         "uvOffDelayBaseS": "1",
@@ -7238,10 +7238,10 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "2.1",
+        "exposureTimeS": "2,1",
         "baseExposureTimeS": "32",
-        "uvOffDelayS": "0.5",
-        "uvOffDelayBaseS": "0.5",
+        "uvOffDelayS": "0,5",
+        "uvOffDelayBaseS": "0,5",
         "restBeforeLiftS": "0s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "0s"
@@ -7300,7 +7300,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "2.3",
+        "exposureTimeS": "2,3",
         "baseExposureTimeS": "21",
         "uvOffDelayS": "8",
         "uvOffDelayBaseS": "1",
@@ -7320,7 +7320,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "baseLayers": 5.0,
-        "exposureTimeS": null,
+        "exposureTimeS": 2.2,
         "baseExposureTimeS": 22.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -7331,7 +7331,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "2024-02-02 00:00:00",
+        "exposureTimeS": "2.2",
         "baseExposureTimeS": "22",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
@@ -7475,7 +7475,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "baseLayers": 5.0,
-        "exposureTimeS": null,
+        "exposureTimeS": 1.9,
         "baseExposureTimeS": 22.0,
         "uvOffDelayS": 6.0,
         "uvOffDelayBaseS": 1.0,
@@ -7486,7 +7486,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "2024-09-01 00:00:00",
+        "exposureTimeS": "1.9",
         "baseExposureTimeS": "22",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "1",
@@ -7548,7 +7548,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.6",
+        "exposureTimeS": "1,6",
         "baseExposureTimeS": "22",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "1",
@@ -7610,7 +7610,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "7",
-        "exposureTimeS": "2.4",
+        "exposureTimeS": "2,4",
         "baseExposureTimeS": "25",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "6",
@@ -7639,9 +7639,9 @@
         "restAfterRetractS": 0.0
       },
       "raw": {
-        "layerHeightMm": "0.05",
+        "layerHeightMm": "0,05",
         "baseLayers": "7",
-        "exposureTimeS": "2.3",
+        "exposureTimeS": "2,3",
         "baseExposureTimeS": "29",
         "uvOffDelayS": "10",
         "uvOffDelayBaseS": "10",
@@ -7833,19 +7833,19 @@
         "restBeforeLiftS": 1.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 1.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.45",
+        "exposureTimeS": "1,45",
         "baseExposureTimeS": "20",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
         "restBeforeLiftS": "1s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "1s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -7866,7 +7866,7 @@
         "restBeforeLiftS": 1.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 1.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -7878,7 +7878,7 @@
         "restBeforeLiftS": "1s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "1s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -7904,7 +7904,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.5",
+        "exposureTimeS": "1,5",
         "baseExposureTimeS": "20",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -7937,7 +7937,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "8",
-        "exposureTimeS": "1.6",
+        "exposureTimeS": "1,6",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -7970,13 +7970,13 @@
       "raw": {
         "layerHeightMm": "0.00mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.4",
+        "exposureTimeS": "1,4",
         "baseExposureTimeS": "20",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
-        "restBeforeLiftS": "0.5",
+        "restBeforeLiftS": "0,5",
         "restAfterLiftS": "0s",
-        "restAfterRetractS": "0.5",
+        "restAfterRetractS": "0,5",
         "uvPower": ""
       },
       "status": "ok"
@@ -8130,9 +8130,9 @@
         "restAfterRetractS": 1.0
       },
       "raw": {
-        "layerHeightMm": "0.05",
+        "layerHeightMm": "0,05",
         "baseLayers": "5",
-        "exposureTimeS": "1.55",
+        "exposureTimeS": "1,55",
         "baseExposureTimeS": "30",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -8161,9 +8161,9 @@
         "restAfterRetractS": 1.0
       },
       "raw": {
-        "layerHeightMm": "0.05",
+        "layerHeightMm": "0,05",
         "baseLayers": "5",
-        "exposureTimeS": "1.55",
+        "exposureTimeS": "1,55",
         "baseExposureTimeS": "25",
         "uvOffDelayS": "8",
         "uvOffDelayBaseS": "8",
@@ -8192,9 +8192,9 @@
         "restAfterRetractS": 1.0
       },
       "raw": {
-        "layerHeightMm": "0.05",
+        "layerHeightMm": "0,05",
         "baseLayers": "5",
-        "exposureTimeS": "1.55",
+        "exposureTimeS": "1,55",
         "baseExposureTimeS": "20",
         "uvOffDelayS": "8",
         "uvOffDelayBaseS": "8",
@@ -8223,9 +8223,9 @@
         "restAfterRetractS": 1.0
       },
       "raw": {
-        "layerHeightMm": "0.05",
+        "layerHeightMm": "0,05",
         "baseLayers": "5",
-        "exposureTimeS": "1.6",
+        "exposureTimeS": "1,6",
         "baseExposureTimeS": "20",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -8254,9 +8254,9 @@
         "restAfterRetractS": 1.0
       },
       "raw": {
-        "layerHeightMm": "0.05",
+        "layerHeightMm": "0,05",
         "baseLayers": "5",
-        "exposureTimeS": "1.8",
+        "exposureTimeS": "1,8",
         "baseExposureTimeS": "20",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -8287,7 +8287,7 @@
       "raw": {
         "layerHeightMm": "0.00mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.5",
+        "exposureTimeS": "1,5",
         "baseExposureTimeS": "20",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
@@ -8318,13 +8318,13 @@
       "raw": {
         "layerHeightMm": "0.00mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.35",
+        "exposureTimeS": "1,35",
         "baseExposureTimeS": "18",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
-        "restBeforeLiftS": "0.5",
+        "restBeforeLiftS": "0,5",
         "restAfterLiftS": "0s",
-        "restAfterRetractS": "0.5"
+        "restAfterRetractS": "0,5"
       },
       "status": "ok"
     },
@@ -8440,9 +8440,9 @@
         "restAfterRetractS": 1.0
       },
       "raw": {
-        "layerHeightMm": "0.05",
+        "layerHeightMm": "0,05",
         "baseLayers": "8",
-        "exposureTimeS": "6.5",
+        "exposureTimeS": "6,5",
         "baseExposureTimeS": "55",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "6",
@@ -8471,9 +8471,9 @@
         "restAfterRetractS": 1.0
       },
       "raw": {
-        "layerHeightMm": "0.05",
+        "layerHeightMm": "0,05",
         "baseLayers": "6",
-        "exposureTimeS": "1.4",
+        "exposureTimeS": "1,4",
         "baseExposureTimeS": "25",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -8502,9 +8502,9 @@
         "restAfterRetractS": 1.0
       },
       "raw": {
-        "layerHeightMm": "0.05",
+        "layerHeightMm": "0,05",
         "baseLayers": "6",
-        "exposureTimeS": "1.7",
+        "exposureTimeS": "1,7",
         "baseExposureTimeS": "30",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -8533,9 +8533,9 @@
         "restAfterRetractS": 1.0
       },
       "raw": {
-        "layerHeightMm": "0.05",
+        "layerHeightMm": "0,05",
         "baseLayers": "7",
-        "exposureTimeS": "1.9",
+        "exposureTimeS": "1,9",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "8",
         "uvOffDelayBaseS": "8",
@@ -8566,7 +8566,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.9",
+        "exposureTimeS": "1,9",
         "baseExposureTimeS": "25",
         "uvOffDelayS": "8",
         "uvOffDelayBaseS": "8",
@@ -8758,7 +8758,7 @@
         "restBeforeLiftS": 1.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 1.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -8770,7 +8770,7 @@
         "restBeforeLiftS": "1s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "1s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -8791,19 +8791,19 @@
         "restBeforeLiftS": 1.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 1.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.65",
+        "exposureTimeS": "1,65",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
         "restBeforeLiftS": "1s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "1s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -8829,7 +8829,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.7",
+        "exposureTimeS": "1,7",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -8862,7 +8862,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "8",
-        "exposureTimeS": "1.8",
+        "exposureTimeS": "1,8",
         "baseExposureTimeS": "45",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -8895,13 +8895,13 @@
       "raw": {
         "layerHeightMm": "0.00mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.6",
+        "exposureTimeS": "1,6",
         "baseExposureTimeS": "20",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
-        "restBeforeLiftS": "0.5",
+        "restBeforeLiftS": "0,5",
         "restAfterLiftS": "0s",
-        "restAfterRetractS": "0.5",
+        "restAfterRetractS": "0,5",
         "uvPower": ""
       },
       "status": "ok"
@@ -9057,7 +9057,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.65",
+        "exposureTimeS": "1,65",
         "baseExposureTimeS": "30",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -9088,7 +9088,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.7",
+        "exposureTimeS": "1,7",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -9119,7 +9119,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.7",
+        "exposureTimeS": "1,7",
         "baseExposureTimeS": "30",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -9181,7 +9181,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "2.1",
+        "exposureTimeS": "2,1",
         "baseExposureTimeS": "45",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -9243,13 +9243,13 @@
       "raw": {
         "layerHeightMm": "0.00mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.18",
+        "exposureTimeS": "1,18",
         "baseExposureTimeS": "22",
         "uvOffDelayS": "0s",
         "uvOffDelayBaseS": "0s",
-        "restBeforeLiftS": "0.5",
+        "restBeforeLiftS": "0,5",
         "restAfterLiftS": "0s",
-        "restAfterRetractS": "0.5"
+        "restAfterRetractS": "0,5"
       },
       "status": "ok"
     },
@@ -9336,7 +9336,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "10",
-        "exposureTimeS": "2.1",
+        "exposureTimeS": "2,1",
         "baseExposureTimeS": "45",
         "uvOffDelayS": "11",
         "uvOffDelayBaseS": "11",
@@ -9367,7 +9367,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "10",
-        "exposureTimeS": "6.1",
+        "exposureTimeS": "6,1",
         "baseExposureTimeS": "65",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -9398,7 +9398,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.65",
+        "exposureTimeS": "1,65",
         "baseExposureTimeS": "30",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -9460,7 +9460,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "10",
-        "exposureTimeS": "2.1",
+        "exposureTimeS": "2,1",
         "baseExposureTimeS": "45",
         "uvOffDelayS": "7",
         "uvOffDelayBaseS": "7",
@@ -9491,7 +9491,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "8",
-        "exposureTimeS": "2.1",
+        "exposureTimeS": "2,1",
         "baseExposureTimeS": "45",
         "uvOffDelayS": "8",
         "uvOffDelayBaseS": "8",
@@ -9589,7 +9589,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.3",
+        "exposureTimeS": "1,3",
         "baseExposureTimeS": "8",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -9622,7 +9622,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.3",
+        "exposureTimeS": "1,3",
         "baseExposureTimeS": "8",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -9655,7 +9655,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.3",
+        "exposureTimeS": "1,3",
         "baseExposureTimeS": "8",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -9683,19 +9683,19 @@
         "restBeforeLiftS": 0.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 0.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.3",
+        "exposureTimeS": "1,3",
         "baseExposureTimeS": "8",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
         "restBeforeLiftS": "0s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "0s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -9716,19 +9716,19 @@
         "restBeforeLiftS": 0.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 0.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.3",
+        "exposureTimeS": "1,3",
         "baseExposureTimeS": "8",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
         "restBeforeLiftS": "0s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "0s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -9754,7 +9754,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.3",
+        "exposureTimeS": "1,3",
         "baseExposureTimeS": "8",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -9787,7 +9787,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.4",
+        "exposureTimeS": "1,4",
         "baseExposureTimeS": "8",
         "uvOffDelayS": "2",
         "uvOffDelayBaseS": "2",
@@ -9820,7 +9820,7 @@
       "raw": {
         "layerHeightMm": "0.00mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.3",
+        "exposureTimeS": "1,3",
         "baseExposureTimeS": "8",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -9982,7 +9982,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.2",
+        "exposureTimeS": "1,2",
         "baseExposureTimeS": "8",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "1",
@@ -10013,7 +10013,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.2",
+        "exposureTimeS": "1,2",
         "baseExposureTimeS": "8",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "1",
@@ -10044,7 +10044,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.3",
+        "exposureTimeS": "1,3",
         "baseExposureTimeS": "7",
         "uvOffDelayS": "2",
         "uvOffDelayBaseS": "1",
@@ -10075,7 +10075,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.4",
+        "exposureTimeS": "1,4",
         "baseExposureTimeS": "8",
         "uvOffDelayS": "3",
         "uvOffDelayBaseS": "2",
@@ -10106,7 +10106,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.3",
+        "exposureTimeS": "1,3",
         "baseExposureTimeS": "8",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "1",
@@ -10261,7 +10261,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.4",
+        "exposureTimeS": "1,4",
         "baseExposureTimeS": "7",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "1",
@@ -10323,7 +10323,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.3",
+        "exposureTimeS": "1,3",
         "baseExposureTimeS": "7",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "1",
@@ -10385,7 +10385,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.4",
+        "exposureTimeS": "1,4",
         "baseExposureTimeS": "8",
         "uvOffDelayS": "6",
         "uvOffDelayBaseS": "1",
@@ -10414,9 +10414,9 @@
         "restAfterRetractS": 0.0
       },
       "raw": {
-        "layerHeightMm": "0.05",
+        "layerHeightMm": "0,05",
         "baseLayers": "6",
-        "exposureTimeS": "1.6",
+        "exposureTimeS": "1,6",
         "baseExposureTimeS": "10",
         "uvOffDelayS": "10",
         "uvOffDelayBaseS": "10",
@@ -10514,7 +10514,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.7",
+        "exposureTimeS": "1,7",
         "baseExposureTimeS": "30",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -10547,7 +10547,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.6",
+        "exposureTimeS": "1,6",
         "baseExposureTimeS": "30",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -10580,7 +10580,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.6",
+        "exposureTimeS": "1,6",
         "baseExposureTimeS": "30",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -10608,19 +10608,19 @@
         "restBeforeLiftS": 0.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 0.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.6",
+        "exposureTimeS": "1,6",
         "baseExposureTimeS": "30",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
         "restBeforeLiftS": "0s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "0s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -10641,19 +10641,19 @@
         "restBeforeLiftS": 0.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 0.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.7",
+        "exposureTimeS": "1,7",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
         "restBeforeLiftS": "0s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "0s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -10679,7 +10679,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "6",
-        "exposureTimeS": "1.7",
+        "exposureTimeS": "1,7",
         "baseExposureTimeS": "35",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -10712,7 +10712,7 @@
       "raw": {
         "layerHeightMm": "0.05mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.8",
+        "exposureTimeS": "1,8",
         "baseExposureTimeS": "38",
         "uvOffDelayS": "2",
         "uvOffDelayBaseS": "2",
@@ -10745,7 +10745,7 @@
       "raw": {
         "layerHeightMm": "0.00mm",
         "baseLayers": "5",
-        "exposureTimeS": "1.6",
+        "exposureTimeS": "1,6",
         "baseExposureTimeS": "33",
         "uvOffDelayS": "1",
         "uvOffDelayBaseS": "1",
@@ -11360,7 +11360,7 @@
       "model": "PHOTON CLÁSSICA",
       "params": {
         "layerHeightMm": 0.05,
-        "exposureTimeS": null,
+        "exposureTimeS": 71.0,
         "baseLayers": 8.0,
         "baseExposureTimeS": 80.0,
         "uvOffDelayS": 0.0,
@@ -11393,7 +11393,7 @@
       "model": "PHOTON S",
       "params": {
         "layerHeightMm": 0.05,
-        "exposureTimeS": null,
+        "exposureTimeS": 61.0,
         "baseLayers": 8.0,
         "baseExposureTimeS": 80.0,
         "uvOffDelayS": 0.0,
@@ -11533,7 +11533,7 @@
         "restBeforeLiftS": 0.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 0.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -11545,7 +11545,7 @@
         "restBeforeLiftS": "0s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "0s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -11566,7 +11566,7 @@
         "restBeforeLiftS": 0.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 0.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -11578,7 +11578,7 @@
         "restBeforeLiftS": "0s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "0s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -12155,7 +12155,7 @@
       "model": "MINI 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "exposureTimeS": null,
+        "exposureTimeS": 50.5,
         "baseLayers": 8.0,
         "baseExposureTimeS": 80.0,
         "uvOffDelayS": 0.0,
@@ -12186,7 +12186,7 @@
       "model": "PHOTON CLÁSSICA",
       "params": {
         "layerHeightMm": 0.05,
-        "exposureTimeS": null,
+        "exposureTimeS": 101.0,
         "baseLayers": 8.0,
         "baseExposureTimeS": 120.0,
         "uvOffDelayS": 0.0,
@@ -12359,7 +12359,7 @@
         "restBeforeLiftS": 0.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 0.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -12371,7 +12371,7 @@
         "restBeforeLiftS": "0s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "0s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -12392,7 +12392,7 @@
         "restBeforeLiftS": 0.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 0.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -12404,7 +12404,7 @@
         "restBeforeLiftS": "0s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "0s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -13123,7 +13123,7 @@
         "restBeforeLiftS": 0.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 0.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -13135,7 +13135,7 @@
         "restBeforeLiftS": "0s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "0s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -13156,7 +13156,7 @@
         "restBeforeLiftS": 2.5,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 2.5,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "layerHeightMm": "0.05mm",
@@ -13165,10 +13165,10 @@
         "baseExposureTimeS": "35s",
         "uvOffDelayS": "0",
         "uvOffDelayBaseS": "0s",
-        "restBeforeLiftS": "2.5",
+        "restBeforeLiftS": "2,5",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "2,50s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -14055,14 +14055,14 @@
         "restBeforeLiftS": 0.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 0.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "uvOffDelayBaseS": "0s",
         "restBeforeLiftS": "0s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "0s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
@@ -14078,14 +14078,14 @@
         "restBeforeLiftS": 0.0,
         "restAfterLiftS": 0.0,
         "restAfterRetractS": 0.0,
-        "uvPower": 0.7
+        "uvPower": 70.0
       },
       "raw": {
         "uvOffDelayBaseS": "0s",
         "restBeforeLiftS": "0s",
         "restAfterLiftS": "0s",
         "restAfterRetractS": "0s",
-        "uvPower": "0.7"
+        "uvPower": "70%"
       },
       "status": "ok"
     },
