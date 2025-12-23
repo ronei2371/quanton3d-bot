@@ -99,6 +99,12 @@ async function migratePrintParameters(db) {
 
 }
 
+async function clearCollections(db) {
+  const printResult = await db.collection(PRINT_PARAMETERS_COLLECTION).deleteMany({});
+  const suggestionsResult = await db.collection(SUGGESTIONS_COLLECTION).deleteMany({});
+  console.log(`[0/3] Limpeza completa: print_parameters=${printResult.deletedCount}, suggestions=${suggestionsResult.deletedCount}`);
+}
+
 async function migrateSuggestions(db) {
   console.log('[2/3] Importando sugestoes...');
 
@@ -154,6 +160,7 @@ async function migrateFinalData() {
   const db = client.db(DB_NAME);
 
   try {
+    await clearCollections(db);
     await migratePrintParameters(db);
     await migrateSuggestions(db);
     console.log('[3/3] Migracao concluida com sucesso.');

@@ -100,6 +100,12 @@ async function seedSuggestions(db) {
   console.log(`ℹ️ Total atual em suggestions: ${total}`);
 }
 
+async function clearCollections(db) {
+  const printResult = await db.collection(PRINT_PARAMETERS_COLLECTION).deleteMany({});
+  const suggestionsResult = await db.collection(SUGGESTIONS_COLLECTION).deleteMany({});
+  console.log(`[0/3] Limpeza completa: print_parameters=${printResult.deletedCount}, suggestions=${suggestionsResult.deletedCount}`);
+}
+
 async function runSeed() {
   if (!MONGODB_URI) {
     throw new Error('Defina a variavel MONGODB_URI antes de rodar o seed.');
@@ -114,6 +120,7 @@ async function runSeed() {
   const db = client.db(DB_NAME);
 
   try {
+    await clearCollections(db);
     await seedPrintParameters(db);
     await seedSuggestions(db);
     console.log('[3/3] Seed concluido com sucesso.');
