@@ -43,7 +43,7 @@ app.get("/params-panel", (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.send("🚀 Quanton3D IA Online! Astra no comando estratégico. Tudo pronto, pai Ronei!");
+  res.sendFile(path.join(publicDir, 'index.html'));
 });
 
 app.post("/admin/login", async (req, res) => {
