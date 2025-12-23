@@ -347,6 +347,55 @@ def build_output(resin_names: List[str], profiles: List[Dict[str, Any]]) -> Dict
     }
 
 
+def generate_rag_digest(profiles: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+    chunks = []
+
+    for profile in profiles:
+        if profile["status"] == "coming_soon":
+            text = f"Resina {profile['resinName']} | Impressora {profile['brand']} {profile['model']}: Parâmetros em breve."
+        else:
+            params = profile.get("params", {})
+            param_parts = []
+
+            if params.get("layerHeightMm") is not None:
+                param_parts.append(f"altura de camada={params['layerHeightMm']}mm")
+            if params.get("baseLayers") is not None:
+                param_parts.append(f"camadas de base={int(params['baseLayers'])}")
+            if params.get("exposureTimeS") is not None:
+                param_parts.append(f"tempo de exposição={params['exposureTimeS']}s")
+            if params.get("baseExposureTimeS") is not None:
+                param_parts.append(f"exposição base={params['baseExposureTimeS']}s")
+            if params.get("uvOffDelayS") is not None:
+                param_parts.append(f"retardo UV={params['uvOffDelayS']}s")
+            if params.get("uvOffDelayBaseS") is not None:
+                param_parts.append(f"retardo UV base={params['uvOffDelayBaseS']}s")
+            if params.get("restBeforeLiftS") is not None:
+                param_parts.append(f"descanso antes elevação={params['restBeforeLiftS']}s")
+            if params.get("restAfterLiftS") is not None:
+                param_parts.append(f"descanso após elevação={params['restAfterLiftS']}s")
+            if params.get("restAfterRetractS") is not None:
+                param_parts.append(f"descanso após retração={params['restAfterRetractS']}s")
+            if params.get("uvPower") is not None:
+                param_parts.append(f"potência UV={params['uvPower']}")
+
+            text = (
+                f"Resina {profile['resinName']} | Impressora {profile['brand']} {profile['model']}: "
+                f"{', '.join(param_parts)}"
+            )
+
+        chunks.append(
+            {
+                "id": profile["id"],
+                "resin": profile["resinName"],
+                "printer": f"{profile['brand']} {profile['model']}",
+                "text": text,
+                "status": profile["status"],
+            }
+        )
+
+    return chunks
+
+
 def extract_sheet_names(html_text: str) -> List[str]:
     matches = re.findall(r"Planilha\s+\d+:\s*<em>(.*?)</em>", html_text, flags=re.IGNORECASE)
     return [unescape(match).strip() for match in matches]
@@ -383,6 +432,13 @@ def main() -> None:
     args.output_path.parent.mkdir(parents=True, exist_ok=True)
     args.output_path.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"✅ Gerado {args.output_path} com {len(profiles)} perfis.")
+
+    rag_output = generate_rag_digest(profiles)
+    db_path = args.output_path.parent / "print-parameters-db.json"
+    rag_path = args.output_path.parent / "print-parameters-rag.json"
+    db_path.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
+    rag_path.write_text(json.dumps(rag_output, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"✅ Gerado {db_path} e {rag_path}.")
 
 
 if __name__ == "__main__":
