@@ -29,34 +29,218 @@
       background: radial-gradient(circle at top, rgba(42, 98, 255, 0.25), transparent 45%),
         radial-gradient(circle at 20% 40%, rgba(0, 214, 255, 0.2), transparent 50%),
         var(--bg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
       color: var(--text);
-      padding: 32px 20px 140px;
+      padding: 32px 20px 160px;
+    }
+
+    .main {
+      width: min(1100px, 100%);
+      margin: 0 auto;
+      display: grid;
+      gap: 32px;
     }
 
     .hud {
-      width: min(420px, 100%);
       background: var(--panel);
       border: 1px solid rgba(60, 160, 255, 0.35);
       border-radius: 28px;
-      padding: 32px 28px 44px;
+      padding: 32px 28px 36px;
       box-shadow: var(--shadow);
       backdrop-filter: blur(20px);
     }
 
     .hud h1 {
-      font-size: 1.5rem;
-      letter-spacing: 0.06em;
+      font-size: 1.8rem;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
     }
 
     .hud p {
       margin-top: 12px;
+      font-size: 1rem;
+      line-height: 1.7;
+      color: rgba(230, 245, 255, 0.78);
+    }
+
+    .cta-row {
+      margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .cta {
+      border: 1px solid rgba(90, 208, 255, 0.5);
+      background: linear-gradient(160deg, rgba(10, 108, 255, 0.4), rgba(6, 28, 70, 0.9));
+      color: var(--text);
+      padding: 12px 18px;
+      border-radius: 16px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      cursor: pointer;
+      box-shadow: 0 0 18px rgba(35, 176, 255, 0.4);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      text-decoration: none;
+    }
+
+    .cta:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 22px rgba(90, 208, 255, 0.8);
+    }
+
+    section.card {
+      background: rgba(5, 20, 50, 0.7);
+      border-radius: 24px;
+      border: 1px solid rgba(90, 208, 255, 0.25);
+      padding: 28px;
+      box-shadow: 0 12px 40px rgba(6, 64, 140, 0.35);
+    }
+
+    section.card h2 {
+      font-size: 1.2rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid.cols-3 {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .grid.cols-4 {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    .service-button {
+      border-radius: 18px;
+      padding: 16px 18px;
+      border: 1px solid rgba(90, 208, 255, 0.35);
+      background: linear-gradient(140deg, rgba(15, 80, 180, 0.9), rgba(2, 18, 48, 0.95));
+      color: var(--text);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      min-height: 78px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      box-shadow: 0 0 18px rgba(35, 176, 255, 0.5);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .service-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 26px rgba(90, 208, 255, 0.9);
+    }
+
+    .partners {
+      display: grid;
+      gap: 14px;
+    }
+
+    .partner-card {
+      padding: 16px 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(90, 208, 255, 0.3);
+      background: rgba(4, 16, 40, 0.75);
+      display: grid;
+      gap: 6px;
+      box-shadow: inset 0 0 12px rgba(90, 208, 255, 0.1);
+    }
+
+    .partner-card strong {
       font-size: 0.95rem;
-      line-height: 1.6;
-      color: rgba(230, 245, 255, 0.75);
+    }
+
+    .partner-card span {
+      color: rgba(230, 245, 255, 0.72);
+      font-size: 0.85rem;
+    }
+
+    .resin-search {
+      display: grid;
+      gap: 16px;
+    }
+
+    .resin-search input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(90, 208, 255, 0.4);
+      background: rgba(3, 14, 35, 0.8);
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      box-shadow: inset 0 0 12px rgba(35, 176, 255, 0.15);
+    }
+
+    .resin-search input::placeholder {
+      color: rgba(230, 245, 255, 0.5);
+    }
+
+    .resin-results {
+      display: grid;
+      gap: 10px;
+    }
+
+    .resin-item {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(90, 208, 255, 0.25);
+      background: rgba(4, 18, 44, 0.8);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+
+    .resin-item small {
+      color: rgba(230, 245, 255, 0.6);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(12, 88, 209, 0.35);
+      border: 1px solid rgba(90, 208, 255, 0.4);
+      color: rgba(230, 245, 255, 0.9);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .site-map {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .site-map a {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(90, 208, 255, 0.35);
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.8rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .site-map a:hover {
+      border-color: rgba(90, 208, 255, 0.8);
     }
 
     .fab-container {
@@ -230,24 +414,87 @@
   </style>
 </head>
 <body>
-  <div class="hud">
-    <h1>Modo Live • Astra UI</h1>
-    <p>
-      Menu de acesso rápido ativado para operações essenciais. Toque no núcleo para
-      expandir as funções em modo radial futurista.
-    </p>
-  </div>
+  <main class="main">
+    <div class="hud" id="inicio">
+      <h1>Quanton3D • Astra Fase 2.5</h1>
+      <p>
+        Conteúdo integrado com visual neon azul. Serviços essenciais, busca de resinas e parceiros
+        estão de volta no layout principal — tudo acessível em poucos toques.
+      </p>
+      <div class="cta-row">
+        <a class="cta" href="/params-panel">Painel de Parâmetros</a>
+        <button class="cta" type="button" data-scroll="#resinas">Busca de Resinas</button>
+        <button class="cta" type="button" data-scroll="#servicos">Serviços</button>
+        <button class="cta" type="button" data-scroll="#parceiros">Parceiros</button>
+      </div>
+    </div>
+
+    <section class="card" id="servicos">
+      <h2>Serviços principais</h2>
+      <p class="status-pill">Operação ativa • Azul Neon</p>
+      <div class="grid cols-4" style="margin-top: 16px;">
+        <button class="service-button" type="button">Nivelamento</button>
+        <button class="service-button" type="button">Calibração</button>
+        <button class="service-button" type="button">Perfis de Resina</button>
+        <button class="service-button" type="button">Diagnóstico Rápido</button>
+        <button class="service-button" type="button">Manutenção</button>
+        <button class="service-button" type="button">Suporte Técnico</button>
+        <button class="service-button" type="button">Parâmetros Express</button>
+        <button class="service-button" type="button">Treinamento</button>
+      </div>
+    </section>
+
+    <section class="card" id="resinas">
+      <h2>Busca de Resinas</h2>
+      <div class="resin-search">
+        <input id="resin-search-input" type="text" placeholder="Digite para buscar resinas (ex: Pyroblast, Iron, Spark)" />
+        <div class="resin-results" id="resin-results">
+          <div class="resin-item">
+            <span>Carregando resinas...</span>
+            <small>Aguarde</small>
+          </div>
+        </div>
+        <small id="resin-status" style="color: rgba(230, 245, 255, 0.6);"></small>
+      </div>
+    </section>
+
+    <section class="card" id="parceiros">
+      <h2>Parceiros</h2>
+      <div class="partners" id="partners-list">
+        <div class="partner-card">
+          <strong>Sincronizando parceiros...</strong>
+          <span>Atualizando rede Quanton3D</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="acessos">
+      <h2>Mapa rápido do site</h2>
+      <p style="color: rgba(230, 245, 255, 0.7); margin-bottom: 12px;">
+        Todos os itens do layout anterior continuam acessíveis por aqui.
+      </p>
+      <div class="site-map">
+        <a href="#inicio">Início</a>
+        <a href="#servicos">Serviços</a>
+        <a href="#resinas">Busca de Resinas</a>
+        <a href="/params-panel">Parâmetros</a>
+        <a href="#parceiros">Parceiros</a>
+        <a href="https://wa.me/5531983340053" target="_blank" rel="noreferrer">WhatsApp</a>
+        <a href="/admin-panel">Admin</a>
+      </div>
+    </section>
+  </main>
 
   <div class="fab-container" id="fabMenu" aria-label="Menu de ações rápidas">
     <div class="fab-shadow-ring"></div>
     <div class="fab-actions">
-      <button class="fab-action parametros" type="button" aria-label="Abrir parâmetros">
+      <button class="fab-action parametros" type="button" aria-label="Abrir parâmetros" data-link="/params-panel">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.14 7.14 0 0 0-1.62-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.49.41l-.36 2.54c-.58.23-1.12.54-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.72 8.42a.5.5 0 0 0 .12.64l2.03 1.58c-.05.3-.07.62-.07.94 0 .33.02.64.07.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.6.22l2.39-.96c.5.4 1.04.72 1.62.94l.36 2.54c.04.24.25.41.49.41h3.8c.24 0 .45-.17.49-.41l.36-2.54c.58-.23 1.12-.54 1.62-.94l2.39.96c.22.09.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58Zm-7.14 2.56a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z" />
         </svg>
         <span>Parâmetros</span>
       </button>
-      <button class="fab-action busca" type="button" aria-label="Abrir busca">
+      <button class="fab-action busca" type="button" aria-label="Abrir busca" data-scroll="#resinas">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M10 2a8 8 0 1 0 5.29 14.04l4.34 4.34 1.41-1.41-4.34-4.34A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z" />
         </svg>
@@ -275,6 +522,11 @@
     const fabMenu = document.getElementById("fabMenu");
     const fabToggle = document.getElementById("fabToggle");
     const actionButtons = fabMenu.querySelectorAll(".fab-action");
+    const resinInput = document.getElementById("resin-search-input");
+    const resinResults = document.getElementById("resin-results");
+    const resinStatus = document.getElementById("resin-status");
+    const partnersList = document.getElementById("partners-list");
+    const scrollButtons = document.querySelectorAll("[data-scroll]");
 
     const toggleMenu = () => {
       const isOpen = fabMenu.classList.toggle("open");
@@ -287,6 +539,29 @@
       button.addEventListener("click", () => {
         fabMenu.classList.remove("open");
         fabToggle.setAttribute("aria-expanded", "false");
+        const link = button.getAttribute("data-link");
+        const target = button.getAttribute("data-scroll");
+        if (link) {
+          window.location.href = link;
+          return;
+        }
+        if (target) {
+          const section = document.querySelector(target);
+          if (section) {
+            section.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }
+      });
+    });
+
+    scrollButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const target = button.getAttribute("data-scroll");
+        if (!target) return;
+        const section = document.querySelector(target);
+        if (section) {
+          section.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
       });
     });
 
@@ -296,6 +571,83 @@
         fabToggle.setAttribute("aria-expanded", "false");
       }
     });
+
+    const renderResins = (items = []) => {
+      resinResults.innerHTML = "";
+      if (!items.length) {
+        resinResults.innerHTML = `
+          <div class="resin-item">
+            <span>Nenhuma resina encontrada.</span>
+            <small>Tente outro termo</small>
+          </div>
+        `;
+        return;
+      }
+      items.forEach((resin) => {
+        const item = document.createElement("div");
+        item.className = "resin-item";
+        item.innerHTML = `
+          <span>${resin.name}</span>
+          <small>${resin.totalProfiles || 0} perfis</small>
+        `;
+        resinResults.appendChild(item);
+      });
+    };
+
+    const fetchResins = async (query = "") => {
+      resinStatus.textContent = "Conectando ao banco de resinas...";
+      try {
+        const params = new URLSearchParams();
+        if (query) params.set("query", query);
+        const response = await fetch(`/api/resins/search?${params.toString()}`);
+        const data = await response.json();
+        if (!data.success) {
+          resinStatus.textContent = "Falha ao carregar resinas.";
+          renderResins([]);
+          return;
+        }
+        renderResins(data.resins);
+        resinStatus.textContent = `Fonte: ${data.source === "mongo" ? "MongoDB" : "local"} • ${data.resins.length} resultados`;
+      } catch (error) {
+        resinStatus.textContent = "Erro de conexão ao carregar resinas.";
+        renderResins([]);
+      }
+    };
+
+    let resinTimeout = null;
+    if (resinInput) {
+      resinInput.addEventListener("input", () => {
+        const value = resinInput.value.trim();
+        clearTimeout(resinTimeout);
+        resinTimeout = setTimeout(() => {
+          fetchResins(value);
+        }, 200);
+      });
+    }
+
+    const loadPartners = async () => {
+      try {
+        const response = await fetch("/api/partners");
+        const data = await response.json();
+        if (!data.success || !Array.isArray(data.partners)) return;
+        partnersList.innerHTML = "";
+        data.partners.forEach((partner) => {
+          const card = document.createElement("div");
+          card.className = "partner-card";
+          card.innerHTML = `
+            <strong>${partner.name || "Parceiro Quanton3D"}</strong>
+            <span>${partner.focus || "Integração técnica e comercial"}</span>
+            ${partner.location ? `<span>${partner.location}</span>` : ""}
+          `;
+          partnersList.appendChild(card);
+        });
+      } catch (error) {
+        // mantém conteúdo fallback
+      }
+    };
+
+    fetchResins();
+    loadPartners();
   </script>
 </body>
 </html>

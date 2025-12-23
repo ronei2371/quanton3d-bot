@@ -5,11 +5,12 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import fs from "fs/promises";
 import path from 'path';
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 import { initializeRAG } from './rag-search.js';
-import { connectToMongo } from './db.js';
+import { connectToMongo, getPartnersCollection, getPrintParametersCollection, isConnected } from './db.js';
 import { attachAdminSecurity } from "./admin/security.js";
 
 dotenv.config();
@@ -44,6 +45,156 @@ app.get("/", (req, res) => {
 
 app.get("/admin-panel", (req, res) => {
   res.sendFile(path.join(rootDir, 'admin-panel-test.html'));
+});
+
+let localResinsCache = null;
+
+async function getLocalResins() {
+  if (localResinsCache) {
+    return localResinsCache;
+  }
+  try {
+    const dataPath = path.join(rootDir, "data", "resins_extracted.json");
+    const raw = await fs.readFile(dataPath, "utf-8");
+    const data = JSON.parse(raw);
+    const resins = (data.resins || [])
+      .map((resin) => ({
+        id: resin.id,
+        name: resin.name,
+        totalProfiles: resin.totalProfiles || 0
+      }))
+      .filter((resin) => resin.id && resin.name);
+    localResinsCache = resins;
+    return resins;
+  } catch (error) {
+    console.warn("⚠️ Falha ao carregar resins_extracted.json:", error.message);
+    localResinsCache = [];
+    return localResinsCache;
+  }
+}
+
+async function ensureMongoReady() {
+  if (!shouldInitMongo()) {
+    return false;
+  }
+  if (!isConnected()) {
+    try {
+      await connectToMongo();
+    } catch (err) {
+      console.warn("⚠️ MongoDB indisponível para rota pública:", err.message);
+      return false;
+    }
+  }
+  return true;
+}
+
+async function getResinsFromMongo(query, limit) {
+  const collection = getPrintParametersCollection();
+  const matchStage = query
+    ? {
+      resinName: {
+        $regex: query,
+        $options: "i"
+      }
+    }
+    : {};
+
+  const pipeline = [
+    { $match: matchStage },
+    {
+      $group: {
+        _id: {
+          resinId: "$resinId",
+          resinName: "$resinName"
+        },
+        totalProfiles: { $sum: 1 }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        id: "$_id.resinId",
+        name: "$_id.resinName",
+        totalProfiles: 1
+      }
+    },
+    { $sort: { name: 1 } },
+    { $limit: limit }
+  ];
+
+  return collection.aggregate(pipeline).toArray();
+}
+
+app.get("/api/resins/search", async (req, res) => {
+  const query = String(req.query.query || req.query.q || "").trim();
+  const limit = Math.min(Number(req.query.limit) || 12, 50);
+  let source = "local";
+  let resins = [];
+
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (mongoReady) {
+      resins = await getResinsFromMongo(query, limit);
+      source = "mongo";
+    }
+  } catch (error) {
+    console.warn("⚠️ Falha ao consultar resinas no MongoDB:", error.message);
+  }
+
+  if (resins.length === 0) {
+    const localResins = await getLocalResins();
+    resins = localResins
+      .filter((resin) => (query ? resin.name.toLowerCase().includes(query.toLowerCase()) : true))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .slice(0, limit);
+  }
+
+  res.json({
+    success: true,
+    source,
+    resins
+  });
+});
+
+app.get("/api/partners", async (req, res) => {
+  let partners = [];
+  let source = "static";
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (mongoReady) {
+      const collection = getPartnersCollection();
+      partners = await collection.find({}).sort({ name: 1 }).limit(12).toArray();
+      source = "mongo";
+    }
+  } catch (error) {
+    console.warn("⚠️ Falha ao carregar parceiros:", error.message);
+  }
+
+  if (partners.length === 0) {
+    partners = [
+      {
+        name: "Laboratório Astra",
+        focus: "Assistência técnica especializada",
+        location: "Belo Horizonte • MG"
+      },
+      {
+        name: "Studio Órbita",
+        focus: "Modelagem e prototipagem avançada",
+        location: "São Paulo • SP"
+      },
+      {
+        name: "Clínica Nova Forma",
+        focus: "Resinas odontológicas e precisão",
+        location: "Curitiba • PR"
+      }
+    ];
+  }
+
+  res.json({
+    success: true,
+    source,
+    partners
+  });
 });
 
 // --- INICIALIZAÇÃO ---
