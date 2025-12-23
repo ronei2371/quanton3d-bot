@@ -49,18 +49,42 @@ app.get("/admin-panel", (req, res) => {
 // --- INICIALIZAÇÃO ---
 const PORT = process.env.PORT || 3001;
 
-async function startServer() {
-  try {
-    console.log('🚀 Astra ligando os motores...');
-    await connectToMongo();
-    await initializeRAG();
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`✅ Servidor Quanton3D rodando na porta ${PORT}`);
-    });
-  } catch (err) {
-    console.error("❌ Falha ao iniciar servidor:", err);
-    process.exit(1);
+function shouldInitMongo() {
+  return Boolean(process.env.MONGODB_URI);
+}
+
+function shouldInitRAG() {
+  return Boolean(process.env.OPENAI_API_KEY) && shouldInitMongo();
+}
+
+async function initializeServices() {
+  if (shouldInitMongo()) {
+    try {
+      await connectToMongo();
+    } catch (err) {
+      console.warn("⚠️ MongoDB não conectado. Servidor continua online:", err.message);
+    }
+  } else {
+    console.warn("⚠️ MONGODB_URI ausente. Rotas estáticas permanecem ativas.");
   }
+
+  if (shouldInitRAG()) {
+    try {
+      await initializeRAG();
+    } catch (err) {
+      console.warn("⚠️ RAG indisponível. Servidor continua online:", err.message);
+    }
+  } else {
+    console.warn("⚠️ OPENAI_API_KEY ausente ou MongoDB indisponível. RAG não inicializado.");
+  }
+}
+
+function startServer() {
+  console.log('🚀 Astra ligando os motores...');
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`✅ Servidor Quanton3D rodando na porta ${PORT}`);
+  });
+  initializeServices();
 }
 
 startServer();
