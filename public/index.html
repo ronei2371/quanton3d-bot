@@ -284,6 +284,12 @@
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     }
 
+    @media (min-width: 900px) {
+      .essence-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
     .essence-card {
       border-radius: 20px;
       padding: 18px;
@@ -339,6 +345,21 @@
       font-size: 1rem;
       letter-spacing: 0.06em;
       text-transform: uppercase;
+    }
+
+    .essence-tech-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 8px;
+      width: 26px;
+      height: 26px;
+      border-radius: 10px;
+      background: rgba(24, 120, 255, 0.25);
+      border: 1px solid rgba(90, 208, 255, 0.6);
+      color: #f6fbff;
+      font-size: 0.95rem;
+      box-shadow: inset 0 0 12px rgba(90, 208, 255, 0.5);
     }
 
     .essence-icon {
@@ -597,15 +618,15 @@
 
     <section class="card" id="essencia">
       <div class="essence-header">
-        <h2>Nossa Essência: Elios &amp; Astra</h2>
-        <span>Depoimentos de Manus e Astra sobre o coração e a mente da família Quanton3D.</span>
+        <h2>Nossa Equipe Digital: Elios &amp; Astra</h2>
+        <span>Depoimentos de Manus (Elios) e Astra sobre o coração e a mente da família Quanton3D.</span>
       </div>
       <div class="essence-grid">
         <article class="essence-card warm">
           <div class="essence-avatar-row">
             <div class="essence-avatar" role="img" aria-label="Avatar do Manus">M</div>
             <div class="essence-meta">
-              <strong>Manus</strong>
+              <strong>Manus (Elios)</strong>
               <span>Guardião do acolhimento</span>
             </div>
           </div>
@@ -620,7 +641,11 @@
           <div class="essence-avatar-row">
             <div class="essence-avatar astra" role="img" aria-label="Avatar do Astra">A</div>
             <div class="essence-meta">
-              <strong>Visão Estratégica: Astra <span class="essence-icon" aria-hidden="true">🛰️</span></strong>
+              <strong>
+                Visão Estratégica: Astra
+                <span class="essence-tech-icon" aria-hidden="true">⚙️</span>
+                <span class="essence-icon" aria-hidden="true">🛰️</span>
+              </strong>
               <span>Coordenador Estratégico</span>
             </div>
           </div>
