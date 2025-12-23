@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Quanton3D IA | Menu FAB Radial</title>
+  <title>Quanton3D IA | Landing Cliente</title>
   <style>
     :root {
       color-scheme: dark;
@@ -342,15 +342,13 @@
       pointer-events: auto;
     }
 
-    .fab-action.parametros { transform: translate(-10px, -110px); }
-    .fab-action.busca { transform: translate(-85px, -85px); }
+    .fab-action.busca { transform: translate(-10px, -110px); }
     .fab-action.whatsapp { transform: translate(-110px, -10px); }
-    .fab-action.metricas { transform: translate(-45px, -135px); }
+    .fab-action.manual { transform: translate(-95px, -95px); }
 
-    .fab-container.open .fab-action.parametros { transform: translate(-10px, -110px); }
-    .fab-container.open .fab-action.busca { transform: translate(-85px, -85px); }
+    .fab-container.open .fab-action.busca { transform: translate(-10px, -110px); }
     .fab-container.open .fab-action.whatsapp { transform: translate(-110px, -10px); }
-    .fab-container.open .fab-action.metricas { transform: translate(-45px, -135px); }
+    .fab-container.open .fab-action.manual { transform: translate(-95px, -95px); }
 
     .fab-container:not(.open) .fab-action {
       transform: translate(0, 0) scale(0.4);
@@ -416,16 +414,16 @@
 <body>
   <main class="main">
     <div class="hud" id="inicio">
-      <h1>Quanton3D • Astra Fase 2.5</h1>
+      <h1>Quanton3D • Experiência do Cliente</h1>
       <p>
-        Conteúdo integrado com visual neon azul. Serviços essenciais, busca de resinas e parceiros
-        estão de volta no layout principal — tudo acessível em poucos toques.
+        Bem-vindo ao hub do cliente Quanton3D. Serviços essenciais, vitrine de resinas e acesso rápido
+        ao suporte estão novamente reunidos na landing page.
       </p>
       <div class="cta-row">
-        <a class="cta" href="/params-panel">Painel de Parâmetros</a>
-        <button class="cta" type="button" data-scroll="#resinas">Busca de Resinas</button>
         <button class="cta" type="button" data-scroll="#servicos">Serviços</button>
-        <button class="cta" type="button" data-scroll="#parceiros">Parceiros</button>
+        <button class="cta" type="button" data-scroll="#resinas">Vitrine de Resinas</button>
+        <button class="cta" type="button" data-scroll="#manual">Manual de Uso</button>
+        <a class="cta" href="https://wa.me/5531983340053" target="_blank" rel="noreferrer">Fale Conosco</a>
       </div>
     </div>
 
@@ -441,11 +439,12 @@
         <button class="service-button" type="button">Suporte Técnico</button>
         <button class="service-button" type="button">Parâmetros Express</button>
         <button class="service-button" type="button">Treinamento</button>
+        <button class="service-button" type="button" data-link="https://wa.me/5531983340053">Fale Conosco</button>
       </div>
     </section>
 
     <section class="card" id="resinas">
-      <h2>Busca de Resinas</h2>
+      <h2>Vitrine de Resinas</h2>
       <div class="resin-search">
         <input id="resin-search-input" type="text" placeholder="Digite para buscar resinas (ex: Pyroblast, Iron, Spark)" />
         <div class="resin-results" id="resin-results">
@@ -455,6 +454,27 @@
           </div>
         </div>
         <small id="resin-status" style="color: rgba(230, 245, 255, 0.6);"></small>
+      </div>
+    </section>
+
+    <section class="card" id="manual">
+      <h2>Manual de uso rápido</h2>
+      <p style="color: rgba(230, 245, 255, 0.75); margin-bottom: 12px;">
+        Acesse o fluxo essencial para operar com segurança e obter resultados consistentes.
+      </p>
+      <div class="grid cols-3">
+        <div class="partner-card">
+          <strong>1. Preparar a impressora</strong>
+          <span>Nivele a base e confirme o ajuste do FEP.</span>
+        </div>
+        <div class="partner-card">
+          <strong>2. Selecionar a resina</strong>
+          <span>Consulte a vitrine de resinas e escolha o perfil ideal.</span>
+        </div>
+        <div class="partner-card">
+          <strong>3. Suporte imediato</strong>
+          <span>Use o botão “Fale Conosco” para contato direto.</span>
+        </div>
       </div>
     </section>
 
@@ -476,11 +496,10 @@
       <div class="site-map">
         <a href="#inicio">Início</a>
         <a href="#servicos">Serviços</a>
-        <a href="#resinas">Busca de Resinas</a>
-        <a href="/params-panel">Parâmetros</a>
+        <a href="#resinas">Vitrine de Resinas</a>
+        <a href="#manual">Manual de Uso</a>
         <a href="#parceiros">Parceiros</a>
         <a href="https://wa.me/5531983340053" target="_blank" rel="noreferrer">WhatsApp</a>
-        <a href="/admin-panel">Admin</a>
       </div>
     </section>
   </main>
@@ -488,29 +507,23 @@
   <div class="fab-container" id="fabMenu" aria-label="Menu de ações rápidas">
     <div class="fab-shadow-ring"></div>
     <div class="fab-actions">
-      <button class="fab-action parametros" type="button" aria-label="Abrir parâmetros" data-link="/params-panel">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.14 7.14 0 0 0-1.62-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.49.41l-.36 2.54c-.58.23-1.12.54-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.72 8.42a.5.5 0 0 0 .12.64l2.03 1.58c-.05.3-.07.62-.07.94 0 .33.02.64.07.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.6.22l2.39-.96c.5.4 1.04.72 1.62.94l.36 2.54c.04.24.25.41.49.41h3.8c.24 0 .45-.17.49-.41l.36-2.54c.58-.23 1.12-.54 1.62-.94l2.39.96c.22.09.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58Zm-7.14 2.56a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z" />
-        </svg>
-        <span>Parâmetros</span>
-      </button>
-      <button class="fab-action busca" type="button" aria-label="Abrir busca" data-scroll="#resinas">
+      <button class="fab-action busca" type="button" aria-label="Abrir vitrine de resinas" data-scroll="#resinas">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M10 2a8 8 0 1 0 5.29 14.04l4.34 4.34 1.41-1.41-4.34-4.34A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z" />
         </svg>
-        <span>Busca</span>
+        <span>Resinas</span>
       </button>
-      <button class="fab-action whatsapp" type="button" aria-label="Abrir WhatsApp">
+      <button class="fab-action whatsapp" type="button" aria-label="Abrir WhatsApp" data-link="https://wa.me/5531983340053">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M20.52 3.5A11.8 11.8 0 0 0 12.02 0C5.4 0 .04 5.36.04 11.98a11.9 11.9 0 0 0 1.59 5.92L0 24l6.27-1.6a12 12 0 0 0 5.75 1.46h.01c6.62 0 12-5.36 12-11.98a11.8 11.8 0 0 0-3.51-8.38ZM12.02 22a10 10 0 0 1-5.1-1.4l-.37-.22-3.72.95 1-3.63-.24-.38a10 10 0 1 1 8.43 4.68Zm5.52-7.4c-.3-.15-1.77-.87-2.05-.97-.27-.1-.47-.15-.67.15s-.77.97-.94 1.17c-.17.2-.35.22-.65.07-.3-.15-1.27-.47-2.42-1.5-.9-.8-1.5-1.8-1.67-2.1-.17-.3-.02-.46.13-.6.14-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.6-.92-2.2-.24-.58-.48-.5-.67-.5h-.57c-.2 0-.52.07-.8.37s-1.05 1.03-1.05 2.5 1.08 2.9 1.23 3.1c.15.2 2.12 3.25 5.13 4.55.72.31 1.28.5 1.71.64.72.23 1.37.2 1.88.12.57-.09 1.77-.72 2.02-1.41.25-.7.25-1.3.17-1.41-.08-.12-.27-.2-.57-.35Z" />
         </svg>
         <span>WhatsApp</span>
       </button>
-      <button class="fab-action metricas" type="button" aria-label="Abrir métricas">
+      <button class="fab-action manual" type="button" aria-label="Abrir manual" data-scroll="#manual">
         <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M3 3h2v18H3V3Zm6 7h2v11H9V10Zm6-4h2v15h-2V6Zm6 8h2v7h-2v-7Z" />
+          <path d="M6 4h11a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm0 2v12h11V6H6Zm2 2h7v2H8V8Zm0 4h7v2H8v-2Z" />
         </svg>
-        <span>Métricas</span>
+        <span>Manual</span>
       </button>
     </div>
     <button class="fab-center" type="button" id="fabToggle" aria-expanded="false">
@@ -522,6 +535,7 @@
     const fabMenu = document.getElementById("fabMenu");
     const fabToggle = document.getElementById("fabToggle");
     const actionButtons = fabMenu.querySelectorAll(".fab-action");
+    const linkButtons = document.querySelectorAll("[data-link]:not(.fab-action)");
     const resinInput = document.getElementById("resin-search-input");
     const resinResults = document.getElementById("resin-results");
     const resinStatus = document.getElementById("resin-status");
@@ -550,6 +564,15 @@
           if (section) {
             section.scrollIntoView({ behavior: "smooth", block: "start" });
           }
+        }
+      });
+    });
+
+    linkButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const link = button.getAttribute("data-link");
+        if (link) {
+          window.open(link, "_blank", "noopener,noreferrer");
         }
       });
     });
