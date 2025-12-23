@@ -234,6 +234,7 @@ def parse_table(rows: List[List[str]], sheet_name: str) -> List[Dict[str, Any]]:
 
     current_brand: Optional[str] = None
     column_mapping: Dict[int, str] = {}
+    missing_data_index: Optional[int] = None
 
     for row in rows:
         row_values = [cell.strip() for cell in row]
@@ -250,7 +251,10 @@ def parse_table(rows: List[List[str]], sheet_name: str) -> List[Dict[str, Any]]:
             or (len(row_values) > 1 and "MODELO" in row_values[1].upper())
         ):
             column_mapping = {}
+            missing_data_index = None
             for idx, col_name in enumerate(row_values):
+                if "FALTANDO DADOS" in col_name.upper():
+                    missing_data_index = idx
                 mapped = map_column_name(col_name)
                 if mapped:
                     column_mapping[idx] = mapped
@@ -261,6 +265,10 @@ def parse_table(rows: List[List[str]], sheet_name: str) -> List[Dict[str, Any]]:
 
         if not first_cell and not current_brand:
             continue
+
+        if missing_data_index is not None and len(row_values) > missing_data_index:
+            if row_values[missing_data_index].strip():
+                continue
 
         brand = first_cell or current_brand
         model = row_values[1] if len(row_values) > 1 else ""
@@ -278,6 +286,8 @@ def parse_table(rows: List[List[str]], sheet_name: str) -> List[Dict[str, Any]]:
             if col_idx >= len(row_values):
                 continue
             numeric, raw, _status = parse_numeric_value(row_values[col_idx])
+            if param_name == "baseLayers" and numeric is not None:
+                numeric = int(round(numeric))
             params[param_name] = numeric
             raw_params[param_name] = raw
             if numeric is not None:
@@ -407,7 +417,11 @@ def main() -> None:
     parser.add_argument("output_path", type=Path, nargs="?", default=Path("data/resins_extracted.json"))
     args = parser.parse_args()
 
-    html_text = args.html_file.read_text(encoding="utf-8", errors="ignore")
+    html_bytes = args.html_file.read_bytes()
+    try:
+        html_text = html_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        html_text = html_bytes.decode("latin1")
     sheet_names = extract_sheet_names(html_text)
 
     table_parser = TableHTMLParser()

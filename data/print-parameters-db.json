@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2025-12-23T04:43:21.638224Z",
+  "generatedAt": "2025-12-23T05:03:02.025314Z",
   "units": {
     "time": "s",
     "layerHeight": "mm"
@@ -266,7 +266,7 @@
       "model": "PHOTON CLÁSSICA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 8.0,
         "baseExposureTimeS": 70.0,
         "uvOffDelayS": 6.0,
@@ -299,7 +299,7 @@
       "model": "PHOTON S",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 8.0,
         "baseExposureTimeS": 70.0,
         "uvOffDelayS": 6.0,
@@ -332,7 +332,7 @@
       "model": "PHOTON SE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 6.0,
@@ -365,7 +365,7 @@
       "model": "PHOTON MONO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -398,7 +398,7 @@
       "model": "PHOTON MONO 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.9,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -431,7 +431,7 @@
       "model": "PHOTON MONO X 4k",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.9,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -464,7 +464,7 @@
       "model": "PHOTON MONO X 6K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 40.0,
         "uvOffDelayS": 1.0,
@@ -497,7 +497,7 @@
       "model": "PHOTON M3 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.9,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -530,7 +530,7 @@
       "model": "PHOTON M3 MAX",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 2.1,
         "baseExposureTimeS": 45.0,
         "uvOffDelayS": 1.0,
@@ -563,7 +563,7 @@
       "model": "PHOTON MONO M5S",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 0.0,
@@ -695,7 +695,7 @@
       "model": "MARS",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 8.0,
         "baseExposureTimeS": 70.0,
         "uvOffDelayS": 6.0,
@@ -726,7 +726,7 @@
       "model": "MARS 2 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 6.0,
@@ -757,7 +757,7 @@
       "model": "MARS 3 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.9,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 7.0,
@@ -788,7 +788,7 @@
       "model": "MARS 3 ULTRA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.9,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 7.0,
@@ -819,7 +819,7 @@
       "model": "SATURN",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 40.0,
         "uvOffDelayS": 11.0,
@@ -850,7 +850,7 @@
       "model": "SATURN 2",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 2.5,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 11.0,
@@ -881,7 +881,7 @@
       "model": "SATURN 3",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 0.0,
@@ -912,7 +912,7 @@
       "model": "SATURN 3 ULTRA",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.3,
         "baseExposureTimeS": 22.0,
         "uvOffDelayS": 0.0,
@@ -1005,7 +1005,7 @@
       "model": "LD-006",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.1,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 11.0,
@@ -1036,7 +1036,7 @@
       "model": "LD-002R",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 8.0,
         "baseExposureTimeS": 65.0,
         "uvOffDelayS": 6.0,
@@ -1067,7 +1067,7 @@
       "model": "LD-002H",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 6.0,
@@ -1098,7 +1098,7 @@
       "model": "HALOT SKY",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.5,
         "baseExposureTimeS": 45.0,
         "uvOffDelayS": 11.0,
@@ -1129,7 +1129,7 @@
       "model": "HALOTE ONE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 2.5,
         "baseExposureTimeS": 45.0,
         "uvOffDelayS": 6.0,
@@ -1160,7 +1160,7 @@
       "model": "MINI 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.5,
         "baseExposureTimeS": 40.0,
         "uvOffDelayS": 7.0,
@@ -1191,7 +1191,7 @@
       "model": "PHOTON CLÁSSICA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 7.0,
         "baseExposureTimeS": 65.0,
         "uvOffDelayS": 7.0,
@@ -1224,7 +1224,7 @@
       "model": "PHOTON S",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 7.5,
         "baseExposureTimeS": 65.0,
         "uvOffDelayS": 7.0,
@@ -1257,7 +1257,7 @@
       "model": "PHOTON SE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 7.0,
@@ -1290,7 +1290,7 @@
       "model": "PHOTON MONO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 7.0,
@@ -1323,7 +1323,7 @@
       "model": "PHOTON MONO 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 7.0,
@@ -1356,7 +1356,7 @@
       "model": "PHOTON MONO X 4k",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -1389,7 +1389,7 @@
       "model": "PHOTON MONO X 6K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 1.0,
@@ -1422,7 +1422,7 @@
       "model": "PHOTON M3 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 1.0,
@@ -1455,7 +1455,7 @@
       "model": "PHOTON M3 MAX",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 1.0,
@@ -1488,7 +1488,7 @@
       "model": "PHOTON MONO M5S",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 0.0,
@@ -1620,7 +1620,7 @@
       "model": "MARS",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 6.1,
         "baseExposureTimeS": 65.0,
         "uvOffDelayS": 7.0,
@@ -1651,7 +1651,7 @@
       "model": "MARS 2 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.5,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 6.0,
@@ -1682,7 +1682,7 @@
       "model": "MARS 3 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 6.0,
@@ -1713,7 +1713,7 @@
       "model": "MARS 3 ULTRA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 6.0,
@@ -1744,7 +1744,7 @@
       "model": "SATURN",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 38.0,
         "uvOffDelayS": 8.0,
@@ -1775,7 +1775,7 @@
       "model": "SATURN 2",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.1,
         "baseExposureTimeS": 45.0,
         "uvOffDelayS": 11.0,
@@ -1806,7 +1806,7 @@
       "model": "SATURN 3",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 0.0,
@@ -1837,7 +1837,7 @@
       "model": "SATURN 3 ULTRA",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.3,
         "baseExposureTimeS": 22.0,
         "uvOffDelayS": 0.0,
@@ -1930,7 +1930,7 @@
       "model": "LD-006",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 7.0,
         "baseExposureTimeS": 65.0,
         "uvOffDelayS": 7.0,
@@ -1961,7 +1961,7 @@
       "model": "LD-002R",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 6.0,
         "baseExposureTimeS": 60.0,
         "uvOffDelayS": 6.0,
@@ -1992,7 +1992,7 @@
       "model": "LD-002H",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 6.0,
@@ -2023,7 +2023,7 @@
       "model": "HALOT SKY",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 6.0,
@@ -2054,7 +2054,7 @@
       "model": "HALOTE ONE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 45.0,
         "uvOffDelayS": 6.0,
@@ -2085,7 +2085,7 @@
       "model": "MINI 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 7.0,
         "baseExposureTimeS": 65.0,
         "uvOffDelayS": 7.0,
@@ -2110,7 +2110,7 @@
       "model": "PHOTON CLÁSSICA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 6.5,
         "baseExposureTimeS": 55.0,
         "uvOffDelayS": 7.0,
@@ -2143,7 +2143,7 @@
       "model": "PHOTON S",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 6.5,
         "baseExposureTimeS": 55.0,
         "uvOffDelayS": 7.0,
@@ -2176,7 +2176,7 @@
       "model": "PHOTON SE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 7.0,
@@ -2209,7 +2209,7 @@
       "model": "PHOTON MONO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 1.75,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 7.0,
@@ -2242,7 +2242,7 @@
       "model": "PHOTON MONO 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 7.0,
@@ -2275,7 +2275,7 @@
       "model": "PHOTON MONO X 4k",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 7.0,
@@ -2308,7 +2308,7 @@
       "model": "PHOTON MONO X 6K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.5,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 1.0,
@@ -2341,7 +2341,7 @@
       "model": "PHOTON M3 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 1.0,
@@ -2374,7 +2374,7 @@
       "model": "PHOTON M3 MAX",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -2407,7 +2407,7 @@
       "model": "PHOTON MONO M5S",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.5,
         "baseExposureTimeS": 20.0,
         "uvOffDelayS": 0.0,
@@ -2539,7 +2539,7 @@
       "model": "MARS",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 6.1,
         "baseExposureTimeS": 60.0,
         "uvOffDelayS": 7.0,
@@ -2570,7 +2570,7 @@
       "model": "MARS 2 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.55,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 7.0,
@@ -2601,7 +2601,7 @@
       "model": "MARS 3 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 7.0,
@@ -2632,7 +2632,7 @@
       "model": "MARS 3 ULTRA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 33.0,
         "uvOffDelayS": 4.0,
@@ -2663,7 +2663,7 @@
       "model": "SATURN",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 11.0,
@@ -2694,7 +2694,7 @@
       "model": "SATURN 2",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.9,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 11.0,
@@ -2725,7 +2725,7 @@
       "model": "SATURN 3",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.5,
         "baseExposureTimeS": 20.0,
         "uvOffDelayS": 0.0,
@@ -2756,7 +2756,7 @@
       "model": "SATURN 3 ULTRA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.15,
         "baseExposureTimeS": 15.0,
         "uvOffDelayS": 0.0,
@@ -2849,7 +2849,7 @@
       "model": "LD-006",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 1.4,
         "baseExposureTimeS": 21.0,
         "uvOffDelayS": 4.0,
@@ -2880,7 +2880,7 @@
       "model": "LD-002R",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 7.0,
         "baseExposureTimeS": 55.0,
         "uvOffDelayS": 6.0,
@@ -2911,7 +2911,7 @@
       "model": "LD-002H",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 21.0,
         "uvOffDelayS": 5.0,
@@ -2942,7 +2942,7 @@
       "model": "HALOT SKY",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 5.0,
@@ -2973,7 +2973,7 @@
       "model": "HALOTE ONE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 38.0,
         "uvOffDelayS": 4.0,
@@ -3004,7 +3004,7 @@
       "model": "MINI 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.1,
         "baseExposureTimeS": 40.0,
         "uvOffDelayS": 4.0,
@@ -3035,7 +3035,7 @@
       "model": "PHOTON CLÁSSICA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 9.0,
         "baseExposureTimeS": 65.0,
         "uvOffDelayS": 7.0,
@@ -3068,7 +3068,7 @@
       "model": "PHOTON S",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 9.0,
         "baseExposureTimeS": 65.0,
         "uvOffDelayS": 7.0,
@@ -3101,7 +3101,7 @@
       "model": "PHOTON SE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 38.0,
         "uvOffDelayS": 7.0,
@@ -3134,7 +3134,7 @@
       "model": "PHOTON MONO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 38.0,
         "uvOffDelayS": 7.0,
@@ -3167,7 +3167,7 @@
       "model": "PHOTON MONO 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 1.9,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -3200,7 +3200,7 @@
       "model": "PHOTON MONO X 4k",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 40.0,
         "uvOffDelayS": 1.0,
@@ -3233,7 +3233,7 @@
       "model": "PHOTON MONO X 6K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -3266,7 +3266,7 @@
       "model": "PHOTON M3 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.9,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -3299,7 +3299,7 @@
       "model": "PHOTON M3 MAX",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.1,
         "baseExposureTimeS": 45.0,
         "uvOffDelayS": 1.0,
@@ -3332,7 +3332,7 @@
       "model": "PHOTON MONO M5S",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.1,
         "baseExposureTimeS": 20.0,
         "uvOffDelayS": 0.0,
@@ -3464,7 +3464,7 @@
       "model": "MARS",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 8.0,
         "baseExposureTimeS": 80.0,
         "uvOffDelayS": 3.0,
@@ -3495,7 +3495,7 @@
       "model": "MARS 2 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 6.0,
@@ -3526,7 +3526,7 @@
       "model": "MARS 3 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.95,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 7.0,
@@ -3557,7 +3557,7 @@
       "model": "MARS 3 ULTRA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 5.0,
@@ -3588,7 +3588,7 @@
       "model": "SATURN",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 5.0,
@@ -3619,7 +3619,7 @@
       "model": "SATURN 2",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 2.2,
         "baseExposureTimeS": 40.0,
         "uvOffDelayS": 11.0,
@@ -3650,7 +3650,7 @@
       "model": "SATURN 3",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 0.0,
@@ -3681,7 +3681,7 @@
       "model": "SATURN 3 ULTRA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.3,
         "baseExposureTimeS": 22.0,
         "uvOffDelayS": 0.0,
@@ -3774,7 +3774,7 @@
       "model": "LD-006",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 40.0,
         "uvOffDelayS": 11.0,
@@ -3805,7 +3805,7 @@
       "model": "LD-002R",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 8.0,
         "baseExposureTimeS": 65.0,
         "uvOffDelayS": 6.0,
@@ -3836,7 +3836,7 @@
       "model": "LD-002H",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 2.1,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 6.0,
@@ -3867,7 +3867,7 @@
       "model": "HALOT SKY",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.1,
         "baseExposureTimeS": 45.0,
         "uvOffDelayS": 11.0,
@@ -3898,7 +3898,7 @@
       "model": "HALOTE ONE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.5,
         "baseExposureTimeS": 45.0,
         "uvOffDelayS": 6.0,
@@ -3929,7 +3929,7 @@
       "model": "MINI 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.2,
         "baseExposureTimeS": 40.0,
         "uvOffDelayS": 6.0,
@@ -3960,7 +3960,7 @@
       "model": "PHOTON CLÁSSICA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 8.5,
         "baseExposureTimeS": 60.0,
         "uvOffDelayS": 7.0,
@@ -3993,7 +3993,7 @@
       "model": "PHOTON S",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 8.0,
         "baseExposureTimeS": 65.0,
         "uvOffDelayS": 7.0,
@@ -4026,7 +4026,7 @@
       "model": "PHOTON SE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.5,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 7.0,
@@ -4059,7 +4059,7 @@
       "model": "PHOTON MONO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.3,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 7.0,
@@ -4092,7 +4092,7 @@
       "model": "PHOTON MONO 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 2.2,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 7.0,
@@ -4125,7 +4125,7 @@
       "model": "PHOTON MONO X 4k",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.2,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -4158,7 +4158,7 @@
       "model": "PHOTON MONO X 6K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.2,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 1.0,
@@ -4191,7 +4191,7 @@
       "model": "PHOTON M3 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 2.3,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -4224,7 +4224,7 @@
       "model": "PHOTON M3 MAX",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 2.4,
         "baseExposureTimeS": 45.0,
         "uvOffDelayS": 1.0,
@@ -4257,7 +4257,7 @@
       "model": "PHOTON MONO M5S",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.1,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 0.0,
@@ -4389,7 +4389,7 @@
       "model": "MARS",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 8.0,
         "baseExposureTimeS": 65.0,
         "uvOffDelayS": 7.0,
@@ -4420,7 +4420,7 @@
       "model": "MARS 2 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.75,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 7.0,
@@ -4451,7 +4451,7 @@
       "model": "MARS 3 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 7.0,
@@ -4482,7 +4482,7 @@
       "model": "MARS 3 ULTRA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.85,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 7.0,
@@ -4513,7 +4513,7 @@
       "model": "SATURN",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 11.0,
@@ -4544,7 +4544,7 @@
       "model": "SATURN 2",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 2.5,
         "baseExposureTimeS": 40.0,
         "uvOffDelayS": 11.0,
@@ -4575,7 +4575,7 @@
       "model": "SATURN 3",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 0.0,
@@ -4606,7 +4606,7 @@
       "model": "SATURN 3 ULTRA",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.4,
         "baseExposureTimeS": 20.0,
         "uvOffDelayS": 0.0,
@@ -4699,7 +4699,7 @@
       "model": "LD-006",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.2,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 11.0,
@@ -4730,7 +4730,7 @@
       "model": "LD-002R",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 7.0,
         "baseExposureTimeS": 65.0,
         "uvOffDelayS": 6.0,
@@ -4761,7 +4761,7 @@
       "model": "LD-002H",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.9,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 7.0,
@@ -4792,7 +4792,7 @@
       "model": "HALOT SKY",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 45.0,
         "uvOffDelayS": 11.0,
@@ -4823,7 +4823,7 @@
       "model": "HALOTE ONE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.2,
         "baseExposureTimeS": 40.0,
         "uvOffDelayS": 6.0,
@@ -4854,7 +4854,7 @@
       "model": "MINI 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.2,
         "baseExposureTimeS": 40.0,
         "uvOffDelayS": 7.0,
@@ -4885,7 +4885,7 @@
       "model": "PHOTON CLÁSSICA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 6.5,
         "baseExposureTimeS": 55.0,
         "uvOffDelayS": 7.0,
@@ -4918,7 +4918,7 @@
       "model": "PHOTON S",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 6.5,
         "baseExposureTimeS": 55.0,
         "uvOffDelayS": 7.0,
@@ -4951,7 +4951,7 @@
       "model": "PHOTON SE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 1.65,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 7.0,
@@ -4984,7 +4984,7 @@
       "model": "PHOTON MONO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 1.65,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 7.0,
@@ -5017,7 +5017,7 @@
       "model": "PHOTON MONO 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 7.0,
@@ -5050,7 +5050,7 @@
       "model": "PHOTON MONO X 4k",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.65,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -5083,7 +5083,7 @@
       "model": "PHOTON MONO X 6K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.65,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -5116,7 +5116,7 @@
       "model": "PHOTON M3 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -5149,7 +5149,7 @@
       "model": "PHOTON M3 MAX",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.2,
         "baseExposureTimeS": 45.0,
         "uvOffDelayS": 1.0,
@@ -5182,7 +5182,7 @@
       "model": "PHOTON MONO M5S",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -5314,7 +5314,7 @@
       "model": "MARS",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 8.0,
         "baseExposureTimeS": 65.0,
         "uvOffDelayS": 6.0,
@@ -5345,7 +5345,7 @@
       "model": "MARS 2 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 5.0,
@@ -5376,7 +5376,7 @@
       "model": "MARS 3 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 7.0,
@@ -5407,7 +5407,7 @@
       "model": "MARS 3 ULTRA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 3.0,
@@ -5438,7 +5438,7 @@
       "model": "SATURN",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 5.0,
@@ -5469,7 +5469,7 @@
       "model": "SATURN 2",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.2,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 11.0,
@@ -5500,7 +5500,7 @@
       "model": "SATURN 3",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -5531,7 +5531,7 @@
       "model": "SATURN 3 ULTRA",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -5624,7 +5624,7 @@
       "model": "LD-006",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.2,
         "baseExposureTimeS": 40.0,
         "uvOffDelayS": 11.0,
@@ -5655,7 +5655,7 @@
       "model": "LD-002R",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 8.0,
         "baseExposureTimeS": 65.0,
         "uvOffDelayS": 6.0,
@@ -5686,7 +5686,7 @@
       "model": "LD-002H",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 7.0,
@@ -5717,7 +5717,7 @@
       "model": "HALOT SKY",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 2.2,
         "baseExposureTimeS": 45.0,
         "uvOffDelayS": 11.0,
@@ -5748,7 +5748,7 @@
       "model": "HALOTE ONE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 5.0,
@@ -5779,7 +5779,7 @@
       "model": "MINI 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 2.2,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 7.0,
@@ -5810,7 +5810,7 @@
       "model": "PHOTON CLÁSSICA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 6.5,
         "baseExposureTimeS": 50.0,
         "uvOffDelayS": 7.0,
@@ -5843,7 +5843,7 @@
       "model": "PHOTON S",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 6.5,
         "baseExposureTimeS": 55.0,
         "uvOffDelayS": 7.0,
@@ -5876,7 +5876,7 @@
       "model": "PHOTON SE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 1.75,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 7.0,
@@ -5909,7 +5909,7 @@
       "model": "PHOTON MONO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 1.75,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 7.0,
@@ -5942,7 +5942,7 @@
       "model": "PHOTON MONO 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 1.75,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 7.0,
@@ -5975,7 +5975,7 @@
       "model": "PHOTON MONO X 4k",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.75,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 1.0,
@@ -6008,7 +6008,7 @@
       "model": "PHOTON MONO X 6K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.75,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 1.0,
@@ -6041,7 +6041,7 @@
       "model": "PHOTON M3 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.75,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 1.0,
@@ -6074,7 +6074,7 @@
       "model": "PHOTON M3 MAX",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -6107,7 +6107,7 @@
       "model": "PHOTON MONO M5S",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 0.0,
@@ -6140,7 +6140,7 @@
       "model": "PHOTON MONO M5S PRO",
       "params": {
         "layerHeightMm": null,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.5,
         "baseExposureTimeS": 28.0,
         "uvOffDelayS": 1.0,
@@ -6239,7 +6239,7 @@
       "model": "MARS",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 6.0,
         "baseExposureTimeS": 60.0,
         "uvOffDelayS": 7.0,
@@ -6270,7 +6270,7 @@
       "model": "MARS 2 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 1.5,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 6.0,
@@ -6301,7 +6301,7 @@
       "model": "MARS 3 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.65,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 6.0,
@@ -6332,7 +6332,7 @@
       "model": "MARS 3 ULTRA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.5,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 4.0,
@@ -6363,7 +6363,7 @@
       "model": "SATURN",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.5,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 11.0,
@@ -6394,7 +6394,7 @@
       "model": "SATURN 2",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.75,
         "baseExposureTimeS": 20.0,
         "uvOffDelayS": 11.0,
@@ -6425,7 +6425,7 @@
       "model": "SATURN 3",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 0.0,
@@ -6456,7 +6456,7 @@
       "model": "SATURN 3 ULTRA",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.35,
         "baseExposureTimeS": 20.0,
         "uvOffDelayS": 0.0,
@@ -6549,7 +6549,7 @@
       "model": "LD-006",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.55,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 11.0,
@@ -6580,7 +6580,7 @@
       "model": "LD-002R",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 5.5,
         "baseExposureTimeS": 55.0,
         "uvOffDelayS": 6.0,
@@ -6611,7 +6611,7 @@
       "model": "LD-002H",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.5,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 6.0,
@@ -6642,7 +6642,7 @@
       "model": "HALOT SKY",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 11.0,
@@ -6673,7 +6673,7 @@
       "model": "HALOTE ONE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 6.0,
@@ -6704,7 +6704,7 @@
       "model": "MINI 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.65,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 6.0,
@@ -6735,7 +6735,7 @@
       "model": "PHOTON CLÁSSICA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 5.0,
         "baseExposureTimeS": 20.0,
         "uvOffDelayS": 6.0,
@@ -6768,7 +6768,7 @@
       "model": "PHOTON S",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 3.0,
         "baseExposureTimeS": 15.0,
         "uvOffDelayS": 6.0,
@@ -6801,7 +6801,7 @@
       "model": "PHOTON SE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.2,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 0.5,
@@ -6834,7 +6834,7 @@
       "model": "PHOTON MONO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.2,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 0.5,
@@ -6867,7 +6867,7 @@
       "model": "PHOTON MONO 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.3,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 0.5,
@@ -6900,7 +6900,7 @@
       "model": "PHOTON MONO X 4k",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.3,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 0.5,
@@ -6933,7 +6933,7 @@
       "model": "PHOTON MONO X 6K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.2,
         "baseExposureTimeS": 7.0,
         "uvOffDelayS": 0.5,
@@ -6966,7 +6966,7 @@
       "model": "PHOTON M3 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.3,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 0.5,
@@ -6999,7 +6999,7 @@
       "model": "PHOTON M3 MAX",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.4,
         "baseExposureTimeS": 9.0,
         "uvOffDelayS": 0.5,
@@ -7032,7 +7032,7 @@
       "model": "PHOTON MONO M5S",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.3,
         "baseExposureTimeS": 9.0,
         "uvOffDelayS": 0.5,
@@ -7164,7 +7164,7 @@
       "model": "MARS",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -7195,7 +7195,7 @@
       "model": "MARS 2 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.3,
         "baseExposureTimeS": 32.0,
         "uvOffDelayS": 5.0,
@@ -7226,7 +7226,7 @@
       "model": "MARS 3 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 2.1,
         "baseExposureTimeS": 32.0,
         "uvOffDelayS": 0.5,
@@ -7288,7 +7288,7 @@
       "model": "SATURN",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 2.3,
         "baseExposureTimeS": 21.0,
         "uvOffDelayS": 8.0,
@@ -7319,7 +7319,7 @@
       "model": "SATURN 2",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 2.2,
         "baseExposureTimeS": 22.0,
         "uvOffDelayS": 0.0,
@@ -7350,7 +7350,7 @@
       "model": "SATURN 3",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -7381,7 +7381,7 @@
       "model": "SATURN 3 ULTRA",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -7474,7 +7474,7 @@
       "model": "LD-006",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.9,
         "baseExposureTimeS": 22.0,
         "uvOffDelayS": 6.0,
@@ -7505,7 +7505,7 @@
       "model": "LD-002R",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 5.0,
         "baseExposureTimeS": 32.0,
         "uvOffDelayS": 6.0,
@@ -7536,7 +7536,7 @@
       "model": "LD-002H",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 22.0,
         "uvOffDelayS": 6.0,
@@ -7567,7 +7567,7 @@
       "model": "HALOT SKY",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -7598,7 +7598,7 @@
       "model": "HALOTE ONE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 2.4,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 6.0,
@@ -7629,7 +7629,7 @@
       "model": "MINI 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 2.3,
         "baseExposureTimeS": 29.0,
         "uvOffDelayS": 10.0,
@@ -7660,7 +7660,7 @@
       "model": "PHOTON CLÁSSICA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 8.0,
         "baseExposureTimeS": 60.0,
         "uvOffDelayS": 7.0,
@@ -7693,7 +7693,7 @@
       "model": "PHOTON S",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 6.0,
         "baseExposureTimeS": 50.0,
         "uvOffDelayS": 8.0,
@@ -7726,7 +7726,7 @@
       "model": "PHOTON SE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 7.0,
@@ -7759,7 +7759,7 @@
       "model": "PHOTON MONO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 7.0,
@@ -7792,7 +7792,7 @@
       "model": "PHOTON MONO 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.5,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 7.0,
@@ -7825,7 +7825,7 @@
       "model": "PHOTON MONO X 4k",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.45,
         "baseExposureTimeS": 20.0,
         "uvOffDelayS": 1.0,
@@ -7858,7 +7858,7 @@
       "model": "PHOTON MONO X 6K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.5,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 1.0,
@@ -7891,7 +7891,7 @@
       "model": "PHOTON M3 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.5,
         "baseExposureTimeS": 20.0,
         "uvOffDelayS": 1.0,
@@ -7924,7 +7924,7 @@
       "model": "PHOTON M3 MAX",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -7957,7 +7957,7 @@
       "model": "PHOTON MONO M5S",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.4,
         "baseExposureTimeS": 20.0,
         "uvOffDelayS": 0.0,
@@ -8089,7 +8089,7 @@
       "model": "MARS",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 6.0,
         "baseExposureTimeS": 55.0,
         "uvOffDelayS": 7.0,
@@ -8120,7 +8120,7 @@
       "model": "MARS 2 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.55,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 7.0,
@@ -8151,7 +8151,7 @@
       "model": "MARS 3 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.55,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 8.0,
@@ -8182,7 +8182,7 @@
       "model": "MARS 3 ULTRA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.55,
         "baseExposureTimeS": 20.0,
         "uvOffDelayS": 8.0,
@@ -8213,7 +8213,7 @@
       "model": "SATURN",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 20.0,
         "uvOffDelayS": 11.0,
@@ -8244,7 +8244,7 @@
       "model": "SATURN 2",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 20.0,
         "uvOffDelayS": 11.0,
@@ -8275,7 +8275,7 @@
       "model": "SATURN 3",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.5,
         "baseExposureTimeS": 20.0,
         "uvOffDelayS": 0.0,
@@ -8306,7 +8306,7 @@
       "model": "SATURN 3 ULTRA",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.35,
         "baseExposureTimeS": 18.0,
         "uvOffDelayS": 0.0,
@@ -8399,7 +8399,7 @@
       "model": "LD-006",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 11.0,
@@ -8430,7 +8430,7 @@
       "model": "LD-002R",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 6.5,
         "baseExposureTimeS": 55.0,
         "uvOffDelayS": 6.0,
@@ -8461,7 +8461,7 @@
       "model": "LD-002H",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.4,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 7.0,
@@ -8492,7 +8492,7 @@
       "model": "HALOT SKY",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 11.0,
@@ -8523,7 +8523,7 @@
       "model": "HALOTE ONE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 1.9,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 8.0,
@@ -8554,7 +8554,7 @@
       "model": "MINI 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.9,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 8.0,
@@ -8585,7 +8585,7 @@
       "model": "PHOTON CLÁSSICA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 6.0,
         "baseExposureTimeS": 55.0,
         "uvOffDelayS": 7.0,
@@ -8618,7 +8618,7 @@
       "model": "PHOTON S",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 6.5,
         "baseExposureTimeS": 55.0,
         "uvOffDelayS": 7.0,
@@ -8651,7 +8651,7 @@
       "model": "PHOTON SE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.65,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 7.0,
@@ -8684,7 +8684,7 @@
       "model": "PHOTON MONO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 7.0,
@@ -8717,7 +8717,7 @@
       "model": "PHOTON MONO 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 1.0,
@@ -8750,7 +8750,7 @@
       "model": "PHOTON MONO X 4k",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.65,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -8783,7 +8783,7 @@
       "model": "PHOTON MONO X 6K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.65,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -8816,7 +8816,7 @@
       "model": "PHOTON M3 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -8849,7 +8849,7 @@
       "model": "PHOTON M3 MAX",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 45.0,
         "uvOffDelayS": 1.0,
@@ -8882,7 +8882,7 @@
       "model": "PHOTON MONO M5S",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 20.0,
         "uvOffDelayS": 0.0,
@@ -9014,7 +9014,7 @@
       "model": "MARS",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 8.0,
         "baseExposureTimeS": 65.0,
         "uvOffDelayS": 7.0,
@@ -9045,7 +9045,7 @@
       "model": "MARS 2 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.65,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 7.0,
@@ -9076,7 +9076,7 @@
       "model": "MARS 3 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 7.0,
@@ -9107,7 +9107,7 @@
       "model": "MARS 3 ULTRA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 7.0,
@@ -9138,7 +9138,7 @@
       "model": "SATURN",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 8.0,
@@ -9169,7 +9169,7 @@
       "model": "SATURN 2",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.1,
         "baseExposureTimeS": 45.0,
         "uvOffDelayS": 11.0,
@@ -9200,7 +9200,7 @@
       "model": "SATURN 3",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 25.0,
         "uvOffDelayS": 0.0,
@@ -9231,7 +9231,7 @@
       "model": "SATURN 3 ULTRA",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.18,
         "baseExposureTimeS": 22.0,
         "uvOffDelayS": 0.0,
@@ -9262,7 +9262,7 @@
       "model": "SATURN 4 ULTRA",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -9293,7 +9293,7 @@
       "model": "SATURN 5 ULTRA",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -9324,7 +9324,7 @@
       "model": "LD-006",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 2.1,
         "baseExposureTimeS": 45.0,
         "uvOffDelayS": 11.0,
@@ -9355,7 +9355,7 @@
       "model": "LD-002R",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 6.1,
         "baseExposureTimeS": 65.0,
         "uvOffDelayS": 7.0,
@@ -9386,7 +9386,7 @@
       "model": "LD-002H",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.65,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 7.0,
@@ -9417,7 +9417,7 @@
       "model": "HALOT SKY",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 2.0,
         "baseExposureTimeS": 45.0,
         "uvOffDelayS": 11.0,
@@ -9448,7 +9448,7 @@
       "model": "HALOTE ONE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 10.0,
+        "baseLayers": 10,
         "exposureTimeS": 2.1,
         "baseExposureTimeS": 45.0,
         "uvOffDelayS": 7.0,
@@ -9479,7 +9479,7 @@
       "model": "MINI 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 2.1,
         "baseExposureTimeS": 45.0,
         "uvOffDelayS": 8.0,
@@ -9510,7 +9510,7 @@
       "model": "PHOTON CLÁSSICA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 5.0,
         "baseExposureTimeS": 12.0,
         "uvOffDelayS": 6.0,
@@ -9543,7 +9543,7 @@
       "model": "PHOTON S",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 7.0,
+        "baseLayers": 7,
         "exposureTimeS": 3.0,
         "baseExposureTimeS": 10.0,
         "uvOffDelayS": 6.0,
@@ -9576,7 +9576,7 @@
       "model": "PHOTON SE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.3,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 1.0,
@@ -9609,7 +9609,7 @@
       "model": "PHOTON MONO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.3,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 1.0,
@@ -9642,7 +9642,7 @@
       "model": "PHOTON MONO 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.3,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 1.0,
@@ -9675,7 +9675,7 @@
       "model": "PHOTON MONO X 4k",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.3,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 1.0,
@@ -9708,7 +9708,7 @@
       "model": "PHOTON MONO X 6K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.3,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 1.0,
@@ -9741,7 +9741,7 @@
       "model": "PHOTON M3 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.3,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 1.0,
@@ -9774,7 +9774,7 @@
       "model": "PHOTON M3 MAX",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.4,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 2.0,
@@ -9807,7 +9807,7 @@
       "model": "PHOTON MONO M5S",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.3,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 1.0,
@@ -9939,7 +9939,7 @@
       "model": "MARS",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 5.0,
         "baseExposureTimeS": 15.0,
         "uvOffDelayS": 6.0,
@@ -9970,7 +9970,7 @@
       "model": "MARS 2 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.2,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 6.0,
@@ -10001,7 +10001,7 @@
       "model": "MARS 3 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.2,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 6.0,
@@ -10032,7 +10032,7 @@
       "model": "MARS 3 ULTRA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.3,
         "baseExposureTimeS": 7.0,
         "uvOffDelayS": 2.0,
@@ -10063,7 +10063,7 @@
       "model": "SATURN",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.4,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 3.0,
@@ -10094,7 +10094,7 @@
       "model": "SATURN 2",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.3,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 6.0,
@@ -10125,7 +10125,7 @@
       "model": "SATURN 3",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -10156,7 +10156,7 @@
       "model": "SATURN 3 ULTRA",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -10249,7 +10249,7 @@
       "model": "LD-006",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.4,
         "baseExposureTimeS": 7.0,
         "uvOffDelayS": 6.0,
@@ -10280,7 +10280,7 @@
       "model": "LD-002R",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 4.0,
         "baseExposureTimeS": 12.0,
         "uvOffDelayS": 6.0,
@@ -10311,7 +10311,7 @@
       "model": "LD-002H",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.3,
         "baseExposureTimeS": 7.0,
         "uvOffDelayS": 6.0,
@@ -10342,7 +10342,7 @@
       "model": "HALOT SKY",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 6.0,
@@ -10373,7 +10373,7 @@
       "model": "HALOTE ONE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.4,
         "baseExposureTimeS": 8.0,
         "uvOffDelayS": 6.0,
@@ -10404,7 +10404,7 @@
       "model": "MINI 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 10.0,
         "uvOffDelayS": 10.0,
@@ -10435,7 +10435,7 @@
       "model": "PHOTON CLÁSSICA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "exposureTimeS": 6.0,
         "baseExposureTimeS": 70.0,
         "uvOffDelayS": 6.0,
@@ -10468,7 +10468,7 @@
       "model": "PHOTON S",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 4.0,
         "baseExposureTimeS": 50.0,
         "uvOffDelayS": 6.0,
@@ -10501,7 +10501,7 @@
       "model": "PHOTON SE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 1.0,
@@ -10534,7 +10534,7 @@
       "model": "PHOTON MONO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 1.0,
@@ -10567,7 +10567,7 @@
       "model": "PHOTON MONO 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 1.0,
@@ -10600,7 +10600,7 @@
       "model": "PHOTON MONO X 4k",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 1.0,
@@ -10633,7 +10633,7 @@
       "model": "PHOTON MONO X 6K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -10666,7 +10666,7 @@
       "model": "PHOTON M3 4K",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "exposureTimeS": 1.7,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 1.0,
@@ -10699,7 +10699,7 @@
       "model": "PHOTON M3 MAX",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.8,
         "baseExposureTimeS": 38.0,
         "uvOffDelayS": 2.0,
@@ -10732,7 +10732,7 @@
       "model": "PHOTON MONO M5S",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "exposureTimeS": 1.6,
         "baseExposureTimeS": 33.0,
         "uvOffDelayS": 1.0,
@@ -10864,7 +10864,7 @@
       "model": "MARS",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -10895,7 +10895,7 @@
       "model": "MARS 2 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -10926,7 +10926,7 @@
       "model": "MARS 3 PRO",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -10957,7 +10957,7 @@
       "model": "MARS 3 ULTRA",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -10988,7 +10988,7 @@
       "model": "SATURN",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -11019,7 +11019,7 @@
       "model": "SATURN 2",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -11050,7 +11050,7 @@
       "model": "SATURN 3",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -11081,7 +11081,7 @@
       "model": "SATURN 3 ULTRA",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -11174,7 +11174,7 @@
       "model": "LD-006",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -11205,7 +11205,7 @@
       "model": "LD-002R",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -11236,7 +11236,7 @@
       "model": "LD-002H",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -11267,7 +11267,7 @@
       "model": "HALOT SKY",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -11298,7 +11298,7 @@
       "model": "HALOTE ONE",
       "params": {
         "layerHeightMm": 0.05,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -11329,7 +11329,7 @@
       "model": "MINI 4K",
       "params": {
         "layerHeightMm": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "exposureTimeS": 0.0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
@@ -11361,7 +11361,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 71.0,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "baseExposureTimeS": 80.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -11394,7 +11394,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 61.0,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "baseExposureTimeS": 80.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -11427,7 +11427,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -11460,7 +11460,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -11493,7 +11493,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": null,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "baseExposureTimeS": 60.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -11526,7 +11526,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -11559,7 +11559,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -11592,7 +11592,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "baseExposureTimeS": 60.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -11625,7 +11625,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -11658,7 +11658,7 @@
       "params": {
         "layerHeightMm": 0.0,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -11691,7 +11691,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -11722,7 +11722,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": null,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "baseExposureTimeS": 80.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -11753,7 +11753,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -11784,7 +11784,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -11815,7 +11815,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -11846,7 +11846,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -11877,7 +11877,7 @@
       "params": {
         "layerHeightMm": 0.0,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -11908,7 +11908,7 @@
       "params": {
         "layerHeightMm": 0.0,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12001,7 +12001,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12032,7 +12032,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12063,7 +12063,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12094,7 +12094,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12125,7 +12125,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": null,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12156,7 +12156,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 50.5,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "baseExposureTimeS": 80.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12187,7 +12187,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 101.0,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "baseExposureTimeS": 120.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12220,7 +12220,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12253,7 +12253,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12286,7 +12286,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12319,7 +12319,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": null,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "baseExposureTimeS": 100.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12352,7 +12352,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12385,7 +12385,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12418,7 +12418,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12451,7 +12451,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12484,7 +12484,7 @@
       "params": {
         "layerHeightMm": 0.0,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12517,7 +12517,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12548,7 +12548,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12579,7 +12579,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12610,7 +12610,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12641,7 +12641,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12672,7 +12672,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12703,7 +12703,7 @@
       "params": {
         "layerHeightMm": 0.0,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12734,7 +12734,7 @@
       "params": {
         "layerHeightMm": 0.0,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12765,7 +12765,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12796,7 +12796,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12827,7 +12827,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12858,7 +12858,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": null,
-        "baseLayers": 0.05,
+        "baseLayers": 0,
         "baseExposureTimeS": 70.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12889,7 +12889,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12920,7 +12920,7 @@
       "params": {
         "layerHeightMm": 0.0,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12951,7 +12951,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -12984,7 +12984,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13017,7 +13017,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13050,7 +13050,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13083,7 +13083,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 1.8,
-        "baseLayers": 6.0,
+        "baseLayers": 6,
         "baseExposureTimeS": 30.0,
         "uvOffDelayS": 1.0,
         "uvOffDelayBaseS": 0.0,
@@ -13116,7 +13116,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13149,7 +13149,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 6.0,
-        "baseLayers": 2.0,
+        "baseLayers": 2,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13182,7 +13182,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 3.0,
-        "baseLayers": 8.0,
+        "baseLayers": 8,
         "baseExposureTimeS": 40.0,
         "uvOffDelayS": 0.5,
         "uvOffDelayBaseS": 0.0,
@@ -13215,7 +13215,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13248,7 +13248,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "baseExposureTimeS": 33.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13380,7 +13380,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13411,7 +13411,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13442,7 +13442,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13473,7 +13473,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 1.5,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "baseExposureTimeS": 50.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13504,7 +13504,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 5.0,
-        "baseLayers": 1.7,
+        "baseLayers": 2,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": null,
         "uvOffDelayBaseS": null,
@@ -13535,7 +13535,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13566,7 +13566,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13597,7 +13597,7 @@
       "params": {
         "layerHeightMm": 0.0,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13628,7 +13628,7 @@
       "params": {
         "layerHeightMm": 0.0,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13659,7 +13659,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 1.5,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": null,
         "uvOffDelayBaseS": null,
@@ -13721,7 +13721,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13752,7 +13752,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13783,7 +13783,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13814,7 +13814,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13845,7 +13845,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -13876,7 +13876,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 1.9,
-        "baseLayers": 5.0,
+        "baseLayers": 5,
         "baseExposureTimeS": 35.0,
         "uvOffDelayS": null,
         "uvOffDelayBaseS": null,
@@ -13907,7 +13907,7 @@
       "params": {
         "layerHeightMm": 0.0,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -14237,7 +14237,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -14268,7 +14268,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -14299,7 +14299,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -14330,7 +14330,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -14361,7 +14361,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -14392,7 +14392,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -14423,7 +14423,7 @@
       "params": {
         "layerHeightMm": 0.0,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -14454,7 +14454,7 @@
       "params": {
         "layerHeightMm": 0.0,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -14547,7 +14547,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -14578,7 +14578,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -14609,7 +14609,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -14640,7 +14640,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -14671,7 +14671,7 @@
       "params": {
         "layerHeightMm": 0.05,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,
@@ -14702,7 +14702,7 @@
       "params": {
         "layerHeightMm": 0.0,
         "exposureTimeS": 0.0,
-        "baseLayers": 0.0,
+        "baseLayers": 0,
         "baseExposureTimeS": 0.0,
         "uvOffDelayS": 0.0,
         "uvOffDelayBaseS": 0.0,

@@ -2908,7 +2908,7 @@
     "id": "athom_dental__elegoo__mars_5_ultra",
     "resin": "ATHOM DENTAL",
     "printer": "ELEGOO MARS 5 ULTRA",
-    "text": "Resina ATHOM DENTAL | Impressora ELEGOO MARS 5 ULTRA: altura de camada=0.05mm, camadas de base=1, tempo de exposição=5.0s, exposição base=35.0s, descanso antes elevação=0.0s, descanso após elevação=0.0s, descanso após retração=0.5s",
+    "text": "Resina ATHOM DENTAL | Impressora ELEGOO MARS 5 ULTRA: altura de camada=0.05mm, camadas de base=2, tempo de exposição=5.0s, exposição base=35.0s, descanso antes elevação=0.0s, descanso após elevação=0.0s, descanso após retração=0.5s",
     "status": "ok"
   },
   {
