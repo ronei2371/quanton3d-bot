@@ -29,6 +29,7 @@ function verifySSE(req, res, next, jwtSecret){
 function attachAdminSecurity(app){
   const ADMIN_SECRET = process.env.ADMIN_SECRET;
   const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
+  const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
   const ALLOWED = allowListFromEnv(process.env.CORS_ORIGIN);
 
   if (!ADMIN_SECRET || !ADMIN_JWT_SECRET) {
@@ -50,8 +51,11 @@ function attachAdminSecurity(app){
 
   // POST /admin/login → troca senha por JWT curto
   app.post("/admin/login", (req, res) => {
-    const { password } = req.body || {};
+    const { username, password } = req.body || {};
     if (!password) return res.status(400).json({ error: "password_required" });
+    if (username && username !== ADMIN_USERNAME) {
+      return res.status(401).json({ error: "bad_credentials" });
+    }
     if (password !== ADMIN_SECRET) return res.status(401).json({ error: "bad_credentials" });
     return res.json({ token: issueToken(ADMIN_JWT_SECRET), expiresIn: 1800 });
   });
