@@ -227,6 +227,44 @@ def map_column_name(col_name: str) -> Optional[str]:
     return None
 
 
+def extract_resin_from_title(title: str) -> Optional[str]:
+    if not title:
+        return None
+
+    upper_title = title.upper()
+    if "RESINA" in upper_title:
+        parts = [part.strip() for part in title.split("-") if part.strip()]
+        for part in parts:
+            if "RESINA" in part.upper():
+                cleaned = re.sub(r"^RESINA\s+", "", part, flags=re.IGNORECASE).strip()
+                return cleaned or None
+
+    if upper_title.startswith("PARÂMETROS") or upper_title.startswith("PARAMETROS"):
+        cleaned = re.sub(r"^PAR[ÂA]METROS?\s+", "", title, flags=re.IGNORECASE)
+        cleaned = cleaned.split("-")[0].strip()
+        return cleaned or None
+
+    return None
+
+
+def normalize_resin_name(sheet_name: str, header_title: Optional[str]) -> str:
+    fallback = extract_resin_name(sheet_name)
+    header_resin = extract_resin_from_title(header_title or "")
+
+    if header_resin and (not fallback or fallback.lower().startswith("planilha") or fallback.lower() == "undefined"):
+        return header_resin
+    if fallback:
+        return fallback
+    return header_resin or "undefined"
+
+
+def enforce_column_positions(column_mapping: Dict[int, str], total_columns: int) -> None:
+    if total_columns > 3:
+        column_mapping[3] = "baseLayers"
+    if total_columns > 4:
+        column_mapping[4] = "exposureTimeS"
+
+
 def parse_table(rows: List[List[str]], sheet_name: str) -> List[Dict[str, Any]]:
     profiles: List[Dict[str, Any]] = []
     resin_name = extract_resin_name(sheet_name)
@@ -244,6 +282,8 @@ def parse_table(rows: List[List[str]], sheet_name: str) -> List[Dict[str, Any]]:
             parts = [part.strip() for part in first_cell.split("-") if part.strip()]
             if parts:
                 current_brand = parts[-1].strip()
+            resin_name = normalize_resin_name(sheet_name, first_cell)
+            resin_id = slugify(resin_name)
             continue
 
         if first_cell and (
@@ -258,6 +298,7 @@ def parse_table(rows: List[List[str]], sheet_name: str) -> List[Dict[str, Any]]:
                 mapped = map_column_name(col_name)
                 if mapped:
                     column_mapping[idx] = mapped
+            enforce_column_positions(column_mapping, len(row_values))
             continue
 
         if not column_mapping:
