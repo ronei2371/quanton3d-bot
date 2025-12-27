@@ -24,7 +24,21 @@ const rootDir = __dirname;
 
 const app = express();
 app.set('trust proxy', 1);
-app.use(cors());
+const allowedOrigins = [
+  "https://quanton3dia.onrender.com",
+  "https://axtonronei.online"
+];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("Not allowed by CORS"));
+  }
+};
+
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(publicDir));
 app.use('/public', express.static(publicDir));
