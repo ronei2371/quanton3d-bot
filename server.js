@@ -12,6 +12,7 @@ import mongoose from "mongoose";
 import { initializeRAG } from './rag-search.js';
 import { connectToMongo, getPartnersCollection, getPrintParametersCollection, isConnected } from './db.js';
 import { attachAdminSecurity } from "./admin/security.js";
+import attachKnowledgeRoutes from './admin/knowledge-routes.js';
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use(express.static(publicDir));
 app.use('/public', express.static(publicDir));
 
 attachAdminSecurity(app);
+attachKnowledgeRoutes(app);
 
 // --- ROTAS VITAIS (CORREÇÃO DO ERRO 'CANNOT GET') ---
 
