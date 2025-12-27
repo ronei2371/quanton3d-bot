@@ -5,12 +5,14 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import fs from "fs/promises";
+import fs from "fs";
+import fsPromises from "fs/promises";
 import path from 'path';
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
-import { initializeRAG } from './rag-search.js';
-import { connectToMongo, getPartnersCollection, getPrintParametersCollection, isConnected } from './db.js';
+import jwt from "jsonwebtoken";
+import { addDocument, clearKnowledgeCollection, initializeRAG } from './rag-search.js';
+import { connectToMongo, getDocumentsCollection, getPartnersCollection, getPrintParametersCollection, isConnected } from './db.js';
 import { attachAdminSecurity } from "./admin/security.js";
 
 dotenv.config();
@@ -34,7 +36,33 @@ const adminSecurityOptions = {
   allowedOrigins: process.env.CORS_ORIGIN
 };
 
+const ADMIN_SECRET = adminSecurityOptions.adminSecret;
+const ADMIN_JWT_SECRET = adminSecurityOptions.adminJwtSecret;
+
 attachAdminSecurity(app, adminSecurityOptions);
+
+function requireAdmin(req, res, next) {
+  if (!ADMIN_SECRET || !ADMIN_JWT_SECRET) {
+    return res.status(500).json({ success: false, error: "Admin authentication not configured" });
+  }
+
+  const authHeader = req.headers.authorization || "";
+  if (authHeader.startsWith("Bearer ")) {
+    try {
+      jwt.verify(authHeader.slice(7), ADMIN_JWT_SECRET);
+      return next();
+    } catch (err) {
+      return res.status(401).json({ success: false, error: "invalid_token" });
+    }
+  }
+
+  const providedSecret = req.headers["x-admin-secret"] || req.headers["admin-secret"];
+  if (providedSecret && providedSecret === ADMIN_SECRET) {
+    return next();
+  }
+
+  return res.status(401).json({ success: false, error: "unauthorized" });
+}
 
 // --- ROTAS VITAIS (CORREÇÃO DO ERRO 'CANNOT GET') ---
 
@@ -62,7 +90,7 @@ async function getLocalResins() {
   }
   try {
     const dataPath = path.join(rootDir, "data", "resins_extracted.json");
-    const raw = await fs.readFile(dataPath, "utf-8");
+    const raw = await fsPromises.readFile(dataPath, "utf-8");
     const data = JSON.parse(raw);
     const resins = (data.resins || [])
       .map((resin) => ({
@@ -202,6 +230,213 @@ app.get("/api/partners", async (req, res) => {
     source,
     partners
   });
+});
+
+app.post("/admin/knowledge/import", requireAdmin, async (req, res) => {
+  try {
+    if (!shouldInitRAG()) {
+      return res.status(503).json({ success: false, error: "OPENAI_API_KEY ou MongoDB indisponível" });
+    }
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+    }
+
+    const bodyIsEmpty = () => {
+      if (!req.body) return true;
+      if (typeof req.body === "string") return req.body.trim().length === 0;
+      if (Buffer.isBuffer(req.body)) return req.body.length === 0;
+      if (typeof req.body === "object") {
+        return Object.keys(req.body).length === 0;
+      }
+      return false;
+    };
+
+    let docsPayload = Array.isArray(req.body?.documents)
+      ? req.body.documents
+      : Array.isArray(req.body)
+        ? req.body
+        : null;
+
+    const normalizeEmbedding = (candidate) => {
+      if (!Array.isArray(candidate)) return null;
+      const numeric = candidate.map((value) => Number(value)).filter((value) => Number.isFinite(value));
+      return numeric.length > 0 ? numeric : null;
+    };
+
+    let collectionCleared = false;
+    const ensureCollectionCleared = async () => {
+      if (collectionCleared) return null;
+      const cleanupResult = await clearKnowledgeCollection();
+      collectionCleared = true;
+      console.log(`[IMPORT-KNOWLEDGE] Coleção limpa antes do import: ${cleanupResult.deleted} registros removidos.`);
+      return cleanupResult;
+    };
+
+    if (bodyIsEmpty() || !Array.isArray(docsPayload) || docsPayload.length === 0) {
+      const kbPath = path.join(rootDir, "kb_index.json");
+
+      try {
+        if (!fs.existsSync(kbPath)) {
+          return res.status(400).json({
+            success: false,
+            error: "Arquivo kb_index.json não encontrado e o corpo da requisição está vazio"
+          });
+        }
+
+        await ensureCollectionCleared();
+
+        const fileContent = await fsPromises.readFile(kbPath, "utf-8");
+        const sanitizedContent = fileContent.replace(/\s+$/u, "");
+        const parsed = JSON.parse(sanitizedContent);
+        const docsFromFile = Array.isArray(parsed)
+          ? parsed
+          : Array.isArray(parsed?.documents)
+            ? parsed.documents
+            : Array.isArray(parsed?.data)
+              ? parsed.data
+              : Object.values(parsed || {}).find(Array.isArray) || null;
+
+        if (!Array.isArray(docsFromFile) || docsFromFile.length === 0) {
+          return res.status(400).json({
+            success: false,
+            error: "Arquivo kb_index.json não contém um array de documentos válido"
+          });
+        }
+
+        docsPayload = docsFromFile;
+        console.log(`[IMPORT-KNOWLEDGE] Corpo vazio; usando kb_index.json com ${docsPayload.length} documentos.`);
+      } catch (err) {
+        console.error("[IMPORT-KNOWLEDGE] Falha ao carregar kb_index.json:", err);
+        return res.status(500).json({
+          success: false,
+          error: "Falha ao carregar kb_index.json ou arquivo inexistente"
+        });
+      }
+    }
+
+    if (!Array.isArray(docsPayload) || docsPayload.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Payload deve ser um array de documentos com title, content, tags e source opcional"
+      });
+    }
+
+    console.log(`[IMPORT-KNOWLEDGE] Recebidos ${docsPayload.length} documentos para importação`);
+
+    await ensureCollectionCleared();
+
+    const imported = [];
+    const errors = [];
+
+    for (let i = 0; i < docsPayload.length; i++) {
+      const item = docsPayload[i] || {};
+      const title = String(item.title || "").trim();
+      const content = String(item.content || "").trim();
+      const tags = Array.isArray(item.tags) ? item.tags : [];
+      const source = item.source || "admin_import";
+      const legacyId = item.id || item.legacyId || null;
+      const embedding = normalizeEmbedding(item.embedding);
+
+      if (!title || !content) {
+        const error = "Título e conteúdo são obrigatórios";
+        errors.push({ index: i, title: title || "(sem título)", error });
+        console.warn(`[IMPORT-KNOWLEDGE] Documento ${i + 1} ignorado: ${error}`);
+        continue;
+      }
+
+      try {
+        console.log(`[IMPORT-KNOWLEDGE] (${i + 1}/${docsPayload.length}) Importando: ${title}`);
+        if (Array.isArray(item.embedding) && !embedding) {
+          console.warn(`[IMPORT-KNOWLEDGE] Embedding inválido no documento ${i + 1}; será gerado automaticamente.`);
+        }
+
+        const result = await addDocument(
+          title,
+          content,
+          source,
+          tags,
+          {
+            legacyId,
+            upsert: Boolean(legacyId),
+            ...(embedding ? { embedding } : {})
+          }
+        );
+        imported.push({ index: i, title, documentId: result.documentId.toString() });
+      } catch (err) {
+        console.error(`[IMPORT-KNOWLEDGE] Falha ao importar "${title}": ${err.message}`);
+        errors.push({ index: i, title, error: err.message });
+      }
+    }
+
+    console.log(`[IMPORT-KNOWLEDGE] Finalizado. Sucesso: ${imported.length}, Erros: ${errors.length}`);
+
+    res.json({
+      success: errors.length === 0,
+      imported: imported.length,
+      errors,
+      documents: imported
+    });
+  } catch (err) {
+    console.error("[IMPORT-KNOWLEDGE] Erro geral na importação:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get("/admin/knowledge/list", requireAdmin, async (req, res) => {
+  try {
+    if (!shouldInitMongo()) {
+      return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+    }
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+    }
+
+    const { tag, resin, printer, search } = req.query;
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
+    const skip = (page - 1) * limit;
+
+    const filters = {};
+    const tagFilter = tag || resin || printer;
+    if (tagFilter) {
+      filters.tags = { $elemMatch: { $regex: tagFilter, $options: "i" } };
+    }
+    if (search) {
+      filters.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { content: { $regex: search, $options: "i" } }
+      ];
+    }
+
+    const collection = getDocumentsCollection();
+    const total = await collection.countDocuments(filters);
+    const documents = await collection.find(
+      filters,
+      { projection: { title: 1, tags: 1, source: 1, createdAt: 1 } }
+    )
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    console.log(`📚 [LIST-KNOWLEDGE] Filtros: tag=${tagFilter || "---"} | search=${search || "---"} | total=${total}`);
+
+    res.json({
+      success: true,
+      documents,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 1
+      }
+    });
+  } catch (err) {
+    console.error("❌ [LIST-KNOWLEDGE] Erro ao listar conhecimento:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // --- INICIALIZAÇÃO ---
