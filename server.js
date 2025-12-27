@@ -27,7 +27,14 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.static(publicDir));
 app.use('/public', express.static(publicDir));
 
-attachAdminSecurity(app);
+const adminSecurityOptions = {
+  adminSecret: process.env.ADMIN_SECRET,
+  adminJwtSecret: process.env.ADMIN_JWT_SECRET,
+  adminUsername: process.env.ADMIN_USERNAME,
+  allowedOrigins: process.env.CORS_ORIGIN
+};
+
+attachAdminSecurity(app, adminSecurityOptions);
 
 // --- ROTAS VITAIS (CORREÇÃO DO ERRO 'CANNOT GET') ---
 
