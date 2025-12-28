@@ -12,8 +12,8 @@ const EMBEDDING_DIMENSIONS = 3072; // Dimensao do text-embedding-3-large
 
 // Limiar minimo de relevancia para considerar um documento util
 // Documentos com similaridade abaixo deste valor serao ignorados
-// NOTA: Ajustado para 0.8 (80%) para priorizar somente documentos altamente relevantes
-const MIN_RELEVANCE_THRESHOLD = 0.8;
+// NOTA: Ajustado para 0.65 para reduzir quedas frequentes de contexto (menos alucinacoes)
+const MIN_RELEVANCE_THRESHOLD = 0.65;
 
 let lastInitialization = null;
 let documentsCount = 0;
@@ -234,7 +234,7 @@ export async function searchKnowledge(query, topK = 5) {
 export function formatContext(results) {
   if (!results || results.length === 0) {
     // Nenhum documento relevante encontrado - instruir o bot a ser honesto
-    return '\n\n[AVISO: Nenhum documento com relevancia suficiente foi encontrado no banco de conhecimento da Quanton3D para esta pergunta. Se a pergunta for especifica sobre produtos, precos ou informacoes da empresa, responda: "Nao encontrei essa informacao especifica no meu banco de dados. Posso te passar para um atendente humano para essa informacao." Para perguntas tecnicas gerais sobre impressao 3D, voce pode usar seu conhecimento geral.]\n\n';
+    return '\n\n[AVISO DE SEGURANCA]\nNao foi encontrado conhecimento interno com relevancia suficiente para responder.\n\nREGRAS:\n- Nao invente parametros, precos, prazos ou garantias.\n- Se a pergunta for sobre produtos, valores ou configuracoes especificas de resina/impressora, responda: "Nao encontrei essa informacao no meu banco de dados interno. Posso acionar um atendente humano para te ajudar com precisao."\n- Para duvidas tecnicas gerais, responda de forma conservadora e convide para compartilhar mais detalhes ou encaminhar ao suporte humano.\n\n';
   }
 
   let context = '\n\n CONHECIMENTO TECNICO RELEVANTE:\n\n';
@@ -246,7 +246,8 @@ export function formatContext(results) {
 
   context += '---\n\n';
   context += 'Use EXCLUSIVAMENTE o conhecimento acima para responder. ';
-  context += 'NAO invente informacoes que nao estejam no contexto.\n\n';
+  context += 'NAO invente informacoes que nao estejam no contexto.\n';
+  context += 'Sempre cite qual documento usou (ex.: "Fonte: Documento 1").\n\n';
 
   return context;
 }

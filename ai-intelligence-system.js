@@ -22,13 +22,15 @@ export function analyzeQuestionType(message) {
     // Parâmetros de impressão
     parameters: [
       'tempo', 'exposição', 'layer', 'camada', 'velocidade', 'temperatura',
-      'configuração', 'parâmetro', 'setting', 'calibração', 'perfil'
+      'configuração', 'parâmetro', 'setting', 'calibração', 'perfil',
+      'ms', 'segundos de base', 'exposure'
     ],
     
     // Produtos e resinas
     product: [
       'resina', 'pyroblast', 'iron', 'spin', 'spark', 'alchemist', 'flexform',
-      'poseidon', 'lowsmell', 'castable', 'athom', 'vulcan', 'produto', 'qual resina'
+      'poseidon', 'lowsmell', 'castable', 'athom', 'vulcan', 'produto', 'qual resina',
+      'abs like', 'abs-like', 'dental', 'bio', 'eco', 'lavavel', 'lavável'
     ],
     
     // Processo e técnicas
@@ -99,7 +101,11 @@ export function extractEntities(message) {
     'LowSmell': ['lowsmell', 'low smell', 'baixo odor'],
     'Castable': ['castable', 'fundição'],
     'Athom': ['athom'],
-    'Vulcan': ['vulcan']
+    'Vulcan': ['vulcan'],
+    'ABS-like': ['abs like', 'abs-like', 'abslike'],
+    'Dental': ['dental', 'odontologica', 'odontológica'],
+    'Bio': ['bio', 'biocompatível', 'biocompatível'],
+    'Eco Washable': ['lavavel', 'lavável', 'washable', 'water washable']
   };
   
   for (const [resin, patterns] of Object.entries(resinPatterns)) {
@@ -113,8 +119,8 @@ export function extractEntities(message) {
     'elegoo', 'mars', 'saturn', 'jupiter',
     'anycubic', 'photon', 'mono',
     'creality', 'halot',
-    'phrozen', 'sonic',
-    'epax', 'nova3d', 'wanhao'
+    'phrozen', 'sonic', 'mighty', 'mini 4k',
+    'epax', 'nova3d', 'wanhao', 'longer'
   ];
   
   printerPatterns.forEach(printer => {
@@ -126,12 +132,14 @@ export function extractEntities(message) {
   // Detectar problemas específicos
   const problemPatterns = {
     'Não adere à base': ['não gruda', 'não adere', 'solta da base'],
-    'Peças rachando': ['rachando', 'quebrando', 'frágil'],
-    'Subcura': ['mole', 'pegajoso', 'não curou'],
+    'Peças rachando': ['rachando', 'quebrando', 'frágil', 'delaminando', 'delaminação'],
+    'Subcura': ['mole', 'pegajoso', 'não curou', 'meia cura', 'sub cura'],
     'Sobrecura': ['queimado', 'amarelado', 'ressecado'],
     'Bolhas': ['bolhas', 'bolha', 'ar'],
     'Camadas visíveis': ['camadas', 'linhas', 'layer'],
-    'Suportes': ['suporte', 'support', 'sustentação']
+    'Suportes': ['suporte', 'support', 'sustentação'],
+    'Descolamento em camadas': ['delaminando', 'separando camadas', 'descolando camada'],
+    'Artefatos de luz': ['listras', 'banding', 'faixas de luz', 'luz vazando']
   };
   
   for (const [problem, patterns] of Object.entries(problemPatterns)) {

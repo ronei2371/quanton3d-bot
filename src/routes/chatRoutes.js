@@ -137,10 +137,20 @@ router.post("/ask", async (req, res) => {
       historyForModel
     );
 
+    const entitiesSummary = [
+      ...(entities.resins || []),
+      ...(entities.printers || []),
+      ...(entities.problems || [])
+    ].join(" | ");
+
+    const searchQuery = entitiesSummary
+      ? `${message}\n\nContexto adicional:\n${entitiesSummary}`
+      : message;
+
     let relevantKnowledge = [];
     let knowledgeContext = "";
     try {
-      relevantKnowledge = await searchKnowledge(message, 5);
+      relevantKnowledge = await searchKnowledge(searchQuery, 5);
       knowledgeContext = formatContext(relevantKnowledge);
     } catch (err) {
       console.warn("⚠️ [ASK] Falha ao buscar conhecimento no MongoDB:", err.message);
@@ -149,6 +159,7 @@ router.post("/ask", async (req, res) => {
     const personalization = personalizeResponse(userName, historyForModel, sentiment);
     const systemPromptParts = [
       "Você é o Elios, atendente oficial da Quanton3D. Responda com cordialidade, acolhimento e precisão técnica.",
+      "Politica de segurança: nunca invente parâmetros, valores comerciais ou prazos. Se o contexto não trouxer documentos, seja transparente e ofereça encaminhamento humano.",
       intelligentContext,
       personalization ? `Personalização: ${personalization}` : "",
       knowledgeContext
