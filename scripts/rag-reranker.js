@@ -7,9 +7,18 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let openaiClient = null;
+
+function getRerankerClient() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY nao configurada");
+  }
+  if (!openaiClient) {
+    openaiClient = new OpenAI({ apiKey });
+  }
+  return openaiClient;
+}
 
 /**
  * Re-ranqueia documentos usando GPT-4o para melhor relevância
@@ -23,6 +32,7 @@ export async function rerankDocuments(query, documents) {
   }
 
   try {
+    const client = getRerankerClient();
     console.log(`🔄 [RE-RANKING] Reordenando ${documents.length} documentos...`);
 
     // Preparar documentos para análise (limite de 500 caracteres por documento)
@@ -63,7 +73,7 @@ Formato: 2,0,4,1,3
 
 ÍNDICES:`;
 
-    const response = await openai.chat.completions.create({
+    const response = await client.chat.completions.create({
       model: "gpt-4o-mini", // mais barato e rápido para re-ranking
       temperature: 0,
       messages: [

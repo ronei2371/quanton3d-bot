@@ -6,11 +6,6 @@ import OpenAI from 'openai';
 import { getDocumentsCollection, getVisualKnowledgeCollection, isConnected } from './db.js';
 import { rerankDocuments } from './scripts/rag-reranker.js';
 
-// Cliente OpenAI para embeddings
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 // Modelo de embeddings unificado (mesmo para salvar e buscar)
 const EMBEDDING_MODEL = 'text-embedding-3-large';
 const EMBEDDING_DIMENSIONS = 3072; // Dimensao do text-embedding-3-large
@@ -22,6 +17,19 @@ const MIN_RELEVANCE_THRESHOLD = 0.8;
 
 let lastInitialization = null;
 let documentsCount = 0;
+let openaiClient = null;
+
+function getOpenAIClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY nao configurada');
+  }
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openaiClient;
+}
 
 // Funcao para logging do RAG
 function logRAG(message, level = 'INFO') {
@@ -61,7 +69,8 @@ export async function initializeRAG() {
 // Gerar embedding usando OpenAI text-embedding-3-large
 export async function generateEmbedding(text) {
   try {
-    const response = await openai.embeddings.create({
+    const client = getOpenAIClient();
+    const response = await client.embeddings.create({
       model: EMBEDDING_MODEL,
       input: text,
     });

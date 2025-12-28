@@ -23,7 +23,7 @@ import {
   shouldInitMongo,
   shouldInitRAG
 } from "./src/routes/common.js";
-import { initializeRAG } from "./rag-search.js";
+import { checkRAGIntegrity, getRAGInfo, initializeRAG } from "./rag-search.js";
 
 dotenv.config();
 
@@ -70,6 +70,27 @@ app.use("/admin", buildAdminRoutes(adminSecurityOptions));
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok", database: mongoose.connection.readyState === 1 ? "connected" : "error" });
+});
+
+app.get("/health/rag", async (req, res) => {
+  try {
+    const snapshot = await buildRagHealthSnapshot();
+    const isHealthy = snapshot.ragConfigured
+      && snapshot.mongoConnected
+      && (snapshot.ragIntegrity?.isValid ?? true);
+
+    res.status(isHealthy ? 200 : 503).json({
+      success: isHealthy,
+      ...snapshot
+    });
+  } catch (error) {
+    console.error("❌ Falha ao obter status do RAG:", error);
+    res.status(500).json({
+      success: false,
+      error: "Falha ao verificar status do RAG",
+      details: error.message
+    });
+  }
 });
 
 app.get("/params-panel", (req, res) => {
@@ -145,6 +166,36 @@ async function getResinsFromMongo(query, limit) {
   ];
 
   return collection.aggregate(pipeline).toArray();
+}
+
+async function buildRagHealthSnapshot() {
+  const mongoConfigured = shouldInitMongo();
+  const ragConfigured = shouldInitRAG();
+  const openaiConfigured = Boolean(process.env.OPENAI_API_KEY);
+  const mongoConnected = mongoose.connection.readyState === 1;
+
+  let ragIntegrity = null;
+  try {
+    ragIntegrity = await checkRAGIntegrity();
+  } catch (error) {
+    ragIntegrity = {
+      isValid: false,
+      reason: "integrity_error",
+      error: error.message
+    };
+  }
+
+  const ragInfo = getRAGInfo();
+
+  return {
+    mongoConfigured,
+    mongoConnected,
+    openaiConfigured,
+    ragConfigured,
+    ragInfo,
+    ragIntegrity,
+    openaiModel: process.env.OPENAI_MODEL || "gpt-4o"
+  };
 }
 
 app.get("/api/resins/search", async (req, res) => {
