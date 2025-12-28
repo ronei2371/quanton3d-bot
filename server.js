@@ -11,9 +11,32 @@ import path from 'path';
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
-import { addDocument, clearKnowledgeCollection, initializeRAG } from './rag-search.js';
-import { connectToMongo, getDocumentsCollection, getPartnersCollection, getPrintParametersCollection, isConnected } from './db.js';
+import OpenAI from "openai";
+import {
+  addDocument,
+  clearKnowledgeCollection,
+  formatContext,
+  initializeRAG,
+  searchKnowledge
+} from './rag-search.js';
+import {
+  connectToMongo,
+  Conversas,
+  getDocumentsCollection,
+  getPartnersCollection,
+  getPrintParametersCollection,
+  isConnected
+} from './db.js';
 import { attachAdminSecurity } from "./admin/security.js";
+import {
+  analyzeQuestionType,
+  analyzeSentiment,
+  calculateIntelligenceMetrics,
+  extractEntities,
+  generateIntelligentContext,
+  learnFromConversation,
+  personalizeResponse
+} from "./ai-intelligence-system.js";
 
 dotenv.config();
 
@@ -52,6 +75,11 @@ const adminSecurityOptions = {
 
 const ADMIN_SECRET = adminSecurityOptions.adminSecret;
 const ADMIN_JWT_SECRET = adminSecurityOptions.adminJwtSecret;
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o";
+const OPENAI_TEMPERATURE = Number(process.env.OPENAI_TEMPERATURE ?? 0.1);
+const openaiClient = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 attachAdminSecurity(app, adminSecurityOptions);
 
@@ -120,6 +148,19 @@ async function getLocalResins() {
     localResinsCache = [];
     return localResinsCache;
   }
+}
+
+function mapConversationHistory(messages = []) {
+  return (messages || [])
+    .filter((message) => message && message.role && message.content)
+    .map(({ role, content }) => ({ role, content }));
+}
+
+function limitHistoryForModel(history, limit = 16) {
+  if (!Array.isArray(history) || history.length <= limit) {
+    return history || [];
+  }
+  return history.slice(history.length - limit);
 }
 
 async function ensureMongoReady() {
@@ -244,6 +285,143 @@ app.get("/api/partners", async (req, res) => {
     source,
     partners
   });
+});
+
+app.post("/ask", async (req, res) => {
+  if (!shouldInitRAG()) {
+    return res.status(503).json({ success: false, error: "OPENAI_API_KEY ou MongoDB indisponível" });
+  }
+
+  const {
+    message,
+    sessionId,
+    userName,
+    userEmail,
+    userPhone,
+    resin,
+    printer
+  } = req.body || {};
+
+  if (!message || !sessionId) {
+    return res.status(400).json({ success: false, error: "message e sessionId são obrigatórios" });
+  }
+
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+    }
+    if (!openaiClient) {
+      return res.status(503).json({ success: false, error: "OPENAI_API_KEY não configurada" });
+    }
+
+    const existingConversation = await Conversas.findOne({ sessionId }).sort({ createdAt: -1 });
+    const historyForModel = limitHistoryForModel(
+      mapConversationHistory(existingConversation?.messages || [])
+    );
+
+    const questionType = analyzeQuestionType(message);
+    const entities = extractEntities(message);
+    const sentiment = analyzeSentiment(message);
+    const intelligentContext = await generateIntelligentContext(
+      message,
+      questionType,
+      entities,
+      historyForModel
+    );
+
+    let relevantKnowledge = [];
+    let knowledgeContext = "";
+    try {
+      relevantKnowledge = await searchKnowledge(message, 5);
+      knowledgeContext = formatContext(relevantKnowledge);
+    } catch (err) {
+      console.warn("⚠️ [ASK] Falha ao buscar conhecimento no MongoDB:", err.message);
+    }
+
+    const personalization = personalizeResponse(userName, historyForModel, sentiment);
+    const systemPromptParts = [
+      "Você é o Elios, atendente oficial da Quanton3D. Responda com cordialidade, acolhimento e precisão técnica.",
+      intelligentContext,
+      personalization ? `Personalização: ${personalization}` : "",
+      knowledgeContext
+    ].filter(Boolean);
+
+    const completion = await openaiClient.chat.completions.create({
+      model: OPENAI_MODEL,
+      temperature: OPENAI_TEMPERATURE,
+      messages: [
+        { role: "system", content: systemPromptParts.join("\n\n") },
+        ...historyForModel,
+        { role: "user", content: message }
+      ]
+    });
+
+    const reply = completion?.choices?.[0]?.message?.content || "Desculpe, não consegui elaborar uma resposta agora.";
+    const timestamp = new Date();
+    const updatedMessages = [
+      ...(existingConversation?.messages || []),
+      { role: "user", content: message, timestamp },
+      { role: "assistant", content: reply, timestamp }
+    ];
+
+    const intelligenceMetrics = calculateIntelligenceMetrics(
+      message,
+      reply,
+      entities,
+      questionType,
+      relevantKnowledge
+    );
+
+    const metadata = {
+      documentsFound: relevantKnowledge.length,
+      questionType: questionType.type,
+      sentiment: sentiment.sentiment,
+      urgency: sentiment.urgency,
+      intelligenceMetrics
+    };
+
+    if (existingConversation) {
+      existingConversation.messages = updatedMessages;
+      existingConversation.userName = userName ?? existingConversation.userName;
+      existingConversation.userEmail = userEmail ?? existingConversation.userEmail;
+      existingConversation.userPhone = userPhone ?? existingConversation.userPhone;
+      existingConversation.resin = resin ?? existingConversation.resin;
+      existingConversation.printer = printer ?? existingConversation.printer;
+      existingConversation.metadata = { ...(existingConversation.metadata || {}), ...metadata };
+      existingConversation.updatedAt = timestamp;
+      await existingConversation.save();
+    } else {
+      await Conversas.create({
+        sessionId,
+        userName,
+        userEmail,
+        userPhone,
+        resin,
+        printer,
+        messages: updatedMessages,
+        metadata,
+        createdAt: timestamp,
+        updatedAt: timestamp
+      });
+    }
+
+    try {
+      await learnFromConversation(message, reply, entities, questionType);
+    } catch (err) {
+      console.warn("⚠️ [ASK] Falha ao registrar aprendizado contínuo:", err.message);
+    }
+
+    res.json({
+      success: true,
+      reply,
+      historyLength: updatedMessages.length,
+      documentsUsed: relevantKnowledge.length
+    });
+  } catch (err) {
+    console.error("❌ [ASK] Erro ao processar conversa:", err);
+    res.status(500).json({ success: false, error: "Falha ao processar a conversa" });
+  }
 });
 
 app.post("/admin/knowledge/import", requireAdmin, async (req, res) => {
