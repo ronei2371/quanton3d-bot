@@ -12,6 +12,7 @@ import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import OpenAI from "openai";
+import { z } from "zod";
 import {
   addDocument,
   clearKnowledgeCollection,
@@ -82,6 +83,53 @@ const openaiClient = process.env.OPENAI_API_KEY
   : null;
 
 attachAdminSecurity(app, adminSecurityOptions);
+
+const askParamsSchema = z.object({}).strict();
+
+const askBodySchema = z.object({
+  message: z.string({
+    required_error: "message é obrigatório",
+    invalid_type_error: "message deve ser um texto"
+  }).trim().min(1, "message é obrigatório"),
+  sessionId: z.string({
+    required_error: "sessionId é obrigatório",
+    invalid_type_error: "sessionId deve ser um texto"
+  }).trim().min(1, "sessionId é obrigatório"),
+  userName: z.string({
+    invalid_type_error: "userName deve ser um texto"
+  }).trim().min(1, "userName não pode ser vazio").max(120, "userName deve ter até 120 caracteres").nullish(),
+  userEmail: z.string({
+    invalid_type_error: "userEmail deve ser um texto"
+  }).trim().email("userEmail deve ser um e-mail válido").nullish(),
+  userPhone: z.string({
+    invalid_type_error: "userPhone deve ser um texto"
+  }).trim().min(5, "userPhone deve ter ao menos 5 caracteres").max(32, "userPhone deve ter até 32 caracteres").nullish(),
+  resin: z.string({
+    invalid_type_error: "resin deve ser um texto"
+  }).trim().min(1, "resin não pode ser vazio").max(160, "resin deve ter até 160 caracteres").nullish(),
+  printer: z.string({
+    invalid_type_error: "printer deve ser um texto"
+  }).trim().min(1, "printer não pode ser vazio").max(160, "printer deve ter até 160 caracteres").nullish()
+}).strict().transform((body) => ({
+  ...body,
+  userName: body.userName ?? undefined,
+  userEmail: body.userEmail ?? undefined,
+  userPhone: body.userPhone ?? undefined,
+  resin: body.resin ?? undefined,
+  printer: body.printer ?? undefined
+}));
+
+const askRequestSchema = z.object({
+  body: askBodySchema,
+  params: askParamsSchema
+}).strict();
+
+function formatZodErrors(error) {
+  return error.errors.map(({ path, message }) => ({
+    field: path.join("."),
+    message
+  }));
+}
 
 function requireAdmin(req, res, next) {
   if (!ADMIN_SECRET || !ADMIN_JWT_SECRET) {
@@ -288,8 +336,13 @@ app.get("/api/partners", async (req, res) => {
 });
 
 app.post("/ask", async (req, res) => {
-  if (!shouldInitRAG()) {
-    return res.status(503).json({ success: false, error: "OPENAI_API_KEY ou MongoDB indisponível" });
+  const askValidation = askRequestSchema.safeParse({ body: req.body, params: req.params });
+  if (!askValidation.success) {
+    return res.status(400).json({
+      success: false,
+      error: "Payload inválido",
+      details: formatZodErrors(askValidation.error)
+    });
   }
 
   const {
@@ -300,10 +353,10 @@ app.post("/ask", async (req, res) => {
     userPhone,
     resin,
     printer
-  } = req.body || {};
+  } = askValidation.data.body;
 
-  if (!message || !sessionId) {
-    return res.status(400).json({ success: false, error: "message e sessionId são obrigatórios" });
+  if (!shouldInitRAG()) {
+    return res.status(503).json({ success: false, error: "OPENAI_API_KEY ou MongoDB indisponível" });
   }
 
   try {
