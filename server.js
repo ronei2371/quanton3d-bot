@@ -5,6 +5,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import fs from "fs";
 import fsPromises from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -28,7 +29,8 @@ dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const publicDir = path.join(__dirname, 'public');
+const buildDir = path.join(__dirname, 'dist');
+const publicDir = fs.existsSync(buildDir) ? buildDir : path.join(__dirname, 'public');
 const rootDir = __dirname;
 
 const app = express();
@@ -215,6 +217,13 @@ app.get("/api/partners", async (req, res) => {
     source,
     partners
   });
+});
+
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api") || req.path.startsWith("/admin")) {
+    return next();
+  }
+  res.sendFile(path.join(publicDir, "index.html"));
 });
 
 // --- INICIALIZAÇÃO ---

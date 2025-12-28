@@ -182,7 +182,7 @@
         const resolveApiBase = () => {
             const viteApi = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env.VITE_API_URL : undefined;
             const windowApi = window.VITE_API_URL || window.env?.VITE_API_URL;
-            return viteApi || windowApi || 'https://quanton3d-bot.onrender.com';
+            return viteApi || windowApi || 'https://quanton3d-bot-v2.onrender.com';
         };
 
         const API_BASE = resolveApiBase();
