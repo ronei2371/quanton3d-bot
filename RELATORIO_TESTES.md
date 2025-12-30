@@ -191,8 +191,8 @@ open admin-panel-test.html
 ### **3. Verificações de Produção**
 ```bash
 # Verificar endpoints
-curl "http://localhost:3001/suggestions?auth=quanton3d_admin_secret"
-curl "http://localhost:3001/rag-status?auth=quanton3d_admin_secret"
+curl "http://localhost:3001/suggestions?auth=${ADMIN_SECRET}"
+curl "http://localhost:3001/rag-status?auth=${ADMIN_SECRET}"
 
 # Verificar logs
 tail -f rag-operations.log
@@ -210,7 +210,7 @@ tail -f operations.log
 ## ⚠️ **PONTOS DE ATENÇÃO**
 
 ### **Críticos:**
-- 🔒 **Autenticação:** Todos endpoints protegidos com `quanton3d_admin_secret`
+- 🔒 **Autenticação:** Todos endpoints protegidos com `ADMIN_SECRET` via variável de ambiente
 - 💾 **Backups:** Sistema cria backups automáticos antes de mudanças
 - 📝 **Logs:** Monitorar `rag-operations.log` e `operations.log`
 

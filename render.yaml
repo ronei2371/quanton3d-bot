@@ -3,7 +3,7 @@ services:
     name: quanton3d-bot
     runtime: node
     plan: free
-    buildCommand: npm install
+    buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_VERSION

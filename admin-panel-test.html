@@ -178,8 +178,14 @@
         </div>
     </div>
 
-    <script>
-        const API_BASE = 'https://quanton3d-bot.onrender.com';
+    <script type="module">
+        const resolveApiBase = () => {
+            const viteApi = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env.VITE_API_URL : undefined;
+            const windowApi = window.VITE_API_URL || window.env?.VITE_API_URL;
+            return viteApi || windowApi || 'https://quanton3d-bot-v2.onrender.com';
+        };
+
+        const API_BASE = resolveApiBase();
         const AUTH_TOKEN_KEY = 'quanton3d_admin_token';
         let authToken = localStorage.getItem(AUTH_TOKEN_KEY) || '';
         const loginStatus = document.getElementById('login-status');

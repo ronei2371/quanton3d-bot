@@ -26,11 +26,11 @@ function verifySSE(req, res, next, jwtSecret){
   catch { return res.status(401).end(); }
 }
 
-function attachAdminSecurity(app){
-  const ADMIN_SECRET = process.env.ADMIN_SECRET;
-  const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
-  const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
-  const ALLOWED = allowListFromEnv(process.env.CORS_ORIGIN);
+function attachAdminSecurity(app, config = {}){
+  const ADMIN_SECRET = config.adminSecret ?? process.env.ADMIN_SECRET;
+  const ADMIN_JWT_SECRET = config.adminJwtSecret ?? process.env.ADMIN_JWT_SECRET;
+  const ADMIN_USERNAME = config.adminUsername ?? process.env.ADMIN_USERNAME ?? "admin";
+  const ALLOWED = allowListFromEnv(config.allowedOrigins ?? process.env.CORS_ORIGIN);
 
   if (!ADMIN_SECRET || !ADMIN_JWT_SECRET) {
     console.warn("[admin] Faltam ADMIN_SECRET/ADMIN_JWT_SECRET; rotas admin não foram ativadas.");
