@@ -1,7 +1,25 @@
-// Cole este código no lugar do seu server.js atual
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
+// =========================
+// 🤖 Quanton3D IA - Servidor Oficial (VERSÃO ASTRA TOTAL - 22/12/2025)
+// =========================
+
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import fs from "fs/promises";
+import path from 'path';
+import { fileURLToPath } from "url";
+import mongoose from "mongoose";
+import { initializeRAG } from './rag-search.js';
+import { connectToMongo, getPartnersCollection, getPrintParametersCollection, isConnected } from './db.js';
+import { attachAdminSecurity } from "./admin/security.js";
+import attachKnowledgeRoutes from './admin/knowledge-routes.js';
+
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const publicDir = path.join(__dirname, 'public');
+const rootDir = __dirname;
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -10,11 +28,16 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Bot online!' });
+attachAdminSecurity(app);
+attachKnowledgeRoutes(app);
+
+// --- ROTAS VITAIS (CORREÇÃO DO ERRO 'CANNOT GET') ---
+
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", database: mongoose.connection.readyState === 1 ? "connected" : "error" });
 });
 
-// Respostas automáticas (SEM precisar de API paga!)
+// Respostas automáticas (Fallback se IA falhar)
 const respostasAutomaticas = {
   'ola': 'Olá! Bem-vindo à Quanton3D! Como posso ajudar?',
   'produtos': 'Temos resinas para: Action Figures, Odontologia, Engenharia, Joalheria e Uso Geral. Qual te interessa?',

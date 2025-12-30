@@ -86,7 +86,7 @@ function attachAdminSecurity(app, config = {}){
   console.log("[admin] Rotas: /admin/login, /admin/feedback, /admin/stream");
 }
 
-export { attachAdminSecurity };
+export { attachAdminSecurity, requireAdmin };
 
 
 // =====================================================================
