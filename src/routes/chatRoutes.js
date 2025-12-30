@@ -69,6 +69,31 @@ const askRequestSchema = z.object({
   params: askParamsSchema
 }).strict();
 
+const fallbackReplies = {
+  ola: "Olá! Bem-vindo à Quanton3D! Como posso ajudar?",
+  produtos: "Temos resinas para: Action Figures, Odontologia, Engenharia, Joalheria e Uso Geral. Qual te interessa?",
+  preco: "Nossos preços variam de R$ 150 a R$ 900. Qual produto você gostaria de saber?",
+  contato: "Entre em contato: (31) 3271-6935 ou WhatsApp (31) 3271-6935",
+  endereco: "Av. Dom Pedro II, 5056 - Jardim Montanhês, Belo Horizonte - MG",
+  horario: "Atendemos de segunda a sexta, das 9h às 18h.",
+  entrega: "Fazemos entregas para todo o Brasil via Correios!",
+  resina: "Trabalhamos com resinas UV de alta performance. Qual aplicação você precisa? Action figures, odontologia, engenharia ou joalheria?",
+  action: "Para action figures temos: Alchemist, FlexForm, Iron, PyroBlast, Spark e Spin. Todas com ótimo acabamento!",
+  odonto: "Para odontologia: Athom Dental, Alinhadores, Gengiva e Washable. Todas biocompatíveis!",
+  engenharia: "Para engenharia: Iron (ultra resistente), FlexForm (flexível) e Vulcan Cast (fundição).",
+  default: "Desculpe, não entendi. Posso ajudar com: produtos, preços, contato, endereço ou horário. Ou ligue: (31) 3271-6935"
+};
+
+function buildFallbackReply(message) {
+  const msgLower = message.toLowerCase();
+  for (const key of Object.keys(fallbackReplies)) {
+    if (msgLower.includes(key)) {
+      return fallbackReplies[key];
+    }
+  }
+  return fallbackReplies.default;
+}
+
 function formatZodErrors(error) {
   return error.errors.map(({ path, message }) => ({
     field: path.join("."),
@@ -110,19 +135,30 @@ router.post("/ask", async (req, res) => {
   } = askValidation.data.body;
 
   if (!shouldInitRAG()) {
-    return res.status(503).json({ success: false, error: "OPENAI_API_KEY ou MongoDB indisponível" });
+    return res.json({
+      success: true,
+      reply: buildFallbackReply(message),
+      historyLength: 1,
+      documentsUsed: 0,
+      fallback: true
+    });
   }
+
+  let existingConversation = null;
 
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-    }
-    if (!openaiClient) {
-      return res.status(503).json({ success: false, error: "OPENAI_API_KEY não configurada" });
+    if (!mongoReady || !openaiClient) {
+      return res.json({
+        success: true,
+        reply: buildFallbackReply(message),
+        historyLength: existingConversation?.messages?.length || 1,
+        documentsUsed: 0,
+        fallback: true
+      });
     }
 
-    const existingConversation = await Conversas.findOne({ sessionId }).sort({ createdAt: -1 });
+    existingConversation = await Conversas.findOne({ sessionId }).sort({ createdAt: -1 });
     const historyForModel = limitHistoryForModel(
       mapConversationHistory(existingConversation?.messages || [])
     );
@@ -238,7 +274,13 @@ router.post("/ask", async (req, res) => {
     });
   } catch (err) {
     console.error("❌ [ASK] Erro ao processar conversa:", err);
-    res.status(500).json({ success: false, error: "Falha ao processar a conversa" });
+    res.json({
+      success: true,
+      reply: buildFallbackReply(message),
+      historyLength: (existingConversation?.messages?.length || 0) + 1,
+      documentsUsed: 0,
+      fallback: true
+    });
   }
 });
 

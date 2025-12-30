@@ -5,36 +5,59 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import fs from "fs/promises";
-import path from 'path';
+import path from "path";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
-import { initializeRAG } from './rag-search.js';
-import { connectToMongo, getPartnersCollection, getPrintParametersCollection, isConnected } from './db.js';
+import { initializeRAG, checkRAGIntegrity, getRAGInfo } from "./rag-search.js";
+import {
+  connectToMongo,
+  isConnected
+} from "./db.js";
 import { attachAdminSecurity } from "./admin/security.js";
-import attachKnowledgeRoutes from './admin/knowledge-routes.js';
+import attachKnowledgeRoutes from "./admin/knowledge-routes.js";
+import { chatRoutes } from "./src/routes/chatRoutes.js";
+import { buildAdminRoutes } from "./src/routes/adminRoutes.js";
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const publicDir = path.join(__dirname, 'public');
-const rootDir = __dirname;
+const publicDir = path.join(__dirname, "public");
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
 app.use(cors());
-app.use(express.json());
-app.use(express.static('public'));
-
-attachAdminSecurity(app);
-attachKnowledgeRoutes(app);
+app.use(express.json({ limit: "2mb" }));
+app.use(express.static(publicDir));
 
 // --- ROTAS VITAIS (CORREÇÃO DO ERRO 'CANNOT GET') ---
 
-app.get("/health", (req, res) => {
-  res.json({ status: "ok", database: mongoose.connection.readyState === 1 ? "connected" : "error" });
+app.get("/health", async (_req, res) => {
+  try {
+    if (process.env.MONGODB_URI && !isConnected()) {
+      await connectToMongo();
+    }
+    const databaseStatus = mongoose.connection.readyState === 1 ? "connected" : "error";
+    res.json({ status: "ok", database: databaseStatus });
+  } catch (error) {
+    res.status(500).json({ status: "error", database: "error", message: error.message });
+  }
+});
+
+app.get("/health/rag", async (_req, res) => {
+  try {
+    const integrity = await checkRAGIntegrity();
+    const ragInfo = getRAGInfo();
+    const healthy = integrity.isValid && Boolean(ragInfo.documentsCount);
+    res.json({
+      success: healthy,
+      integrity,
+      ragInfo
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // Respostas automáticas (Fallback se IA falhar)
@@ -73,6 +96,31 @@ app.post('/api/chat', (req, res) => {
     res.status(500).json({ error: 'Erro ao processar mensagem' });
   }
 });
+
+app.use(chatRoutes);
+attachAdminSecurity(app);
+attachKnowledgeRoutes(app);
+app.use("/admin", buildAdminRoutes());
+
+async function bootstrapServices() {
+  if (process.env.MONGODB_URI) {
+    try {
+      await connectToMongo();
+    } catch (error) {
+      console.warn("[boot] Falha ao conectar ao MongoDB:", error.message);
+    }
+  }
+
+  if (process.env.OPENAI_API_KEY && process.env.MONGODB_URI) {
+    try {
+      await initializeRAG();
+    } catch (error) {
+      console.warn("[boot] Falha ao inicializar o RAG:", error.message);
+    }
+  }
+}
+
+bootstrapServices();
 
 app.listen(PORT, () => {
   console.log(`🚀 Bot Quanton3D rodando na porta ${PORT}`);
