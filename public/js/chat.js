@@ -1,7 +1,9 @@
 // Configurações
+const API_BASE = (window.API_BASE_URL || window.location.origin || "").replace(/\/$/, "");
+
 const CONFIG = {
-  API_URL: 'https://quanton3d-bot-v2.onrender.com/api/chat',
-  HEALTH_URL: 'https://quanton3d-bot-v2.onrender.com/health',
+  API_URL: `${API_BASE}/api/chat`,
+  HEALTH_URL: `${API_BASE}/health`,
   MAX_RETRIES: 3,
   RETRY_DELAY: 2000
 };
