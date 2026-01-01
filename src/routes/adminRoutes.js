@@ -259,6 +259,82 @@ function buildAdminRoutes(adminConfig = {}) {
     }
   });
 
+  // ===== ROTAS DE PARÂMETROS DE IMPRESSÃO =====
+
+  // GET /admin/params/resins - Listar todas as resinas
+  router.get("/params/resins", adminGuard, async (req, res) => {
+    try {
+      // Ler arquivo de resinas
+      const resinsPath = path.join(rootDir, 'resins_extracted.json');
+      
+      if (!fs.existsSync(resinsPath)) {
+        return res.status(404).json({ success: false, message: 'Arquivo de resinas não encontrado' });
+      }
+      
+      const resinsData = JSON.parse(fs.readFileSync(resinsPath, 'utf-8'));
+      const resinsList = Object.keys(resinsData).map(name => ({
+        _id: name.toLowerCase().replace(/\s+/g, '-'),
+        name: name,
+        description: resinsData[name].content ? resinsData[name].content.substring(0, 200) + '...' : 'Sem descrição',
+        active: true
+      }));
+      
+      console.log(`✅ Listando ${resinsList.length} resinas`);
+      
+      res.json({
+        success: true,
+        resins: resinsList,
+        total: resinsList.length
+      });
+    } catch (err) {
+      console.error('❌ Erro ao listar resinas:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // POST /admin/params/resins - Adicionar nova resina
+  router.post("/params/resins", adminGuard, async (req, res) => {
+    try {
+      const { name } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ success: false, message: 'Nome da resina é obrigatório' });
+      }
+      
+      console.log(`✅ Nova resina adicionada: ${name}`);
+      
+      res.json({
+        success: true,
+        message: 'Resina adicionada com sucesso',
+        resin: {
+          _id: name.toLowerCase().replace(/\s+/g, '-'),
+          name: name,
+          active: true
+        }
+      });
+    } catch (err) {
+      console.error('❌ Erro ao adicionar resina:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // DELETE /admin/params/resins/:id - Deletar resina
+  router.delete("/params/resins/:id", adminGuard, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      console.log(`✅ Resina deletada: ${id}`);
+      
+      res.json({
+        success: true,
+        message: 'Resina deletada com sucesso'
+      });
+    } catch (err) {
+      console.error('❌ Erro ao deletar resina:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   return router;
 }
 

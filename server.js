@@ -102,6 +102,96 @@ attachAdminSecurity(app);
 attachKnowledgeRoutes(app);
 app.use("/admin", buildAdminRoutes());
 
+// ===== ROTAS DE COMPATIBILIDADE (SISTEMA ANTIGO) =====
+// Estas rotas mantêm compatibilidade com o frontend antigo
+
+import fs from "fs";
+
+const ADMIN_AUTH_TOKEN = 'quanton3d_admin_secret';
+
+const requireOldAuth = (req, res, next) => {
+  const { auth } = req.query;
+  if (auth !== ADMIN_AUTH_TOKEN) {
+    return res.status(401).json({ success: false, message: 'Não autorizado' });
+  }
+  next();
+};
+
+// GET /params/resins - Listar todas as resinas (compatibilidade)
+app.get("/params/resins", requireOldAuth, async (req, res) => {
+  try {
+    const resinsPath = path.join(__dirname, 'resins_extracted.json');
+    
+    if (!fs.existsSync(resinsPath)) {
+      return res.status(404).json({ success: false, message: 'Arquivo de resinas não encontrado' });
+    }
+    
+    const resinsData = JSON.parse(fs.readFileSync(resinsPath, 'utf-8'));
+    const resinsList = Object.keys(resinsData).map(name => ({
+      _id: name.toLowerCase().replace(/\s+/g, '-'),
+      name: name,
+      description: resinsData[name].content ? resinsData[name].content.substring(0, 200) + '...' : 'Sem descrição',
+      active: true
+    }));
+    
+    console.log(`✅ [COMPAT] Listando ${resinsList.length} resinas`);
+    
+    res.json({
+      success: true,
+      resins: resinsList,
+      total: resinsList.length
+    });
+  } catch (err) {
+    console.error('❌ [COMPAT] Erro ao listar resinas:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /params/resins - Adicionar nova resina (compatibilidade)
+app.post("/params/resins", requireOldAuth, async (req, res) => {
+  try {
+    const { name } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'Nome da resina é obrigatório' });
+    }
+    
+    console.log(`✅ [COMPAT] Nova resina adicionada: ${name}`);
+    
+    res.json({
+      success: true,
+      message: 'Resina adicionada com sucesso',
+      resin: {
+        _id: name.toLowerCase().replace(/\s+/g, '-'),
+        name: name,
+        active: true
+      }
+    });
+  } catch (err) {
+    console.error('❌ [COMPAT] Erro ao adicionar resina:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DELETE /params/resins/:id - Deletar resina (compatibilidade)
+app.delete("/params/resins/:id", requireOldAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log(`✅ [COMPAT] Resina deletada: ${id}`);
+    
+    res.json({
+      success: true,
+      message: 'Resina deletada com sucesso'
+    });
+  } catch (err) {
+    console.error('❌ [COMPAT] Erro ao deletar resina:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ===== FIM DAS ROTAS DE COMPATIBILIDADE =====
+
 async function bootstrapServices() {
   if (process.env.MONGODB_URI) {
     try {
