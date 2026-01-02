@@ -272,10 +272,11 @@ function buildAdminRoutes(adminConfig = {}) {
       }
       
       const resinsData = JSON.parse(fs.readFileSync(resinsPath, 'utf-8'));
-      const resinsList = Object.keys(resinsData).map(name => ({
-        _id: name.toLowerCase().replace(/\s+/g, '-'),
-        name: name,
-        description: resinsData[name].content ? resinsData[name].content.substring(0, 200) + '...' : 'Sem descrição',
+      const resinsArray = resinsData.resins || [];
+      const resinsList = resinsArray.map(resin => ({
+        _id: resin.id || resin.name.toLowerCase().replace(/\s+/g, '-'),
+        name: resin.name,
+        description: resin.sourceSheet || 'Sem descrição',
         active: true
       }));
       
