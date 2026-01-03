@@ -183,7 +183,9 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+// Montar chatRoutes em / (compatibilidade) e /api (frontend oficial)
 app.use(chatRoutes);
+app.use("/api", chatRoutes);
 attachAdminSecurity(app);
 attachKnowledgeRoutes(app);
 
