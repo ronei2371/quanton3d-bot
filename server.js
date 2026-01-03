@@ -20,6 +20,7 @@ import { chatRoutes } from "./src/routes/chatRoutes.js";
 import { buildAdminRoutes } from "./src/routes/adminRoutes.js";
 import { authRoutes, requireJWT } from "./src/routes/authRoutes.js";
 import { suggestionsRoutes } from "./src/routes/suggestionsRoutes.js";
+import { apiRoutes } from "./src/routes/apiRoutes.js";
 
 dotenv.config();
 
@@ -186,6 +187,10 @@ app.post('/api/chat', async (req, res) => {
 // Montar chatRoutes em / (compatibilidade) e /api (frontend oficial)
 app.use(chatRoutes);
 app.use("/api", chatRoutes);
+
+// Montar apiRoutes em /api (formularios, galeria, contato, etc.)
+app.use("/api", apiRoutes);
+
 attachAdminSecurity(app);
 attachKnowledgeRoutes(app);
 
