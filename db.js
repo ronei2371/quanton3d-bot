@@ -130,6 +130,16 @@ export function getPrintParametersCollection() {
   return getDb().collection('print_parameters');
 }
 
+// Obter colecao de metricas de conversas
+export function getMetricasCollection() {
+  return getDb().collection('metricas');
+}
+
+// Obter colecao de conversas
+export function getConversasCollection() {
+  return getDb().collection('conversas');
+}
+
 // Fechar conexao (para cleanup)
 export async function closeMongo() {
   if (client) {
@@ -160,6 +170,8 @@ export default {
   getSuggestionsCollection,
   getPartnersCollection,
   getPrintParametersCollection,
+  getMetricasCollection,
+  getConversasCollection,
   Parametros,
   Sugestoes,
   Conversas,

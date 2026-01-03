@@ -19,6 +19,7 @@ import attachKnowledgeRoutes from "./admin/knowledge-routes.js";
 import { chatRoutes } from "./src/routes/chatRoutes.js";
 import { buildAdminRoutes } from "./src/routes/adminRoutes.js";
 import { authRoutes, requireJWT } from "./src/routes/authRoutes.js";
+import { suggestionsRoutes } from "./src/routes/suggestionsRoutes.js";
 
 dotenv.config();
 
@@ -191,6 +192,9 @@ app.use("/auth", authRoutes);
 
 // Rotas admin (protegidas por JWT)
 app.use("/admin", buildAdminRoutes());
+
+// Rotas de sugestoes e compatibilidade admin (restauradas)
+app.use(suggestionsRoutes);
 
 // ===== ROTAS DE COMPATIBILIDADE (SISTEMA ANTIGO) =====
 // Estas rotas mantêm compatibilidade com o frontend antigo
