@@ -17,6 +17,7 @@ import { attachAdminSecurity } from "./admin/security.js";
 import attachKnowledgeRoutes from "./admin/knowledge-routes.js";
 import { chatRoutes } from "./src/routes/chatRoutes.js";
 import { buildAdminRoutes } from "./src/routes/adminRoutes.js";
+import { authRoutes, requireJWT } from "./src/routes/authRoutes.js";
 
 dotenv.config();
 
@@ -100,6 +101,11 @@ app.post('/api/chat', (req, res) => {
 app.use(chatRoutes);
 attachAdminSecurity(app);
 attachKnowledgeRoutes(app);
+
+// Rotas de autenticação (públicas)
+app.use("/auth", authRoutes);
+
+// Rotas admin (protegidas por JWT)
 app.use("/admin", buildAdminRoutes());
 
 // ===== ROTAS DE COMPATIBILIDADE (SISTEMA ANTIGO) =====
@@ -109,16 +115,25 @@ import fs from "fs";
 
 const ADMIN_AUTH_TOKEN = 'quanton3d_admin_secret';
 
-const requireOldAuth = (req, res, next) => {
-  const { auth } = req.query;
-  if (auth !== ADMIN_AUTH_TOKEN) {
-    return res.status(401).json({ success: false, message: 'Não autorizado' });
+// Middleware de autenticação: aceita tanto JWT quanto token antigo
+const requireAuth = (req, res, next) => {
+  // Tentar JWT primeiro (novo sistema)
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return requireJWT(req, res, next);
   }
-  next();
+  
+  // Fallback: token antigo via query param (compatibilidade)
+  const { auth } = req.query;
+  if (auth === ADMIN_AUTH_TOKEN) {
+    return next();
+  }
+  
+  return res.status(401).json({ success: false, message: 'Não autorizado' });
 };
 
 // GET /params/resins - Listar todas as resinas (compatibilidade)
-app.get("/params/resins", requireOldAuth, async (req, res) => {
+app.get("/params/resins", requireAuth, async (req, res) => {
   try {
     const resinsPath = path.join(__dirname, 'resins_extracted.json');
     
@@ -149,7 +164,7 @@ app.get("/params/resins", requireOldAuth, async (req, res) => {
 });
 
 // POST /params/resins - Adicionar nova resina (compatibilidade)
-app.post("/params/resins", requireOldAuth, async (req, res) => {
+app.post("/params/resins", requireAuth, async (req, res) => {
   try {
     const { name } = req.body;
     
@@ -175,7 +190,7 @@ app.post("/params/resins", requireOldAuth, async (req, res) => {
 });
 
 // DELETE /params/resins/:id - Deletar resina (compatibilidade)
-app.delete("/params/resins/:id", requireOldAuth, async (req, res) => {
+app.delete("/params/resins/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     
