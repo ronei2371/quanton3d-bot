@@ -9,6 +9,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 import { initializeRAG, checkRAGIntegrity, getRAGInfo } from "./rag-search.js";
+import { metrics } from "./src/utils/metrics.js";
 import {
   connectToMongo,
   isConnected
@@ -59,6 +60,15 @@ app.get("/health/rag", async (_req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
+});
+
+// Endpoint de metricas para monitoramento de desempenho
+app.get('/health/metrics', (_req, res) => {
+  res.json({
+    success: true,
+    metrics: metrics.getStats(),
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Respostas automáticas (Fallback se IA falhar)
