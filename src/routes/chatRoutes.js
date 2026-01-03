@@ -1,6 +1,7 @@
 import express from "express";
 import OpenAI from "openai";
 import { z } from "zod";
+import rateLimit from "express-rate-limit";
 import {
   formatContext,
   searchKnowledge
@@ -24,10 +25,33 @@ import {
 
 const router = express.Router();
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o";
-const OPENAI_TEMPERATURE = Number(process.env.OPENAI_TEMPERATURE ?? 0.1);
+const OPENAI_TEMPERATURE = Number(process.env.OPENAI_TEMPERATURE ?? 0.5);
 const openaiClient = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
+
+// Rate limiter para rota de chat - protege o orcamento da OpenAI API
+const askRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minuto
+  max: 30, // 30 requisicoes por minuto por IP
+  message: {
+    success: false,
+    error: 'Muitas requisicoes. Aguarde um momento e tente novamente.',
+    retryAfter: 60
+  },
+  standardHeaders: true, // Retorna info no header `RateLimit-*`
+  legacyHeaders: false, // Desabilita headers `X-RateLimit-*`
+  // Identificar usuario por IP
+  keyGenerator: (req) => {
+    return req.ip || req.connection?.remoteAddress || 'unknown';
+  },
+  // Permitir bypass para localhost em desenvolvimento
+  skip: (req) => {
+    const isDev = process.env.NODE_ENV === 'development';
+    const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1';
+    return isDev && isLocalhost;
+  }
+});
 
 const askParamsSchema = z.object({}).strict();
 
@@ -114,7 +138,7 @@ function limitHistoryForModel(history, limit = 16) {
   return history.slice(history.length - limit);
 }
 
-router.post("/ask", async (req, res) => {
+router.post("/ask", askRateLimiter, async (req, res) => {
   const askValidation = askRequestSchema.safeParse({ body: req.body, params: req.params });
   if (!askValidation.success) {
     return res.status(400).json({
