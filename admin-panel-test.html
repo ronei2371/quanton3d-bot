@@ -158,8 +158,10 @@
             <h3>📊 Status do Sistema</h3>
             <div id="rag-info">Carregando...</div>
             <div id="intelligence-info" style="margin-top: 15px;"></div>
+            <div id="system-metrics" style="margin-top: 15px;"></div>
             <button class="btn btn-refresh" onclick="checkRAGStatus()">Verificar RAG</button>
-            <button class="btn btn-refresh" onclick="checkIntelligenceStats()">Estatísticas IA</button>
+            <button class="btn btn-refresh" onclick="checkIntelligenceStats()">Estatisticas IA</button>
+            <button class="btn btn-refresh" onclick="checkSystemMetrics()">Metricas Sistema</button>
         </div>
 
         <div style="margin-bottom: 20px;">
@@ -264,6 +266,33 @@
             } catch (error) {
                 document.getElementById('rag-info').innerHTML = '❌ Erro de conexão';
                 console.error('Erro ao verificar RAG:', error);
+            }
+        }
+
+        // Funcao para verificar metricas do sistema (Winston)
+        async function checkSystemMetrics() {
+            try {
+                const response = await fetch(`${API_BASE}/health/metrics`);
+                const data = await response.json();
+
+                if (data.success && data.metrics) {
+                    const m = data.metrics;
+                    document.getElementById('system-metrics').innerHTML = `
+                        <strong>📈 Metricas do Sistema (Winston):</strong><br>
+                        📊 Total Requisicoes: ${m.totalRequests}<br>
+                        ❌ Total Erros: ${m.totalErrors} (${m.errorRate})<br>
+                        🔍 Buscas RAG: ${m.totalRAGSearches}<br>
+                        ✅ RAG Hits: ${m.totalRAGHits} | ❌ Misses: ${m.totalRAGMisses} (${m.ragHitRate})<br>
+                        ⏱️ Tempo Medio Resposta: ${m.averageResponseTime}ms<br>
+                        🕒 Uptime: ${m.uptime}<br>
+                        📅 Ultima Atualizacao: ${new Date(data.timestamp).toLocaleString('pt-BR')}
+                    `;
+                } else {
+                    document.getElementById('system-metrics').innerHTML = '❌ Erro ao verificar metricas do sistema';
+                }
+            } catch (error) {
+                document.getElementById('system-metrics').innerHTML = '❌ Erro de conexao com metricas';
+                console.error('Erro ao verificar metricas:', error);
             }
         }
 
@@ -478,6 +507,7 @@
                 loadSuggestions();
                 checkRAGStatus();
                 checkIntelligenceStats();
+                checkSystemMetrics();
             }
         });
     </script>
