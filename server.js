@@ -77,12 +77,75 @@ const respostasAutomaticas = {
   'default': 'Desculpe, não entendi. Posso ajudar com: produtos, preços, contato, endereço ou horário. Ou ligue: (31) 3271-6935'
 };
 
-app.post('/api/chat', (req, res) => {
+// ✅ CORREÇÃO #1: Rota /api/chat agora usa sistema RAG completo
+// Delega para a rota /ask que tem inteligência real com GPT-4o
+app.post('/api/chat', async (req, res) => {
   try {
-    const { message } = req.body;
-    const msgLower = message.toLowerCase();
+    const { message, sessionId, userName, userEmail, userPhone, resin, printer } = req.body;
     
-    // Procura palavra-chave na mensagem
+    // Validação básica
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Mensagem inválida' 
+      });
+    }
+    
+    // Gerar sessionId se não fornecido
+    const finalSessionId = sessionId || `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Preparar dados para /ask
+    const askPayload = {
+      message: message.trim(),
+      sessionId: finalSessionId,
+      userName: userName || undefined,
+      userEmail: userEmail || undefined,
+      userPhone: userPhone || undefined,
+      resin: resin || undefined,
+      printer: printer || undefined
+    };
+    
+    // Fazer requisição interna para /ask
+    const askRequest = {
+      body: askPayload,
+      params: {}
+    };
+    
+    // Criar objeto de resposta mock
+    let askResponse = null;
+    const mockRes = {
+      json: (data) => { askResponse = data; },
+      status: (code) => ({
+        json: (data) => { askResponse = { ...data, statusCode: code }; }
+      })
+    };
+    
+    // Importar e executar handler do /ask
+    const { chatRoutes } = await import('./src/routes/chatRoutes.js');
+    
+    // Simular requisição para /ask
+    const askHandler = chatRoutes.stack.find(layer => 
+      layer.route && layer.route.path === '/ask' && layer.route.methods.post
+    );
+    
+    if (askHandler) {
+      await askHandler.route.stack[0].handle(askRequest, mockRes);
+      
+      if (askResponse) {
+        // Adaptar resposta do /ask para formato do /api/chat
+        return res.json({
+          success: true,
+          response: askResponse.reply || askResponse.response,
+          sessionId: finalSessionId,
+          documentsUsed: askResponse.documentsUsed || 0,
+          historyLength: askResponse.historyLength || 1,
+          rag_enabled: true
+        });
+      }
+    }
+    
+    // Fallback se não conseguir usar /ask
+    const msgLower = message.toLowerCase();
     let resposta = respostasAutomaticas.default;
     
     for (let palavra in respostasAutomaticas) {
@@ -92,9 +155,20 @@ app.post('/api/chat', (req, res) => {
       }
     }
     
-    res.json({ response: resposta });
+    res.json({ 
+      success: true,
+      response: resposta, 
+      sessionId: finalSessionId,
+      fallback: true 
+    });
+    
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao processar mensagem' });
+    console.error('❌ [/api/chat] Erro:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Erro ao processar mensagem',
+      message: error.message 
+    });
   }
 });
 
