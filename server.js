@@ -9,6 +9,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
+import OpenAI from "openai";
 import { initializeRAG, checkRAGIntegrity, getRAGInfo } from "./rag-search.js";
 import { metrics } from "./src/utils/metrics.js";
 import {
@@ -53,6 +54,31 @@ app.get("/health", async (_req, res) => {
     res.json({ status: "ok", database: databaseStatus });
   } catch (error) {
     res.status(500).json({ status: "error", database: "error", message: error.message });
+  }
+});
+
+app.get("/health/openai", async (_req, res) => {
+  try {
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({
+        success: false,
+        message: "OPENAI_API_KEY ausente"
+      });
+    }
+
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const models = await client.models.list({ limit: 1 });
+    const sampleModel = models?.data?.[0]?.id;
+
+    return res.json({
+      success: Boolean(sampleModel),
+      model: sampleModel || null
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 });
 
