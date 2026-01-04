@@ -11,9 +11,6 @@ const JWT_EXPIRATION = '24h';
 /**
  * POST /auth/login
  * Autentica usuário e retorna JWT token
- * 
- * Body: { password: string }
- * Response: { success: true, token: string, expiresIn: string }
  */
 router.post("/login", (req, res) => {
   try {
@@ -21,6 +18,7 @@ router.post("/login", (req, res) => {
 
     // Validar senha
     if (!password) {
+      console.log('⚠️ [AUTH] Tentativa de login sem senha');
       return res.status(400).json({
         success: false,
         error: "Senha é obrigatória"
@@ -65,9 +63,6 @@ router.post("/login", (req, res) => {
 /**
  * POST /auth/verify
  * Verifica se um JWT token é válido
- * 
- * Body: { token: string }
- * Response: { success: true, valid: boolean }
  */
 router.post("/verify", (req, res) => {
   try {
@@ -76,11 +71,14 @@ router.post("/verify", (req, res) => {
     if (!token) {
       return res.json({
         success: true,
-        valid: false
+        valid: false,
+        reason: 'no_token'
       });
     }
 
     jwt.verify(token, JWT_SECRET);
+    
+    console.log('✅ [AUTH] Token válido verificado');
     
     res.json({
       success: true,
@@ -88,37 +86,37 @@ router.post("/verify", (req, res) => {
     });
 
   } catch (err) {
+    console.log('⚠️ [AUTH] Token inválido ou expirado');
     res.json({
       success: true,
-      valid: false
+      valid: false,
+      reason: 'invalid_token'
     });
   }
 });
 
 /**
  * Middleware para proteger rotas com JWT
- * Uso: router.get("/rota-protegida", requireJWT, (req, res) => {...})
  */
 export const requireJWT = (req, res, next) => {
   try {
-    // Tentar pegar token do header Authorization
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.warn('⚠️ [AUTH] Requisição sem token JWT');
       return res.status(401).json({
         success: false,
         error: "Token JWT não fornecido"
       });
     }
 
-    const token = authHeader.slice(7); // Remove "Bearer "
+    const token = authHeader.slice(7);
     
-    // Verificar token
     const decoded = jwt.verify(token, JWT_SECRET);
     
-    // Adicionar dados do usuário à requisição
     req.user = decoded;
     
+    console.log('✅ [AUTH] Requisição autenticada com sucesso');
     next();
 
   } catch (err) {
