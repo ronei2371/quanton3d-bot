@@ -436,6 +436,9 @@
           ["Exposição", params.exposureTimeS && `${params.exposureTimeS}s`],
           ["Base", params.baseExposureTimeS && `${params.baseExposureTimeS}s`],
           ["Cam. base", params.baseLayers && Math.round(params.baseLayers)],
+          ["Retardo UV", params.uvOffDelayS != null ? `${params.uvOffDelayS}s` : null],
+          ["Retardo UV base", params.uvOffDelayBaseS != null ? `${params.uvOffDelayBaseS}s` : null],
+          ["Descanso", params.restAfterLiftS != null ? `${params.restAfterLiftS}s` : params.restAfterRetractS != null ? `${params.restAfterRetractS}s` : null],
           ["UV", params.uvPower || null]
         ].filter(([, value]) => value);
 

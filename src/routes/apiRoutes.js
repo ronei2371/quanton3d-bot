@@ -5,6 +5,7 @@ import {
   getGalleryCollection,
   getSuggestionsCollection,
   getPartnersCollection,
+  getPrintParametersCollection,
   getVisualKnowledgeCollection,
   Conversas,
   isConnected
@@ -12,6 +13,7 @@ import {
 import { ensureMongoReady } from "./common.js";
 
 const router = express.Router();
+const MAX_PARAMS_PAGE_SIZE = 200;
 
 // POST /register-user - Registrar usuario do chat
 router.post("/register-user", async (req, res) => {
@@ -113,6 +115,190 @@ router.post("/contact", async (req, res) => {
       success: false,
       error: "Erro ao enviar mensagem"
     });
+  }
+});
+
+// ===== PARÂMETROS DE IMPRESSÃO (público, leitura) =====
+
+function normalizeParams(params = {}) {
+  return {
+    layerHeightMm: params.layerHeightMm ?? null,
+    exposureTimeS: params.exposureTimeS ?? null,
+    baseExposureTimeS: params.baseExposureTimeS ?? null,
+    baseLayers: params.baseLayers ?? null,
+    uvOffDelayS: params.uvOffDelayS ?? null,
+    uvOffDelayBaseS: params.uvOffDelayBaseS ?? null,
+    restBeforeLiftS: params.restBeforeLiftS ?? null,
+    restAfterLiftS: params.restAfterLiftS ?? null,
+    restAfterRetractS: params.restAfterRetractS ?? null,
+    uvPower: params.uvPower ?? null,
+    liftDistanceMm: params.liftDistanceMm ?? null,
+    retractSpeedMmS: params.retractSpeedMmS ?? null
+  };
+}
+
+function buildProfileResponse(doc) {
+  return {
+    id: doc.id,
+    resinId: doc.resinId,
+    resinName: doc.resinName,
+    printerId: doc.printerId,
+    brand: doc.brand,
+    model: doc.model,
+    params: normalizeParams(doc.params || doc.raw || {}),
+    status: doc.status || "ok",
+    updatedAt: doc.updatedAt || doc.createdAt || null
+  };
+}
+
+router.get("/params/resins", async (_req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    }
+
+    const collection = getPrintParametersCollection();
+    const resins = await collection
+      .aggregate([
+        {
+          $group: {
+            _id: "$resinId",
+            name: { $first: "$resinName" },
+            profiles: { $sum: 1 }
+          }
+        },
+        { $sort: { name: 1 } }
+      ])
+      .toArray();
+
+    res.json({
+      success: true,
+      resins: resins.map((item) => ({
+        id: item._id,
+        name: item.name,
+        profiles: item.profiles
+      }))
+    });
+  } catch (err) {
+    console.error("[API] Erro ao listar resinas de parâmetros:", err);
+    res.status(500).json({ success: false, error: "Erro ao listar resinas" });
+  }
+});
+
+router.get("/params/printers", async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    }
+
+    const { resinId } = req.query;
+    const filter = resinId ? { resinId } : {};
+    const collection = getPrintParametersCollection();
+    const printers = await collection
+      .aggregate([
+        { $match: filter },
+        {
+          $group: {
+            _id: "$printerId",
+            brand: { $first: "$brand" },
+            model: { $first: "$model" },
+            resinIds: { $addToSet: "$resinId" }
+          }
+        },
+        { $sort: { brand: 1, model: 1 } }
+      ])
+      .toArray();
+
+    res.json({
+      success: true,
+      printers: printers.map((item) => ({
+        id: item._id,
+        brand: item.brand,
+        model: item.model,
+        resinIds: item.resinIds
+      })),
+      matchingPrinters: resinId
+        ? printers.map((item) => ({
+            id: item._id,
+            brand: item.brand,
+            model: item.model,
+            resinIds: item.resinIds
+          }))
+        : undefined
+    });
+  } catch (err) {
+    console.error("[API] Erro ao listar impressoras:", err);
+    res.status(500).json({ success: false, error: "Erro ao listar impressoras" });
+  }
+});
+
+router.get("/params/profiles", async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    }
+
+    const { resinId, printerId, status } = req.query;
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limitRaw = parseInt(req.query.limit, 10);
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, MAX_PARAMS_PAGE_SIZE) : null;
+    const skip = limit ? (page - 1) * limit : 0;
+
+    const filter = {};
+    if (resinId) filter.resinId = resinId;
+    if (printerId) filter.printerId = printerId;
+    if (status) filter.status = status;
+
+    const collection = getPrintParametersCollection();
+    const total = await collection.countDocuments(filter);
+    const cursor = collection.find(filter).sort({ updatedAt: -1, createdAt: -1 });
+    if (limit) cursor.skip(skip).limit(limit);
+    const docs = await cursor.toArray();
+
+    res.json({
+      success: true,
+      total,
+      page: limit ? page : 1,
+      limit: limit || null,
+      profiles: docs.map(buildProfileResponse)
+    });
+  } catch (err) {
+    console.error("[API] Erro ao listar perfis de impressão:", err);
+    res.status(500).json({ success: false, error: "Erro ao listar perfis" });
+  }
+});
+
+router.get("/params/stats", async (_req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    }
+
+    const collection = getPrintParametersCollection();
+    const [resinAgg, printerAgg, total] = await Promise.all([
+      collection.distinct("resinId"),
+      collection.distinct("printerId"),
+      collection.countDocuments()
+    ]);
+
+    const comingSoon = await collection.countDocuments({ status: "coming_soon" });
+
+    res.json({
+      success: true,
+      stats: {
+        totalResins: resinAgg.length,
+        totalPrinters: printerAgg.length,
+        totalProfiles: total,
+        comingSoonProfiles: comingSoon
+      }
+    });
+  } catch (err) {
+    console.error("[API] Erro ao obter estatísticas de parâmetros:", err);
+    res.status(500).json({ success: false, error: "Erro ao obter estatísticas" });
   }
 });
 

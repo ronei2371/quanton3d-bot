@@ -25,7 +25,7 @@ import {
 
 const router = express.Router();
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o";
-const OPENAI_TEMPERATURE = Number(process.env.OPENAI_TEMPERATURE ?? 0.5);
+const OPENAI_TEMPERATURE = Number(process.env.OPENAI_TEMPERATURE ?? 0.2);
 const openaiClient = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
@@ -97,14 +97,22 @@ const askBodySchema = z.object({
   }).trim().min(1, "resin não pode ser vazio").max(160, "resin deve ter até 160 caracteres").nullish(),
   printer: z.string({
     invalid_type_error: "printer deve ser um texto"
-  }).trim().min(1, "printer não pode ser vazio").max(160, "printer deve ter até 160 caracteres").nullish()
+  }).trim().min(1, "printer não pode ser vazio").max(160, "printer deve ter até 160 caracteres").nullish(),
+  image: z.string({
+    invalid_type_error: "image deve ser um texto"
+  }).trim().min(1, "image não pode ser vazia").nullish(),
+  imageUrl: z.string({
+    invalid_type_error: "imageUrl deve ser um texto"
+  }).trim().url("imageUrl deve ser uma URL válida").nullish()
 }).strict().transform((body) => ({
   ...body,
   userName: body.userName ?? undefined,
   userEmail: body.userEmail ?? undefined,
   userPhone: body.userPhone ?? undefined,
   resin: body.resin ?? undefined,
-  printer: body.printer ?? undefined
+  printer: body.printer ?? undefined,
+  image: body.image ?? undefined,
+  imageUrl: body.imageUrl ?? undefined
 }));
 
 const askRequestSchema = z.object({
@@ -174,7 +182,9 @@ router.post("/ask", askRateLimiter, async (req, res) => {
     userEmail,
     userPhone,
     resin,
-    printer
+    printer,
+    image,
+    imageUrl
   } = askValidation.data.body;
 
   if (!shouldInitRAG()) {
@@ -236,13 +246,29 @@ router.post("/ask", askRateLimiter, async (req, res) => {
     }
 
     const personalization = personalizeResponse(userName, historyForModel, sentiment);
+    const isImageAnalysis = Boolean(image || imageUrl);
     const systemPromptParts = [
-      "Você é o Elios, atendente oficial da Quanton3D. Responda com cordialidade, acolhimento e precisão técnica.",
-      "Política de segurança: nunca invente parâmetros, valores comerciais ou prazos. Se o contexto não trouxer documentos, seja transparente e ofereça encaminhamento humano.",
+      "Você é o Elios, atendente oficial da Quanton3D. Seja direto, técnico e conciso (poucas linhas).",
+      "Baseie-se apenas nos 16 documentos da base de conhecimento Quanton3D; não invente dados fora desse escopo.",
+      "Política de segurança: nunca invente parâmetros, valores comerciais ou prazos. Se não houver contexto suficiente, peça detalhes ou encaminhe para atendimento humano.",
+      "Evite floreios. Priorize listas curtas ou frases objetivas focadas na solução técnica.",
+      isImageAnalysis ? "Fluxo de visão: use a imagem apenas para diagnosticar defeitos técnicos conhecidos e referenciar soluções." : "",
       intelligentContext,
       personalization ? `Personalização: ${personalization}` : "",
       knowledgeContext
     ].filter(Boolean);
+
+    const userContent = isImageAnalysis
+      ? [
+          { type: "text", text: message },
+          {
+            type: "image_url",
+            image_url: {
+              url: imageUrl || `data:image/jpeg;base64,${image}`
+            }
+          }
+        ]
+      : message;
 
     const completion = await openaiClient.chat.completions.create({
       model: OPENAI_MODEL,
@@ -250,7 +276,7 @@ router.post("/ask", askRateLimiter, async (req, res) => {
       messages: [
         { role: "system", content: systemPromptParts.join("\n\n") },
         ...historyForModel,
-        { role: "user", content: message }
+        { role: "user", content: userContent }
       ]
     });
 
@@ -275,7 +301,9 @@ router.post("/ask", askRateLimiter, async (req, res) => {
       questionType: questionType.type,
       sentiment: sentiment.sentiment,
       urgency: sentiment.urgency,
-      intelligenceMetrics
+      intelligenceMetrics,
+      isImageAnalysis,
+      imageProvided: Boolean(image || imageUrl)
     };
 
     if (existingConversation) {
