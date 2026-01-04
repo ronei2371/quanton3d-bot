@@ -15,8 +15,9 @@ async function ensureMongoReady() {
   if (!isConnected()) {
     try {
       await connectToMongo();
+      console.log('✅ [COMMON] MongoDB conectado com sucesso');
     } catch (err) {
-      console.warn("⚠️ MongoDB indisponível para rota pública:", err.message);
+      console.warn("⚠️ [COMMON] MongoDB indisponível:", err.message);
       return false;
     }
   }
