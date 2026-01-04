@@ -19,7 +19,7 @@ import { attachAdminSecurity } from "./admin/security.js";
 import attachKnowledgeRoutes from "./admin/knowledge-routes.js";
 import { chatRoutes } from "./src/routes/chatRoutes.js";
 import { buildAdminRoutes } from "./src/routes/adminRoutes.js";
-import { authRoutes } from "./src/routes/authRoutes.js";
+import { authRoutes, verifyJWT } from "./src/routes/authRoutes.js";
 import { suggestionsRoutes } from "./src/routes/suggestionsRoutes.js";
 import { apiRoutes } from "./src/routes/apiRoutes.js";
 
@@ -152,7 +152,6 @@ const requireAuth = async (req, res, next) => {
     return res.status(401).json({ success: false, message: 'Não autorizado' });
   }
 
-  const { requireJWT: verifyJWT } = await import('./src/routes/authRoutes.js');
   return verifyJWT(req, res, next);
 };
 

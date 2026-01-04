@@ -98,7 +98,7 @@ router.post("/verify", (req, res) => {
 /**
  * Middleware para proteger rotas com JWT
  */
-export const requireJWT = (req, res, next) => {
+const verifyJWT = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     
@@ -127,5 +127,8 @@ export const requireJWT = (req, res, next) => {
     });
   }
 };
+
+export const requireJWT = verifyJWT;
+export { verifyJWT };
 
 export { router as authRoutes };
