@@ -6,6 +6,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 import { initializeRAG, checkRAGIntegrity, getRAGInfo } from "./rag-search.js";
@@ -27,6 +28,11 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicDir = path.join(__dirname, "public");
+const uploadsDir = path.join(__dirname, "uploads");
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -34,6 +40,7 @@ const PORT = process.env.PORT || 10000;
 app.use(cors());
 app.use(express.json({ limit: "2mb" }));
 app.use(express.static(publicDir));
+app.use("/uploads", express.static(uploadsDir));
 
 // --- ROTAS VITAIS ---
 
@@ -137,27 +144,16 @@ app.use(suggestionsRoutes);
 
 // ===== ROTAS DE COMPATIBILIDADE =====
 
-import fs from "fs";
-
-const ADMIN_AUTH_TOKEN = 'quanton3d_admin_secret';
-
 // Middleware de autenticação simplificado
-const requireAuth = (req, res, next) => {
+const requireAuth = async (req, res, next) => {
   const authHeader = req.headers.authorization;
-  
-  // JWT via Bearer token
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const { requireJWT } = await import('./src/routes/authRoutes.js');
-    return requireJWT(req, res, next);
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Não autorizado' });
   }
-  
-  // Token legado via query
-  const { auth } = req.query;
-  if (auth === ADMIN_AUTH_TOKEN) {
-    return next();
-  }
-  
-  return res.status(401).json({ success: false, message: 'Não autorizado' });
+
+  const { requireJWT: verifyJWT } = await import('./src/routes/authRoutes.js');
+  return verifyJWT(req, res, next);
 };
 
 // ✅ CORREÇÃO #3: ROTA /resins PÚBLICA (SEM AUTH)
