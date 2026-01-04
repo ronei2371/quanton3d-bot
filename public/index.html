@@ -412,7 +412,7 @@
 
     <script>
       (() => {
-        const API_BASE = window.API_BASE_URL || "";
+        const API_BASE = (window.API_BASE_URL || "https://quanton3d-bot-v2.onrender.com").replace(/\/$/, "");
         const apiStatus = document.getElementById("api-status");
         const apiDot = document.getElementById("api-dot");
         const ragStatus = document.getElementById("rag-status");

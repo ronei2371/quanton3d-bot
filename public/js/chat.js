@@ -1,5 +1,5 @@
 // Configurações
-const API_BASE = (window.API_BASE_URL || window.location.origin || "").replace(/\/$/, "");
+const API_BASE = (window.API_BASE_URL || "https://quanton3d-bot-v2.onrender.com" || window.location.origin || "").replace(/\/$/, "");
 
 const CONFIG = {
   API_URL: `${API_BASE}/api/chat`,

@@ -109,7 +109,7 @@ app.get('/health/metrics', (_req, res) => {
 // Delega DIRETO para a rota /ask via Express (sem hacks)
 app.post('/api/chat', async (req, res, next) => {
   try {
-    const { message, sessionId, userName, userEmail, userPhone, resin, printer } = req.body;
+    const { message, sessionId, userName, userEmail, userPhone, resin, printer, image, imageUrl } = req.body;
     
     // Validação básica
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
@@ -130,7 +130,9 @@ app.post('/api/chat', async (req, res, next) => {
       userEmail: userEmail || undefined,
       userPhone: userPhone || undefined,
       resin: resin || undefined,
-      printer: printer || undefined
+      printer: printer || undefined,
+      image: image || undefined,
+      imageUrl: imageUrl || undefined
     };
     
     // ✅ Redirecionar para handler de /ask via next('route')
