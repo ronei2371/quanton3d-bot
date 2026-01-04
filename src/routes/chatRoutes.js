@@ -30,26 +30,45 @@ const openaiClient = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
 
-// Rate limiter para rota de chat - protege o orcamento da OpenAI API
+// ✅ CORREÇÃO: Rate limiter com suporte IPv6
 const askRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minuto
-  max: 30, // 30 requisicoes por minuto por IP
+  max: 30, // 30 requisições por minuto por IP
   message: {
     success: false,
-    error: 'Muitas requisicoes. Aguarde um momento e tente novamente.',
+    error: 'Muitas requisições. Aguarde um momento e tente novamente.',
     retryAfter: 60
   },
-  standardHeaders: true, // Retorna info no header `RateLimit-*`
-  legacyHeaders: false, // Desabilita headers `X-RateLimit-*`
-  // Identificar usuario por IP
-  keyGenerator: (req) => {
-    return req.ip || req.connection?.remoteAddress || 'unknown';
+  standardHeaders: true,
+  legacyHeaders: false,
+  // ✅ SOLUÇÃO: Usar helper ipKeyGenerator para IPv6
+  keyGenerator: (req, res) => {
+    // Importar helper do express-rate-limit
+    const { ipKeyGenerator } = rateLimit;
+    
+    // Tentar obter IP do request
+    const ip = req.ip || 
+               req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+               req.connection?.remoteAddress ||
+               'unknown';
+    
+    // Usar helper para normalizar IPv6
+    return ipKeyGenerator(req, res) || ip;
   },
   // Permitir bypass para localhost em desenvolvimento
   skip: (req) => {
     const isDev = process.env.NODE_ENV === 'development';
     const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1';
     return isDev && isLocalhost;
+  },
+  // ✅ ADICIONAL: Handler de erro customizado
+  handler: (req, res) => {
+    console.warn(`⚠️ [RATE-LIMIT] IP bloqueado temporariamente: ${req.ip}`);
+    res.status(429).json({
+      success: false,
+      error: 'Muitas requisições. Aguarde 1 minuto e tente novamente.',
+      retryAfter: 60
+    });
   }
 });
 
@@ -219,7 +238,7 @@ router.post("/ask", askRateLimiter, async (req, res) => {
     const personalization = personalizeResponse(userName, historyForModel, sentiment);
     const systemPromptParts = [
       "Você é o Elios, atendente oficial da Quanton3D. Responda com cordialidade, acolhimento e precisão técnica.",
-      "Politica de segurança: nunca invente parâmetros, valores comerciais ou prazos. Se o contexto não trouxer documentos, seja transparente e ofereça encaminhamento humano.",
+      "Política de segurança: nunca invente parâmetros, valores comerciais ou prazos. Se o contexto não trouxer documentos, seja transparente e ofereça encaminhamento humano.",
       intelligentContext,
       personalization ? `Personalização: ${personalization}` : "",
       knowledgeContext
