@@ -13,9 +13,9 @@ import {
 // URI do MongoDB (OBRIGATORIO via variavel de ambiente)
 const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = 'quanton3d';
-const PRINT_PARAMETERS_COLLECTION = 'print_parameters';
-const LEGACY_PARAMETERS_COLLECTION = 'parametros';
-let printParametersCollectionName = PRINT_PARAMETERS_COLLECTION;
+const PRIMARY_PARAMETERS_COLLECTION = 'parametros';
+const LEGACY_PARAMETERS_COLLECTION = 'print_parameters';
+const activeParametersCollectionName = PRIMARY_PARAMETERS_COLLECTION;
 
 if (!MONGODB_URI) {
   console.error('[MongoDB] ERRO CRITICO: Variavel de ambiente MONGODB_URI nao definida!');
@@ -70,18 +70,16 @@ export async function connectToMongo() {
       await db.createCollection('messages');
       console.log('[MongoDB] Colecao "messages" criada');
     }
-    const hasPrintParameters = collectionNames.includes(PRINT_PARAMETERS_COLLECTION);
+    const hasPrimaryParameters = collectionNames.includes(PRIMARY_PARAMETERS_COLLECTION);
     const hasLegacyParameters = collectionNames.includes(LEGACY_PARAMETERS_COLLECTION);
 
-    if (!hasPrintParameters && hasLegacyParameters) {
-      printParametersCollectionName = LEGACY_PARAMETERS_COLLECTION;
-      console.warn(`[MongoDB] Colecao legacy "${LEGACY_PARAMETERS_COLLECTION}" detectada. Usando como fonte enquanto a migracao para "${PRINT_PARAMETERS_COLLECTION}" nao acontece.`);
-    } else {
-      printParametersCollectionName = PRINT_PARAMETERS_COLLECTION;
-      if (!hasPrintParameters) {
-        await db.createCollection(PRINT_PARAMETERS_COLLECTION);
-        console.log(`[MongoDB] Colecao "${PRINT_PARAMETERS_COLLECTION}" criada`);
-      }
+    if (!hasPrimaryParameters) {
+      await db.createCollection(PRIMARY_PARAMETERS_COLLECTION);
+      console.log(`[MongoDB] Colecao \"${PRIMARY_PARAMETERS_COLLECTION}\" criada`);
+    }
+
+    if (hasLegacyParameters && !hasPrimaryParameters) {
+      console.warn(`[MongoDB] Colecao legacy \"${LEGACY_PARAMETERS_COLLECTION}\" detectada. Migre os dados para \"${PRIMARY_PARAMETERS_COLLECTION}\" imediatamente.`);
     }
 
     await ensureMongoIndexes();
@@ -141,7 +139,7 @@ export function getPartnersCollection() {
 
 // Obter colecao de parametros de impressao
 export function getPrintParametersCollection() {
-  return getDb().collection(printParametersCollectionName);
+  return getDb().collection(activeParametersCollectionName);
 }
 
 // Obter colecao de metricas de conversas

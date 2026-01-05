@@ -147,10 +147,13 @@ app.post('/api/chat', async (req, res, next) => {
 // Montar rotas de chat (contém /ask) em / e /api para compatibilidade
 app.use(chatRoutes);
 app.use("/api", chatRoutes);
+// Compatibilidade adicional para clientes que duplicam o prefixo /api
+app.use("/api/api", chatRoutes);
 
 // Montar apiRoutes em /api e também na raiz para compatibilidade com frontends legados
 app.use("/api", apiRoutes);
 app.use("/", apiRoutes);
+app.use("/api/api", apiRoutes);
 
 attachAdminSecurity(app);
 attachKnowledgeRoutes(app);
@@ -224,29 +227,34 @@ app.get("/resins", async (_req, res) => {
 });
 
 // Rotas de resinas (admin protegidas) - mantém fallback local para manutenção
-app.get("/params/resins", requireAuth, async (req, res) => {
+app.get("/params/resins", requireAuth, async (_req, res) => {
   try {
-    const resinsPath = path.join(__dirname, 'resins_extracted.json');
-    
-    if (!fs.existsSync(resinsPath)) {
-      return res.status(404).json({ success: false, message: 'Arquivo de resinas não encontrado' });
-    }
-    
-    const resinsData = JSON.parse(fs.readFileSync(resinsPath, 'utf-8'));
-    const resinsArray = resinsData.resins || [];
-    const resinsList = resinsArray.map(resin => ({
-      _id: resin.id || resin.name.toLowerCase().replace(/\s+/g, '-'),
-      name: resin.name,
-      description: resin.sourceSheet || 'Sem descrição',
-      active: true
-    }));
-    
-    console.log(`✅ [ADMIN] Listando ${resinsList.length} resinas`);
-    
+    await connectToMongo();
+    const collection = getPrintParametersCollection();
+
+    const resins = await collection
+      .aggregate([
+        {
+          $group: {
+            _id: "$resinId",
+            name: { $first: "$resinName" },
+            profiles: { $sum: 1 }
+          }
+        },
+        { $sort: { name: 1 } }
+      ])
+      .toArray();
+
     res.json({
       success: true,
-      resins: resinsList,
-      total: resinsList.length
+      resins: resins.map((item) => ({
+        _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
+        name: item.name || "Sem nome",
+        description: `Perfis cadastrados: ${item.profiles ?? 0}`,
+        profiles: item.profiles ?? 0,
+        active: true
+      })),
+      total: resins.length
     });
   } catch (err) {
     console.error('❌ [ADMIN] Erro ao listar resinas:', err);
