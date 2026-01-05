@@ -106,13 +106,11 @@ app.get('/health/metrics', (_req, res) => {
   });
 });
 
-// ✅ CORREÇÃO #1: ROTA /api/chat SIMPLIFICADA
-// Delega DIRETO para a rota /ask via Express (sem hacks)
+// ✅ Rota de compatibilidade /api/chat para delegar a /ask
 app.post('/api/chat', async (req, res, next) => {
   try {
     const { message, sessionId, userName, userEmail, userPhone, resin, printer, image, imageUrl } = req.body;
     
-    // Validação básica
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return res.status(400).json({ 
         success: false, 
@@ -120,10 +118,8 @@ app.post('/api/chat', async (req, res, next) => {
       });
     }
     
-    // Gerar sessionId se não fornecido
     const finalSessionId = sessionId || `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    // ✅ SOLUÇÃO: Reescrever body para formato esperado por /ask
     req.body = {
       message: message.trim(),
       sessionId: finalSessionId,
@@ -136,8 +132,6 @@ app.post('/api/chat', async (req, res, next) => {
       imageUrl: imageUrl || undefined
     };
     
-    // ✅ Redirecionar para handler de /ask via next('route')
-    // Express vai processar naturalmente a próxima rota que dá match
     next();
     
   } catch (error) {
@@ -154,8 +148,9 @@ app.post('/api/chat', async (req, res, next) => {
 app.use(chatRoutes);
 app.use("/api", chatRoutes);
 
-// Montar apiRoutes em /api
+// Montar apiRoutes em /api e também na raiz para compatibilidade com frontends legados
 app.use("/api", apiRoutes);
+app.use("/", apiRoutes);
 
 attachAdminSecurity(app);
 attachKnowledgeRoutes(app);
@@ -182,13 +177,12 @@ const requireAuth = async (req, res, next) => {
   return verifyJWT(req, res, next);
 };
 
-// ✅ CORREÇÃO #3: ROTA /resins PÚBLICA (SEM AUTH)
-// Frontend está chamando /resins sem autenticação
+// ✅ ROTA /resins PÚBLICA – lida diretamente do MongoDB (print_parameters)
 app.get("/resins", async (_req, res) => {
   try {
-    // ✅ Priorizar dados do Mongo (coleção print_parameters) para refletir as 459 resinas restauradas
     await connectToMongo();
     const collection = getPrintParametersCollection();
+
     const resins = await collection
       .aggregate([
         {
@@ -202,45 +196,26 @@ app.get("/resins", async (_req, res) => {
       ])
       .toArray();
 
-    if (resins.length > 0) {
-      console.log(`✅ [PUBLIC] Listando ${resins.length} resinas do MongoDB`);
-      return res.json({
-        success: true,
-        resins: resins.map((item) => ({
-          _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
-          name: item.name || "Sem nome",
-          description: `Perfis cadastrados: ${item.profiles ?? 0}`,
-          profiles: item.profiles ?? 0,
-          active: true
-        })),
-        total: resins.length
-      });
-    }
-
-    // 🔄 Fallback: usa arquivo local se o banco não tiver registros
-    const resinsPath = path.join(__dirname, "resins_extracted.json");
-    if (!fs.existsSync(resinsPath)) {
+    if (!resins || resins.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "Nenhuma resina encontrada no MongoDB ou arquivo local"
+        message: "Nenhuma resina encontrada no MongoDB"
       });
     }
 
-    const resinsData = JSON.parse(fs.readFileSync(resinsPath, "utf-8"));
-    const resinsArray = resinsData.resins || [];
-    const resinsList = resinsArray.map((resin) => ({
-      _id: resin.id || resin.name.toLowerCase().replace(/\s+/g, "-"),
-      name: resin.name,
-      description: resin.sourceSheet || "Sem descrição",
-      active: true
-    }));
-
-    console.log(`✅ [PUBLIC] Listando ${resinsList.length} resinas (fallback arquivo)`);
+    console.log(`✅ [PUBLIC] Listando ${resins.length} resinas do MongoDB`);
 
     res.json({
       success: true,
-      resins: resinsList,
-      total: resinsList.length
+      resins: resins.map((item) => ({
+        _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
+        name: item.name || "Sem nome",
+        description: `Perfis cadastrados: ${item.profiles ?? 0}`,
+        profiles: item.profiles ?? 0,
+        active: true
+      })),
+      total: resins.length,
+      source: "mongo"
     });
   } catch (err) {
     console.error("❌ [PUBLIC] Erro ao listar resinas:", err);
@@ -248,7 +223,7 @@ app.get("/resins", async (_req, res) => {
   }
 });
 
-// Rotas de resinas (admin protegidas)
+// Rotas de resinas (admin protegidas) - mantém fallback local para manutenção
 app.get("/params/resins", requireAuth, async (req, res) => {
   try {
     const resinsPath = path.join(__dirname, 'resins_extracted.json');
