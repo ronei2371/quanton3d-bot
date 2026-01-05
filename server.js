@@ -39,7 +39,23 @@ if (!fs.existsSync(uploadsDir)) {
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-app.use(cors());
+const allowedOrigins = [
+  "https://quanton3dia.onrender.com",
+  process.env.CORS_ORIGIN,
+  process.env.ADMIN_PANEL_ORIGIN,
+  process.env.FRONTEND_ORIGIN
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true
+  })
+);
 app.use(express.json({ limit: "2mb" }));
 app.use(express.static(publicDir));
 app.use("/uploads", express.static(uploadsDir));
@@ -145,7 +161,7 @@ app.post('/api/chat', async (req, res, next) => {
 });
 
 // Montar rotas de chat (contém /ask) em / e /api para compatibilidade
-app.use(chatRoutes);
+app.use("/", chatRoutes);
 app.use("/api", chatRoutes);
 // Compatibilidade adicional para clientes que duplicam o prefixo /api
 app.use("/api/api", chatRoutes);
