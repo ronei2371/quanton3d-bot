@@ -14,7 +14,8 @@ import { initializeRAG, checkRAGIntegrity, getRAGInfo } from "./rag-search.js";
 import { metrics } from "./src/utils/metrics.js";
 import {
   connectToMongo,
-  isConnected
+  isConnected,
+  getPrintParametersCollection
 } from "./db.js";
 import { attachAdminSecurity } from "./admin/security.js";
 import attachKnowledgeRoutes from "./admin/knowledge-routes.js";
@@ -149,14 +150,13 @@ app.post('/api/chat', async (req, res, next) => {
   }
 });
 
-// Montar rotas de chat (contém /ask)
+// Montar rotas de chat (contém /ask) em / e /api para compatibilidade
 app.use(chatRoutes);
+app.use("/api", chatRoutes);
 
-// ✅ CORREÇÃO #2: REMOVER DUPLICAÇÃO
-// app.use("/api", chatRoutes); // ❌ REMOVIDO - causava conflito
-
-// Montar apiRoutes em /api
+// Montar apiRoutes em /api e também na raiz para compatibilidade com frontends legados
 app.use("/api", apiRoutes);
+app.use("/", apiRoutes);
 
 attachAdminSecurity(app);
 attachKnowledgeRoutes(app);
@@ -185,35 +185,76 @@ const requireAuth = async (req, res, next) => {
 
 // ✅ CORREÇÃO #3: ROTA /resins PÚBLICA (SEM AUTH)
 // Frontend está chamando /resins sem autenticação
-app.get("/resins", async (req, res) => {
+app.get("/resins", async (_req, res) => {
   try {
-    const resinsPath = path.join(__dirname, 'resins_extracted.json');
-    
-    if (!fs.existsSync(resinsPath)) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Arquivo de resinas não encontrado' 
+    let resins = [];
+    let usedMongo = false;
+
+    try {
+      // ✅ Priorizar dados do Mongo (coleção print_parameters) para refletir as 459 resinas restauradas
+      await connectToMongo();
+      const collection = getPrintParametersCollection();
+      resins = await collection
+        .aggregate([
+          {
+            $group: {
+              _id: "$resinId",
+              name: { $first: "$resinName" },
+              profiles: { $sum: 1 }
+            }
+          },
+          { $sort: { name: 1 } }
+        ])
+        .toArray();
+      usedMongo = resins.length > 0;
+    } catch (err) {
+      console.warn("⚠️ [PUBLIC] Falha ao ler resinas do MongoDB, usando fallback local:", err.message);
+    }
+
+    if (usedMongo) {
+      console.log(`✅ [PUBLIC] Listando ${resins.length} resinas do MongoDB`);
+      return res.json({
+        success: true,
+        resins: resins.map((item) => ({
+          _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
+          name: item.name || "Sem nome",
+          description: `Perfis cadastrados: ${item.profiles ?? 0}`,
+          profiles: item.profiles ?? 0,
+          active: true
+        })),
+        total: resins.length,
+        source: "mongo"
       });
     }
-    
-    const resinsData = JSON.parse(fs.readFileSync(resinsPath, 'utf-8'));
+
+    // 🔄 Fallback: usa arquivo local se o banco não tiver registros ou se a conexão falhar
+    const resinsPath = path.join(__dirname, "resins_extracted.json");
+    if (!fs.existsSync(resinsPath)) {
+      return res.status(404).json({
+        success: false,
+        message: "Nenhuma resina encontrada no MongoDB ou arquivo local"
+      });
+    }
+
+    const resinsData = JSON.parse(fs.readFileSync(resinsPath, "utf-8"));
     const resinsArray = resinsData.resins || [];
-    const resinsList = resinsArray.map(resin => ({
-      _id: resin.id || resin.name.toLowerCase().replace(/\s+/g, '-'),
+    const resinsList = resinsArray.map((resin) => ({
+      _id: resin.id || resin.name.toLowerCase().replace(/\s+/g, "-"),
       name: resin.name,
-      description: resin.sourceSheet || 'Sem descrição',
+      description: resin.sourceSheet || "Sem descrição",
       active: true
     }));
-    
-    console.log(`✅ [PUBLIC] Listando ${resinsList.length} resinas`);
-    
+
+    console.log(`✅ [PUBLIC] Listando ${resinsList.length} resinas (fallback arquivo)`);
+
     res.json({
       success: true,
       resins: resinsList,
-      total: resinsList.length
+      total: resinsList.length,
+      source: "file"
     });
   } catch (err) {
-    console.error('❌ [PUBLIC] Erro ao listar resinas:', err);
+    console.error("❌ [PUBLIC] Erro ao listar resinas:", err);
     res.status(500).json({ success: false, error: err.message });
   }
 });

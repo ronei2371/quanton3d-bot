@@ -79,10 +79,10 @@ const askBodySchema = z.object({
     required_error: "message é obrigatório",
     invalid_type_error: "message deve ser um texto"
   }).trim().min(1, "message é obrigatório"),
+  // ✅ Permitir que o front não envie sessionId e gerar um automaticamente
   sessionId: z.string({
-    required_error: "sessionId é obrigatório",
     invalid_type_error: "sessionId deve ser um texto"
-  }).trim().min(1, "sessionId é obrigatório"),
+  }).trim().min(1, "sessionId é obrigatório").optional(),
   userName: z.string({
     invalid_type_error: "userName deve ser um texto"
   }).trim().min(1, "userName não pode ser vazio").max(120, "userName deve ter até 120 caracteres").nullish(),
@@ -106,6 +106,7 @@ const askBodySchema = z.object({
   }).trim().url("imageUrl deve ser uma URL válida").nullish()
 }).strict().transform((body) => ({
   ...body,
+  sessionId: body.sessionId || `chat-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
   userName: body.userName ?? undefined,
   userEmail: body.userEmail ?? undefined,
   userPhone: body.userPhone ?? undefined,
@@ -165,7 +166,7 @@ function limitHistoryForModel(history, limit = 16) {
   return history.slice(history.length - limit);
 }
 
-router.post("/ask", askRateLimiter, async (req, res) => {
+const handleAsk = async (req, res) => {
   const askValidation = askRequestSchema.safeParse({ body: req.body, params: req.params });
   if (!askValidation.success) {
     return res.status(400).json({
@@ -353,6 +354,11 @@ router.post("/ask", askRateLimiter, async (req, res) => {
       fallback: true
     });
   }
-});
+};
+
+// ✅ Rota oficial
+router.post("/ask", askRateLimiter, handleAsk);
+// ✅ Alias para /api/chat (compatibilidade com frontend)
+router.post("/chat", askRateLimiter, handleAsk);
 
 export { router as chatRoutes };
