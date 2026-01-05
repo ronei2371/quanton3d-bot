@@ -67,9 +67,9 @@ export async function connectToMongo() {
       await db.createCollection('messages');
       console.log('[MongoDB] Colecao "messages" criada');
     }
-    if (!collectionNames.includes('print_parameters')) {
-      await db.createCollection('print_parameters');
-      console.log('[MongoDB] Colecao "print_parameters" criada');
+    if (!collectionNames.includes('parametros')) {
+      await db.createCollection('parametros');
+      console.log('[MongoDB] Colecao "parametros" criada');
     }
 
     await ensureMongoIndexes();
@@ -129,7 +129,7 @@ export function getPartnersCollection() {
 
 // Obter colecao de parametros de impressao
 export function getPrintParametersCollection() {
-  return getDb().collection('print_parameters');
+  return getDb().collection('parametros');
 }
 
 // Obter colecao de metricas de conversas

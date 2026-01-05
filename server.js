@@ -177,7 +177,7 @@ const requireAuth = async (req, res, next) => {
   return verifyJWT(req, res, next);
 };
 
-// ✅ ROTA /resins PÚBLICA – lida diretamente do MongoDB (print_parameters)
+// ✅ ROTA /resins PÚBLICA – lida diretamente do MongoDB (parametros)
 app.get("/resins", async (_req, res) => {
   try {
     await connectToMongo();
