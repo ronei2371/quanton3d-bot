@@ -15,7 +15,7 @@ const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = 'quanton3d';
 const PRIMARY_PARAMETERS_COLLECTION = 'parametros';
 const LEGACY_PARAMETERS_COLLECTION = 'print_parameters';
-const activeParametersCollectionName = PRIMARY_PARAMETERS_COLLECTION;
+let activeParametersCollectionName = PRIMARY_PARAMETERS_COLLECTION;
 
 if (!MONGODB_URI) {
   console.error('[MongoDB] ERRO CRITICO: Variavel de ambiente MONGODB_URI nao definida!');
@@ -78,8 +78,55 @@ export async function connectToMongo() {
       console.log(`[MongoDB] Colecao \"${PRIMARY_PARAMETERS_COLLECTION}\" criada`);
     }
 
-    if (hasLegacyParameters && !hasPrimaryParameters) {
-      console.warn(`[MongoDB] Colecao legacy \"${LEGACY_PARAMETERS_COLLECTION}\" detectada. Migre os dados para \"${PRIMARY_PARAMETERS_COLLECTION}\" imediatamente.`);
+    if (hasLegacyParameters) {
+      const legacyCollection = db.collection(LEGACY_PARAMETERS_COLLECTION);
+      const primaryCollection = db.collection(PRIMARY_PARAMETERS_COLLECTION);
+      const [legacyCount, primaryCount] = await Promise.all([
+        legacyCollection.countDocuments(),
+        primaryCollection.countDocuments()
+      ]);
+
+      if (primaryCount === 0 && legacyCount > 0) {
+        try {
+          console.warn(`[MongoDB] Colecao legacy \"${LEGACY_PARAMETERS_COLLECTION}\" detectada com dados. Migrando para \"${PRIMARY_PARAMETERS_COLLECTION}\"...`);
+          const legacyDocs = await legacyCollection.find({}).toArray();
+          const operations = legacyDocs.map(doc => {
+            const { _id, ...rest } = doc;
+            const filter = doc.id != null ? { id: doc.id } : { _id };
+            return {
+              updateOne: {
+                filter,
+                update: {
+                  $set: {
+                    ...rest,
+                    migratedFrom: LEGACY_PARAMETERS_COLLECTION,
+                    migratedAt: new Date()
+                  }
+                },
+                upsert: true
+              }
+            };
+          });
+
+          if (operations.length > 0) {
+            const result = await primaryCollection.bulkWrite(operations, { ordered: false });
+            const migrated = result.upsertedCount || 0;
+            console.log(`[MongoDB] Migracao concluida: ${migrated}/${operations.length} registros inseridos/atualizados em \"${PRIMARY_PARAMETERS_COLLECTION}\".`);
+          }
+        } catch (err) {
+          console.warn(`[MongoDB] Falha ao migrar dados de \"${LEGACY_PARAMETERS_COLLECTION}\" para \"${PRIMARY_PARAMETERS_COLLECTION}\": ${err.message}`);
+        }
+      }
+
+      const primaryCountAfter = await db.collection(PRIMARY_PARAMETERS_COLLECTION).countDocuments();
+      if (primaryCountAfter === 0 && legacyCount > 0) {
+        activeParametersCollectionName = LEGACY_PARAMETERS_COLLECTION;
+        console.warn(`[MongoDB] Usando colecao legacy \"${LEGACY_PARAMETERS_COLLECTION}\" para parametros ate que a migracao seja concluida.`);
+      } else {
+        activeParametersCollectionName = PRIMARY_PARAMETERS_COLLECTION;
+      }
+    } else {
+      activeParametersCollectionName = PRIMARY_PARAMETERS_COLLECTION;
     }
 
     await ensureMongoIndexes();
