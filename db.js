@@ -80,6 +80,7 @@ export async function connectToMongo() {
     throw err;
   }
 }
+
 // Coleção para dados de aprendizado
 export function getLearningCollection() {
   if (!db) {
@@ -87,6 +88,7 @@ export function getLearningCollection() {
   }
   return db.collection('learning');
 }
+
 // Obter instancia do banco de dados
 export function getDb() {
   if (!db) {
