@@ -176,6 +176,13 @@ export async function connectToMongo(forceReconnect = false) {
   await ensureMongoIndexes();
 
   const collectionNames = await listCollectionNames();
+
+  if (!collectionNames.includes('parametros')) {
+    await db.createCollection('parametros');
+    console.log('[MongoDB] Colecao "parametros" criada');
+    collectionNames.push('parametros');
+  }
+
   console.log(`[MongoDB] Conectado! Colecoes existentes: ${collectionNames.join(', ') || 'nenhuma'}`);
 
   return db;
