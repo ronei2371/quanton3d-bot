@@ -9,7 +9,8 @@ import {
   clearKnowledgeCollection
 } from "../../rag-search.js";
 import {
-  getDocumentsCollection
+  getDocumentsCollection,
+  getPrintParametersCollection
 } from "../../db.js";
 import {
   ensureMongoReady,
@@ -264,24 +265,35 @@ function buildAdminRoutes(adminConfig = {}) {
   // GET /admin/params/resins - Listar todas as resinas
   router.get("/params/resins", adminGuard, async (req, res) => {
     try {
-      // Ler arquivo de resinas
-      const resinsPath = path.join(rootDir, 'resins_extracted.json');
-      
-      if (!fs.existsSync(resinsPath)) {
-        return res.status(404).json({ success: false, message: 'Arquivo de resinas não encontrado' });
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, message: "MongoDB não conectado" });
       }
-      
-      const resinsData = JSON.parse(fs.readFileSync(resinsPath, 'utf-8'));
-      const resinsArray = resinsData.resins || [];
-      const resinsList = resinsArray.map(resin => ({
-        _id: resin.id || resin.name.toLowerCase().replace(/\s+/g, '-'),
-        name: resin.name,
-        description: resin.sourceSheet || 'Sem descrição',
+
+      const collection = getPrintParametersCollection();
+      const resins = await collection
+        .aggregate([
+          {
+            $group: {
+              _id: "$resinId",
+              name: { $first: "$resinName" },
+              profiles: { $sum: 1 }
+            }
+          },
+          { $sort: { name: 1 } }
+        ])
+        .toArray();
+
+      const resinsList = resins.map((resin) => ({
+        _id: resin._id || resin.name?.toLowerCase().replace(/\s+/g, "-"),
+        name: resin.name || "Sem nome",
+        description: `Perfis cadastrados: ${resin.profiles ?? 0}`,
+        profiles: resin.profiles ?? 0,
         active: true
       }));
-      
-      console.log(`✅ Listando ${resinsList.length} resinas`);
-      
+
+      console.log(`✅ [ADMIN] Listando ${resinsList.length} resinas do MongoDB`);
+
       res.json({
         success: true,
         resins: resinsList,
