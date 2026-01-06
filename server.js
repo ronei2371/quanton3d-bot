@@ -10,6 +10,9 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 import OpenAI from "openai";
+import rateLimit from "express-rate-limit";
+import swaggerUi from "swagger-ui-express";
+import * as Sentry from "@sentry/node";
 import { initializeRAG, checkRAGIntegrity, getRAGInfo } from "./rag-search.js";
 import { metrics } from "./src/utils/metrics.js";
 import {
@@ -24,6 +27,8 @@ import { buildAdminRoutes } from "./src/routes/adminRoutes.js";
 import { authRoutes, verifyJWT } from "./src/routes/authRoutes.js";
 import { suggestionsRoutes } from "./src/routes/suggestionsRoutes.js";
 import { apiRoutes } from "./src/routes/apiRoutes.js";
+import { swaggerSpec } from "./src/docs/swagger.js";
+import { notifyBootstrapError } from "./src/utils/notifications.js";
 
 dotenv.config();
 
@@ -36,13 +41,47 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    tracesSampleRate: 0.1
+  });
+}
+
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-app.use(cors());
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean)
+  : ["https://seu-site.com"];
+
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: "2mb" }));
 app.use(express.static(publicDir));
 app.use("/uploads", express.static(uploadsDir));
+
+// Rate limiting para rotas sensíveis
+const sensitiveLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "Muitas requisições. Tente novamente mais tarde." }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "Muitas tentativas de autenticação. Aguarde alguns minutos." }
+});
+
+app.use("/auth", authLimiter);
+app.use(["/admin", "/api/admin", "/api/chat", "/chat"], sensitiveLimiter);
+
+// Swagger UI
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // --- ROTAS VITAIS ---
 
@@ -174,7 +213,7 @@ const requireAuth = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, message: 'Não autorizado' });
+    return res.status(401).json({ error: 'Token inválido' });
   }
 
   return verifyJWT(req, res, next);
@@ -309,6 +348,7 @@ async function bootstrapServices() {
       await connectToMongo();
     } catch (error) {
       console.warn("[boot] Falha ao conectar ao MongoDB:", error.message);
+      notifyBootstrapError(error, "mongodb");
     }
   }
 
@@ -317,6 +357,7 @@ async function bootstrapServices() {
       await initializeRAG();
     } catch (error) {
       console.warn("[boot] Falha ao inicializar o RAG:", error.message);
+      notifyBootstrapError(error, "rag");
     }
   }
 }

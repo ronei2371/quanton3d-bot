@@ -7,6 +7,7 @@ const router = express.Router();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'rmartins1201';
 const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton3d_jwt_secret_key_2025';
 const JWT_EXPIRATION = '24h';
+const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
 
 /**
  * POST /auth/login
@@ -99,32 +100,23 @@ router.post("/verify", (req, res) => {
  * Middleware para proteger rotas com JWT
  */
 const verifyJWT = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.warn('⚠️ [AUTH] Requisição sem token JWT');
+    return res.status(401).json(INVALID_TOKEN_RESPONSE);
+  }
+
+  const token = authHeader.slice(7);
+
   try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.warn('⚠️ [AUTH] Requisição sem token JWT');
-      return res.status(401).json({
-        success: false,
-        error: "Token JWT não fornecido"
-      });
-    }
-
-    const token = authHeader.slice(7);
-    
     const decoded = jwt.verify(token, JWT_SECRET);
-    
     req.user = decoded;
-    
     console.log('✅ [AUTH] Requisição autenticada com sucesso');
-    next();
-
+    return next();
   } catch (err) {
     console.error('❌ [AUTH] Token inválido:', err.message);
-    return res.status(401).json({
-      success: false,
-      error: "Token JWT inválido ou expirado"
-    });
+    return res.status(401).json(INVALID_TOKEN_RESPONSE);
   }
 };
 

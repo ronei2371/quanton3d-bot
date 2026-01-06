@@ -1,7 +1,6 @@
 // Modulo de conexao com MongoDB
-// Gerencia conexao unica com o banco de dados
+// Gerencia conexao unica com o banco de dados usando apenas Mongoose
 
-import { MongoClient } from 'mongodb';
 import mongoose from 'mongoose';
 import {
   Parametros,
@@ -16,79 +15,171 @@ const DB_NAME = 'quanton3d';
 const PRIMARY_PARAMETERS_COLLECTION = 'parametros';
 const LEGACY_PARAMETERS_COLLECTION = 'print_parameters';
 const activeParametersCollectionName = PRIMARY_PARAMETERS_COLLECTION;
+const connectionOptions = {
+  dbName: DB_NAME,
+  serverSelectionTimeoutMS: 5000,
+  maxPoolSize: 10
+};
 
 if (!MONGODB_URI) {
   console.error('[MongoDB] ERRO CRITICO: Variavel de ambiente MONGODB_URI nao definida!');
   console.error('[MongoDB] Configure MONGODB_URI no Render ou no arquivo .env');
 }
 
-let client = null;
 let db = null;
-let mongooseConnected = false;
+let connectingPromise = null;
+let eventsBound = false;
+let migrationExecuted = false;
 
 async function ensureMongoIndexes() {
   try {
-    await Parametros.createIndexes();
-    await Sugestoes.createIndexes();
-    await Conversas.createIndexes();
-    await Metricas.createIndexes();
+    await Promise.all([
+      Parametros.createIndexes(),
+      Sugestoes.createIndexes(),
+      Conversas.createIndexes(),
+      Metricas.createIndexes()
+    ]);
     console.log('[MongoDB] Indices garantidos para Parametros, Sugestoes, Conversas e Metricas');
   } catch (err) {
     console.warn('[MongoDB] Falha ao criar indices:', err.message);
   }
 }
 
-// Conectar ao MongoDB
-export async function connectToMongo() {
-  if (db) {
-    console.log('[MongoDB] Conexao ja estabelecida');
+async function createCollectionIfMissing(name, existingNames) {
+  const normalizedExisting = existingNames || await listCollectionNames();
+  if (normalizedExisting.includes(name)) {
+    return false;
+  }
+  await mongoose.connection.db.createCollection(name);
+  console.log(`[MongoDB] Colecao "${name}" criada`);
+  return true;
+}
+
+async function listCollectionNames() {
+  const collections = await mongoose.connection.db.listCollections().toArray();
+  return collections.map((c) => c.name);
+}
+
+async function migrateLegacyPrintParameters(collectionNames) {
+  if (migrationExecuted) return;
+
+  const names = collectionNames || await listCollectionNames();
+  const hasLegacy = names.includes(LEGACY_PARAMETERS_COLLECTION);
+
+  if (!hasLegacy) {
+    migrationExecuted = true;
+    return;
+  }
+
+  const primaryCollection = mongoose.connection.collection(PRIMARY_PARAMETERS_COLLECTION);
+  const legacyCollection = mongoose.connection.collection(LEGACY_PARAMETERS_COLLECTION);
+
+  const legacyCount = await legacyCollection.countDocuments();
+  if (legacyCount === 0) {
+    await legacyCollection.drop();
+    console.log(`[MongoDB] Colecao legacy "${LEGACY_PARAMETERS_COLLECTION}" vazia removida`);
+    migrationExecuted = true;
+    return;
+  }
+
+  console.warn(`[MongoDB] Migrando ${legacyCount} documentos da colecao legacy "${LEGACY_PARAMETERS_COLLECTION}" para "${PRIMARY_PARAMETERS_COLLECTION}"...`);
+
+  const cursor = legacyCollection.find();
+  let migrated = 0;
+
+  // Usar upsert idempotente para evitar duplicacoes em ambientes distribuidos
+  while (await cursor.hasNext()) {
+    const doc = await cursor.next();
+    const { _id, ...rest } = doc;
+    await primaryCollection.updateOne(
+      {
+        resinId: doc.resinId,
+        profileId: doc.profileId || _id,
+        resinName: doc.resinName
+      },
+      {
+        $setOnInsert: rest
+      },
+      { upsert: true }
+    );
+    migrated++;
+  }
+
+  await legacyCollection.drop();
+  console.log(`[MongoDB] Migracao concluida. ${migrated} documentos movidos e colecao legacy removida.`);
+  migrationExecuted = true;
+}
+
+async function ensureCollections() {
+  const collectionNames = await listCollectionNames();
+  const requiredCollections = [
+    'documents',
+    'messages',
+    'gallery',
+    'visual_knowledge',
+    'suggestions',
+    'partners',
+    'metricas',
+    'conversas',
+    PRIMARY_PARAMETERS_COLLECTION
+  ];
+
+  for (const collection of requiredCollections) {
+    await createCollectionIfMissing(collection, collectionNames);
+  }
+
+  await migrateLegacyPrintParameters(collectionNames);
+}
+
+function bindConnectionEvents() {
+  if (eventsBound) return;
+
+  eventsBound = true;
+
+  mongoose.connection.on('disconnected', async () => {
+    console.warn('[MongoDB] Conexao perdida. Tentando reconectar...');
+    try {
+      await connectToMongo(true);
+    } catch (err) {
+      console.error('[MongoDB] Falha ao reconectar:', err.message);
+    }
+  });
+
+  mongoose.connection.on('reconnected', () => {
+    console.log('[MongoDB] Reconectado ao MongoDB');
+  });
+
+  mongoose.connection.on('error', (err) => {
+    console.error('[MongoDB] Erro de conexao:', err.message);
+  });
+}
+
+// Conectar ao MongoDB usando somente Mongoose
+export async function connectToMongo(forceReconnect = false) {
+  if (db && !forceReconnect) {
     return db;
   }
 
-  try {
-    console.log('[MongoDB] Conectando ao banco de dados...');
-    if (!mongooseConnected) {
-      await mongoose.connect(MONGODB_URI, { dbName: DB_NAME });
-      mongooseConnected = true;
-      console.log('[MongoDB] Conexao Mongoose estabelecida');
-    }
-    client = new MongoClient(MONGODB_URI);
-    await client.connect();
-    db = client.db(DB_NAME);
-    
-    // Verificar colecoes existentes
-    const collections = await db.listCollections().toArray();
-    const collectionNames = collections.map(c => c.name);
-    console.log(`[MongoDB] Conectado! Colecoes existentes: ${collectionNames.join(', ') || 'nenhuma'}`);
-    
-    // Criar colecoes se nao existirem
-    if (!collectionNames.includes('documents')) {
-      await db.createCollection('documents');
-      console.log('[MongoDB] Colecao "documents" criada');
-    }
-    if (!collectionNames.includes('messages')) {
-      await db.createCollection('messages');
-      console.log('[MongoDB] Colecao "messages" criada');
-    }
-    const hasPrimaryParameters = collectionNames.includes(PRIMARY_PARAMETERS_COLLECTION);
-    const hasLegacyParameters = collectionNames.includes(LEGACY_PARAMETERS_COLLECTION);
-
-    if (!hasPrimaryParameters) {
-      await db.createCollection(PRIMARY_PARAMETERS_COLLECTION);
-      console.log(`[MongoDB] Colecao \"${PRIMARY_PARAMETERS_COLLECTION}\" criada`);
-    }
-
-    if (hasLegacyParameters && !hasPrimaryParameters) {
-      console.warn(`[MongoDB] Colecao legacy \"${LEGACY_PARAMETERS_COLLECTION}\" detectada. Migre os dados para \"${PRIMARY_PARAMETERS_COLLECTION}\" imediatamente.`);
-    }
-
-    await ensureMongoIndexes();
-    
-    return db;
-  } catch (err) {
-    console.error('[MongoDB] Erro ao conectar:', err.message);
-    throw err;
+  if (!MONGODB_URI) {
+    throw new Error('[MongoDB] MONGODB_URI nao definido');
   }
+
+  bindConnectionEvents();
+
+  if (!connectingPromise || forceReconnect) {
+    connectingPromise = mongoose.connect(MONGODB_URI, connectionOptions);
+  }
+
+  await connectingPromise;
+  db = mongoose.connection.db;
+
+  await ensureCollections();
+  await ensureMongoIndexes();
+
+  const collectionNames = await listCollectionNames();
+  console.log(`[MongoDB] Conectado! Colecoes existentes: ${collectionNames.join(', ') || 'nenhuma'}`);
+
+  return db;
 }
 
 // Coleção para dados de aprendizado
@@ -96,7 +187,7 @@ export function getLearningCollection() {
   if (!db) {
     throw new Error('Banco de dados nao conectado');
   }
-  return db.collection('learning');
+  return mongoose.connection.collection('learning');
 }
 
 // Obter instancia do banco de dados
@@ -107,69 +198,72 @@ export function getDb() {
   return db;
 }
 
+function getCollection(name) {
+  if (!db) {
+    throw new Error('[MongoDB] Banco de dados nao conectado. Chame connectToMongo() primeiro.');
+  }
+  return mongoose.connection.collection(name);
+}
+
 // Obter colecao de documentos (RAG)
 export function getDocumentsCollection() {
-  return getDb().collection('documents');
+  return getCollection('documents');
 }
 
 // Obter colecao de mensagens (Fale Conosco)
 export function getMessagesCollection() {
-  return getDb().collection('messages');
+  return getCollection('messages');
 }
 
 // Obter colecao de galeria (Fotos de impressoes)
 export function getGalleryCollection() {
-  return getDb().collection('gallery');
+  return getCollection('gallery');
 }
 
 // Obter colecao de conhecimento visual (Visual RAG)
 export function getVisualKnowledgeCollection() {
-  return getDb().collection('visual_knowledge');
+  return getCollection('visual_knowledge');
 }
 
 // Obter colecao de sugestoes de conhecimento
 export function getSuggestionsCollection() {
-  return getDb().collection('suggestions');
+  return getCollection('suggestions');
 }
 
 // Obter colecao de parceiros
 export function getPartnersCollection() {
-  return getDb().collection('partners');
+  return getCollection('partners');
 }
 
 // Obter colecao de parametros de impressao
 export function getPrintParametersCollection() {
-  return getDb().collection(activeParametersCollectionName);
+  return getCollection(activeParametersCollectionName);
 }
 
 // Obter colecao de metricas de conversas
 export function getMetricasCollection() {
-  return getDb().collection('metricas');
+  return getCollection('metricas');
 }
 
 // Obter colecao de conversas
 export function getConversasCollection() {
-  return getDb().collection('conversas');
+  return getCollection('conversas');
 }
 
 // Fechar conexao (para cleanup)
 export async function closeMongo() {
-  if (client) {
-    await client.close();
-    client = null;
-    db = null;
-    console.log('[MongoDB] Conexao fechada');
-  }
-  if (mongooseConnected) {
+  if (mongoose.connection.readyState !== 0) {
     await mongoose.disconnect();
-    mongooseConnected = false;
+    db = null;
+    connectingPromise = null;
+    migrationExecuted = false;
     console.log('[MongoDB] Conexao Mongoose fechada');
   }
 }
 
 // Verificar status da conexao
 export function isConnected() {
-  return db !== null;
+  return mongoose.connection.readyState === 1;
 }
 
 export default {

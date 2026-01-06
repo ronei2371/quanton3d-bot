@@ -2,7 +2,9 @@
 // VERSAO MONGODB - Usa text-embedding-3-large da OpenAI e MongoDB para persistencia
 // Busca conhecimento relevante para melhorar respostas do bot
 
+import fs from 'fs';
 import OpenAI from 'openai';
+import winston from 'winston';
 import { getDocumentsCollection, getVisualKnowledgeCollection, isConnected } from './db.js';
 import { rerankDocuments } from './scripts/rag-reranker.js';
 
@@ -10,10 +12,35 @@ import { rerankDocuments } from './scripts/rag-reranker.js';
 const EMBEDDING_MODEL = 'text-embedding-3-large';
 const EMBEDDING_DIMENSIONS = 3072; // Dimensao do text-embedding-3-large
 
-// Limiar minimo de relevancia para considerar um documento util
-// Documentos com similaridade abaixo deste valor serao ignorados
-// NOTA: Ajustado para 0.65 para reduzir quedas frequentes de contexto (menos alucinacoes)
-const MIN_RELEVANCE_THRESHOLD = 0.65;
+// Limiar minimo de relevancia para considerar um documento util (configuravel)
+const ENV_RELEVANCE = Number(process.env.RAG_MIN_RELEVANCE ?? 0.65);
+const MIN_RELEVANCE_THRESHOLD =
+  Number.isFinite(ENV_RELEVANCE) && ENV_RELEVANCE > 0 && ENV_RELEVANCE < 1
+    ? ENV_RELEVANCE
+    : 0.65;
+
+const LOG_DIR = 'logs';
+
+if (!fs.existsSync(LOG_DIR)) {
+  fs.mkdirSync(LOG_DIR, { recursive: true });
+}
+
+const ragLogger = winston.createLogger({
+  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.Console({ level: 'debug' }),
+    new winston.transports.File({
+      filename: `${LOG_DIR}/rag-operations.log`,
+      maxsize: 5e6,
+      maxFiles: 3,
+      tailable: true
+    })
+  ]
+});
 
 let lastInitialization = null;
 let documentsCount = 0;
@@ -34,7 +61,8 @@ function getOpenAIClient() {
 // Funcao para logging do RAG
 function logRAG(message, level = 'INFO') {
   const timestamp = new Date().toISOString();
-  console.log(`[RAG-${level}] ${timestamp} - ${message}`);
+  const payload = `[RAG-${level}] ${timestamp} - ${message}`;
+  ragLogger.log(level.toLowerCase(), payload);
 }
 
 // Inicializar RAG (verificar conexao e contar documentos)
@@ -128,21 +156,68 @@ export async function searchKnowledge(query, topK = 5) {
     // 1. Gerar embedding da pergunta
     const queryEmbedding = await generateEmbedding(query);
 
-    // 2. Buscar todos os documentos com embeddings
+    // 2. Buscar documentos com embeddings (preferindo índice vetorial quando configurado)
     const collection = getDocumentsCollection();
-    const documents = await collection.find(
-      { embedding: { $exists: true, $ne: [] } },
-      { projection: { _id: 1, title: 1, content: 1, embedding: 1, tags: 1 } }
-    ).toArray();
+    let documents = [];
+    const vectorIndex = process.env.RAG_VECTOR_INDEX;
+
+    if (vectorIndex) {
+      try {
+        const vectorResults = await collection
+          .aggregate([
+            {
+              $vectorSearch: {
+                index: vectorIndex,
+                path: 'embedding',
+                queryVector: queryEmbedding,
+                numCandidates: 200,
+                limit: Math.max(topK * 2, 10)
+              }
+            },
+            {
+              $project: {
+                _id: 1,
+                title: 1,
+                content: 1,
+                tags: 1,
+                embedding: 1,
+                similarity: { $meta: 'vectorSearchScore' }
+              }
+            }
+          ])
+          .toArray();
+
+        documents = vectorResults.map((doc) => ({
+          ...doc,
+          similarity: Number(doc.similarity) || 0
+        }));
+        logRAG(`[VECTOR] Busca via índice ${vectorIndex} retornou ${documents.length} documentos`, 'INFO');
+      } catch (error) {
+        logRAG(`[VECTOR] Falha ao usar índice vetorial: ${error.message}. Recuando para busca tradicional.`, 'WARN');
+      }
+    }
 
     if (documents.length === 0) {
-      logRAG('Nenhum documento com embedding encontrado', 'WARN');
+      documents = await collection.find(
+        { embedding: { $exists: true, $ne: [] } },
+        { projection: { _id: 1, title: 1, content: 1, embedding: 1, tags: 1 } }
+      ).toArray();
+    }
+
+    const validDocuments = documents.filter(
+      (doc) => Array.isArray(doc.embedding) && doc.embedding.length === EMBEDDING_DIMENSIONS
+    );
+
+    if (validDocuments.length === 0) {
+      logRAG('Nenhum documento com embedding válido encontrado', 'WARN');
       return [];
     }
 
     // 3. Calcular similaridade com cada documento
-    const results = documents.map(doc => {
-      const similarity = cosineSimilarity(queryEmbedding, doc.embedding);
+    const results = validDocuments.map(doc => {
+      const similarity = typeof doc.similarity === 'number'
+        ? doc.similarity
+        : cosineSimilarity(queryEmbedding, doc.embedding);
       const tags = Array.isArray(doc.tags) ? doc.tags : [];
 
       const boostedSimilarity = hasLcdSymptom && tags.some(tag => String(tag).toLowerCase() === 'hardware:lcd_check')
@@ -174,27 +249,43 @@ export async function searchKnowledge(query, topK = 5) {
         'WARN'
       );
       
-      // FALLBACK: Busca por texto se busca vetorial falhar
-      logRAG('Tentando busca por texto como fallback...', 'INFO');
+      // FALLBACK: Busca por texto com TF-IDF simples se busca vetorial falhar
+      logRAG('Tentando busca por texto como fallback (TF-IDF)...', 'INFO');
       const normalizedQuery = normalizeText(query);
       const keywords = normalizedQuery.split(' ').filter(w => w.length > 2);
-      
-      const textResults = results
-        .map(doc => {
-          const normalizedContent = normalizeText(doc.content + ' ' + doc.title);
-          const matchCount = keywords.filter(kw => normalizedContent.includes(kw)).length;
-          const textScore = matchCount / keywords.length;
-          return { ...doc, textScore };
-        })
-        .filter(doc => doc.textScore > 0.3)
-        .sort((a, b) => b.textScore - a.textScore)
-        .slice(0, 3);
-      
+      if (keywords.length === 0) {
+        logRAG('Sem palavras-chave suficientes para fallback de texto.', 'WARN');
+        return [];
+      }
+
+      const termFrequencies = results.map((doc) => {
+        const normalizedContent = normalizeText(doc.content + ' ' + doc.title);
+        const tf = {};
+        keywords.forEach((kw) => {
+          const occurrences = normalizedContent.split(kw).length - 1;
+          tf[kw] = occurrences;
+        });
+        return { doc, tf, normalizedContent };
+      });
+
+      const docCount = termFrequencies.length;
+      const scored = termFrequencies.map(({ doc, tf, normalizedContent }) => {
+        let score = 0;
+        keywords.forEach((kw) => {
+          const df = termFrequencies.filter((t) => t.normalizedContent.includes(kw)).length || 1;
+          const idf = Math.log(docCount / df);
+          score += (tf[kw] || 0) * idf;
+        });
+        return { ...doc, similarity: score ? Math.min(1, score / keywords.length) : 0 };
+      });
+
+      const textResults = scored.filter((doc) => doc.similarity > 0).sort((a, b) => b.similarity - a.similarity).slice(0, 3);
+
       if (textResults.length > 0) {
         logRAG(`Busca por texto encontrou ${textResults.length} documentos`, 'INFO');
-        return textResults.map(doc => ({ ...doc, similarity: doc.textScore * 0.5 }));
+        return textResults;
       }
-      
+
       return [];
     }
 
@@ -298,6 +389,10 @@ export async function addDocument(title, content, source = 'suggestion', tags = 
       console.warn('⚠️ [ADD-DOC] Embedding informado contém valores inválidos e foi normalizado.');
     }
 
+    if (providedEmbedding && providedEmbedding.length !== EMBEDDING_DIMENSIONS) {
+      throw new Error(`Embedding inválido: esperado ${EMBEDDING_DIMENSIONS} dimensões, recebido ${providedEmbedding.length}`);
+    }
+
     // Gerar ou reaproveitar embedding do conteudo
     let embedding;
     if (providedEmbedding && providedEmbedding.length > 0) {
@@ -307,6 +402,10 @@ export async function addDocument(title, content, source = 'suggestion', tags = 
       console.log(`🔄 [ADD-DOC] Gerando embedding...`);
       embedding = await generateEmbedding(content);
       console.log(`✅ [ADD-DOC] Embedding gerado! Dimensao: ${embedding.length}`);
+    }
+
+    if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_DIMENSIONS) {
+      throw new Error(`Embedding gerado com tamanho inesperado: ${embedding?.length}`);
     }
 
     // Inserir no MongoDB
