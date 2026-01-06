@@ -2,6 +2,8 @@
 
 Este documento registra as principais mudanças após a migração de persistência para MongoDB e a implementação de autenticação por JWT no painel administrativo do Quanton3D Bot.
 
+> **Nota (jan/2026):** para orientações consolidadas e atualizadas sobre build, deploy e regras de dados — incluindo o uso exclusivo da coleção `parametros` para resinas — consulte o arquivo `DIRETRIZES_TECNICAS_2026.md`.
+
 ## 1) Arquitetura de Dados
 
 ### 1.1. Migração de `fs` para MongoDB
@@ -13,7 +15,7 @@ Este documento registra as principais mudanças após a migração de persistên
 O módulo `db.js` centraliza a conexão e expõe funções de acesso às coleções. As coleções criadas automaticamente (quando não existem) são:
 - `documents` — base de conhecimento (RAG).
 - `messages` — mensagens de contato (“Fale Conosco”).
-- `print_parameters` — parâmetros de impressão persistidos (também via Mongoose).
+- `parametros` — parâmetros de impressão persistidos (coleção única em MongoDB; substitui a antiga `print_parameters`). 
 
 Coleções utilizadas/esperadas no fluxo atual:
 - `gallery` — galeria de fotos (upload / aprovação).
@@ -24,7 +26,7 @@ Coleções utilizadas/esperadas no fluxo atual:
 
 ### 1.3. Modelos Mongoose
 Além do cliente nativo do MongoDB, existem modelos com Mongoose para:
-- `Parametros` → coleção `print_parameters`.
+- `Parametros` → coleção `parametros`.
 - `Sugestoes` → coleção `suggestions`.
 - `Conversas` → histórico de conversas.
 - `Metricas` → métricas de interação e qualidade.

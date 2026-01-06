@@ -9,7 +9,8 @@ import {
   clearKnowledgeCollection
 } from "../../rag-search.js";
 import {
-  getDocumentsCollection
+  getDocumentsCollection,
+  getPrintParametersCollection
 } from "../../db.js";
 import {
   ensureMongoReady,
@@ -264,31 +265,52 @@ function buildAdminRoutes(adminConfig = {}) {
   // GET /admin/params/resins - Listar todas as resinas
   router.get("/params/resins", adminGuard, async (req, res) => {
     try {
-      // Ler arquivo de resinas
-      const resinsPath = path.join(rootDir, 'resins_extracted.json');
-      
-      if (!fs.existsSync(resinsPath)) {
-        return res.status(404).json({ success: false, message: 'Arquivo de resinas não encontrado' });
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
       }
-      
-      const resinsData = JSON.parse(fs.readFileSync(resinsPath, 'utf-8'));
-      const resinsArray = resinsData.resins || [];
-      const resinsList = resinsArray.map(resin => ({
-        _id: resin.id || resin.name.toLowerCase().replace(/\s+/g, '-'),
-        name: resin.name,
-        description: resin.sourceSheet || 'Sem descrição',
-        active: true
-      }));
-      
-      console.log(`✅ Listando ${resinsList.length} resinas`);
-      
+
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+
+      const collection = getPrintParametersCollection();
+      const resins = await collection
+        .aggregate([
+          {
+            $group: {
+              _id: "$resinId",
+              name: { $first: "$resinName" },
+              profiles: { $sum: 1 }
+            }
+          },
+          { $sort: { name: 1 } }
+        ])
+        .toArray();
+
+      if (!resins || resins.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Nenhuma resina encontrada no MongoDB"
+        });
+      }
+
+      console.log(`✅ [ADMIN] Listando ${resins.length} resinas diretamente do MongoDB`);
+
       res.json({
         success: true,
-        resins: resinsList,
-        total: resinsList.length
+        resins: resins.map((item) => ({
+          _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
+          name: item.name || "Sem nome",
+          description: `Perfis cadastrados: ${item.profiles ?? 0}`,
+          profiles: item.profiles ?? 0,
+          active: true
+        })),
+        total: resins.length,
+        source: "mongo"
       });
     } catch (err) {
-      console.error('❌ Erro ao listar resinas:', err);
+      console.error('❌ [ADMIN] Erro ao listar resinas:', err);
       res.status(500).json({ success: false, error: err.message });
     }
   });

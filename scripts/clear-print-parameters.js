@@ -5,9 +5,9 @@ const clearPrintParameters = async () => {
     await connectToMongo();
     const collection = getPrintParametersCollection();
     const result = await collection.deleteMany({});
-    console.log(`[MongoDB] Registros removidos de print_parameters: ${result.deletedCount}`);
+    console.log(`[MongoDB] Registros removidos de parametros: ${result.deletedCount}`);
   } catch (error) {
-    console.error('[MongoDB] Falha ao limpar print_parameters:', error.message);
+    console.error('[MongoDB] Falha ao limpar parametros:', error.message);
     process.exitCode = 1;
   } finally {
     await closeMongo();
