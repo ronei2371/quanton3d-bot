@@ -24,7 +24,7 @@ import { attachAdminSecurity } from "./admin/security.js";
 import attachKnowledgeRoutes from "./admin/knowledge-routes.js";
 import { chatRoutes } from "./src/routes/chatRoutes.js";
 import { buildAdminRoutes } from "./src/routes/adminRoutes.js";
-import { authRoutes, verifyJWT } from "./src/routes/authRoutes.js";
+import { authRoutes, requireJWT as requireJWT_middleware } from "./src/routes/authRoutes.js";
 import { suggestionsRoutes } from "./src/routes/suggestionsRoutes.js";
 import { apiRoutes } from "./src/routes/apiRoutes.js";
 import { swaggerSpec } from "./src/docs/swagger.js";
@@ -216,7 +216,7 @@ const requireAuth = async (req, res, next) => {
     return res.status(401).json({ error: 'Token inválido' });
   }
 
-  return verifyJWT(req, res, next);
+  return requireJWT_middleware(req, res, next);
 };
 
 // ✅ ROTA /resins PÚBLICA – lida diretamente do MongoDB (parametros)
