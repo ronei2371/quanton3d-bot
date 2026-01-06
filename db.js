@@ -14,7 +14,6 @@ const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = 'quanton3d';
 const PRIMARY_PARAMETERS_COLLECTION = 'parametros';
 const LEGACY_PARAMETERS_COLLECTION = 'print_parameters';
-const activeParametersCollectionName = PRIMARY_PARAMETERS_COLLECTION;
 const connectionOptions = {
   dbName: DB_NAME,
   serverSelectionTimeoutMS: 5000,
@@ -237,7 +236,7 @@ export function getPartnersCollection() {
 
 // Obter colecao de parametros de impressao
 export function getPrintParametersCollection() {
-  return getCollection(activeParametersCollectionName);
+  return getDb().collection('parametros');
 }
 
 // Obter colecao de metricas de conversas
