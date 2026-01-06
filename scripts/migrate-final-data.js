@@ -1,5 +1,5 @@
 // Migracao final de dados para MongoDB
-// - Importa perfis de impressao (data/resins_extracted.json) para print_parameters
+// - Importa perfis de impressao (data/resins_extracted.json) para parametros
 // - Importa sugestoes (knowledge/suggestions.json) para suggestions
 
 import fs from 'fs';
@@ -11,7 +11,7 @@ dotenv.config();
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = 'quanton3d';
-const PRINT_PARAMETERS_COLLECTION = 'print_parameters';
+const PRINT_PARAMETERS_COLLECTION = 'parametros';
 const SUGGESTIONS_COLLECTION = 'suggestions';
 
 const PRINT_PARAMETERS_FILE = path.join(process.cwd(), 'data', 'resins_extracted.json');
@@ -102,7 +102,7 @@ async function migratePrintParameters(db) {
 async function clearCollections(db) {
   const printResult = await db.collection(PRINT_PARAMETERS_COLLECTION).deleteMany({});
   const suggestionsResult = await db.collection(SUGGESTIONS_COLLECTION).deleteMany({});
-  console.log(`[0/3] Limpeza completa: print_parameters=${printResult.deletedCount}, suggestions=${suggestionsResult.deletedCount}`);
+  console.log(`[0/3] Limpeza completa: parametros=${printResult.deletedCount}, suggestions=${suggestionsResult.deletedCount}`);
 }
 
 async function migrateSuggestions(db) {

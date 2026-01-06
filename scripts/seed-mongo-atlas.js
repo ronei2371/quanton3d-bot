@@ -1,5 +1,5 @@
 // Seed de dados para MongoDB Atlas
-// - Importa data/resins_extracted.json -> print_parameters
+// - Importa data/resins_extracted.json -> parametros
 // - Importa knowledge/suggestions.json -> suggestions
 
 import fs from 'fs';
@@ -11,7 +11,7 @@ dotenv.config();
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = 'quanton3d';
-const PRINT_PARAMETERS_COLLECTION = 'print_parameters';
+const PRINT_PARAMETERS_COLLECTION = 'parametros';
 const SUGGESTIONS_COLLECTION = 'suggestions';
 
 const PRINT_PARAMETERS_FILE = path.join(process.cwd(), 'data', 'resins_extracted.json');
@@ -68,7 +68,7 @@ async function seedPrintParameters(db) {
   const result = await db.collection(PRINT_PARAMETERS_COLLECTION).bulkWrite(operations, { ordered: false });
   const total = await db.collection(PRINT_PARAMETERS_COLLECTION).countDocuments();
   console.log(`✅ Perfis importados/atualizados: ${result.upsertedCount}/${operations.length}`);
-  console.log(`ℹ️ Total atual em print_parameters: ${total}`);
+  console.log(`ℹ️ Total atual em parametros: ${total}`);
 }
 
 async function seedSuggestions(db) {
@@ -103,7 +103,7 @@ async function seedSuggestions(db) {
 async function clearCollections(db) {
   const printResult = await db.collection(PRINT_PARAMETERS_COLLECTION).deleteMany({});
   const suggestionsResult = await db.collection(SUGGESTIONS_COLLECTION).deleteMany({});
-  console.log(`[0/3] Limpeza completa: print_parameters=${printResult.deletedCount}, suggestions=${suggestionsResult.deletedCount}`);
+  console.log(`[0/3] Limpeza completa: parametros=${printResult.deletedCount}, suggestions=${suggestionsResult.deletedCount}`);
 }
 
 async function runSeed() {
