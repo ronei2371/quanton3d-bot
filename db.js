@@ -39,14 +39,12 @@ export function getDb() {
   return db;
 }
 
-// --- FUNÇÕES DE ACESSO ÀS COLEÇÕES (Restauradas) ---
+// --- FUNÇÕES DE ACESSO ÀS COLEÇÕES ---
 
-// 1. Coleção principal de Resinas (Corrigida para 'parametros')
 export function getPrintParametersCollection() {
   return getDb().collection(PRIMARY_PARAMETERS_COLLECTION);
 }
 
-// 2. Coleções usadas pelo RAG e Chat (Que estavam faltando)
 export function getDocumentsCollection() {
   return getDb().collection('documents');
 }
@@ -63,7 +61,6 @@ export function getSugestoesCollection() {
   return getDb().collection('sugestoes');
 }
 
-// 3. Helpers utilitários
 export function isConnected() {
   return !!db;
 }
@@ -72,7 +69,7 @@ export function getCollection(name) {
   return getDb().collection(name);
 }
 
-// Função para acessar a coleção de aprendizado da IA (ADICIONADA CORRETAMENTE AQUI)
+// Essa é a parte que estava dando erro, agora está arrumada:
 export function getLearningCollection() {
   return getDb().collection('ai_learning');
 }
