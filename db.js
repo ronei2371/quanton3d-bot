@@ -71,3 +71,8 @@ export function isConnected() {
 export function getCollection(name) {
   return getDb().collection(name);
 }
+
+// Função para acessar a coleção de aprendizado da IA (ADICIONADA CORRETAMENTE AQUI)
+export function getLearningCollection() {
+  return getDb().collection('ai_learning');
+}
