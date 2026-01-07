@@ -1,6 +1,6 @@
 // =========================
-// 🤖 Quanton3D IA - Servidor Unificado COM CORS CORRIGIDO
-// Versão: 3.0 - CORS RESOLVIDO
+// 🤖 Quanton3D IA - Servidor com CORS baseado em ENV
+// Versão: 4.0 - PRODUÇÃO PRONTA
 // =========================
 
 import express from "express";
@@ -49,30 +49,56 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 
 // =========================
+// CONFIGURAÇÃO DE CORS BASEADA EM ENV
+// =========================
+
+// ✅ LER ORIGENS PERMITIDAS DAS VARIÁVEIS DE AMBIENTE
+const allowedOriginsEnv = process.env.ALLOWED_ORIGINS || '';
+const allowedOriginsList = allowedOriginsEnv
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+
+// Lista padrão de origens permitidas
+const defaultAllowedOrigins = [
+  'https://quanton3dia.onrender.com',
+  'https://quanton3d-bot-v2.onrender.com',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:10000'
+];
+
+// Combinar origens do ENV com as padrões
+const allowedOrigins = [...new Set([...allowedOriginsList, ...defaultAllowedOrigins])];
+
+console.log('🔒 CORS - Origens permitidas:', allowedOrigins);
+
+// =========================
 // MIDDLEWARES GLOBAIS
 // =========================
 
-// ✅ CORS - CONFIGURAÇÃO CORRETA PARA MÚLTIPLOS DOMÍNIOS
+// CORS - CONFIGURAÇÃO BASEADA EM ENV
 app.use(cors({
   origin: function(origin, callback) {
-    // Lista de origens permitidas
-    const allowedOrigins = [
-      'https://quanton3dia.onrender.com',
-      'https://quanton3d-bot-v2.onrender.com',
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'http://localhost:10000'
-    ];
+    // Permitir requisições sem origin (Postman, curl, mobile apps)
+    if (!origin) {
+      return callback(null, true);
+    }
     
-    // Permitir requisições sem origin (Postman, curl, etc.)
-    if (!origin) return callback(null, true);
-    
-    // Verificar se a origem está na lista
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Verificar se a origem está na lista permitida
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.warn(`⚠️ Origem bloqueada por CORS: ${origin}`);
-      callback(null, true); // ✅ TEMPORÁRIO: Permitir todas durante debug
+      console.warn(`⚠️ CORS - Origem bloqueada: ${origin}`);
+      
+      // ✅ EM DESENVOLVIMENTO: Permitir todas as origens
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('🔓 Modo desenvolvimento: permitindo origem');
+        callback(null, true);
+      } else {
+        // ❌ EM PRODUÇÃO: Bloquear origens não autorizadas
+        callback(new Error(`Origem não permitida: ${origin}`));
+      }
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
@@ -81,26 +107,32 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
-// ✅ IMPORTANTE: Tratar preflight requests (OPTIONS)
+// Tratar preflight requests (OPTIONS)
 app.options('*', cors());
 
-// Body parsers
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
-// ✅ ADICIONAR HEADERS DE CORS MANUALMENTE (extra segurança)
+// Headers adicionais de CORS
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  const origin = req.headers.origin;
+  
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else if (!origin || process.env.NODE_ENV !== 'production') {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
+  
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   res.header('Access-Control-Allow-Credentials', 'true');
   
-  // Se for OPTIONS, responder imediatamente
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
   next();
 });
+
+// Body parsers
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Servir arquivos estáticos
 app.use(express.static(publicDir));
@@ -111,7 +143,7 @@ if (fs.existsSync(distDir)) {
   app.use(express.static(distDir));
   console.log('✅ Servindo build do React da pasta dist/');
 } else {
-  console.warn('⚠️ Pasta dist/ não encontrada. Execute "npm run build" primeiro.');
+  console.warn('⚠️ Pasta dist/ não encontrada');
 }
 
 // Middleware de log
@@ -136,8 +168,12 @@ app.get("/health", async (req, res) => {
       openai: openaiStatus,
       timestamp: new Date().toISOString(),
       port: PORT,
-      cors: "enabled",
-      origin: req.headers.origin || 'none'
+      cors: {
+        enabled: true,
+        allowedOrigins,
+        requestOrigin: req.headers.origin || 'none'
+      },
+      env: process.env.NODE_ENV || 'development'
     });
   } catch (error) {
     res.status(500).json({ 
@@ -194,38 +230,35 @@ app.get("/health/cors", (req, res) => {
     success: true,
     message: "CORS está funcionando!",
     origin: req.headers.origin || 'none',
-    headers: req.headers
+    allowedOrigins,
+    env: process.env.NODE_ENV || 'development'
   });
 });
 
 // =========================
-// MONTAGEM DAS ROTAS (ORDEM CRÍTICA!)
+// MONTAGEM DAS ROTAS
 // =========================
 
-// 1. ROTAS DE CHAT - DEVEM VIR PRIMEIRO!
-console.log('📡 Montando rotas de chat...');
-app.use("/api", chatRoutes);  // /api/ask e /api/chat
-app.use(chatRoutes);           // /ask e /chat (sem prefixo)
+console.log('📡 Montando rotas...');
+
+// 1. ROTAS DE CHAT
+app.use("/api", chatRoutes);
+app.use(chatRoutes);
 
 // 2. ROTAS DE API PÚBLICAS
-console.log('📡 Montando rotas de API...');
 app.use("/api", apiRoutes);
-app.use(apiRoutes); // Fallback sem /api
+app.use(apiRoutes);
 
 // 3. ROTAS DE AUTENTICAÇÃO
-console.log('📡 Montando rotas de autenticação...');
 app.use("/auth", authRoutes);
 
-// 4. ROTAS DE ADMIN (protegidas)
-console.log('📡 Montando rotas de admin...');
+// 4. ROTAS DE ADMIN
 app.use("/admin", buildAdminRoutes());
 
 // 5. ROTAS DE SUGESTÕES
-console.log('📡 Montando rotas de sugestões...');
 app.use(suggestionsRoutes);
 
-// 6. SEGURANÇA E CONHECIMENTO (admin)
-console.log('📡 Configurando segurança admin...');
+// 6. SEGURANÇA E CONHECIMENTO
 attachAdminSecurity(app);
 attachKnowledgeRoutes(app);
 
@@ -260,8 +293,6 @@ app.get("/resins", async (_req, res) => {
       });
     }
 
-    console.log(`✅ Listando ${resins.length} resinas`);
-
     res.json({
       success: true,
       resins: resins.map((item) => ({
@@ -283,11 +314,10 @@ app.get("/resins", async (_req, res) => {
 });
 
 // =========================
-// FALLBACK PARA SPA (React Router)
+// FALLBACK PARA SPA
 // =========================
 
 app.get('*', (req, res) => {
-  // Ignorar rotas de API
   if (
     req.path.startsWith('/api') || 
     req.path.startsWith('/admin') || 
@@ -302,24 +332,34 @@ app.get('*', (req, res) => {
     });
   }
   
-  // Servir index.html para rotas do React
   const indexPath = path.join(distDir, 'index.html');
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
     res.status(503).json({ 
       success: false, 
-      message: 'Frontend não foi compilado. Execute: npm run build'
+      message: 'Frontend não compilado'
     });
   }
 });
 
 // =========================
-// TRATAMENTO DE ERROS GLOBAL
+// TRATAMENTO DE ERROS
 // =========================
 
 app.use((err, req, res, next) => {
   console.error('❌ Erro não tratado:', err);
+  
+  // Erro de CORS
+  if (err.message && err.message.includes('Origem não permitida')) {
+    return res.status(403).json({
+      success: false,
+      error: 'CORS Error',
+      message: 'Origem não autorizada',
+      origin: req.headers.origin
+    });
+  }
+  
   res.status(500).json({
     success: false,
     error: 'Erro interno do servidor',
@@ -328,46 +368,42 @@ app.use((err, req, res, next) => {
 });
 
 // =========================
-// INICIALIZAÇÃO DOS SERVIÇOS
+// INICIALIZAÇÃO
 // =========================
 
 async function bootstrapServices() {
-  console.log('\n🚀 Iniciando serviços do Quanton3D Bot...\n');
+  console.log('\n🚀 Iniciando Quanton3D Bot...\n');
   
-  // 1. Conectar MongoDB
+  // MongoDB
   if (process.env.MONGODB_URI) {
     try {
       await connectToMongo();
-      console.log('✅ MongoDB conectado com sucesso');
+      console.log('✅ MongoDB conectado');
     } catch (error) {
-      console.error("❌ Falha ao conectar MongoDB:", error.message);
-      console.warn("⚠️ O bot funcionará em modo fallback (sem banco de dados)");
+      console.error("❌ MongoDB falhou:", error.message);
     }
   } else {
-    console.warn('⚠️ MONGODB_URI não configurado - banco de dados desabilitado');
+    console.warn('⚠️ MONGODB_URI não configurado');
   }
 
-  // 2. Verificar OpenAI
+  // OpenAI
   if (!process.env.OPENAI_API_KEY) {
-    console.warn('⚠️ OPENAI_API_KEY não configurado - IA desabilitada');
+    console.warn('⚠️ OPENAI_API_KEY não configurado');
   } else {
     console.log('✅ OpenAI API configurada');
   }
 
-  // 3. Inicializar RAG
+  // RAG
   if (process.env.OPENAI_API_KEY && isConnected()) {
     try {
       await initializeRAG();
-      console.log('✅ RAG inicializado com sucesso');
+      console.log('✅ RAG inicializado');
     } catch (error) {
-      console.error("❌ Falha ao inicializar RAG:", error.message);
-      console.warn("⚠️ O bot funcionará sem busca vetorial");
+      console.error("❌ RAG falhou:", error.message);
     }
-  } else {
-    console.warn('⚠️ RAG não inicializado (faltam requisitos)');
   }
   
-  console.log('\n✨ Todos os serviços inicializados!\n');
+  console.log('\n✨ Serviços inicializados!\n');
 }
 
 // =========================
@@ -377,30 +413,27 @@ async function bootstrapServices() {
 bootstrapServices().then(() => {
   const server = app.listen(PORT, '0.0.0.0', () => {
     console.log('═══════════════════════════════════════════════');
-    console.log('🤖 QUANTON3D BOT ONLINE COM CORS HABILITADO!');
+    console.log('🤖 QUANTON3D BOT ONLINE!');
     console.log('═══════════════════════════════════════════════');
-    console.log(`📡 Servidor: http://localhost:${PORT}`);
-    console.log(`💚 Health: http://localhost:${PORT}/health`);
-    console.log(`🔒 CORS: http://localhost:${PORT}/health/cors`);
-    console.log(`🤖 Chat: http://localhost:${PORT}/api/ask`);
-    console.log(`📚 Resinas: http://localhost:${PORT}/resins`);
+    console.log(`📡 Porta: ${PORT}`);
+    console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔒 CORS: ${allowedOrigins.length} origens permitidas`);
+    console.log(`💚 Health: /health`);
+    console.log(`🤖 Chat: /api/ask`);
     console.log('═══════════════════════════════════════════════\n');
   });
 
-  // Tratamento de erros do servidor
   server.on('error', (error) => {
     if (error.code === 'EADDRINUSE') {
-      console.error(`❌ Porta ${PORT} já está em uso!`);
-      console.log('💡 Tente: killall node && npm start');
+      console.error(`❌ Porta ${PORT} em uso!`);
     } else {
       console.error('❌ Erro no servidor:', error);
     }
     process.exit(1);
   });
 
-  // Graceful shutdown
   process.on('SIGTERM', () => {
-    console.log('⚠️ Recebido SIGTERM, encerrando servidor...');
+    console.log('⚠️ SIGTERM recebido');
     server.close(() => {
       console.log('✅ Servidor encerrado');
       mongoose.connection.close(false, () => {
