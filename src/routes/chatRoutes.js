@@ -42,13 +42,17 @@ const askRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req, res) => {
-    const { ipKeyGenerator } = rateLimit;
-    const ip = req.ip || 
-               req.headers['x-forwarded-for']?.split(',')[0].trim() ||
-               req.connection?.remoteAddress ||
-               'unknown';
-    return ipKeyGenerator(req, res) || ip;
+  keyGenerator: (req) => {
+    const forwardedFor = req.headers["x-forwarded-for"];
+    const forwardedIp = typeof forwardedFor === "string"
+      ? forwardedFor.split(",")[0].trim()
+      : undefined;
+    return (
+      forwardedIp ||
+      req.ip ||
+      req.connection?.remoteAddress ||
+      "unknown"
+    );
   },
   skip: (req) => {
     const isDev = process.env.NODE_ENV === 'development';
