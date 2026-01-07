@@ -1,19 +1,22 @@
 import express from "express";
 import { ObjectId } from "mongodb";
 import {
-  getMessagesCollection,
-  getGalleryCollection,
-  getSuggestionsCollection,
-  getPartnersCollection,
+  getSugestoesCollection,
   getPrintParametersCollection,
   getVisualKnowledgeCollection,
-  getConversasCollection, // ✅ CORREÇÃO: Import correto da função
+  getConversasCollection, // ✅ CORREÇÃO 1: Import correto da função de conversas
+  getCollection,          // ✅ CORREÇÃO 2: Import genérico para criar as que faltam
   isConnected
 } from "../../db.js";
 import { ensureMongoReady } from "./common.js";
 
 const router = express.Router();
 const MAX_PARAMS_PAGE_SIZE = 200;
+
+// ✅ CORREÇÃO 3: Criar helpers locais para as funções que não estão no db.js
+const getMessagesCollection = () => getCollection('messages');
+const getGalleryCollection = () => getCollection('gallery');
+const getPartnersCollection = () => getCollection('partners');
 
 // POST /register-user - Registrar usuario do chat
 router.post("/register-user", async (req, res) => {
@@ -37,8 +40,9 @@ router.post("/register-user", async (req, res) => {
     
     // Atualizar ou criar conversa com dados do usuario
     if (sessionId) {
-      const conversasCollection = getConversasCollection(); // ✅ CORREÇÃO: Pegar coleção
-      await conversasCollection.updateOne( // ✅ CORREÇÃO: Usar updateOne em vez de findOneAndUpdate
+      const conversasCollection = getConversasCollection(); 
+      // ✅ CORREÇÃO 4: Usar updateOne (Nativo) em vez de findOneAndUpdate (Mongoose)
+      await conversasCollection.updateOne(
         { sessionId },
         {
           $set: {
