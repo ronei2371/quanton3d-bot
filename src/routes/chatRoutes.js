@@ -6,8 +6,9 @@ import {
   formatContext,
   searchKnowledge
 } from "../../rag-search.js";
+// ✅ CORREÇÃO: Importar a função correta do novo db.js
 import {
-  Conversas
+  getConversasCollection
 } from "../../db.js";
 import {
   ensureMongoReady,
@@ -30,10 +31,10 @@ const openaiClient = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
 
-// ✅ CORREÇÃO: Rate limiter com suporte IPv6
+// Rate limiter com suporte IPv6
 const askRateLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minuto
-  max: 30, // 30 requisições por minuto por IP
+  windowMs: 60 * 1000,
+  max: 30,
   message: {
     success: false,
     error: 'Muitas requisições. Aguarde um momento e tente novamente.',
@@ -41,27 +42,19 @@ const askRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // ✅ SOLUÇÃO: Usar helper ipKeyGenerator para IPv6
   keyGenerator: (req, res) => {
-    // Importar helper do express-rate-limit
     const { ipKeyGenerator } = rateLimit;
-    
-    // Tentar obter IP do request
     const ip = req.ip || 
                req.headers['x-forwarded-for']?.split(',')[0].trim() ||
                req.connection?.remoteAddress ||
                'unknown';
-    
-    // Usar helper para normalizar IPv6
     return ipKeyGenerator(req, res) || ip;
   },
-  // Permitir bypass para localhost em desenvolvimento
   skip: (req) => {
     const isDev = process.env.NODE_ENV === 'development';
     const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1';
     return isDev && isLocalhost;
   },
-  // ✅ ADICIONAL: Handler de erro customizado
   handler: (req, res) => {
     console.warn(`⚠️ [RATE-LIMIT] IP bloqueado temporariamente: ${req.ip}`);
     res.status(429).json({
@@ -75,35 +68,15 @@ const askRateLimiter = rateLimit({
 const askParamsSchema = z.object({}).strict();
 
 const askBodySchema = z.object({
-  message: z.string({
-    required_error: "message é obrigatório",
-    invalid_type_error: "message deve ser um texto"
-  }).trim().min(1, "message é obrigatório"),
-  // ✅ Permitir que o front não envie sessionId e gerar um automaticamente
-  sessionId: z.string({
-    invalid_type_error: "sessionId deve ser um texto"
-  }).trim().min(1, "sessionId é obrigatório").optional(),
-  userName: z.string({
-    invalid_type_error: "userName deve ser um texto"
-  }).trim().min(1, "userName não pode ser vazio").max(120, "userName deve ter até 120 caracteres").nullish(),
-  userEmail: z.string({
-    invalid_type_error: "userEmail deve ser um texto"
-  }).trim().email("userEmail deve ser um e-mail válido").nullish(),
-  userPhone: z.string({
-    invalid_type_error: "userPhone deve ser um texto"
-  }).trim().min(5, "userPhone deve ter ao menos 5 caracteres").max(32, "userPhone deve ter até 32 caracteres").nullish(),
-  resin: z.string({
-    invalid_type_error: "resin deve ser um texto"
-  }).trim().min(1, "resin não pode ser vazio").max(160, "resin deve ter até 160 caracteres").nullish(),
-  printer: z.string({
-    invalid_type_error: "printer deve ser um texto"
-  }).trim().min(1, "printer não pode ser vazio").max(160, "printer deve ter até 160 caracteres").nullish(),
-  image: z.string({
-    invalid_type_error: "image deve ser um texto"
-  }).trim().min(1, "image não pode ser vazia").nullish(),
-  imageUrl: z.string({
-    invalid_type_error: "imageUrl deve ser um texto"
-  }).trim().url("imageUrl deve ser uma URL válida").nullish()
+  message: z.string().trim().min(1, "message é obrigatório"),
+  sessionId: z.string().trim().min(1).optional(),
+  userName: z.string().trim().nullish(),
+  userEmail: z.string().trim().email().nullish(),
+  userPhone: z.string().trim().nullish(),
+  resin: z.string().trim().nullish(),
+  printer: z.string().trim().nullish(),
+  image: z.string().trim().nullish(),
+  imageUrl: z.string().trim().url().nullish()
 }).strict().transform((body) => ({
   ...body,
   sessionId: body.sessionId || `chat-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -123,26 +96,10 @@ const askRequestSchema = z.object({
 
 const fallbackReplies = {
   ola: "Olá! Bem-vindo à Quanton3D! Como posso ajudar?",
-  produtos: "Temos resinas para: Action Figures, Odontologia, Engenharia, Joalheria e Uso Geral. Qual te interessa?",
-  preco: "Nossos preços variam de R$ 150 a R$ 900. Qual produto você gostaria de saber?",
-  contato: "Entre em contato: (31) 3271-6935 ou WhatsApp (31) 3271-6935",
-  endereco: "Av. Dom Pedro II, 5056 - Jardim Montanhês, Belo Horizonte - MG",
-  horario: "Atendemos de segunda a sexta, das 9h às 18h.",
-  entrega: "Fazemos entregas para todo o Brasil via Correios!",
-  resina: "Trabalhamos com resinas UV de alta performance. Qual aplicação você precisa? Action figures, odontologia, engenharia ou joalheria?",
-  action: "Para action figures temos: Alchemist, FlexForm, Iron, PyroBlast, Spark e Spin. Todas com ótimo acabamento!",
-  odonto: "Para odontologia: Athom Dental, Alinhadores, Gengiva e Washable. Todas biocompatíveis!",
-  engenharia: "Para engenharia: Iron (ultra resistente), FlexForm (flexível) e Vulcan Cast (fundição).",
-  default: "Desculpe, não entendi. Posso ajudar com: produtos, preços, contato, endereço ou horário. Ou ligue: (31) 3271-6935"
+  default: "Desculpe, não entendi. Posso ajudar com produtos, preços ou suporte técnico."
 };
 
 function buildFallbackReply(message) {
-  const msgLower = message.toLowerCase();
-  for (const key of Object.keys(fallbackReplies)) {
-    if (msgLower.includes(key)) {
-      return fallbackReplies[key];
-    }
-  }
   return fallbackReplies.default;
 }
 
@@ -189,13 +146,7 @@ const handleAsk = async (req, res) => {
   } = askValidation.data.body;
 
   if (!shouldInitRAG()) {
-    return res.json({
-      success: true,
-      reply: buildFallbackReply(message),
-      historyLength: 1,
-      documentsUsed: 0,
-      fallback: true
-    });
+    return res.json({ success: true, reply: buildFallbackReply(message), fallback: true });
   }
 
   let existingConversation = null;
@@ -203,16 +154,13 @@ const handleAsk = async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady || !openaiClient) {
-      return res.json({
-        success: true,
-        reply: buildFallbackReply(message),
-        historyLength: existingConversation?.messages?.length || 1,
-        documentsUsed: 0,
-        fallback: true
-      });
+      return res.json({ success: true, reply: buildFallbackReply(message), fallback: true });
     }
 
-    existingConversation = await Conversas.findOne({ sessionId }).sort({ createdAt: -1 });
+    // ✅ CORREÇÃO: Usar driver nativo em vez de Mongoose Model
+    const conversasCol = getConversasCollection();
+    existingConversation = await conversasCol.findOne({ sessionId }); // .sort() removido pois findOne retorna 1
+
     const historyForModel = limitHistoryForModel(
       mapConversationHistory(existingConversation?.messages || [])
     );
@@ -243,17 +191,15 @@ const handleAsk = async (req, res) => {
       relevantKnowledge = await searchKnowledge(searchQuery, 5);
       knowledgeContext = formatContext(relevantKnowledge);
     } catch (err) {
-      console.warn("⚠️ [ASK] Falha ao buscar conhecimento no MongoDB:", err.message);
+      console.warn("⚠️ [ASK] Falha ao buscar conhecimento:", err.message);
     }
 
     const personalization = personalizeResponse(userName, historyForModel, sentiment);
     const isImageAnalysis = Boolean(image || imageUrl);
     const systemPromptParts = [
-      "Você é o Elios, atendente oficial da Quanton3D. Seja direto, técnico e conciso (poucas linhas).",
-      "Baseie-se apenas nos 16 documentos da base de conhecimento Quanton3D; não invente dados fora desse escopo.",
-      "Política de segurança: nunca invente parâmetros, valores comerciais ou prazos. Se não houver contexto suficiente, peça detalhes ou encaminhe para atendimento humano.",
-      "Evite floreios. Priorize listas curtas ou frases objetivas focadas na solução técnica.",
-      isImageAnalysis ? "Fluxo de visão: use a imagem apenas para diagnosticar defeitos técnicos conhecidos e referenciar soluções." : "",
+      "Você é o Elios, atendente oficial da Quanton3D. Seja direto e técnico.",
+      "Baseie-se apenas na base de conhecimento Quanton3D.",
+      "Nunca invente parâmetros.",
       intelligentContext,
       personalization ? `Personalização: ${personalization}` : "",
       knowledgeContext
@@ -262,12 +208,7 @@ const handleAsk = async (req, res) => {
     const userContent = isImageAnalysis
       ? [
           { type: "text", text: message },
-          {
-            type: "image_url",
-            image_url: {
-              url: imageUrl || `data:image/jpeg;base64,${image}`
-            }
-          }
+          { type: "image_url", image_url: { url: imageUrl || `data:image/jpeg;base64,${image}` } }
         ]
       : message;
 
@@ -281,7 +222,7 @@ const handleAsk = async (req, res) => {
       ]
     });
 
-    const reply = completion?.choices?.[0]?.message?.content || "Desculpe, não consegui elaborar uma resposta agora.";
+    const reply = completion?.choices?.[0]?.message?.content || "Desculpe, não consegui responder.";
     const timestamp = new Date();
     const updatedMessages = [
       ...(existingConversation?.messages || []),
@@ -290,11 +231,7 @@ const handleAsk = async (req, res) => {
     ];
 
     const intelligenceMetrics = calculateIntelligenceMetrics(
-      message,
-      reply,
-      entities,
-      questionType,
-      relevantKnowledge
+      message, reply, entities, questionType, relevantKnowledge
     );
 
     const metadata = {
@@ -303,39 +240,37 @@ const handleAsk = async (req, res) => {
       sentiment: sentiment.sentiment,
       urgency: sentiment.urgency,
       intelligenceMetrics,
-      isImageAnalysis,
-      imageProvided: Boolean(image || imageUrl)
+      isImageAnalysis
     };
 
-    if (existingConversation) {
-      existingConversation.messages = updatedMessages;
-      existingConversation.userName = userName ?? existingConversation.userName;
-      existingConversation.userEmail = userEmail ?? existingConversation.userEmail;
-      existingConversation.userPhone = userPhone ?? existingConversation.userPhone;
-      existingConversation.resin = resin ?? existingConversation.resin;
-      existingConversation.printer = printer ?? existingConversation.printer;
-      existingConversation.metadata = { ...(existingConversation.metadata || {}), ...metadata };
-      existingConversation.updatedAt = timestamp;
-      await existingConversation.save();
-    } else {
-      await Conversas.create({
-        sessionId,
-        userName,
-        userEmail,
-        userPhone,
-        resin,
-        printer,
+    // ✅ CORREÇÃO: Salvar usando updateOne ou insertOne (Driver Nativo)
+    const updateData = {
+      $set: {
+        userName: userName ?? existingConversation?.userName,
+        userEmail: userEmail ?? existingConversation?.userEmail,
+        userPhone: userPhone ?? existingConversation?.userPhone,
+        resin: resin ?? existingConversation?.resin,
+        printer: printer ?? existingConversation?.printer,
         messages: updatedMessages,
-        metadata,
-        createdAt: timestamp,
+        metadata: { ...(existingConversation?.metadata || {}), ...metadata },
         updatedAt: timestamp
-      });
-    }
+      },
+      $setOnInsert: {
+        createdAt: timestamp,
+        sessionId: sessionId // Garante que sessionId seja salvo na criação
+      }
+    };
+
+    await conversasCol.updateOne(
+      { sessionId: sessionId },
+      updateData,
+      { upsert: true } // Cria se não existir
+    );
 
     try {
       await learnFromConversation(message, reply, entities, questionType);
     } catch (err) {
-      console.warn("⚠️ [ASK] Falha ao registrar aprendizado contínuo:", err.message);
+      console.warn("⚠️ Falha ao aprender:", err.message);
     }
 
     res.json({
@@ -345,20 +280,12 @@ const handleAsk = async (req, res) => {
       documentsUsed: relevantKnowledge.length
     });
   } catch (err) {
-    console.error("❌ [ASK] Erro ao processar conversa:", err);
-    res.json({
-      success: true,
-      reply: buildFallbackReply(message),
-      historyLength: (existingConversation?.messages?.length || 0) + 1,
-      documentsUsed: 0,
-      fallback: true
-    });
+    console.error("❌ [ASK] Erro ao processar:", err);
+    res.json({ success: true, reply: buildFallbackReply(message), fallback: true });
   }
 };
 
-// ✅ Rota oficial
 router.post("/ask", askRateLimiter, handleAsk);
-// ✅ Alias para /api/chat (compatibilidade com frontend)
 router.post("/chat", askRateLimiter, handleAsk);
 
 export { router as chatRoutes };
