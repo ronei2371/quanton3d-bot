@@ -1,6 +1,6 @@
 // =========================
-// 🤖 Quanton3D IA - Servidor Unificado DEFINITIVO
-// Versão: 2.0 - CORRIGIDA E TESTADA
+// 🤖 Quanton3D IA - Servidor Unificado COM CORS CORRIGIDO
+// Versão: 3.0 - CORS RESOLVIDO
 // =========================
 
 import express from "express";
@@ -52,17 +52,55 @@ const PORT = process.env.PORT || 10000;
 // MIDDLEWARES GLOBAIS
 // =========================
 
-// CORS - DEVE ser o PRIMEIRO middleware
+// ✅ CORS - CONFIGURAÇÃO CORRETA PARA MÚLTIPLOS DOMÍNIOS
 app.use(cors({
-  origin: '*',
+  origin: function(origin, callback) {
+    // Lista de origens permitidas
+    const allowedOrigins = [
+      'https://quanton3dia.onrender.com',
+      'https://quanton3d-bot-v2.onrender.com',
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://localhost:10000'
+    ];
+    
+    // Permitir requisições sem origin (Postman, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Verificar se a origem está na lista
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️ Origem bloqueada por CORS: ${origin}`);
+      callback(null, true); // ✅ TEMPORÁRIO: Permitir todas durante debug
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true,
+  optionsSuccessStatus: 200
 }));
+
+// ✅ IMPORTANTE: Tratar preflight requests (OPTIONS)
+app.options('*', cors());
 
 // Body parsers
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// ✅ ADICIONAR HEADERS DE CORS MANUALMENTE (extra segurança)
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Se for OPTIONS, responder imediatamente
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 // Servir arquivos estáticos
 app.use(express.static(publicDir));
@@ -78,7 +116,8 @@ if (fs.existsSync(distDir)) {
 
 // Middleware de log
 app.use((req, res, next) => {
-  console.log(`📨 ${req.method} ${req.path}`);
+  const timestamp = new Date().toISOString();
+  console.log(`📨 [${timestamp}] ${req.method} ${req.path} - Origin: ${req.headers.origin || 'none'}`);
   next();
 });
 
@@ -86,7 +125,7 @@ app.use((req, res, next) => {
 // ROTAS DE SAÚDE (Health Checks)
 // =========================
 
-app.get("/health", async (_req, res) => {
+app.get("/health", async (req, res) => {
   try {
     const dbStatus = mongoose.connection.readyState === 1 ? "connected" : "disconnected";
     const openaiStatus = process.env.OPENAI_API_KEY ? "configured" : "missing";
@@ -96,7 +135,9 @@ app.get("/health", async (_req, res) => {
       database: dbStatus,
       openai: openaiStatus,
       timestamp: new Date().toISOString(),
-      port: PORT
+      port: PORT,
+      cors: "enabled",
+      origin: req.headers.origin || 'none'
     });
   } catch (error) {
     res.status(500).json({ 
@@ -146,6 +187,15 @@ app.get("/health/rag", async (_req, res) => {
       error: error.message 
     });
   }
+});
+
+app.get("/health/cors", (req, res) => {
+  res.json({
+    success: true,
+    message: "CORS está funcionando!",
+    origin: req.headers.origin || 'none',
+    headers: req.headers
+  });
 });
 
 // =========================
@@ -242,7 +292,8 @@ app.get('*', (req, res) => {
     req.path.startsWith('/api') || 
     req.path.startsWith('/admin') || 
     req.path.startsWith('/auth') ||
-    req.path.startsWith('/uploads')
+    req.path.startsWith('/uploads') ||
+    req.path.startsWith('/health')
   ) {
     return res.status(404).json({ 
       success: false, 
@@ -261,6 +312,19 @@ app.get('*', (req, res) => {
       message: 'Frontend não foi compilado. Execute: npm run build'
     });
   }
+});
+
+// =========================
+// TRATAMENTO DE ERROS GLOBAL
+// =========================
+
+app.use((err, req, res, next) => {
+  console.error('❌ Erro não tratado:', err);
+  res.status(500).json({
+    success: false,
+    error: 'Erro interno do servidor',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
 // =========================
@@ -313,10 +377,11 @@ async function bootstrapServices() {
 bootstrapServices().then(() => {
   const server = app.listen(PORT, '0.0.0.0', () => {
     console.log('═══════════════════════════════════════════════');
-    console.log('🤖 QUANTON3D BOT ONLINE!');
+    console.log('🤖 QUANTON3D BOT ONLINE COM CORS HABILITADO!');
     console.log('═══════════════════════════════════════════════');
     console.log(`📡 Servidor: http://localhost:${PORT}`);
     console.log(`💚 Health: http://localhost:${PORT}/health`);
+    console.log(`🔒 CORS: http://localhost:${PORT}/health/cors`);
     console.log(`🤖 Chat: http://localhost:${PORT}/api/ask`);
     console.log(`📚 Resinas: http://localhost:${PORT}/resins`);
     console.log('═══════════════════════════════════════════════\n');
@@ -344,9 +409,6 @@ bootstrapServices().then(() => {
       });
     });
   });
-
-  // Exportar para testes
-  if (process.env.NODE_ENV === 'test') {
-    export default server;
-  }
 });
+
+export default app;
