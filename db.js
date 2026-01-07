@@ -2,13 +2,18 @@ import { MongoClient } from 'mongodb';
 
 // Definição da constante para evitar erros de digitação
 const PRIMARY_PARAMETERS_COLLECTION = 'parametros';
+const DEFAULT_DB_NAME = process.env.MONGODB_DB || process.env.DB_NAME || 'quanton3d';
 
 let db = null;
 
-export async function connectToMongo(mongoUri, dbName) {
+export async function connectToMongo(mongoUri = process.env.MONGODB_URI, dbName = DEFAULT_DB_NAME) {
   if (db) return db;
 
   try {
+    if (!mongoUri) {
+      throw new Error('MONGODB_URI não configurado');
+    }
+
     const client = new MongoClient(mongoUri);
 
     await client.connect();
