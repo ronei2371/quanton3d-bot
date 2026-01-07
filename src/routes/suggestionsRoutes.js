@@ -11,7 +11,7 @@ import { ObjectId } from "mongodb";
 import { requireJWT } from "./authRoutes.js";
 import {
   getSuggestionsCollection,
-  getMetricasCollection,
+  getCollection, // ✅ CORREÇÃO 1: Importamos a função genérica
   isConnected
 } from "../../db.js";
 import {
@@ -27,6 +27,9 @@ const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "../../");
 
 const router = express.Router();
+
+// ✅ CORREÇÃO 2: Criamos a função que faltava aqui mesmo
+const getMetricasCollection = () => getCollection('metricas');
 
 // Middleware de autenticacao: aceita JWT ou token legado para compatibilidade
 const requireAuth = (req, res, next) => {
@@ -297,6 +300,7 @@ router.get("/intelligence-stats", requireAuth, async (req, res) => {
       return res.status(503).json({ success: false, error: "MongoDB nao conectado" });
     }
     
+    // ✅ CORREÇÃO 3: Agora essa função existe!
     const metricasCollection = getMetricasCollection();
     
     // Buscar metricas com dados de inteligencia
