@@ -10,8 +10,7 @@ import { fileURLToPath } from "url";
 import { ObjectId } from "mongodb";
 import { requireJWT } from "./authRoutes.js";
 import {
-  getSuggestionsCollection,
-  getCollection, // ✅ CORREÇÃO 1: Importamos a função genérica
+  getCollection, // ✅ CORREÇÃO: Importamos APENAS a função genérica e o isConnected
   isConnected
 } from "../../db.js";
 import {
@@ -28,7 +27,9 @@ const rootDir = path.resolve(__dirname, "../../");
 
 const router = express.Router();
 
-// ✅ CORREÇÃO 2: Criamos a função que faltava aqui mesmo
+// ✅ CORREÇÃO FINAL: Criamos as funções de acesso manualmente aqui
+// Isso resolve o problema de nomes (Inglês vs Português)
+const getSuggestionsCollection = () => getCollection('sugestoes');
 const getMetricasCollection = () => getCollection('metricas');
 
 // Middleware de autenticacao: aceita JWT ou token legado para compatibilidade
@@ -300,7 +301,6 @@ router.get("/intelligence-stats", requireAuth, async (req, res) => {
       return res.status(503).json({ success: false, error: "MongoDB nao conectado" });
     }
     
-    // ✅ CORREÇÃO 3: Agora essa função existe!
     const metricasCollection = getMetricasCollection();
     
     // Buscar metricas com dados de inteligencia
