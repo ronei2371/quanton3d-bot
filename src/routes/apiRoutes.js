@@ -7,7 +7,7 @@ import {
   getPartnersCollection,
   getPrintParametersCollection,
   getVisualKnowledgeCollection,
-  Conversas,
+  getConversasCollection, // ✅ CORREÇÃO: Import correto da função
   isConnected
 } from "../../db.js";
 import { ensureMongoReady } from "./common.js";
@@ -37,7 +37,8 @@ router.post("/register-user", async (req, res) => {
     
     // Atualizar ou criar conversa com dados do usuario
     if (sessionId) {
-      await Conversas.findOneAndUpdate(
+      const conversasCollection = getConversasCollection(); // ✅ CORREÇÃO: Pegar coleção
+      await conversasCollection.updateOne( // ✅ CORREÇÃO: Usar updateOne em vez de findOneAndUpdate
         { sessionId },
         {
           $set: {
