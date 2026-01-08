@@ -456,6 +456,42 @@ app.post("/api/suggest-knowledge", async (req, res) => {
 // ROTAS DE PARÂMETROS
 // =========================
 
+app.get("/params/resins", async (_req, res) => {
+  try {
+    if (!isConnected()) {
+      await connectToMongo();
+    }
+
+    if (!isConnected()) {
+      return res.status(503).json({ success: false, error: "Banco de dados desconectado" });
+    }
+
+    const collection = getPrintParametersCollection();
+    let resins = await collection.distinct("resinName");
+    if (!resins || resins.length === 0) {
+      resins = await collection.distinct("resin");
+    }
+
+    if (!resins || resins.length === 0) {
+      return res.json({ success: true, resins: [] });
+    }
+
+    const resinsList = resins
+      .filter((name) => typeof name === "string" && name.trim().length > 0)
+      .map((name) => ({
+        _id: name.toLowerCase().replace(/\s+/g, "-"),
+        name,
+        active: true
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    res.json({ success: true, resins: resinsList });
+  } catch (error) {
+    console.error("Erro ao buscar resinas no MongoDB:", error);
+    res.status(500).json({ success: false, resins: [], error: error.message });
+  }
+});
+
 app.get("/api/resins", async (_req, res) => {
   try {
     if (!isConnected()) {
@@ -563,6 +599,60 @@ app.get("/api/gallery", async (req, res) => {
   } catch (err) {
     console.error('❌ [GALLERY] Erro:', err);
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/gallery", async (req, res) => {
+  try {
+    const { name, email, title, description, imageUrl, category, resin, printer } = req.body;
+
+    if (!name || !email || !imageUrl) {
+      return res.status(400).json({
+        success: false,
+        error: "Nome, email e imagem sao obrigatorios"
+      });
+    }
+
+    if (!isConnected()) {
+      await connectToMongo();
+    }
+
+    if (!isConnected()) {
+      return res.status(503).json({
+        success: false,
+        error: "Banco de dados indisponivel"
+      });
+    }
+
+    const galleryCollection = getGalleryCollection();
+    const newItem = {
+      name,
+      email,
+      title: title || "Sem titulo",
+      description: description || null,
+      imageUrl,
+      category: category || "geral",
+      resin: resin || null,
+      printer: printer || null,
+      status: "pending",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await galleryCollection.insertOne(newItem);
+    console.log(`[API] Item de galeria enviado por: ${name} (${email})`);
+
+    res.json({
+      success: true,
+      message: "Imagem enviada para aprovacao! Obrigado por compartilhar.",
+      id: result.insertedId
+    });
+  } catch (err) {
+    console.error("[API] Erro ao enviar item de galeria:", err);
+    res.status(500).json({
+      success: false,
+      error: "Erro ao enviar imagem"
+    });
   }
 });
 
