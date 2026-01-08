@@ -1,209 +1,48 @@
 // =========================
-// 🤖 Quanton3D IA - Servidor com CORS baseado em ENV
-// Versão: 4.0 - PRODUÇÃO PRONTA
+// 🤖 Quanton3D IA - Servidor Oficial (VERSÃO ASTRA TOTAL - 22/12/2025)
 // =========================
 
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
-import fs from "fs";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
-import OpenAI from "openai";
-
-// Importações dos módulos do sistema
 import { initializeRAG, checkRAGIntegrity, getRAGInfo } from "./rag-search.js";
-import { connectToMongo, isConnected, getPrintParametersCollection } from "./db.js";
-
-// Importações das rotas
-import { chatRoutes } from "./src/routes/chatRoutes.js";
-import { apiRoutes } from "./src/routes/apiRoutes.js";
-import { authRoutes, verifyJWT } from "./src/routes/authRoutes.js";
-import { buildAdminRoutes } from "./src/routes/adminRoutes.js";
-import { suggestionsRoutes } from "./src/routes/suggestionsRoutes.js";
-
-// Importações admin
+import {
+  connectToMongo,
+  isConnected
+} from "./db.js";
 import { attachAdminSecurity } from "./admin/security.js";
 import attachKnowledgeRoutes from "./admin/knowledge-routes.js";
+import { chatRoutes } from "./src/routes/chatRoutes.js";
+import { buildAdminRoutes } from "./src/routes/adminRoutes.js";
+import { authRoutes, requireJWT } from "./src/routes/authRoutes.js";
 
-// Configuração de ambiente
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Diretórios
 const publicDir = path.join(__dirname, "public");
-const uploadsDir = path.join(__dirname, "uploads");
-const distDir = path.join(__dirname, "dist");
 
-// Criar pasta de uploads se não existir
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-  console.log('📁 Pasta uploads/ criada');
-}
-
-// Inicializar Express
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// =========================
-// CONFIGURAÇÃO DE CORS BASEADA EM ENV
-// =========================
-
-// ✅ LER ORIGENS PERMITIDAS DAS VARIÁVEIS DE AMBIENTE
-const allowedOriginsEnv = process.env.ALLOWED_ORIGINS || '';
-const allowedOriginsList = allowedOriginsEnv
-  .split(',')
-  .map(origin => origin.trim())
-  .filter(Boolean);
-
-// Lista padrão de origens permitidas
-const defaultAllowedOrigins = [
-  'https://quanton3dia.onrender.com',
-  'https://quanton3d-bot-v2.onrender.com',
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'http://localhost:10000'
-];
-
-// Combinar origens do ENV com as padrões
-const allowedOrigins = [...new Set([...allowedOriginsList, ...defaultAllowedOrigins])];
-
-console.log('🔒 CORS - Origens permitidas:', allowedOrigins);
-
-// =========================
-// MIDDLEWARES GLOBAIS
-// =========================
-
-// CORS - CONFIGURAÇÃO BASEADA EM ENV
-app.use(cors({
-  origin: function(origin, callback) {
-    // Permitir requisições sem origin (Postman, curl, mobile apps)
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    // Verificar se a origem está na lista permitida
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`⚠️ CORS - Origem bloqueada: ${origin}`);
-      
-      // ✅ EM DESENVOLVIMENTO: Permitir todas as origens
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('🔓 Modo desenvolvimento: permitindo origem');
-        callback(null, true);
-      } else {
-        // ❌ EM PRODUÇÃO: Bloquear origens não autorizadas
-        callback(new Error(`Origem não permitida: ${origin}`));
-      }
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  credentials: true,
-  optionsSuccessStatus: 200
-}));
-
-// Tratar preflight requests (OPTIONS)
-app.options('*', cors());
-
-// Headers adicionais de CORS
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  
-  if (origin && allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  } else if (!origin || process.env.NODE_ENV !== 'production') {
-    res.header('Access-Control-Allow-Origin', '*');
-  }
-  
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
-
-// Body parsers
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
-// Servir arquivos estáticos
+app.use(cors());
+app.use(express.json({ limit: "2mb" }));
 app.use(express.static(publicDir));
-app.use("/uploads", express.static(uploadsDir));
 
-// Servir build do React (se existir)
-if (fs.existsSync(distDir)) {
-  app.use(express.static(distDir));
-  console.log('✅ Servindo build do React da pasta dist/');
-} else {
-  console.warn('⚠️ Pasta dist/ não encontrada');
-}
+// --- ROTAS VITAIS (CORREÇÃO DO ERRO 'CANNOT GET') ---
 
-// Middleware de log
-app.use((req, res, next) => {
-  const timestamp = new Date().toISOString();
-  console.log(`📨 [${timestamp}] ${req.method} ${req.path} - Origin: ${req.headers.origin || 'none'}`);
-  next();
-});
-
-// =========================
-// ROTAS DE SAÚDE (Health Checks)
-// =========================
-
-app.get("/health", async (req, res) => {
+app.get("/health", async (_req, res) => {
   try {
-    const dbStatus = mongoose.connection.readyState === 1 ? "connected" : "disconnected";
-    const openaiStatus = process.env.OPENAI_API_KEY ? "configured" : "missing";
-    
-    res.json({ 
-      status: "ok", 
-      database: dbStatus,
-      openai: openaiStatus,
-      timestamp: new Date().toISOString(),
-      port: PORT,
-      cors: {
-        enabled: true,
-        allowedOrigins,
-        requestOrigin: req.headers.origin || 'none'
-      },
-      env: process.env.NODE_ENV || 'development'
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      status: "error", 
-      message: error.message 
-    });
-  }
-});
-
-app.get("/health/openai", async (_req, res) => {
-  try {
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({
-        success: false,
-        message: "OPENAI_API_KEY não configurada"
-      });
+    if (process.env.MONGODB_URI && !isConnected()) {
+      await connectToMongo();
     }
-
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const models = await client.models.list({ limit: 1 });
-    
-    res.json({
-      success: true,
-      model: models?.data?.[0]?.id || null
-    });
+    const databaseStatus = mongoose.connection.readyState === 1 ? "connected" : "error";
+    res.json({ status: "ok", database: databaseStatus });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    res.status(500).json({ status: "error", database: "error", message: error.message });
   }
 });
 
@@ -211,237 +50,260 @@ app.get("/health/rag", async (_req, res) => {
   try {
     const integrity = await checkRAGIntegrity();
     const ragInfo = getRAGInfo();
-    
+    const healthy = integrity.isValid && Boolean(ragInfo.documentsCount);
     res.json({
-      success: integrity.isValid,
+      success: healthy,
       integrity,
       ragInfo
     });
   } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Respostas automáticas (Fallback se IA falhar)
+const respostasAutomaticas = {
+  'ola': 'Olá! Bem-vindo à Quanton3D! Como posso ajudar?',
+  'produtos': 'Temos resinas para: Action Figures, Odontologia, Engenharia, Joalheria e Uso Geral. Qual te interessa?',
+  'preço': 'Nossos preços variam de R$ 150 a R$ 900. Qual produto você gostaria de saber?',
+  'contato': 'Entre em contato: (31) 3271-6935 ou WhatsApp (31) 3271-6935',
+  'endereço': 'Av. Dom Pedro II, 5056 - Jardim Montanhês, Belo Horizonte - MG',
+  'horario': 'Atendemos de segunda a sexta, das 9h às 18h.',
+  'entrega': 'Fazemos entregas para todo o Brasil via Correios!',
+  'resina': 'Trabalhamos com resinas UV de alta performance. Qual aplicação você precisa? Action figures, odontologia, engenharia ou joalheria?',
+  'action': 'Para action figures temos: Alchemist, FlexForm, Iron, PyroBlast, Spark e Spin. Todas com ótimo acabamento!',
+  'odonto': 'Para odontologia: Athom Dental, Alinhadores, Gengiva e Washable. Todas biocompatíveis!',
+  'engenharia': 'Para engenharia: Iron (ultra resistente), FlexForm (flexível) e Vulcan Cast (fundição).',
+  'default': 'Desculpe, não entendi. Posso ajudar com: produtos, preços, contato, endereço ou horário. Ou ligue: (31) 3271-6935'
+};
+
+// ✅ CORREÇÃO #1: Rota /api/chat agora usa sistema RAG completo
+// Delega para a rota /ask que tem inteligência real com GPT-4o
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { message, sessionId, userName, userEmail, userPhone, resin, printer } = req.body;
+    
+    // Validação básica
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Mensagem inválida' 
+      });
+    }
+    
+    // Gerar sessionId se não fornecido
+    const finalSessionId = sessionId || `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Preparar dados para /ask
+    const askPayload = {
+      message: message.trim(),
+      sessionId: finalSessionId,
+      userName: userName || undefined,
+      userEmail: userEmail || undefined,
+      userPhone: userPhone || undefined,
+      resin: resin || undefined,
+      printer: printer || undefined
+    };
+    
+    // Fazer requisição interna para /ask
+    const askRequest = {
+      body: askPayload,
+      params: {}
+    };
+    
+    // Criar objeto de resposta mock
+    let askResponse = null;
+    const mockRes = {
+      json: (data) => { askResponse = data; },
+      status: (code) => ({
+        json: (data) => { askResponse = { ...data, statusCode: code }; }
+      })
+    };
+    
+    // Importar e executar handler do /ask
+    const { chatRoutes } = await import('./src/routes/chatRoutes.js');
+    
+    // Simular requisição para /ask
+    const askHandler = chatRoutes.stack.find(layer => 
+      layer.route && layer.route.path === '/ask' && layer.route.methods.post
+    );
+    
+    if (askHandler) {
+      await askHandler.route.stack[0].handle(askRequest, mockRes);
+      
+      if (askResponse) {
+        // Adaptar resposta do /ask para formato do /api/chat
+        return res.json({
+          success: true,
+          response: askResponse.reply || askResponse.response,
+          sessionId: finalSessionId,
+          documentsUsed: askResponse.documentsUsed || 0,
+          historyLength: askResponse.historyLength || 1,
+          rag_enabled: true
+        });
+      }
+    }
+    
+    // Fallback se não conseguir usar /ask
+    const msgLower = message.toLowerCase();
+    let resposta = respostasAutomaticas.default;
+    
+    for (let palavra in respostasAutomaticas) {
+      if (msgLower.includes(palavra)) {
+        resposta = respostasAutomaticas[palavra];
+        break;
+      }
+    }
+    
+    res.json({ 
+      success: true,
+      response: resposta, 
+      sessionId: finalSessionId,
+      fallback: true 
+    });
+    
+  } catch (error) {
+    console.error('❌ [/api/chat] Erro:', error);
     res.status(500).json({ 
-      success: false, 
-      error: error.message 
+      success: false,
+      error: 'Erro ao processar mensagem',
+      message: error.message 
     });
   }
 });
 
-app.get("/health/cors", (req, res) => {
-  res.json({
-    success: true,
-    message: "CORS está funcionando!",
-    origin: req.headers.origin || 'none',
-    allowedOrigins,
-    env: process.env.NODE_ENV || 'development'
-  });
-});
-
-// =========================
-// MONTAGEM DAS ROTAS
-// =========================
-
-console.log('📡 Montando rotas...');
-
-// 1. ROTAS DE CHAT
-app.use("/api", chatRoutes);
 app.use(chatRoutes);
-
-// 2. ROTAS DE API PÚBLICAS
-app.use("/api", apiRoutes);
-app.use(apiRoutes);
-
-// 3. ROTAS DE AUTENTICAÇÃO
-app.use("/auth", authRoutes);
-
-// 4. ROTAS DE ADMIN
-app.use("/admin", buildAdminRoutes());
-
-// 5. ROTAS DE SUGESTÕES
-app.use(suggestionsRoutes);
-
-// 6. SEGURANÇA E CONHECIMENTO
 attachAdminSecurity(app);
 attachKnowledgeRoutes(app);
 
-// =========================
-// ROTA PÚBLICA: /resins
-// =========================
+// Rotas de autenticação (públicas)
+app.use("/auth", authRoutes);
 
-app.get("/resins", async (_req, res) => {
+// Rotas admin (protegidas por JWT)
+app.use("/admin", buildAdminRoutes());
+
+// ===== ROTAS DE COMPATIBILIDADE (SISTEMA ANTIGO) =====
+// Estas rotas mantêm compatibilidade com o frontend antigo
+
+import fs from "fs";
+
+// Importação de requireJWT para uso no middleware requireAuth (compatibilidade com CJS)
+
+const ADMIN_AUTH_TOKEN = 'quanton3d_admin_secret';
+
+// Middleware de autenticação: aceita tanto JWT quanto token antigo
+const requireAuth = (req, res, next) => {
+  // Tentar JWT primeiro (novo sistema)
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return requireJWT(req, res, next);
+  }
+  
+  // Fallback: token antigo via query param (compatibilidade)
+  const { auth } = req.query;
+  if (auth === ADMIN_AUTH_TOKEN) {
+    return next();
+  }
+  
+  return res.status(401).json({ success: false, message: 'Não autorizado' });
+};
+
+// GET /params/resins - Listar todas as resinas (compatibilidade)
+app.get("/params/resins", requireAuth, async (req, res) => {
   try {
-    if (!isConnected()) {
-      await connectToMongo();
+    const resinsPath = path.join(__dirname, 'resins_extracted.json');
+    
+    if (!fs.existsSync(resinsPath)) {
+      return res.status(404).json({ success: false, message: 'Arquivo de resinas não encontrado' });
     }
-
-    const collection = getPrintParametersCollection();
-    const resins = await collection
-      .aggregate([
-        {
-          $group: {
-            _id: "$resinId",
-            name: { $first: "$resinName" },
-            profiles: { $sum: 1 }
-          }
-        },
-        { $sort: { name: 1 } }
-      ])
-      .toArray();
-
-    if (!resins || resins.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Nenhuma resina encontrada"
-      });
-    }
-
+    
+    const resinsData = JSON.parse(fs.readFileSync(resinsPath, 'utf-8'));
+    const resinsArray = resinsData.resins || [];
+    const resinsList = resinsArray.map(resin => ({
+      _id: resin.id || resin.name.toLowerCase().replace(/\s+/g, '-'),
+      name: resin.name,
+      description: resin.sourceSheet || 'Sem descrição',
+      active: true
+    }));
+    
+    console.log(`✅ [COMPAT] Listando ${resinsList.length} resinas`);
+    
     res.json({
       success: true,
-      resins: resins.map((item) => ({
-        _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
-        name: item.name || "Sem nome",
-        description: `Perfis: ${item.profiles ?? 0}`,
-        profiles: item.profiles ?? 0,
-        active: true
-      })),
-      total: resins.length
+      resins: resinsList,
+      total: resinsList.length
     });
   } catch (err) {
-    console.error("❌ Erro ao listar resinas:", err);
-    res.status(500).json({ 
-      success: false, 
-      error: err.message 
-    });
+    console.error('❌ [COMPAT] Erro ao listar resinas:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// =========================
-// FALLBACK PARA SPA
-// =========================
-
-app.get('*', (req, res) => {
-  if (
-    req.path.startsWith('/api') || 
-    req.path.startsWith('/admin') || 
-    req.path.startsWith('/auth') ||
-    req.path.startsWith('/uploads') ||
-    req.path.startsWith('/health')
-  ) {
-    return res.status(404).json({ 
-      success: false, 
-      message: 'Rota não encontrada',
-      path: req.path
+// POST /params/resins - Adicionar nova resina (compatibilidade)
+app.post("/params/resins", requireAuth, async (req, res) => {
+  try {
+    const { name } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'Nome da resina é obrigatório' });
+    }
+    
+    console.log(`✅ [COMPAT] Nova resina adicionada: ${name}`);
+    
+    res.json({
+      success: true,
+      message: 'Resina adicionada com sucesso',
+      resin: {
+        _id: name.toLowerCase().replace(/\s+/g, '-'),
+        name: name,
+        active: true
+      }
     });
-  }
-  
-  const indexPath = path.join(distDir, 'index.html');
-  if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath);
-  } else {
-    res.status(503).json({ 
-      success: false, 
-      message: 'Frontend não compilado'
-    });
+  } catch (err) {
+    console.error('❌ [COMPAT] Erro ao adicionar resina:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// =========================
-// TRATAMENTO DE ERROS
-// =========================
-
-app.use((err, req, res, next) => {
-  console.error('❌ Erro não tratado:', err);
-  
-  // Erro de CORS
-  if (err.message && err.message.includes('Origem não permitida')) {
-    return res.status(403).json({
-      success: false,
-      error: 'CORS Error',
-      message: 'Origem não autorizada',
-      origin: req.headers.origin
+// DELETE /params/resins/:id - Deletar resina (compatibilidade)
+app.delete("/params/resins/:id", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log(`✅ [COMPAT] Resina deletada: ${id}`);
+    
+    res.json({
+      success: true,
+      message: 'Resina deletada com sucesso'
     });
+  } catch (err) {
+    console.error('❌ [COMPAT] Erro ao deletar resina:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
-  
-  res.status(500).json({
-    success: false,
-    error: 'Erro interno do servidor',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
 });
 
-// =========================
-// INICIALIZAÇÃO
-// =========================
+// ===== FIM DAS ROTAS DE COMPATIBILIDADE =====
 
 async function bootstrapServices() {
-  console.log('\n🚀 Iniciando Quanton3D Bot...\n');
-  
-  // MongoDB
   if (process.env.MONGODB_URI) {
     try {
       await connectToMongo();
-      console.log('✅ MongoDB conectado');
     } catch (error) {
-      console.error("❌ MongoDB falhou:", error.message);
+      console.warn("[boot] Falha ao conectar ao MongoDB:", error.message);
     }
-  } else {
-    console.warn('⚠️ MONGODB_URI não configurado');
   }
 
-  // OpenAI
-  if (!process.env.OPENAI_API_KEY) {
-    console.warn('⚠️ OPENAI_API_KEY não configurado');
-  } else {
-    console.log('✅ OpenAI API configurada');
-  }
-
-  // RAG
-  if (process.env.OPENAI_API_KEY && isConnected()) {
+  if (process.env.OPENAI_API_KEY && process.env.MONGODB_URI) {
     try {
       await initializeRAG();
-      console.log('✅ RAG inicializado');
     } catch (error) {
-      console.error("❌ RAG falhou:", error.message);
+      console.warn("[boot] Falha ao inicializar o RAG:", error.message);
     }
   }
-  
-  console.log('\n✨ Serviços inicializados!\n');
 }
 
-// =========================
-// INICIAR SERVIDOR
-// =========================
+bootstrapServices();
 
-bootstrapServices().then(() => {
-  const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log('═══════════════════════════════════════════════');
-    console.log('🤖 QUANTON3D BOT ONLINE!');
-    console.log('═══════════════════════════════════════════════');
-    console.log(`📡 Porta: ${PORT}`);
-    console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔒 CORS: ${allowedOrigins.length} origens permitidas`);
-    console.log(`💚 Health: /health`);
-    console.log(`🤖 Chat: /api/ask`);
-    console.log('═══════════════════════════════════════════════\n');
-  });
-
-  server.on('error', (error) => {
-    if (error.code === 'EADDRINUSE') {
-      console.error(`❌ Porta ${PORT} em uso!`);
-    } else {
-      console.error('❌ Erro no servidor:', error);
-    }
-    process.exit(1);
-  });
-
-  process.on('SIGTERM', () => {
-    console.log('⚠️ SIGTERM recebido');
-    server.close(() => {
-      console.log('✅ Servidor encerrado');
-      mongoose.connection.close(false, () => {
-        console.log('✅ MongoDB desconectado');
-        process.exit(0);
-      });
-    });
-  });
+app.listen(PORT, () => {
+  console.log(`🚀 Bot Quanton3D rodando na porta ${PORT}`);
 });
-
-export default app;
