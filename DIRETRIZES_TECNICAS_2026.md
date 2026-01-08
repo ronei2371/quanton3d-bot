@@ -3,6 +3,7 @@ Diretrizes Técnicas Atualizadas: Projeto Quanton3D (Jan 2026)
 1. Visão Geral da Arquitetura
 
 Frontend (quanton3dia): Site estático em React/Vite (https://quanton3dia.onrender.com). NUNCA deve conter chaves secretas (MONGODB_URI ou OPENAI_API_KEY).
+Endereço oficial do site: https://quanton3dia.onrender.com.
 
 Backend (quanton3d-bot-v2): Servidor Node.js que hospeda a API, conecta no MongoDB e processa a IA.
 
