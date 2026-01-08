@@ -7,31 +7,50 @@ router.get('/ping', (req, res) => {
   res.json({ status: 'ok', message: 'Chat route working' });
 });
 
-// Rota PRINCIPAL /ask (Simplificada para estabilizar o sistema)
-router.post('/ask', async (req, res) => {
+const RECOVERY_REPLY = "O sistema está reiniciando e voltará com a IA em breve. (Modo de Recuperação)";
+
+function hasImagePayload(body = {}) {
+  return Boolean(
+    body.imageUrl ||
+    body.image ||
+    body.imageBase64 ||
+    body.imageData ||
+    body.attachment
+  );
+}
+
+async function handleChatRequest(req, res) {
   try {
-    const { message, sessionId } = req.body;
+    const { message, sessionId } = req.body ?? {};
+    const trimmedMessage = typeof message === "string" ? message.trim() : "";
+    const hasMessage = trimmedMessage.length > 0;
+    const hasImage = hasImagePayload(req.body);
 
-    console.log(`[CHAT] Mensagem recebida: ${message}`);
+    console.log(`[CHAT] Mensagem recebida: ${trimmedMessage || "(sem texto)"}`);
 
-    if (!message) {
-      return res.status(400).json({ error: 'Mensagem necessária' });
+    if (!hasMessage && !hasImage) {
+      return res.status(400).json({ error: "Mensagem ou imagem necessária" });
     }
 
-    // Resposta de emergência para o sistema subir
-    // Depois reativaremos a IA completa. Agora a prioridade é o servidor VERDE.
-    const reply = "O sistema está reiniciando e voltará com a IA em breve. (Modo de Recuperação)";
-
     res.json({
-      reply: reply,
-      sessionId: sessionId || 'session-recuperacao',
+      reply: RECOVERY_REPLY,
+      sessionId: sessionId || "session-recuperacao",
       documentsUsed: 0
     });
 
   } catch (error) {
-    console.error('Erro na rota /ask:', error);
-    res.status(500).json({ error: 'Erro interno no servidor.' });
+    console.error("Erro na rota de chat:", error);
+    res.status(500).json({ error: "Erro interno no servidor." });
   }
-});
+}
+
+// Rota PRINCIPAL /ask (Simplificada para estabilizar o sistema)
+router.post("/ask", handleChatRequest);
+
+// Compatibilidade: /chat (frontend antigo)
+router.post("/chat", handleChatRequest);
+
+// Compatibilidade: /ask-with-image (frontend com imagem)
+router.post("/ask-with-image", handleChatRequest);
 
 export { router as chatRoutes };
