@@ -6,6 +6,7 @@ import {
   getVisualKnowledgeCollection,
   getConversasCollection, // ✅ CORREÇÃO 1: Import correto da função de conversas
   getCollection,          // ✅ CORREÇÃO 2: Import genérico para criar as que faltam
+  getDb,
   isConnected
 } from "../../db.js";
 import { ensureMongoReady } from "./common.js";
@@ -163,27 +164,28 @@ router.get("/params/resins", async (_req, res) => {
       return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     }
 
-    const collection = getPrintParametersCollection();
-    const resins = await collection
-      .aggregate([
-        {
-          $group: {
-            _id: "$resinId",
-            name: { $first: "$resinName" },
-            profiles: { $sum: 1 }
-          }
-        },
-        { $sort: { name: 1 } }
-      ])
+    const db = getDb();
+    const collections = await db
+      .listCollections({ name: "parametros" })
       .toArray();
+    if (collections.length === 0) {
+      return res.json({ success: true, resins: [] });
+    }
+
+    const collection = getPrintParametersCollection();
+    const resins = await collection.distinct("resin");
+    const resinsList = resins
+      .filter((name) => typeof name === "string" && name.trim().length > 0)
+      .map((name) => ({
+        _id: name.toLowerCase().replace(/\s+/g, "-"),
+        name,
+        active: true
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
 
     res.json({
       success: true,
-      resins: resins.map((item) => ({
-        id: item._id,
-        name: item.name,
-        profiles: item.profiles
-      }))
+      resins: resinsList
     });
   } catch (err) {
     console.error("[API] Erro ao listar resinas de parâmetros:", err);
