@@ -15,6 +15,7 @@ import OpenAI from "openai";
 // Importações dos módulos do sistema
 import { initializeRAG, checkRAGIntegrity, getRAGInfo } from "./rag-search.js";
 import { connectToMongo, isConnected, getPrintParametersCollection } from "./db.js";
+import { ensureMongoReady } from "./src/routes/common.js";
 
 // Importações das rotas
 import { chatRoutes } from "./src/routes/chatRoutes.js";
@@ -297,8 +298,12 @@ attachKnowledgeRoutes(app);
 
 app.get("/resins", async (_req, res) => {
   try {
-    if (!isConnected()) {
-      await connectToMongo();
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({
+        success: false,
+        error: "Banco de dados indisponivel"
+      });
     }
 
     const collection = getPrintParametersCollection();
@@ -316,9 +321,10 @@ app.get("/resins", async (_req, res) => {
       .toArray();
 
     if (!resins || resins.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Nenhuma resina encontrada"
+      return res.json({
+        success: true,
+        resins: [],
+        total: 0
       });
     }
 
