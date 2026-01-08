@@ -185,9 +185,7 @@ app.use("/admin", buildAdminRoutes());
 // ===== ROTAS DE COMPATIBILIDADE (SISTEMA ANTIGO) =====
 // Estas rotas mantêm compatibilidade com o frontend antigo
 
-import fs from "fs";
-
-// Importação de requireJWT para uso no middleware requireAuth (compatibilidade com CJS)
+import fs from "fs";\n\n// Importação de requireJWT para uso no middleware requireAuth (compatibilidade com CJS)
 
 const ADMIN_AUTH_TOKEN = 'quanton3d_admin_secret';
 
