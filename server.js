@@ -68,8 +68,33 @@ const defaultAllowedOrigins = [
   'http://localhost:10000'
 ];
 
+function normalizeOrigin(origin) {
+  if (!origin) {
+    return '';
+  }
+
+  const trimmedOrigin = origin.trim().replace(/\/$/, '');
+
+  try {
+    const url = new URL(trimmedOrigin);
+    const isDefaultPort =
+      (url.protocol === 'https:' && url.port === '443') ||
+      (url.protocol === 'http:' && url.port === '80');
+    const host = isDefaultPort || !url.port ? url.hostname : `${url.hostname}:${url.port}`;
+
+    return `${url.protocol}//${host}`.toLowerCase();
+  } catch {
+    return trimmedOrigin.toLowerCase();
+  }
+}
+
 // Combinar origens do ENV com as padrões
 const allowedOrigins = [...new Set([...allowedOriginsList, ...defaultAllowedOrigins])];
+const allowedOriginsNormalized = new Set(
+  allowedOrigins
+    .map(normalizeOrigin)
+    .filter(Boolean)
+);
 
 console.log('🔒 CORS - Origens permitidas:', allowedOrigins);
 
@@ -78,19 +103,21 @@ console.log('🔒 CORS - Origens permitidas:', allowedOrigins);
 // =========================
 
 // CORS - CONFIGURAÇÃO BASEADA EM ENV
-app.use(cors({
+const corsOptions = {
   origin: function(origin, callback) {
     // Permitir requisições sem origin (Postman, curl, mobile apps)
     if (!origin) {
       return callback(null, true);
     }
-    
+
+    const normalizedOrigin = normalizeOrigin(origin);
+
     // Verificar se a origem está na lista permitida
-    if (allowedOrigins.includes(origin)) {
+    if (allowedOriginsNormalized.has(normalizedOrigin)) {
       callback(null, true);
     } else {
       console.warn(`⚠️ CORS - Origem bloqueada: ${origin}`);
-      
+
       // ✅ EM DESENVOLVIMENTO: Permitir todas as origens
       if (process.env.NODE_ENV !== 'production') {
         console.log('🔓 Modo desenvolvimento: permitindo origem');
@@ -105,16 +132,18 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true,
   optionsSuccessStatus: 200
-}));
+};
+
+app.use(cors(corsOptions));
 
 // Tratar preflight requests (OPTIONS)
-app.options('*', cors());
+app.options('*', cors(corsOptions));
 
 // Headers adicionais de CORS
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
-  if (origin && allowedOrigins.includes(origin)) {
+  if (origin && allowedOriginsNormalized.has(normalizeOrigin(origin))) {
     res.header('Access-Control-Allow-Origin', origin);
   } else if (!origin || process.env.NODE_ENV !== 'production') {
     res.header('Access-Control-Allow-Origin', '*');
