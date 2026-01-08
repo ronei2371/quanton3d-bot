@@ -1,6 +1,4 @@
 import express from 'express';
-// Removendo importações quebradas do db.js antigo
-import { PrintParameter } from '../models/schemas.js';
 
 const router = express.Router();
 
