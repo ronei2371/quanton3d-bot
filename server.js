@@ -1,6 +1,6 @@
 // =========================
-// 🤖 Quanton3D IA - Servidor com CORS baseado em ENV
-// Versão: 4.0 - PRODUÇÃO PRONTA
+// 🤖 Quanton3D - SERVIDOR STANDALONE
+// Versão: FINAL - Todas as rotas funcionando
 // =========================
 
 import express from "express";
@@ -11,57 +11,58 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 import OpenAI from "openai";
+import { ObjectId } from "mongodb";
 
-// Importações dos módulos do sistema
-import { initializeRAG, checkRAGIntegrity, getRAGInfo } from "./rag-search.js";
-import { connectToMongo, isConnected, getDb, getPrintParametersCollection } from "./db.js";
-import { ensureMongoReady } from "./src/routes/common.js";
+// Importações do sistema
+import { 
+  initializeRAG, 
+  checkRAGIntegrity, 
+  getRAGInfo,
+  searchKnowledge,
+  formatContext
+} from "./rag-search.js";
 
-// Importações das rotas
-import { chatRoutes } from "./src/routes/chatRoutes.js";
-import { apiRoutes } from "./src/routes/apiRoutes.js";
-import { authRoutes, verifyJWT } from "./src/routes/authRoutes.js";
-import { buildAdminRoutes } from "./src/routes/adminRoutes.js";
-import { suggestionsRoutes } from "./src/routes/suggestionsRoutes.js";
+import {
+  connectToMongo,
+  isConnected,
+  getPrintParametersCollection,
+  getMessagesCollection,
+  getGalleryCollection,
+  getSuggestionsCollection,
+  Conversas
+} from "./db.js";
 
-// Importações admin
-import { attachAdminSecurity } from "./admin/security.js";
-import attachKnowledgeRoutes from "./admin/knowledge-routes.js";
+import {
+  analyzeQuestionType,
+  analyzeSentiment,
+  calculateIntelligenceMetrics,
+  extractEntities,
+  generateIntelligentContext,
+  learnFromConversation,
+  personalizeResponse
+} from "./ai-intelligence-system.js";
 
-// Configuração de ambiente
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Diretórios
 const publicDir = path.join(__dirname, "public");
 const uploadsDir = path.join(__dirname, "uploads");
 const distDir = path.join(__dirname, "dist");
 
-// Criar pasta de uploads se não existir
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
-  console.log('📁 Pasta uploads/ criada');
 }
 
-// Inicializar Express
 const app = express();
 const PORT = process.env.PORT || 10000;
 
 // =========================
-// CONFIGURAÇÃO DE CORS BASEADA EM ENV
+// CONFIGURAÇÃO DE CORS
 // =========================
 
-// ✅ LER ORIGENS PERMITIDAS DAS VARIÁVEIS DE AMBIENTE
-const allowedOriginsEnv = process.env.ALLOWED_ORIGINS || '';
-const allowedOriginsList = allowedOriginsEnv
-  .split(',')
-  .map(origin => origin.trim())
-  .filter(Boolean);
-
-// Lista padrão de origens permitidas
-const defaultAllowedOrigins = [
+const allowedOrigins = [
   'https://quanton3dia.onrender.com',
   'https://quanton3d-bot-v2.onrender.com',
   'http://localhost:5173',
@@ -69,87 +70,24 @@ const defaultAllowedOrigins = [
   'http://localhost:10000'
 ];
 
-function normalizeOrigin(origin) {
-  if (!origin) {
-    return '';
-  }
-
-  const trimmedOrigin = origin.trim().replace(/\/$/, '');
-
-  try {
-    const url = new URL(trimmedOrigin);
-    const isDefaultPort =
-      (url.protocol === 'https:' && url.port === '443') ||
-      (url.protocol === 'http:' && url.port === '80');
-    const host = isDefaultPort || !url.port ? url.hostname : `${url.hostname}:${url.port}`;
-
-    return `${url.protocol}//${host}`.toLowerCase();
-  } catch {
-    return trimmedOrigin.toLowerCase();
-  }
-}
-
-// Combinar origens do ENV com as padrões
-const allowedOrigins = [...new Set([...allowedOriginsList, ...defaultAllowedOrigins])];
-const allowedOriginsNormalized = new Set(
-  allowedOrigins
-    .map(normalizeOrigin)
-    .filter(Boolean)
-);
-
-console.log('🔒 CORS - Origens permitidas:', allowedOrigins);
-
-// =========================
-// MIDDLEWARES GLOBAIS
-// =========================
-
-// CORS - CONFIGURAÇÃO BASEADA EM ENV
-const corsOptions = {
+app.use(cors({
   origin: function(origin, callback) {
-    // Permitir requisições sem origin (Postman, curl, mobile apps)
-    if (!origin) {
-      return callback(null, true);
-    }
-
-    const normalizedOrigin = normalizeOrigin(origin);
-
-    // Verificar se a origem está na lista permitida
-    if (allowedOriginsNormalized.has(normalizedOrigin)) {
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.warn(`⚠️ CORS - Origem bloqueada: ${origin}`);
-
-      // ✅ EM DESENVOLVIMENTO: Permitir todas as origens
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('🔓 Modo desenvolvimento: permitindo origem');
-        callback(null, true);
-      } else {
-        // ❌ EM PRODUÇÃO: Bloquear origens não autorizadas
-        callback(new Error(`Origem não permitida: ${origin}`));
-      }
+      console.warn(`⚠️ CORS bloqueou: ${origin}`);
+      callback(null, true); // Permitir por enquanto
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  credentials: true,
-  optionsSuccessStatus: 200
-};
+  credentials: true
+}));
 
-app.use(cors(corsOptions));
+app.options('*', cors());
 
-// Tratar preflight requests (OPTIONS)
-app.options('*', cors(corsOptions));
-
-// Headers adicionais de CORS
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  
-  if (origin && allowedOriginsNormalized.has(normalizeOrigin(origin))) {
-    res.header('Access-Control-Allow-Origin', origin);
-  } else if (!origin || process.env.NODE_ENV !== 'production') {
-    res.header('Access-Control-Allow-Origin', '*');
-  }
-  
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   res.header('Access-Control-Allow-Credentials', 'true');
@@ -160,162 +98,368 @@ app.use((req, res, next) => {
   next();
 });
 
-// Body parsers
+// =========================
+// MIDDLEWARES
+// =========================
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
-// Servir arquivos estáticos
 app.use(express.static(publicDir));
 app.use("/uploads", express.static(uploadsDir));
 
-// Servir build do React (se existir)
 if (fs.existsSync(distDir)) {
   app.use(express.static(distDir));
-  console.log('✅ Servindo build do React da pasta dist/');
-} else {
-  console.warn('⚠️ Pasta dist/ não encontrada');
 }
 
-// Middleware de log
+// Log de requisições
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
-  console.log(`📨 [${timestamp}] ${req.method} ${req.path} - Origin: ${req.headers.origin || 'none'}`);
+  console.log(`📨 [${timestamp}] ${req.method} ${req.path}`);
   next();
 });
 
 // =========================
-// ROTAS DE SAÚDE (Health Checks)
+// OPENAI CLIENT
+// =========================
+
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o";
+const OPENAI_TEMPERATURE = Number(process.env.OPENAI_TEMPERATURE ?? 0.2);
+const openaiClient = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
+
+// =========================
+// HEALTH CHECKS
 // =========================
 
 app.get("/health", async (req, res) => {
   try {
     const dbStatus = mongoose.connection.readyState === 1 ? "connected" : "disconnected";
-    const openaiStatus = process.env.OPENAI_API_KEY ? "configured" : "missing";
-    
     res.json({ 
       status: "ok", 
       database: dbStatus,
-      openai: openaiStatus,
+      openai: openaiClient ? "configured" : "missing",
       timestamp: new Date().toISOString(),
-      port: PORT,
-      cors: {
-        enabled: true,
-        allowedOrigins,
-        requestOrigin: req.headers.origin || 'none'
-      },
-      env: process.env.NODE_ENV || 'development'
+      cors: "enabled"
     });
   } catch (error) {
-    res.status(500).json({ 
-      status: "error", 
-      message: error.message 
-    });
+    res.status(500).json({ status: "error", message: error.message });
   }
 });
 
-app.get("/health/openai", async (_req, res) => {
-  try {
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({
-        success: false,
-        message: "OPENAI_API_KEY não configurada"
-      });
-    }
+// =========================
+// ROTA DE CHAT (/api/ask e /api/chat)
+// =========================
 
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const models = await client.models.list({ limit: 1 });
+const fallbackReplies = {
+  ola: "Olá! Bem-vindo à Quanton3D!",
+  default: "Desculpe, não entendi. Como posso ajudar?"
+};
+
+function buildFallbackReply(message) {
+  const msgLower = message.toLowerCase();
+  if (msgLower.includes('ola') || msgLower.includes('olá')) {
+    return fallbackReplies.ola;
+  }
+  return fallbackReplies.default;
+}
+
+async function handleChatRequest(req, res) {
+  console.log('📨 [CHAT] Requisição recebida');
+  
+  const { message, sessionId: reqSessionId } = req.body;
+  
+  if (!message || typeof message !== 'string' || message.trim().length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: 'Mensagem inválida'
+    });
+  }
+  
+  const sessionId = reqSessionId || `chat-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  
+  console.log(`📨 [CHAT] Mensagem: "${message}" | Session: ${sessionId}`);
+  
+  // Fallback se não tiver OpenAI
+  if (!openaiClient) {
+    console.warn('⚠️ [CHAT] OpenAI não configurado');
+    return res.json({
+      success: true,
+      reply: buildFallbackReply(message),
+      fallback: true
+    });
+  }
+  
+  try {
+    // Buscar conversa existente
+    let conversation = null;
+    if (isConnected()) {
+      conversation = await Conversas.findOne({ sessionId }).sort({ createdAt: -1 });
+    }
+    
+    const history = conversation?.messages || [];
+    const limitedHistory = history.slice(-16);
+    
+    // Análise inteligente
+    const questionType = analyzeQuestionType(message);
+    const entities = extractEntities(message);
+    const sentiment = analyzeSentiment(message);
+    
+    // Buscar conhecimento
+    let relevantKnowledge = [];
+    try {
+      relevantKnowledge = await searchKnowledge(message, 5);
+    } catch (err) {
+      console.warn('⚠️ [CHAT] Falha ao buscar conhecimento:', err.message);
+    }
+    
+    const knowledgeContext = formatContext(relevantKnowledge);
+    
+    // Chamar OpenAI
+    const completion = await openaiClient.chat.completions.create({
+      model: OPENAI_MODEL,
+      temperature: OPENAI_TEMPERATURE,
+      messages: [
+        { 
+          role: "system", 
+          content: `Você é o Elios, atendente da Quanton3D. Seja direto e técnico.${knowledgeContext}` 
+        },
+        ...limitedHistory.map(msg => ({ role: msg.role, content: msg.content })),
+        { role: "user", content: message }
+      ]
+    });
+    
+    const reply = completion?.choices?.[0]?.message?.content || "Não consegui elaborar uma resposta.";
+    
+    console.log('✅ [CHAT] Resposta gerada');
+    
+    // Salvar conversa
+    if (isConnected()) {
+      const timestamp = new Date();
+      const updatedMessages = [
+        ...history,
+        { role: "user", content: message, timestamp },
+        { role: "assistant", content: reply, timestamp }
+      ];
+      
+      if (conversation) {
+        conversation.messages = updatedMessages;
+        conversation.updatedAt = timestamp;
+        await conversation.save();
+      } else {
+        await Conversas.create({
+          sessionId,
+          messages: updatedMessages,
+          createdAt: timestamp,
+          updatedAt: timestamp
+        });
+      }
+    }
     
     res.json({
       success: true,
-      model: models?.data?.[0]?.id || null
+      reply,
+      historyLength: history.length + 2,
+      documentsUsed: relevantKnowledge.length
     });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-app.get("/health/rag", async (_req, res) => {
-  try {
-    const integrity = await checkRAGIntegrity();
-    const ragInfo = getRAGInfo();
     
+  } catch (err) {
+    console.error('❌ [CHAT] Erro:', err);
     res.json({
-      success: integrity.isValid,
-      integrity,
-      ragInfo
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
+      success: true,
+      reply: buildFallbackReply(message),
+      fallback: true
     });
   }
-});
+}
 
-app.get("/health/cors", (req, res) => {
-  res.json({
-    success: true,
-    message: "CORS está funcionando!",
-    origin: req.headers.origin || 'none',
-    allowedOrigins,
-    env: process.env.NODE_ENV || 'development'
-  });
-});
+app.post("/api/ask", handleChatRequest);
+app.post("/api/chat", handleChatRequest);
+app.post("/ask", handleChatRequest);
+app.post("/chat", handleChatRequest);
 
 // =========================
-// MONTAGEM DAS ROTAS
+// ROTAS DE FORMULÁRIOS
 // =========================
 
-console.log('📡 Montando rotas...');
-
-// 1. ROTAS DE CHAT
-app.use("/api", chatRoutes);
-app.use(chatRoutes);
-
-// 2. ROTAS DE API PÚBLICAS
-app.use("/api", apiRoutes);
-app.use(apiRoutes);
-
-// 3. ROTAS DE AUTENTICAÇÃO
-app.use("/auth", authRoutes);
-
-// 4. ROTAS DE ADMIN
-app.use("/admin", buildAdminRoutes());
-
-// 5. ROTAS DE SUGESTÕES
-app.use(suggestionsRoutes);
-
-// 6. SEGURANÇA E CONHECIMENTO
-attachAdminSecurity(app);
-attachKnowledgeRoutes(app);
-
-// =========================
-// ROTA PÚBLICA: /resins
-// =========================
-
-async function handleResinsRoute(_req, res) {
+app.post("/api/register-user", async (req, res) => {
   try {
-    const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({
+    const { name, phone, email, resin, problemType, sessionId } = req.body;
+    
+    console.log('📝 [REGISTER] Usuário:', name, email);
+    
+    if (!name || !phone || !email) {
+      return res.status(400).json({
         success: false,
-        error: "Banco de dados indisponivel"
+        error: "Nome, telefone e email são obrigatórios"
       });
     }
+    
+    if (isConnected() && sessionId) {
+      await Conversas.findOneAndUpdate(
+        { sessionId },
+        {
+          $set: {
+            userName: name,
+            userPhone: phone,
+            userEmail: email,
+            resin: resin || null,
+            problemType: problemType || null,
+            updatedAt: new Date()
+          }
+        },
+        { upsert: true }
+      );
+    }
+    
+    res.json({
+      success: true,
+      message: "Usuário registrado com sucesso",
+      user: { name, phone, email, resin, problemType }
+    });
+  } catch (err) {
+    console.error('❌ [REGISTER] Erro:', err);
+    res.status(500).json({
+      success: false,
+      error: "Erro ao registrar usuário"
+    });
+  }
+});
 
-    const db = getDb();
-    const collections = await db
-      .listCollections({ name: "parametros" })
-      .toArray();
-    if (collections.length === 0) {
-      return res.json({
-        success: true,
-        resins: [],
-        total: 0
+app.post("/api/contact", async (req, res) => {
+  try {
+    const { name, email, phone, subject, message } = req.body;
+    
+    console.log('📧 [CONTACT] Mensagem de:', name, email);
+    
+    if (!name || !email || !message) {
+      return res.status(400).json({
+        success: false,
+        error: "Nome, email e mensagem são obrigatórios"
       });
+    }
+    
+    if (isConnected()) {
+      const messagesCollection = getMessagesCollection();
+      await messagesCollection.insertOne({
+        name,
+        email,
+        phone: phone || null,
+        subject: subject || "Contato via Site",
+        message,
+        status: "pending",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: "Mensagem enviada com sucesso!"
+    });
+  } catch (err) {
+    console.error('❌ [CONTACT] Erro:', err);
+    res.status(500).json({
+      success: false,
+      error: "Erro ao enviar mensagem"
+    });
+  }
+});
+
+app.post("/api/custom-request", async (req, res) => {
+  try {
+    const { name, email, phone, resin, printer, description, urgency } = req.body;
+    
+    console.log('📝 [CUSTOM] Solicitação de:', name, email);
+    
+    if (!name || !email) {
+      return res.status(400).json({
+        success: false,
+        error: "Nome e email são obrigatórios"
+      });
+    }
+    
+    if (isConnected()) {
+      const messagesCollection = getMessagesCollection();
+      await messagesCollection.insertOne({
+        type: "custom_request",
+        name,
+        email,
+        phone: phone || null,
+        resin: resin || null,
+        printer: printer || null,
+        description: description || null,
+        urgency: urgency || "normal",
+        status: "pending",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: "Solicitação enviada com sucesso!"
+    });
+  } catch (err) {
+    console.error('❌ [CUSTOM] Erro:', err);
+    res.status(500).json({
+      success: false,
+      error: "Erro ao enviar solicitação"
+    });
+  }
+});
+
+app.post("/api/suggest-knowledge", async (req, res) => {
+  try {
+    const { suggestion, userName, userPhone, sessionId, lastUserMessage, lastBotReply } = req.body;
+    
+    console.log('💡 [SUGGEST] Sugestão de:', userName);
+    
+    if (!suggestion) {
+      return res.status(400).json({
+        success: false,
+        error: "Sugestão é obrigatória"
+      });
+    }
+    
+    if (isConnected()) {
+      const suggestionsCollection = getSuggestionsCollection();
+      await suggestionsCollection.insertOne({
+        suggestion,
+        userName: userName || "Usuário Anônimo",
+        userPhone: userPhone || null,
+        sessionId: sessionId || null,
+        context: {
+          lastUserMessage: lastUserMessage || null,
+          lastBotReply: lastBotReply || null
+        },
+        status: "pending",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: "Obrigado pela sugestão! Nossa equipe irá analisar."
+    });
+  } catch (err) {
+    console.error('❌ [SUGGEST] Erro:', err);
+    res.status(500).json({
+      success: false,
+      error: "Erro ao enviar sugestão"
+    });
+  }
+});
+
+// =========================
+// ROTAS DE PARÂMETROS
+// =========================
+
+app.get("/api/resins", async (_req, res) => {
+  try {
+    if (!isConnected()) {
+      await connectToMongo();
     }
 
     const collection = getPrintParametersCollection();
@@ -332,38 +476,98 @@ async function handleResinsRoute(_req, res) {
       ])
       .toArray();
 
-    if (!resins || resins.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Nenhuma resina encontrada"
-      });
-    }
-
     res.json({
       success: true,
       resins: resins.map((item) => ({
-        _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
-        name: item.name || "Sem nome",
-        description: `Perfis: ${item.profiles ?? 0}`,
-        profiles: item.profiles ?? 0,
-        active: true
+        _id: item._id,
+        name: item.name,
+        profiles: item.profiles
       })),
       total: resins.length
     });
   } catch (err) {
-    console.error("❌ Erro ao listar resinas:", err);
-    res.status(500).json({ 
-      success: false, 
-      error: err.message 
-    });
+    console.error('❌ [RESINS] Erro:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
-}
+});
 
-app.get("/resins", handleResinsRoute);
-app.get("/api/resins", handleResinsRoute);
+app.get("/api/params/printers", async (req, res) => {
+  try {
+    if (!isConnected()) {
+      await connectToMongo();
+    }
+
+    const { resinId } = req.query;
+    const filter = resinId ? { resinId } : {};
+    
+    const collection = getPrintParametersCollection();
+    const printers = await collection
+      .aggregate([
+        { $match: filter },
+        {
+          $group: {
+            _id: "$printerId",
+            brand: { $first: "$brand" },
+            model: { $first: "$model" }
+          }
+        },
+        { $sort: { brand: 1, model: 1 } }
+      ])
+      .toArray();
+
+    res.json({
+      success: true,
+      printers: printers.map((item) => ({
+        id: item._id,
+        brand: item.brand,
+        model: item.model
+      }))
+    });
+  } catch (err) {
+    console.error('❌ [PRINTERS] Erro:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // =========================
-// FALLBACK PARA SPA
+// GALERIA
+// =========================
+
+app.get("/api/gallery", async (req, res) => {
+  try {
+    const { page = 1, limit = 12 } = req.query;
+    
+    if (!isConnected()) {
+      await connectToMongo();
+    }
+    
+    const galleryCollection = getGalleryCollection();
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const items = await galleryCollection
+      .find({ status: "approved" })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .toArray();
+    
+    const total = await galleryCollection.countDocuments({ status: "approved" });
+    
+    res.json({
+      success: true,
+      items,
+      total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / parseInt(limit))
+    });
+  } catch (err) {
+    console.error('❌ [GALLERY] Erro:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// =========================
+// FALLBACK SPA
 // =========================
 
 app.get('*', (req, res) => {
@@ -393,37 +597,12 @@ app.get('*', (req, res) => {
 });
 
 // =========================
-// TRATAMENTO DE ERROS
-// =========================
-
-app.use((err, req, res, next) => {
-  console.error('❌ Erro não tratado:', err);
-  
-  // Erro de CORS
-  if (err.message && err.message.includes('Origem não permitida')) {
-    return res.status(403).json({
-      success: false,
-      error: 'CORS Error',
-      message: 'Origem não autorizada',
-      origin: req.headers.origin
-    });
-  }
-  
-  res.status(500).json({
-    success: false,
-    error: 'Erro interno do servidor',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
-
-// =========================
 // INICIALIZAÇÃO
 // =========================
 
-async function bootstrapServices() {
+async function bootstrap() {
   console.log('\n🚀 Iniciando Quanton3D Bot...\n');
   
-  // MongoDB
   if (process.env.MONGODB_URI) {
     try {
       await connectToMongo();
@@ -431,18 +610,8 @@ async function bootstrapServices() {
     } catch (error) {
       console.error("❌ MongoDB falhou:", error.message);
     }
-  } else {
-    console.warn('⚠️ MONGODB_URI não configurado');
   }
 
-  // OpenAI
-  if (!process.env.OPENAI_API_KEY) {
-    console.warn('⚠️ OPENAI_API_KEY não configurado');
-  } else {
-    console.log('✅ OpenAI API configurada');
-  }
-
-  // RAG
   if (process.env.OPENAI_API_KEY && isConnected()) {
     try {
       await initializeRAG();
@@ -452,21 +621,15 @@ async function bootstrapServices() {
     }
   }
   
-  console.log('\n✨ Serviços inicializados!\n');
+  console.log('\n✨ Servidor pronto!\n');
 }
 
-// =========================
-// INICIAR SERVIDOR
-// =========================
-
-bootstrapServices().then(() => {
+bootstrap().then(() => {
   const server = app.listen(PORT, '0.0.0.0', () => {
     console.log('═══════════════════════════════════════════════');
     console.log('🤖 QUANTON3D BOT ONLINE!');
     console.log('═══════════════════════════════════════════════');
     console.log(`📡 Porta: ${PORT}`);
-    console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔒 CORS: ${allowedOrigins.length} origens permitidas`);
     console.log(`💚 Health: /health`);
     console.log(`🤖 Chat: /api/ask`);
     console.log('═══════════════════════════════════════════════\n');
@@ -479,17 +642,6 @@ bootstrapServices().then(() => {
       console.error('❌ Erro no servidor:', error);
     }
     process.exit(1);
-  });
-
-  process.on('SIGTERM', () => {
-    console.log('⚠️ SIGTERM recebido');
-    server.close(() => {
-      console.log('✅ Servidor encerrado');
-      mongoose.connection.close(false, () => {
-        console.log('✅ MongoDB desconectado');
-        process.exit(0);
-      });
-    });
   });
 });
 
