@@ -1,6 +1,7 @@
-// Cliente simples para consumir a API pública do Quanton3D Bot.
-// Não depende de variáveis do backend como MONGODB_URI, evitando expor
-// dados sensíveis no frontend.
+// =========================
+// API Client - Quanton3D
+// Cliente para consumir a API do backend
+// =========================
 
 const DEFAULT_API_BASE = "https://quanton3d-bot-v2.onrender.com";
 
@@ -16,6 +17,7 @@ function resolveApiBase() {
       ? window.API_BASE_URL || window.VITE_API_URL || window.env?.VITE_API_URL
       : undefined;
 
+  // Remove /api do final se existir
   let baseUrl = viteApi || browserApi || DEFAULT_API_BASE;
   baseUrl = baseUrl.replace(/\/api\/?$/, "");
 
@@ -24,9 +26,15 @@ function resolveApiBase() {
 
 const API_BASE = resolveApiBase();
 
+console.log("🔗 [apiClient] URL base:", API_BASE);
+
 async function request(path, options = {}) {
+  // Garantir que path comece com /
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const url = `${API_BASE}${normalizedPath}`;
+
+  console.log("📤 [apiClient]", options.method || "GET", url);
+
   const config = {
     headers: {
       "Content-Type": "application/json",
@@ -35,26 +43,39 @@ async function request(path, options = {}) {
     ...options
   };
 
-  const response = await fetch(url, config);
-  const contentType = response.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) {
-    throw new Error(`Servidor retornou ${contentType} ao invés de JSON`);
-  }
+  try {
+    const response = await fetch(url, config);
 
-  const data = await response.json();
+    // Verificar se resposta é JSON
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      console.error("❌ [apiClient] Resposta não é JSON:", contentType);
+      throw new Error(`Servidor retornou ${contentType} ao invés de JSON`);
+    }
 
-  if (!response.ok) {
-    const error = new Error(data.error || data.message || "Erro na requisição");
-    error.status = response.status;
-    error.data = data;
+    const data = await response.json();
+
+    if (!response.ok) {
+      const error = new Error(data.error || data.message || "Erro na requisição");
+      error.status = response.status;
+      error.data = data;
+      throw error;
+    }
+
+    console.log("✅ [apiClient] Sucesso");
+    return data;
+  } catch (error) {
+    console.error("❌ [apiClient] Erro:", error.message);
     throw error;
   }
-
-  return data;
 }
 
+// =========================
+// FUNÇÕES PÚBLICAS
+// =========================
+
 export async function fetchResins() {
-  return request("/resins");
+  return request("/api/resins");
 }
 
 export async function fetchPrinters(resinId) {
@@ -70,7 +91,7 @@ export async function registerUser(payload) {
 }
 
 export async function sendChatMessage(payload) {
-  return request("/api/chat", {
+  return request("/api/ask", {
     method: "POST",
     body: JSON.stringify(payload || {})
   });
@@ -85,6 +106,13 @@ export async function sendContact(payload) {
 
 export async function sendCustomRequest(payload) {
   return request("/api/custom-request", {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+}
+
+export async function sendSuggestion(payload) {
+  return request("/api/suggest-knowledge", {
     method: "POST",
     body: JSON.stringify(payload || {})
   });
@@ -108,6 +136,7 @@ export default {
   sendChatMessage,
   sendContact,
   sendCustomRequest,
+  sendSuggestion,
   fetchGallery,
   uploadToGallery
 };
