@@ -37,7 +37,7 @@ const ParametrosSchema = new mongoose.Schema({
   },
   createdAt: { type: Date, default: Date.now, index: true },
   updatedAt: { type: Date, default: Date.now }
-}, { collection: 'parametros' });
+}, { collection: 'print_parameters' });
 
 ParametrosSchema.index({ resin: 1, printer: 1, createdAt: -1 });
 ParametrosSchema.index({ sessionId: 1, createdAt: -1 });
