@@ -14,7 +14,7 @@ import OpenAI from "openai";
 
 // Importações dos módulos do sistema
 import { initializeRAG, checkRAGIntegrity, getRAGInfo } from "./rag-search.js";
-import { connectToMongo, isConnected, getPrintParametersCollection } from "./db.js";
+import { connectToMongo, isConnected, getDb, getPrintParametersCollection } from "./db.js";
 import { ensureMongoReady } from "./src/routes/common.js";
 
 // Importações das rotas
@@ -306,21 +306,11 @@ app.get("/resins", async (_req, res) => {
       });
     }
 
-    const collection = getPrintParametersCollection();
-    const resins = await collection
-      .aggregate([
-        {
-          $group: {
-            _id: "$resinId",
-            name: { $first: "$resinName" },
-            profiles: { $sum: 1 }
-          }
-        },
-        { $sort: { name: 1 } }
-      ])
+    const db = getDb();
+    const collections = await db
+      .listCollections({ name: "parametros" })
       .toArray();
-
-    if (!resins || resins.length === 0) {
+    if (collections.length === 0) {
       return res.json({
         success: true,
         resins: [],
@@ -328,16 +318,21 @@ app.get("/resins", async (_req, res) => {
       });
     }
 
+    const collection = getPrintParametersCollection();
+    const resins = await collection.distinct("resin");
+    const resinsList = resins
+      .filter((name) => typeof name === "string" && name.trim().length > 0)
+      .map((name) => ({
+        _id: name.toLowerCase().replace(/\s+/g, "-"),
+        name,
+        active: true
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
     res.json({
       success: true,
-      resins: resins.map((item) => ({
-        _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
-        name: item.name || "Sem nome",
-        description: `Perfis: ${item.profiles ?? 0}`,
-        profiles: item.profiles ?? 0,
-        active: true
-      })),
-      total: resins.length
+      resins: resinsList,
+      total: resinsList.length
     });
   } catch (err) {
     console.error("❌ Erro ao listar resinas:", err);
