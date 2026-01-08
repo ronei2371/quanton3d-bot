@@ -296,7 +296,7 @@ attachKnowledgeRoutes(app);
 // ROTA PÚBLICA: /resins
 // =========================
 
-app.get("/resins", async (_req, res) => {
+async function handleResinsRoute(_req, res) {
   try {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
@@ -319,20 +319,36 @@ app.get("/resins", async (_req, res) => {
     }
 
     const collection = getPrintParametersCollection();
-    const resins = await collection.distinct("resin");
-    const resinsList = resins
-      .filter((name) => typeof name === "string" && name.trim().length > 0)
-      .map((name) => ({
-        _id: name.toLowerCase().replace(/\s+/g, "-"),
-        name,
-        active: true
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    const resins = await collection
+      .aggregate([
+        {
+          $group: {
+            _id: "$resinId",
+            name: { $first: "$resinName" },
+            profiles: { $sum: 1 }
+          }
+        },
+        { $sort: { name: 1 } }
+      ])
+      .toArray();
+
+    if (!resins || resins.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Nenhuma resina encontrada"
+      });
+    }
 
     res.json({
       success: true,
-      resins: resinsList,
-      total: resinsList.length
+      resins: resins.map((item) => ({
+        _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
+        name: item.name || "Sem nome",
+        description: `Perfis: ${item.profiles ?? 0}`,
+        profiles: item.profiles ?? 0,
+        active: true
+      })),
+      total: resins.length
     });
   } catch (err) {
     console.error("❌ Erro ao listar resinas:", err);
@@ -341,7 +357,10 @@ app.get("/resins", async (_req, res) => {
       error: err.message 
     });
   }
-});
+}
+
+app.get("/resins", handleResinsRoute);
+app.get("/api/resins", handleResinsRoute);
 
 // =========================
 // FALLBACK PARA SPA

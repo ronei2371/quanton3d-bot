@@ -173,19 +173,35 @@ router.get("/params/resins", async (_req, res) => {
     }
 
     const collection = getPrintParametersCollection();
-    const resins = await collection.distinct("resin");
-    const resinsList = resins
-      .filter((name) => typeof name === "string" && name.trim().length > 0)
-      .map((name) => ({
-        _id: name.toLowerCase().replace(/\s+/g, "-"),
-        name,
-        active: true
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    const resins = await collection
+      .aggregate([
+        {
+          $group: {
+            _id: "$resinId",
+            name: { $first: "$resinName" },
+            profiles: { $sum: 1 }
+          }
+        },
+        { $sort: { name: 1 } }
+      ])
+      .toArray();
+
+    if (!resins || resins.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Nenhuma resina encontrada"
+      });
+    }
 
     res.json({
       success: true,
-      resins: resinsList
+      resins: resins.map((item) => ({
+        _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
+        name: item.name || "Sem nome",
+        description: `Perfis: ${item.profiles ?? 0}`,
+        profiles: item.profiles ?? 0,
+        active: true
+      }))
     });
   } catch (err) {
     console.error("[API] Erro ao listar resinas de parâmetros:", err);

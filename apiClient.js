@@ -16,13 +16,17 @@ function resolveApiBase() {
       ? window.API_BASE_URL || window.VITE_API_URL || window.env?.VITE_API_URL
       : undefined;
 
-  return normalizeUrl(viteApi || browserApi || DEFAULT_API_BASE);
+  let baseUrl = viteApi || browserApi || DEFAULT_API_BASE;
+  baseUrl = baseUrl.replace(/\/api\/?$/, "");
+
+  return normalizeUrl(baseUrl);
 }
 
 const API_BASE = resolveApiBase();
 
 async function request(path, options = {}) {
-  const url = `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const url = `${API_BASE}${normalizedPath}`;
   const config = {
     headers: {
       "Content-Type": "application/json",
@@ -32,7 +36,12 @@ async function request(path, options = {}) {
   };
 
   const response = await fetch(url, config);
-  const data = await response.json().catch(() => ({}));
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    throw new Error(`Servidor retornou ${contentType} ao invés de JSON`);
+  }
+
+  const data = await response.json();
 
   if (!response.ok) {
     const error = new Error(data.error || data.message || "Erro na requisição");
@@ -67,9 +76,38 @@ export async function sendChatMessage(payload) {
   });
 }
 
+export async function sendContact(payload) {
+  return request("/api/contact", {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+}
+
+export async function sendCustomRequest(payload) {
+  return request("/api/custom-request", {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+}
+
+export async function fetchGallery(page = 1, limit = 12) {
+  return request(`/api/gallery?page=${page}&limit=${limit}`);
+}
+
+export async function uploadToGallery(payload) {
+  return request("/api/gallery", {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+}
+
 export default {
   fetchResins,
   fetchPrinters,
   registerUser,
-  sendChatMessage
+  sendChatMessage,
+  sendContact,
+  sendCustomRequest,
+  fetchGallery,
+  uploadToGallery
 };
