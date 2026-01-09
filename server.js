@@ -28,9 +28,9 @@ import {
   getPrintParametersCollection,
   getMessagesCollection,
   getGalleryCollection,
-  getSuggestionsCollection,
-  Conversas
+  getSuggestionsCollection
 } from "./db.js";
+import { Conversas } from "./models/schemas.js";
 
 import {
   analyzeQuestionType,
