@@ -30,7 +30,7 @@ import {
   getGalleryCollection,
   getSuggestionsCollection
 } from "./db.js";
-import { Conversas } from "./models/schemas.js";
+import { Conversas } from "./src/models/schemas.js";
 
 import {
   analyzeQuestionType,
