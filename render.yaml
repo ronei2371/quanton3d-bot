@@ -4,7 +4,7 @@ services:
     name: quanton3d-bot-v2
     env: node
     plan: free
-    buildCommand: npm install && npm run build
+    buildCommand: corepack enable && pnpm install --no-frozen-lockfile && pnpm run build
     startCommand: node server.js
     envVars:
       - key: NODE_VERSION
@@ -13,10 +13,15 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      - key: CI
+        value: "true"
 
   # Configuração do Site (Static Site)
   - type: web
     name: quanton3dia
     env: static
-    buildCommand: npm install && npm run build
+    buildCommand: corepack enable && pnpm install --no-frozen-lockfile && pnpm run build
     staticPublishPath: dist
+    envVars:
+      - key: CI
+        value: "true"
