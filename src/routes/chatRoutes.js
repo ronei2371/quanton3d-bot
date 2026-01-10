@@ -128,4 +128,4 @@ router.post('/chat', handleChatRequest);
 // Compatibilidade: /ask-with-image (frontend com imagem)
 router.post('/ask-with-image', handleChatRequest);
 
-export { router as chatRoutes };
+export default router;
