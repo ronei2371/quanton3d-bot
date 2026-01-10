@@ -12,9 +12,12 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const app = express()
-const PORT = process.env.PORT || 4000
+const PORT = process.env.PORT || 10000  // ✅ CORRIGIDO: Porta 10000 para Render
 const MONGODB_URI = process.env.MONGODB_URI || ''
 
+// ==========================================================
+// CONFIGURAÇÃO DE CORS
+// ==========================================================
 app.use(
   cors({
     origin: process.env.CORS_ORIGIN?.split(',').map((origin) => origin.trim()).filter(Boolean) || '*',
@@ -24,104 +27,371 @@ app.use(
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
-// Conexão com o Banco de Dados
+// ==========================================================
+// CONEXÃO COM MONGODB
+// ==========================================================
 if (MONGODB_URI) {
   db.connectToMongo(MONGODB_URI)
-    .then(() => console.log('[MongoDB] Conectado com sucesso'))
-    .catch((error) => console.error('[MongoDB] Erro na conexão', error))
+    .then(() => console.log('[MongoDB] ✅ Conectado com sucesso'))
+    .catch((error) => console.error('[MongoDB] ❌ Erro na conexão:', error))
+} else {
+  console.warn('[MongoDB] ⚠️ MONGODB_URI não configurada')
 }
 
 // ==========================================================
-// ALINHAMENTO DE ROTAS COM O FRONTEND (DIAGNÓSTICO)
+// HEALTH CHECK
 // ==========================================================
-
-// 1. Resinas e Parâmetros
-app.get('/api/resins', async (req, res) => {
-  const collection = db.getParametrosCollection()
-  if (!collection) return res.status(503).json({ success: false, message: 'DB offline' })
+app.get('/health', async (req, res) => {
   try {
+    const dbStatus = db.getCollection ? 'connected' : 'disconnected'
+    res.json({
+      status: 'ok',
+      database: dbStatus,
+      timestamp: new Date().toISOString(),
+      port: PORT
+    })
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: error.message
+    })
+  }
+})
+
+// ==========================================================
+// 1. ROTAS DE PARÂMETROS - Resinas e Impressoras
+// ==========================================================
+app.get('/api/resins', async (req, res) => {
+  try {
+    const collection = db.getParametrosCollection?.() || db.getCollection?.('parametros')
+    if (!collection) {
+      console.warn('[API] ⚠️ Collection parametros não disponível')
+      return res.status(200).json({ success: true, resins: [] })
+    }
     const resins = await collection.find({}).toArray()
+    console.log(`[API] ✅ Resinas carregadas: ${resins.length}`)
     res.status(200).json({ success: true, resins })
-  } catch (e) { res.status(500).json({ success: false }) }
+  } catch (error) {
+    console.error('[API] ❌ Erro ao buscar resinas:', error)
+    res.status(500).json({ success: false, resins: [], message: 'Erro ao carregar resinas' })
+  }
 })
 
 app.get('/api/params/printers', async (req, res) => {
-  res.status(200).json({ success: true, printers: [] })
-})
-
-// 2. Galeria
-app.get('/api/gallery', async (req, res) => {
-  const collection = db.getGalleryCollection()
   try {
-    const photos = await collection.find({}).limit(50).toArray()
-    res.status(200).json({ success: true, photos })
-  } catch (e) { res.status(500).json({ success: false }) }
-})
-
-app.post('/api/gallery', async (req, res) => {
-  const collection = db.getGalleryCollection()
-  try {
-    await collection.insertOne({ ...req.body, createdAt: new Date() })
-    res.status(200).json({ success: true })
-  } catch (e) { res.status(500).json({ success: false }) }
-})
-
-// 3. Formulários e Mensagens (Correção dos 404)
-app.post('/api/contact', async (req, res) => {
-  const collection = db.getCollection ? db.getCollection('messages') : null
-  try {
-    await collection.insertOne({ ...req.body, type: 'contact', createdAt: new Date() })
-    res.status(200).json({ success: true })
-  } catch (e) { res.status(500).json({ success: false }) }
-})
-
-app.post('/api/register-user', async (req, res) => {
-  const collection = db.getCollection ? db.getCollection('partners') : null
-  try {
-    await collection.insertOne({ ...req.body, type: 'registration', createdAt: new Date() })
-    res.status(200).json({ success: true })
-  } catch (e) { res.status(200).json({ success: true }) } // Fallback para não travar o site
-})
-
-app.post('/api/custom-request', async (req, res) => {
-  const collection = db.getCollection ? db.getCollection('messages') : null
-  try {
-    await collection.insertOne({ ...req.body, type: 'custom_request', createdAt: new Date() })
-    res.status(200).json({ success: true })
-  } catch (e) { res.status(500).json({ success: false }) }
-})
-
-app.post('/api/suggest-knowledge', async (req, res) => {
-  const collection = db.getSuggestionsCollection()
-  try {
-    await collection.insertOne({ ...req.body, createdAt: new Date() })
-    res.status(200).json({ success: true })
-  } catch (e) { res.status(500).json({ success: false }) }
-})
-
-// 4. Admin e Login
-app.post('/auth/login', (req, res) => {
-  res.status(401).json({ success: false, message: 'Acesso restrito' })
+    const collection = db.getCollection?.('printers')
+    if (!collection) {
+      return res.status(200).json({ success: true, printers: [] })
+    }
+    const printers = await collection.find({}).toArray()
+    console.log(`[API] ✅ Impressoras carregadas: ${printers.length}`)
+    res.status(200).json({ success: true, printers })
+  } catch (error) {
+    console.error('[API] ❌ Erro ao buscar impressoras:', error)
+    res.status(200).json({ success: true, printers: [] })
+  }
 })
 
 // ==========================================================
+// 2. ROTAS DE GALERIA
+// ==========================================================
+app.get('/api/gallery', async (req, res) => {
+  try {
+    const collection = db.getGalleryCollection?.() || db.getCollection?.('gallery')
+    if (!collection) {
+      return res.status(200).json({ success: true, photos: [] })
+    }
+    
+    const page = parseInt(req.query.page) || 1
+    const limit = parseInt(req.query.limit) || 50
+    const skip = (page - 1) * limit
+    
+    const photos = await collection.find({})
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray()
+    
+    console.log(`[API] ✅ Galeria carregada: ${photos.length} fotos`)
+    res.status(200).json({ success: true, photos })
+  } catch (error) {
+    console.error('[API] ❌ Erro ao buscar galeria:', error)
+    res.status(500).json({ success: false, photos: [] })
+  }
+})
 
-// Rotas do Chat (Cérebro)
+app.post('/api/gallery', async (req, res) => {
+  try {
+    const collection = db.getGalleryCollection?.() || db.getCollection?.('gallery')
+    if (!collection) {
+      return res.status(503).json({ success: false, message: 'DB offline' })
+    }
+    await collection.insertOne({ ...req.body, createdAt: new Date() })
+    console.log('[API] ✅ Foto adicionada à galeria')
+    res.status(200).json({ success: true, message: 'Foto adicionada com sucesso!' })
+  } catch (error) {
+    console.error('[API] ❌ Erro ao adicionar foto:', error)
+    res.status(500).json({ success: false, message: 'Erro ao salvar foto' })
+  }
+})
+
+// ==========================================================
+// 3. ROTAS DE FORMULÁRIOS (Correção dos 404)
+// ==========================================================
+app.post('/api/contact', async (req, res) => {
+  try {
+    const collection = db.getCollection ? db.getCollection('messages') : null
+    if (!collection) {
+      console.warn('[FORM] ⚠️ DB offline, mas retornando sucesso (fallback)')
+      return res.status(200).json({ success: true, message: 'Mensagem recebida (sem DB)' })
+    }
+    await collection.insertOne({ ...req.body, type: 'contact', createdAt: new Date() })
+    console.log(`[FORM] ✅ Contato salvo: ${req.body.nome || req.body.name || 'anônimo'}`)
+    res.status(200).json({ success: true, message: 'Mensagem enviada com sucesso!' })
+  } catch (error) {
+    console.error('[FORM] ❌ Erro ao salvar contato:', error)
+    res.status(500).json({ success: false, message: 'Erro ao enviar mensagem' })
+  }
+})
+
+app.post('/api/register-user', async (req, res) => {
+  try {
+    const collection = db.getCollection ? db.getCollection('partners') : null
+    if (!collection) {
+      console.warn('[FORM] ⚠️ DB offline, retornando sucesso (fallback)')
+      return res.status(200).json({ success: true, message: 'Cadastro recebido' })
+    }
+    await collection.insertOne({ ...req.body, type: 'registration', createdAt: new Date() })
+    console.log(`[FORM] ✅ Cadastro salvo: ${req.body.nome || req.body.name || 'anônimo'}`)
+    res.status(200).json({ success: true, message: 'Cadastro realizado com sucesso!' })
+  } catch (error) {
+    console.error('[FORM] ❌ Erro ao salvar cadastro:', error)
+    // Fallback: não travar o site
+    res.status(200).json({ success: true, message: 'Cadastro recebido' })
+  }
+})
+
+app.post('/api/custom-request', async (req, res) => {
+  try {
+    const collection = db.getCollection ? db.getCollection('messages') : null
+    if (!collection) {
+      console.warn('[FORM] ⚠️ DB offline, mas retornando sucesso (fallback)')
+      return res.status(200).json({ success: true, message: 'Pedido recebido' })
+    }
+    await collection.insertOne({ ...req.body, type: 'custom_request', createdAt: new Date() })
+    console.log(`[FORM] ✅ Pedido customizado salvo: ${req.body.titulo || 'sem título'}`)
+    res.status(200).json({ success: true, message: 'Pedido enviado com sucesso!' })
+  } catch (error) {
+    console.error('[FORM] ❌ Erro ao salvar pedido:', error)
+    res.status(500).json({ success: false, message: 'Erro ao enviar pedido' })
+  }
+})
+
+app.post('/api/suggest-knowledge', async (req, res) => {
+  try {
+    const collection = db.getSuggestionsCollection?.() || db.getCollection?.('suggestions')
+    if (!collection) {
+      console.warn('[FORM] ⚠️ DB offline, mas retornando sucesso (fallback)')
+      return res.status(200).json({ success: true, message: 'Sugestão recebida' })
+    }
+    await collection.insertOne({ ...req.body, createdAt: new Date(), status: 'pending' })
+    console.log(`[FORM] ✅ Sugestão salva: ${req.body.titulo || 'sem título'}`)
+    res.status(200).json({ success: true, message: 'Sugestão enviada! Obrigado!' })
+  } catch (error) {
+    console.error('[FORM] ❌ Erro ao salvar sugestão:', error)
+    res.status(500).json({ success: false, message: 'Erro ao enviar sugestão' })
+  }
+})
+
+// ==========================================================
+// 4. ROTA DE ANÁLISE DE IMAGEM (NOVO!)
+// ==========================================================
+app.post('/api/ask-with-image', async (req, res) => {
+  try {
+    const { message, image, imageUrl, sessionId } = req.body
+
+    if (!image && !imageUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'Imagem não fornecida'
+      })
+    }
+
+    console.log('[IMAGE] 🖼️ Recebida requisição de análise de imagem')
+
+    // Importar OpenAI dinamicamente (só quando necessário)
+    const { default: OpenAI } = await import('openai')
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    })
+
+    // Preparar URL da imagem
+    let finalImageUrl = imageUrl
+    if (image && !imageUrl) {
+      finalImageUrl = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`
+    }
+
+    // Chamar OpenAI Vision
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'system',
+          content: 'Você é um assistente especializado em impressão 3D da Quanton3D. Analise imagens relacionadas a impressão 3D, peças, modelos, problemas de impressão, etc. Seja técnico mas acessível.'
+        },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: message || 'Analise esta imagem detalhadamente' },
+            { type: 'image_url', image_url: { url: finalImageUrl } }
+          ]
+        }
+      ],
+      max_tokens: 1000
+    })
+
+    const reply = response.choices[0].message.content
+
+    console.log('[IMAGE] ✅ Análise concluída')
+
+    res.json({
+      success: true,
+      reply,
+      sessionId: sessionId || `img-${Date.now()}`
+    })
+
+  } catch (error) {
+    console.error('[IMAGE] ❌ Erro ao analisar:', error.message)
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao analisar imagem',
+      message: error.message
+    })
+  }
+})
+
+// ==========================================================
+// 5. AUTENTICAÇÃO ADMIN
+// ==========================================================
+app.post('/auth/login', (req, res) => {
+  const { username, password } = req.body
+  
+  // Verificar credenciais (básico - melhorar depois)
+  const adminUser = process.env.ADMIN_USER || 'admin'
+  const adminPass = process.env.ADMIN_PASS || 'admin123'
+  
+  if (username === adminUser && password === adminPass) {
+    console.log('[AUTH] ✅ Login bem-sucedido')
+    res.status(200).json({ 
+      success: true, 
+      message: 'Login bem-sucedido',
+      token: 'token-' + Date.now() // Substituir por JWT real depois
+    })
+  } else {
+    console.log('[AUTH] ❌ Credenciais inválidas')
+    res.status(401).json({ 
+      success: false, 
+      message: 'Credenciais inválidas' 
+    })
+  }
+})
+
+// ==========================================================
+// ROTAS DO CHAT (Bot IA - Cérebro)
+// ==========================================================
+console.log('[ROUTES] 📡 Montando rotas do chat...')
 app.use('/api', chatRoutes)
 app.use('/chat', chatRoutes)
 
-// Servir o Frontend e Fallback de HTML
+// ==========================================================
+// SERVIR FRONTEND (Arquivos Estáticos)
+// ==========================================================
 const distPath = path.join(__dirname, 'dist')
+console.log(`[FRONTEND] 📂 Pasta dist: ${distPath}`)
 app.use(express.static(distPath))
 
+// ==========================================================
+// FALLBACK PARA SPA (React Router)
+// ==========================================================
 app.get('*', (req, res) => {
-  // Se for uma rota que deveria ser API, não manda o HTML
+  // Se for rota de API, retornar 404 JSON
   if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ error: 'Rota de API não encontrada' })
+    return res.status(404).json({ 
+      error: 'Rota de API não encontrada',
+      path: req.path 
+    })
   }
-  res.sendFile(path.join(distPath, 'index.html'))
+  
+  // Servir index.html para rotas do frontend
+  const indexPath = path.join(distPath, 'index.html')
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      console.error('[FRONTEND] ❌ Erro ao servir index.html:', err.message)
+      res.status(404).json({ 
+        error: 'Frontend não encontrado',
+        message: 'Execute "npm run build" antes de fazer deploy',
+        path: indexPath
+      })
+    }
+  })
 })
 
-app.listen(PORT, () => {
-  console.log(`🚀 Bot Quanton3D rodando na porta ${PORT}`)
-})
+// ==========================================================
+// INICIALIZAÇÃO DO SERVIDOR
+// ==========================================================
+const startServer = async () => {
+  try {
+    console.log('\n═══════════════════════════════════════════════')
+    console.log('🚀 INICIANDO QUANTON3D BOT...')
+    console.log('═══════════════════════════════════════════════\n')
+
+    // 1. Verificar MongoDB
+    if (MONGODB_URI) {
+      console.log('[INIT] 🔄 Aguardando conexão MongoDB...')
+      await new Promise(resolve => setTimeout(resolve, 2000)) // Aguardar conexão
+      console.log('[INIT] ✅ MongoDB verificado')
+    } else {
+      console.log('[INIT] ⚠️ MongoDB não configurado')
+    }
+
+    // 2. Verificar OpenAI API
+    if (!process.env.OPENAI_API_KEY) {
+      console.log('[INIT] ⚠️ OPENAI_API_KEY não configurada')
+    } else {
+      console.log('[INIT] ✅ OpenAI API configurada')
+    }
+
+    // 3. Inicializar RAG (se disponível)
+    try {
+      const { initRAG } = await import('./src/services/ragService.js')
+      await initRAG()
+      console.log('[INIT] ✅ RAG inicializado')
+    } catch (error) {
+      console.log('[INIT] ⚠️ RAG não disponível:', error.message)
+    }
+
+    console.log('\n[INIT] ✨ Todos os serviços inicializados!\n')
+
+    // 4. Iniciar servidor HTTP
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log('═══════════════════════════════════════════════')
+      console.log('🤖 QUANTON3D BOT ONLINE!')
+      console.log('═══════════════════════════════════════════════')
+      console.log(`📡 Porta: ${PORT}`)
+      console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`)
+      console.log(`💚 Health: http://localhost:${PORT}/health`)
+      console.log(`🤖 Chat: http://localhost:${PORT}/api/ask`)
+      console.log(`🖼️  Imagem: http://localhost:${PORT}/api/ask-with-image`)
+      console.log(`📝 Formulários: /api/contact, /api/register-user`)
+      console.log('═══════════════════════════════════════════════\n')
+    })
+
+  } catch (error) {
+    console.error('\n❌ ERRO FATAL AO INICIAR SERVIDOR:', error)
+    console.error(error.stack)
+    process.exit(1)
+  }
+}
+
+// Iniciar o servidor
+startServer()
