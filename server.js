@@ -61,7 +61,7 @@ app.get('/health', async (req, res) => {
 // ==========================================================
 // 1. ROTAS DE PARÂMETROS - Resinas e Impressoras
 // ==========================================================
-app.get('/api/resins', async (req, res) => {
+const handleResinsRequest = async (req, res) => {
   try {
     const collection = db.getParametrosCollection?.() || db.getCollection?.('parametros')
     if (!collection) {
@@ -75,7 +75,10 @@ app.get('/api/resins', async (req, res) => {
     console.error('[API] ❌ Erro ao buscar resinas:', error)
     res.status(500).json({ success: false, resins: [], message: 'Erro ao carregar resinas' })
   }
-})
+}
+
+app.get('/api/resins', handleResinsRequest)
+app.get('/resins', handleResinsRequest)
 
 app.get('/api/params/printers', async (req, res) => {
   try {
@@ -138,7 +141,7 @@ app.post('/api/gallery', async (req, res) => {
 // ==========================================================
 // 3. ROTAS DE FORMULÁRIOS (Correção dos 404)
 // ==========================================================
-app.post('/api/contact', async (req, res) => {
+const handleContactRequest = async (req, res) => {
   try {
     const collection = db.getCollection ? db.getCollection('messages') : null
     if (!collection) {
@@ -152,9 +155,12 @@ app.post('/api/contact', async (req, res) => {
     console.error('[FORM] ❌ Erro ao salvar contato:', error)
     res.status(500).json({ success: false, message: 'Erro ao enviar mensagem' })
   }
-})
+}
 
-app.post('/api/register-user', async (req, res) => {
+app.post('/api/contact', handleContactRequest)
+app.post('/contact', handleContactRequest)
+
+const handleRegisterUserRequest = async (req, res) => {
   try {
     const collection = db.getCollection ? db.getCollection('partners') : null
     if (!collection) {
@@ -169,9 +175,12 @@ app.post('/api/register-user', async (req, res) => {
     // Fallback: não travar o site
     res.status(200).json({ success: true, message: 'Cadastro recebido' })
   }
-})
+}
 
-app.post('/api/custom-request', async (req, res) => {
+app.post('/api/register-user', handleRegisterUserRequest)
+app.post('/register-user', handleRegisterUserRequest)
+
+const handleCustomRequest = async (req, res) => {
   try {
     const collection = db.getCollection ? db.getCollection('messages') : null
     if (!collection) {
@@ -185,9 +194,12 @@ app.post('/api/custom-request', async (req, res) => {
     console.error('[FORM] ❌ Erro ao salvar pedido:', error)
     res.status(500).json({ success: false, message: 'Erro ao enviar pedido' })
   }
-})
+}
 
-app.post('/api/suggest-knowledge', async (req, res) => {
+app.post('/api/custom-request', handleCustomRequest)
+app.post('/custom-request', handleCustomRequest)
+
+const handleSuggestKnowledgeRequest = async (req, res) => {
   try {
     const collection = db.getSuggestionsCollection?.() || db.getCollection?.('suggestions')
     if (!collection) {
@@ -201,7 +213,10 @@ app.post('/api/suggest-knowledge', async (req, res) => {
     console.error('[FORM] ❌ Erro ao salvar sugestão:', error)
     res.status(500).json({ success: false, message: 'Erro ao enviar sugestão' })
   }
-})
+}
+
+app.post('/api/suggest-knowledge', handleSuggestKnowledgeRequest)
+app.post('/suggest-knowledge', handleSuggestKnowledgeRequest)
 
 // ==========================================================
 // 4. ROTA DE ANÁLISE DE IMAGEM (NOVO!)
