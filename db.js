@@ -1,80 +1,50 @@
-import { MongoClient } from 'mongodb';
+import mongoose from 'mongoose'
 
-// Definição da constante para evitar erros de digitação
-const PRIMARY_PARAMETERS_COLLECTION = 'parametros';
-const DEFAULT_DB_NAME = process.env.MONGODB_DB || process.env.DB_NAME || 'quanton3d';
+const DEFAULT_OPTIONS = {
+  serverSelectionTimeoutMS: 5000,
+}
 
-let db = null;
+let connectPromise = null
 
-export async function connectToMongo(mongoUri = process.env.MONGODB_URI, dbName = DEFAULT_DB_NAME) {
-  if (db) return db;
+export const connectToMongo = async (uri) => {
+  if (!uri) return false
 
-  try {
-    if (!mongoUri) {
-      throw new Error('MONGODB_URI não configurado');
-    }
-
-    const client = new MongoClient(mongoUri);
-
-    await client.connect();
-    db = client.db(dbName);
-    console.log(`[MongoDB] Conectado ao banco: ${dbName}`);
-
-    // Lista coleções existentes
-    const collections = await db.listCollections().toArray();
-    const collectionNames = collections.map(c => c.name);
-
-    // CRIAÇÃO SEGURA DA COLEÇÃO 'parametros'
-    if (!collectionNames.includes(PRIMARY_PARAMETERS_COLLECTION)) {
-      await db.createCollection(PRIMARY_PARAMETERS_COLLECTION);
-      console.log(`[MongoDB] Colecao "${PRIMARY_PARAMETERS_COLLECTION}" criada com sucesso.`);
-    }
-
-    return db;
-  } catch (error) {
-    console.error('[MongoDB] Erro fatal na conexão:', error);
-    throw error;
+  if (mongoose.connection.readyState === 1) {
+    return true
   }
-}
 
-export function getDb() {
-  if (!db) {
-    throw new Error('Banco de dados não inicializado. Chame connectToMongo primeiro.');
+  if (!connectPromise) {
+    connectPromise = mongoose
+      .connect(uri, DEFAULT_OPTIONS)
+      .then(() => true)
+      .catch((error) => {
+        connectPromise = null
+        throw error
+      })
   }
-  return db;
+
+  return connectPromise
 }
 
-// --- FUNÇÕES DE ACESSO ÀS COLEÇÕES ---
-
-export function getPrintParametersCollection() {
-  return getDb().collection(PRIMARY_PARAMETERS_COLLECTION);
+const getCollection = (name) => {
+  if (!mongoose.connection?.db) return null
+  return mongoose.connection.db.collection(name)
 }
 
-export function getDocumentsCollection() {
-  return getDb().collection('documents');
-}
+export const getGalleryCollection = () => getCollection('gallery')
+export const getSuggestionsCollection = () => getCollection('suggestions')
+export const getMetricasCollection = () => getCollection('metricas')
+export const getParametrosCollection = () => getCollection('parametros')
 
-export function getVisualKnowledgeCollection() {
-  return getDb().collection('visual_knowledge');
-}
+const conversasSchema = new mongoose.Schema({}, { strict: false, collection: 'conversas' })
 
-export function getConversasCollection() {
-  return getDb().collection('conversas');
-}
+export const Conversas = mongoose.models.Conversas || mongoose.model('Conversas', conversasSchema)
 
-export function getSugestoesCollection() {
-  return getDb().collection('sugestoes');
-}
-
-export function isConnected() {
-  return !!db;
-}
-
-export function getCollection(name) {
-  return getDb().collection(name);
-}
-
-// Essa é a parte que estava dando erro, agora está arrumada:
-export function getLearningCollection() {
-  return getDb().collection('ai_learning');
+export default {
+  connectToMongo,
+  getGalleryCollection,
+  getSuggestionsCollection,
+  getMetricasCollection,
+  getParametrosCollection,
+  Conversas,
 }
