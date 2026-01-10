@@ -1,18 +1,22 @@
 services:
+  # Configuração do Bot (Backend)
   - type: web
-    name: quanton3d-bot
-    runtime: node
+    name: quanton3d-bot-v2
+    env: node
     plan: free
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    startCommand: node server.js
     envVars:
       - key: NODE_VERSION
-        value: 20
+        value: 20.x
+      - key: MONGODB_URI
+        sync: false
       - key: OPENAI_API_KEY
         sync: false
-      - key: OPENAI_MODEL
-        value: gpt-4o
-      - key: OPENAI_TEMPERATURE
-        value: "0.0"
-      - key: PORT
-        value: "10000"
+
+  # Configuração do Site (Static Site)
+  - type: web
+    name: quanton3dia
+    env: static
+    buildCommand: npm install && npm run build
+    publishDir: dist
