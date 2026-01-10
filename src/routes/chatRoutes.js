@@ -19,7 +19,7 @@ function getOpenAIClient() {
   return openaiClient;
 }
 
-// Rota de teste simples para garantir que o bot responde
+// Rota de teste
 router.get('/ping', (req, res) => {
   res.json({ status: 'ok', message: 'Chat route working' });
 });
@@ -35,18 +35,9 @@ function hasImagePayload(body = {}) {
 }
 
 function summarizeImagePayload(body = {}) {
-  if (body.imageUrl) {
-    return `Imagem recebida via URL: ${body.imageUrl}`;
-  }
-
-  if (body.image) {
-    return 'Imagem recebida (campo image).';
-  }
-
-  if (body.imageBase64 || body.imageData || body.attachment) {
-    return 'Imagem recebida em formato base64/anexo.';
-  }
-
+  if (body.imageUrl) return `Imagem recebida via URL: ${body.imageUrl}`;
+  if (body.image) return 'Imagem recebida (campo image).';
+  if (body.imageBase64 || body.imageData || body.attachment) return 'Imagem recebida em formato base64/anexo.';
   return '';
 }
 
@@ -55,29 +46,32 @@ async function generateResponse({ message, imageSummary }) {
   const ragResults = trimmedMessage ? await searchKnowledge(trimmedMessage) : [];
   const ragContext = formatContext(ragResults);
 
+  // --- AQUI ESTÁ A MÁGICA DA PERSONALIDADE ---
+  const systemPrompt = `
+    Você é a IA da Quanton3D, especialista em resinas para impressão 3D.
+    
+    Diretrizes de Resposta:
+    1. Seja direto, amigável e técnico na medida certa.
+    2. Use formatação com tópicos (bullet points) ou negrito para facilitar a leitura.
+    3. Use o contexto fornecido abaixo para responder, mas JAMAIS escreva "(Fonte: Documento 1)" ou citações parecidas. Integre a informação naturalmente.
+    4. Se a resposta não estiver no contexto, sugira entrar em contato com o suporte humano (WhatsApp/Email).
+    5. Se o usuário mandar uma imagem ou descrever um defeito, aja como um especialista em troubleshooting, dando dicas de cura, lavagem e parâmetros.
+  `;
+
   const prompt = [
-    ragContext,
-    trimmedMessage
-      ? `Pergunta do cliente: ${trimmedMessage}`
-      : 'O cliente enviou uma imagem sem texto explicativo.',
+    `Contexto Técnico Interno (Use isso para responder):\n${ragContext}`,
+    '---',
+    trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : 'O cliente enviou uma imagem.',
     imageSummary ? `Contexto da imagem: ${imageSummary}` : null,
-  ]
-    .filter(Boolean)
-    .join('\n\n');
+  ].filter(Boolean).join('\n\n');
 
   const client = getOpenAIClient();
   const completion = await client.chat.completions.create({
     model: DEFAULT_CHAT_MODEL,
-    temperature: 0.3,
+    temperature: 0.4, // Um pouco mais criativo para não ser robótico
     messages: [
-      {
-        role: 'system',
-        content: 'Você é o assistente técnico oficial da Quanton3D. Responda em português e siga o contexto fornecido.'
-      },
-      {
-        role: 'user',
-        content: prompt
-      }
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: prompt }
     ]
   });
 
@@ -103,10 +97,7 @@ async function handleChatRequest(req, res) {
     }
 
     const imageSummary = hasImage ? summarizeImagePayload(req.body) : '';
-    const response = await generateResponse({
-      message: trimmedMessage,
-      imageSummary
-    });
+    const response = await generateResponse({ message: trimmedMessage, imageSummary });
 
     res.json({
       reply: response.reply,
@@ -119,13 +110,8 @@ async function handleChatRequest(req, res) {
   }
 }
 
-// Rota PRINCIPAL /ask
 router.post('/ask', handleChatRequest);
-
-// Compatibilidade: /chat (frontend antigo)
 router.post('/chat', handleChatRequest);
-
-// Compatibilidade: /ask-with-image (frontend com imagem)
 router.post('/ask-with-image', handleChatRequest);
 
 export default router;
