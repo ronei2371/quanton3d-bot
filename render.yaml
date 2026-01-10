@@ -19,4 +19,4 @@ services:
     name: quanton3dia
     env: static
     buildCommand: npm install && npm run build
-    publishDir: dist
+    staticPublishPath: dist
