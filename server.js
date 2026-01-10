@@ -61,7 +61,7 @@ app.get('/health', async (req, res) => {
 // ==========================================================
 // 1. ROTAS DE PARÂMETROS - Resinas e Impressoras
 // ==========================================================
-app.get('/api/resins', async (req, res) => {
+const handleResinsRequest = async (req, res) => {
   try {
     const collection = db.getParametrosCollection?.() || db.getCollection?.('parametros')
     if (!collection) {
@@ -75,7 +75,10 @@ app.get('/api/resins', async (req, res) => {
     console.error('[API] ❌ Erro ao buscar resinas:', error)
     res.status(500).json({ success: false, resins: [], message: 'Erro ao carregar resinas' })
   }
-})
+}
+
+app.get('/api/resins', handleResinsRequest)
+app.get('/resins', handleResinsRequest)
 
 app.get('/api/params/printers', async (req, res) => {
   try {
