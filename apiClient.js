@@ -75,7 +75,7 @@ async function request(path, options = {}) {
 // =========================
 
 export async function fetchResins() {
-  return request("/api/resins");
+  return request("/resins");
 }
 
 export async function fetchPrinters(resinId) {
