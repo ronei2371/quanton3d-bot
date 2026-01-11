@@ -93,6 +93,7 @@ async function handleChatRequest(req, res) {
 
     res.json({
       reply: response.reply,
+      response: response.reply,
       sessionId: sessionId || 'session-auto',
       documentsUsed: response.documentsUsed
     });

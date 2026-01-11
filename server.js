@@ -272,6 +272,7 @@ const handleAskWithImage = async (req, res) => {
     res.json({
       success: true,
       reply,
+      response: reply,
       sessionId: sessionId || `img-${Date.now()}`
     })
 
