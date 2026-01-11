@@ -4,6 +4,7 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import chatRoutes from './src/routes/chatRoutes.js'
+import { authRoutes } from './src/routes/authRoutes.js'
 import * as db from './db.js'
 
 dotenv.config()
@@ -219,97 +220,10 @@ app.post('/api/suggest-knowledge', handleSuggestKnowledgeRequest)
 app.post('/suggest-knowledge', handleSuggestKnowledgeRequest)
 
 // ==========================================================
-// 4. ROTA DE ANÁLISE DE IMAGEM (NOVO!)
+// 4. AUTENTICAÇÃO ADMIN (JWT)
 // ==========================================================
-app.post('/api/ask-with-image', async (req, res) => {
-  try {
-    const { message, image, imageUrl, sessionId } = req.body
-
-    if (!image && !imageUrl) {
-      return res.status(400).json({
-        success: false,
-        error: 'Imagem não fornecida'
-      })
-    }
-
-    console.log('[IMAGE] 🖼️ Recebida requisição de análise de imagem')
-
-    // Importar OpenAI dinamicamente (só quando necessário)
-    const { default: OpenAI } = await import('openai')
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    })
-
-    // Preparar URL da imagem
-    let finalImageUrl = imageUrl
-    if (image && !imageUrl) {
-      finalImageUrl = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`
-    }
-
-    // Chamar OpenAI Vision
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: 'Você é um assistente especializado em impressão 3D da Quanton3D. Analise imagens relacionadas a impressão 3D, peças, modelos, problemas de impressão, etc. Seja técnico mas acessível.'
-        },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: message || 'Analise esta imagem detalhadamente' },
-            { type: 'image_url', image_url: { url: finalImageUrl } }
-          ]
-        }
-      ],
-      max_tokens: 1000
-    })
-
-    const reply = response.choices[0].message.content
-
-    console.log('[IMAGE] ✅ Análise concluída')
-
-    res.json({
-      success: true,
-      reply,
-      sessionId: sessionId || `img-${Date.now()}`
-    })
-
-  } catch (error) {
-    console.error('[IMAGE] ❌ Erro ao analisar:', error.message)
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao analisar imagem',
-      message: error.message
-    })
-  }
-})
-
-// ==========================================================
-// 5. AUTENTICAÇÃO ADMIN
-// ==========================================================
-app.post('/auth/login', (req, res) => {
-  const { username, password } = req.body
-  
-  // Verificar credenciais (básico - melhorar depois)
-  const adminUser = process.env.ADMIN_USER || 'admin'
-  const adminPass = process.env.ADMIN_PASS || 'admin123'
-  
-  if (username === adminUser && password === adminPass) {
-    console.log('[AUTH] ✅ Login bem-sucedido')
-    res.status(200).json({ 
-      success: true, 
-      message: 'Login bem-sucedido',
-      token: 'token-' + Date.now() // Substituir por JWT real depois
-    })
-  } else {
-    console.log('[AUTH] ❌ Credenciais inválidas')
-    res.status(401).json({ 
-      success: false, 
-      message: 'Credenciais inválidas' 
-    })
-  }
-})
+app.use('/auth', authRoutes)
+app.use('/api/auth', authRoutes)
 
 // ==========================================================
 // ROTAS DO CHAT (Bot IA - Cérebro)
