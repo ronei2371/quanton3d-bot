@@ -221,7 +221,7 @@ app.post('/suggest-knowledge', handleSuggestKnowledgeRequest)
 // ==========================================================
 // 4. ROTA DE ANÁLISE DE IMAGEM (NOVO!)
 // ==========================================================
-app.post('/api/ask-with-image', async (req, res) => {
+const handleAskWithImage = async (req, res) => {
   try {
     const { message, image, imageUrl, sessionId } = req.body
 
@@ -283,7 +283,10 @@ app.post('/api/ask-with-image', async (req, res) => {
       message: error.message
     })
   }
-})
+}
+
+app.post('/api/ask-with-image', handleAskWithImage)
+app.post('/ask-with-image', handleAskWithImage)
 
 // ==========================================================
 // 5. AUTENTICAÇÃO ADMIN
@@ -316,7 +319,7 @@ app.post('/auth/login', (req, res) => {
 // ==========================================================
 console.log('[ROUTES] 📡 Montando rotas do chat...')
 app.use('/api', chatRoutes)
-app.use('/chat', chatRoutes)
+app.use('/', chatRoutes)
 
 // ==========================================================
 // SERVIR FRONTEND (Arquivos Estáticos)

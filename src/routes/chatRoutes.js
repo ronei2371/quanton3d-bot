@@ -104,6 +104,5 @@ async function handleChatRequest(req, res) {
 
 router.post('/ask', handleChatRequest);
 router.post('/chat', handleChatRequest);
-router.post('/ask-with-image', handleChatRequest);
 
 export default router;
