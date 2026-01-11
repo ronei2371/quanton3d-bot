@@ -93,6 +93,7 @@ async function handleChatRequest(req, res) {
 
     res.json({
       reply: response.reply,
+      response: response.reply,
       sessionId: sessionId || 'session-auto',
       documentsUsed: response.documentsUsed
     });
@@ -104,6 +105,5 @@ async function handleChatRequest(req, res) {
 
 router.post('/ask', handleChatRequest);
 router.post('/chat', handleChatRequest);
-router.post('/ask-with-image', handleChatRequest);
 
 export default router;

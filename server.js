@@ -221,7 +221,7 @@ app.post('/suggest-knowledge', handleSuggestKnowledgeRequest)
 // ==========================================================
 // 4. ROTA DE ANÁLISE DE IMAGEM (NOVO!)
 // ==========================================================
-app.post('/api/ask-with-image', async (req, res) => {
+const handleAskWithImage = async (req, res) => {
   try {
     const { message, image, imageUrl, sessionId } = req.body
 
@@ -272,6 +272,7 @@ app.post('/api/ask-with-image', async (req, res) => {
     res.json({
       success: true,
       reply,
+      response: reply,
       sessionId: sessionId || `img-${Date.now()}`
     })
 
@@ -283,7 +284,10 @@ app.post('/api/ask-with-image', async (req, res) => {
       message: error.message
     })
   }
-})
+}
+
+app.post('/api/ask-with-image', handleAskWithImage)
+app.post('/ask-with-image', handleAskWithImage)
 
 // ==========================================================
 // 5. AUTENTICAÇÃO ADMIN
