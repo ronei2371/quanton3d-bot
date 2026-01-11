@@ -316,7 +316,7 @@ app.post('/auth/login', (req, res) => {
 // ==========================================================
 console.log('[ROUTES] 📡 Montando rotas do chat...')
 app.use('/api', chatRoutes)
-app.use('/chat', chatRoutes)
+app.use('/', chatRoutes)
 
 // ==========================================================
 // SERVIR FRONTEND (Arquivos Estáticos)
