@@ -33,7 +33,16 @@ function summarizeImagePayload(body = {}) {
   return '';
 }
 
-async function generateResponse({ message, imageSummary }) {
+function extractImageUrl(body = {}) {
+  if (body.imageUrl) return body.imageUrl;
+  const raw = body.image || body.imageBase64 || body.imageData || body.attachment;
+  if (!raw) return null;
+  if (typeof raw === 'string' && raw.startsWith('data:')) return raw;
+  if (typeof raw === 'string') return `data:image/jpeg;base64,${raw}`;
+  return null;
+}
+
+async function generateResponse({ message, imageSummary, imageUrl }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
   const ragResults = trimmedMessage ? await searchKnowledge(trimmedMessage) : [];
   const ragContext = formatContext(ragResults);
@@ -45,9 +54,10 @@ async function generateResponse({ message, imageSummary }) {
     SUAS REGRAS DE OURO:
     1. JAMAIS cite fontes explicitamente como "(Fonte: Documento 1)" ou "[Doc 1]". Use o conhecimento naturalmente no texto.
     2. Seja cordial, direto e profissional. Aja como um consultor técnico experiente.
-    3. Use formatação (negrito, tópicos) para deixar a leitura fácil.
+    3. Responda de forma objetiva (máximo de 6 a 8 linhas), com tópicos quando fizer sentido.
     4. Se o usuário relatar falhas (como "peça sem definição"), aja como suporte técnico: analise as causas prováveis (cura, limpeza, parâmetros) baseando-se no contexto.
-    5. Se a resposta não estiver no contexto, sugira contato humano pelo WhatsApp (31) 98334-0053.
+    5. Se a resposta não estiver no contexto, diga que precisa de mais detalhes e sugira contato humano pelo WhatsApp (31) 98334-0053.
+    6. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
   `;
 
   const prompt = [
@@ -58,12 +68,20 @@ async function generateResponse({ message, imageSummary }) {
   ].filter(Boolean).join('\n\n');
 
   const client = getOpenAIClient();
+  const userContent = imageUrl
+    ? [
+        { type: 'text', text: prompt },
+        { type: 'image_url', image_url: { url: imageUrl } }
+      ]
+    : prompt;
+
   const completion = await client.chat.completions.create({
     model: DEFAULT_CHAT_MODEL,
-    temperature: 0.5, // Aumentei um pouco para ficar mais natural
+    temperature: 0.3,
+    max_tokens: 500,
     messages: [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: prompt }
+      { role: 'user', content: userContent }
     ]
   });
 
@@ -80,6 +98,7 @@ async function handleChatRequest(req, res) {
     const { message, sessionId } = req.body ?? {};
     const trimmedMessage = typeof message === 'string' ? message.trim() : '';
     const hasImage = hasImagePayload(req.body);
+    const imageUrl = hasImage ? extractImageUrl(req.body) : null;
 
     console.log(`[CHAT] Msg: ${trimmedMessage.substring(0, 50)}...`);
 
@@ -89,7 +108,7 @@ async function handleChatRequest(req, res) {
     }
 
     const imageSummary = hasImage ? summarizeImagePayload(req.body) : '';
-    const response = await generateResponse({ message: trimmedMessage, imageSummary });
+    const response = await generateResponse({ message: trimmedMessage, imageSummary, imageUrl });
 
     res.json({
       reply: response.reply,
