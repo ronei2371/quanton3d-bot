@@ -4,6 +4,11 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import chatRoutes from './src/routes/chatRoutes.js'
+import { apiRoutes } from './src/routes/apiRoutes.js'
+import { suggestionsRoutes } from './src/routes/suggestionsRoutes.js'
+import { authRoutes } from './src/routes/authRoutes.js'
+import { buildAdminRoutes } from './src/routes/adminRoutes.js'
+import { metrics } from './src/utils/metrics.js'
 import * as db from './db.js'
 
 dotenv.config()
@@ -60,7 +65,7 @@ if (MONGODB_URI) {
 // ==========================================================
 app.get('/health', async (req, res) => {
   try {
-    const dbStatus = db.getCollection ? 'connected' : 'disconnected'
+    const dbStatus = db.isConnected?.() ? 'connected' : 'disconnected'
     res.json({
       status: 'ok',
       database: dbStatus,
@@ -73,207 +78,32 @@ app.get('/health', async (req, res) => {
 })
 
 // ==========================================================
-// ROTAS DE PARÂMETROS
+// ROTAS DE API / ADMIN / MÉTRICAS
 // ==========================================================
-app.get('/api/resins', async (req, res) => {
-  try {
-    console.log('[API] 📦 Buscando resinas...')
-    const collection = db.getParametrosCollection?.() || db.getCollection?.('parametros')
-    
-    if (!collection) {
-      return res.status(200).json({ success: true, resins: [] })
-    }
-    
-    const resins = await collection.find({}).toArray()
-    console.log(`[API] ✅ ${resins.length} resinas`)
-    
-    res.status(200).json({ success: true, resins: resins || [] })
-  } catch (error) {
-    console.error('[API] ❌ Erro resinas:', error.message)
-    res.status(500).json({ success: false, resins: [], error: error.message })
-  }
+app.get('/health/metrics', (req, res) => {
+  res.json({
+    success: true,
+    metrics: metrics.getStats(),
+    timestamp: new Date().toISOString()
+  })
 })
 
-app.get('/api/params/printers', async (req, res) => {
-  try {
-    const collection = db.getCollection?.('printers')
-    if (!collection) {
-      return res.status(200).json({ success: true, printers: [] })
-    }
-    const printers = await collection.find({}).toArray()
-    res.status(200).json({ success: true, printers: printers || [] })
-  } catch (error) {
-    res.status(200).json({ success: true, printers: [] })
-  }
-})
+const adminRoutes = buildAdminRoutes()
 
-// ==========================================================
-// GALERIA
-// ==========================================================
-app.get('/api/gallery', async (req, res) => {
-  try {
-    const collection = db.getGalleryCollection?.() || db.getCollection?.('gallery')
-    if (!collection) {
-      return res.status(200).json({ success: true, photos: [], pagination: { page: 1, limit: 12, total: 0, totalPages: 0 } })
-    }
-    
-    const page = parseInt(req.query.page) || 1
-    const limit = parseInt(req.query.limit) || 12
-    const skip = (page - 1) * limit
-    
-    const photos = await collection.find({}).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray()
-    const total = await collection.countDocuments()
-    
-    console.log(`[API] ✅ Galeria: ${photos.length} fotos`)
-    
-    res.status(200).json({ 
-      success: true, 
-      photos: photos || [],
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
-    })
-  } catch (error) {
-    console.error('[API] ❌ Galeria:', error.message)
-    res.status(500).json({ success: false, photos: [], error: error.message })
-  }
-})
-
-app.post('/api/gallery', async (req, res) => {
-  try {
-    const collection = db.getGalleryCollection?.() || db.getCollection?.('gallery')
-    if (!collection) {
-      return res.status(503).json({ success: false, message: 'DB offline' })
-    }
-    await collection.insertOne({ ...req.body, createdAt: new Date() })
-    res.status(200).json({ success: true, message: 'Foto adicionada!' })
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Erro', error: error.message })
-  }
-})
-
-// ==========================================================
-// FORMULÁRIOS
-// ==========================================================
-app.post('/api/contact', async (req, res) => {
-  try {
-    const collection = db.getCollection ? db.getCollection('messages') : null
-    if (!collection) {
-      return res.status(200).json({ success: true, message: 'Mensagem recebida' })
-    }
-    await collection.insertOne({ ...req.body, type: 'contact', createdAt: new Date() })
-    console.log(`[FORM] ✅ Contato: ${req.body.nome || 'anônimo'}`)
-    res.status(200).json({ success: true, message: 'Mensagem enviada!' })
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Erro', error: error.message })
-  }
-})
-
-app.post('/api/register-user', async (req, res) => {
-  try {
-    const collection = db.getCollection ? db.getCollection('partners') : null
-    if (!collection) {
-      return res.status(200).json({ success: true, message: 'Cadastro recebido' })
-    }
-    await collection.insertOne({ ...req.body, type: 'registration', createdAt: new Date() })
-    res.status(200).json({ success: true, message: 'Cadastro OK!' })
-  } catch (error) {
-    res.status(200).json({ success: true, message: 'Cadastro recebido' })
-  }
-})
-
-app.post('/api/custom-request', async (req, res) => {
-  try {
-    const collection = db.getCollection ? db.getCollection('messages') : null
-    if (!collection) {
-      return res.status(200).json({ success: true, message: 'Pedido recebido' })
-    }
-    await collection.insertOne({ ...req.body, type: 'custom_request', createdAt: new Date() })
-    res.status(200).json({ success: true, message: 'Pedido enviado!' })
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Erro', error: error.message })
-  }
-})
-
-app.post('/api/suggest-knowledge', async (req, res) => {
-  try {
-    const collection = db.getSuggestionsCollection?.() || db.getCollection?.('suggestions')
-    if (!collection) {
-      return res.status(200).json({ success: true, message: 'Sugestão recebida' })
-    }
-    await collection.insertOne({ ...req.body, createdAt: new Date(), status: 'pending' })
-    res.status(200).json({ success: true, message: 'Sugestão enviada!' })
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Erro', error: error.message })
-  }
-})
-
-// ==========================================================
-// ANÁLISE DE IMAGEM
-// ==========================================================
-app.post('/api/ask-with-image', async (req, res) => {
-  try {
-    const { message, image, imageUrl, sessionId } = req.body
-
-    if (!image && !imageUrl) {
-      return res.status(400).json({ success: false, error: 'Imagem não fornecida' })
-    }
-
-    const { default: OpenAI } = await import('openai')
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
-    let finalImageUrl = imageUrl
-    if (image && !imageUrl) {
-      finalImageUrl = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`
-    }
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: 'Você é assistente de impressão 3D da Quanton3D. Analise imagens de peças, modelos e problemas.'
-        },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: message || 'Analise esta imagem' },
-            { type: 'image_url', image_url: { url: finalImageUrl } }
-          ]
-        }
-      ],
-      max_tokens: 1000
-    })
-
-    const reply = response.choices[0].message.content
-    res.json({ success: true, reply, sessionId: sessionId || `img-${Date.now()}` })
-
-  } catch (error) {
-    console.error('[IMAGE] ❌:', error.message)
-    res.status(500).json({ success: false, error: 'Erro ao analisar', message: error.message })
-  }
-})
-
-// ==========================================================
-// LOGIN ADMIN
-// ==========================================================
-app.post('/auth/login', (req, res) => {
-  const { username, password } = req.body
-  const adminUser = process.env.ADMIN_USER || 'admin'
-  const adminPass = process.env.ADMIN_PASS || 'admin123'
-  
-  if (username === adminUser && password === adminPass) {
-    console.log('[AUTH] ✅ Login OK')
-    res.status(200).json({ success: true, message: 'Login OK', token: 'token-' + Date.now() })
-  } else {
-    console.log('[AUTH] ❌ Credenciais inválidas')
-    res.status(401).json({ success: false, message: 'Credenciais inválidas' })
-  }
-})
+app.use('/api', apiRoutes)
+app.use('/', apiRoutes)
+app.use('/api', suggestionsRoutes)
+app.use('/', suggestionsRoutes)
+app.use('/auth', authRoutes)
+app.use('/admin', authRoutes)
+app.use('/admin', adminRoutes)
 
 // ==========================================================
 // ROTAS DO CHAT
 // ==========================================================
 app.use('/api', chatRoutes)
 app.use('/chat', chatRoutes)
+app.use('/', chatRoutes)
 
 // ==========================================================
 // FRONTEND

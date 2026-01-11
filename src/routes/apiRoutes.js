@@ -157,41 +157,47 @@ function buildProfileResponse(doc) {
   };
 }
 
+async function listParamResins() {
+  const mongoReady = await ensureMongoReady();
+  if (!mongoReady) {
+    return {
+      error: { status: 503, body: { success: false, error: "Banco de dados indisponivel" } }
+    };
+  }
+
+  const db = getDb();
+  const collections = await db
+    .listCollections({ name: "parametros" })
+    .toArray();
+  if (collections.length === 0) {
+    return { resins: [] };
+  }
+
+  const collection = getPrintParametersCollection();
+  const resins = await collection
+    .aggregate([
+      {
+        $group: {
+          _id: "$resinId",
+          name: { $first: "$resinName" },
+          profiles: { $sum: 1 }
+        }
+      },
+      { $sort: { name: 1 } }
+    ])
+    .toArray();
+
+  return { resins };
+}
+
 router.get("/params/resins", async (_req, res) => {
   try {
-    const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    const result = await listParamResins();
+    if (result.error) {
+      return res.status(result.error.status).json(result.error.body);
     }
 
-    const db = getDb();
-    const collections = await db
-      .listCollections({ name: "parametros" })
-      .toArray();
-    if (collections.length === 0) {
-      return res.json({ success: true, resins: [] });
-    }
-
-    const collection = getPrintParametersCollection();
-    const resins = await collection
-      .aggregate([
-        {
-          $group: {
-            _id: "$resinId",
-            name: { $first: "$resinName" },
-            profiles: { $sum: 1 }
-          }
-        },
-        { $sort: { name: 1 } }
-      ])
-      .toArray();
-
-    if (!resins || resins.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Nenhuma resina encontrada"
-      });
-    }
+    const resins = result.resins || [];
 
     res.json({
       success: true,
@@ -205,6 +211,31 @@ router.get("/params/resins", async (_req, res) => {
     });
   } catch (err) {
     console.error("[API] Erro ao listar resinas de parâmetros:", err);
+    res.status(500).json({ success: false, error: "Erro ao listar resinas" });
+  }
+});
+
+router.get("/resins", async (_req, res) => {
+  try {
+    const result = await listParamResins();
+    if (result.error) {
+      return res.status(result.error.status).json(result.error.body);
+    }
+
+    const resins = result.resins || [];
+
+    res.json({
+      success: true,
+      resins: resins.map((item) => ({
+        _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
+        name: item.name || "Sem nome",
+        description: `Perfis: ${item.profiles ?? 0}`,
+        profiles: item.profiles ?? 0,
+        active: true
+      }))
+    });
+  } catch (err) {
+    console.error("[API] Erro ao listar resinas:", err);
     res.status(500).json({ success: false, error: "Erro ao listar resinas" });
   }
 });
@@ -406,7 +437,7 @@ router.post("/suggest-knowledge", async (req, res) => {
       });
     }
     
-    const suggestionsCollection = getSuggestionsCollection();
+    const suggestionsCollection = getSugestoesCollection();
     const newSuggestion = {
       suggestion,
       userName: userName || "Usuario Anonimo",

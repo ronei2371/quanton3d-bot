@@ -5,6 +5,7 @@ const router = express.Router();
 
 // Configurações
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'rmartins1201';
+const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton3d_jwt_secret_key_2025';
 const JWT_EXPIRATION = '24h';
 const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
@@ -15,7 +16,7 @@ const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
  */
 router.post("/login", (req, res) => {
   try {
-    const { password } = req.body;
+    const { password, username } = req.body;
 
     // Validar senha
     if (!password) {
@@ -23,6 +24,14 @@ router.post("/login", (req, res) => {
       return res.status(400).json({
         success: false,
         error: "Senha é obrigatória"
+      });
+    }
+
+    if (username && username !== ADMIN_USER) {
+      console.log(`❌ [AUTH] Tentativa de login com usuario incorreto`);
+      return res.status(401).json({
+        success: false,
+        error: "Usuário incorreto"
       });
     }
 
