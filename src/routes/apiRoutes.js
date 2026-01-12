@@ -178,11 +178,16 @@ async function listParamResins() {
     .aggregate([
       {
         $group: {
-          _id: "$resinId",
-          name: { $first: "$resinName" },
+          _id: {
+            $ifNull: ["$resinId", { $ifNull: ["$resinName", "$name"] }]
+          },
+          name: {
+            $first: { $ifNull: ["$resinName", "$name"] }
+          },
           profiles: { $sum: 1 }
         }
       },
+      { $match: { name: { $ne: null } } },
       { $sort: { name: 1 } }
     ])
     .toArray();
@@ -550,12 +555,14 @@ router.get("/gallery", async (req, res) => {
     
     const total = await galleryCollection.countDocuments(query);
     
+    const totalPages = Math.ceil(total / parseInt(limit));
     res.json({
       success: true,
       items,
       total,
       page: parseInt(page),
-      totalPages: Math.ceil(total / parseInt(limit))
+      totalPages,
+      pages: totalPages
     });
   } catch (err) {
     console.error("[API] Erro ao listar galeria:", err);

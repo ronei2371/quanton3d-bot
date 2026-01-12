@@ -1,0 +1,22 @@
+ADESAO NA PLATAFORMA - PECA DIFICIL DE REMOVER
+
+SINTOMAS
+- Peca muito presa na mesa/plate, dificil de remover.
+- Base muito larga ou achatada (elephant foot).
+
+HIPOTESES MAIS COMUNS
+- Exposicao de base alta demais.
+- Numero de camadas de base excessivo.
+- Base/raft muito grande.
+- Resina com alta aderencia ou temperatura elevada.
+
+ORIENTACAO SEGURA (SEM NUMEROS EXATOS)
+- Reduzir gradualmente a exposicao de base.
+- Reduzir o numero de camadas de base.
+- Ajustar a area da base/raft para o minimo necessario.
+- Confirmar nivelamento da plataforma e limpeza da superficie.
+
+PERGUNTAS PARA CONFIRMAR
+- Qual impressora e resina?
+- Quantas camadas de base e tempo de exposicao base?
+- Temperatura ambiente e tipo de base/raft usado?

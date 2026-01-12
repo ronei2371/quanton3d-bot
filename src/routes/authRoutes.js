@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 const router = express.Router();
 
 // Configurações
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'rmartins1201';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || process.env.ADMIN_SECRET || 'rmartins1201';
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton3d_jwt_secret_key_2025';
 const JWT_EXPIRATION = '24h';

@@ -121,6 +121,10 @@ async function generateResponse({ message, imageSummary, imageUrl, hasImage }) {
   const ragResults = ragQuery ? await searchKnowledge(ragQuery) : [];
   const ragContext = formatContext(ragResults);
   const hasRelevantContext = ragResults.length > 0;
+  const adhesionIssueHint = /dificil|difícil|duro|presa|grudada|grudado/i.test(trimmedMessage)
+    && /mesa|plate|plataforma|base/i.test(trimmedMessage)
+    ? 'Nota de triagem: cliente relata peça muito presa na plataforma; evite sugerir AUMENTAR exposição base sem dados. Considere sobre-adesão e peça parâmetros antes de recomendar ajustes.'
+    : null;
 
   // --- AQUI ESTÁ A CORREÇÃO DA PERSONALIDADE ---
   const systemPrompt = `
@@ -143,6 +147,7 @@ async function generateResponse({ message, imageSummary, imageUrl, hasImage }) {
     '---',
     `Sinalizadores: CONTEXTO_RELEVANTE=${hasRelevantContext ? 'SIM' : 'NAO'} | IMAGEM=${hasImage ? 'SIM' : 'NAO'}`,
     trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : 'Cliente enviou uma imagem.',
+    adhesionIssueHint,
     imageSummary ? `Detalhes da imagem: ${imageSummary}` : null,
   ].filter(Boolean).join('\n\n');
 
