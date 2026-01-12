@@ -115,10 +115,12 @@ function attachMultipartImage(req, res, next) {
   next();
 }
 
-async function generateResponse({ message, imageSummary, imageUrl }) {
+async function generateResponse({ message, imageSummary, imageUrl, hasImage }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
-  const ragResults = trimmedMessage ? await searchKnowledge(trimmedMessage) : [];
+  const ragQuery = trimmedMessage || (hasImage ? 'diagnostico visual impressao 3d resina defeitos comuns' : '');
+  const ragResults = ragQuery ? await searchKnowledge(ragQuery) : [];
   const ragContext = formatContext(ragResults);
+  const hasRelevantContext = ragResults.length > 0;
 
   // --- AQUI ESTÁ A CORREÇÃO DA PERSONALIDADE ---
   const systemPrompt = `
@@ -128,14 +130,18 @@ async function generateResponse({ message, imageSummary, imageUrl }) {
     1. JAMAIS cite fontes explicitamente como "(Fonte: Documento 1)" ou "[Doc 1]". Use o conhecimento naturalmente no texto.
     2. Seja cordial, direto e profissional. Aja como um consultor técnico experiente.
     3. Responda de forma objetiva (máximo de 6 a 8 linhas), com tópicos quando fizer sentido.
-    4. Se o usuário relatar falhas (como "peça sem definição"), aja como suporte técnico: analise as causas prováveis (cura, limpeza, parâmetros) baseando-se no contexto.
-    5. Se a resposta não estiver no contexto, diga que precisa de mais detalhes e sugira contato humano pelo WhatsApp (31) 98334-0053.
-    6. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
+    4. Só apresente causas prováveis quando houver CONTEXTO_RELEVANTE=SIM ou o cliente fornecer dados técnicos claros.
+    5. Se CONTEXTO_RELEVANTE=NAO, NÃO diagnostique. Peça informações objetivas (modelo da impressora, resina, tempo de exposição, altura de camada, velocidade de lift, temperatura, orientação/suportes) e ofereça ajuda humana no WhatsApp (31) 98334-0053.
+    6. Se IMAGEM=SIM, descreva rapidamente o que você observa sem afirmar a causa. Liste no máximo 2-3 hipóteses e peça dados antes de recomendar ajustes.
+    7. Só forneça valores numéricos quando o cliente informar impressora e resina, ou quando o contexto trouxer parâmetros explícitos.
+    8. Nunca mencione uma resina específica (ex: Pyroblast+) se o cliente não citou ou se não estiver no contexto.
+    9. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
   `;
 
   const prompt = [
     `Contexto Técnico (Use isso para basear sua resposta):\n${ragContext}`,
     '---',
+    `Sinalizadores: CONTEXTO_RELEVANTE=${hasRelevantContext ? 'SIM' : 'NAO'} | IMAGEM=${hasImage ? 'SIM' : 'NAO'}`,
     trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : 'Cliente enviou uma imagem.',
     imageSummary ? `Detalhes da imagem: ${imageSummary}` : null,
   ].filter(Boolean).join('\n\n');
@@ -184,7 +190,12 @@ async function handleChatRequest(req, res) {
     }
 
     const imageSummary = hasImage ? summarizeImagePayload(req.body) : '';
-    const response = await generateResponse({ message: trimmedMessage, imageSummary, imageUrl });
+    const response = await generateResponse({
+      message: trimmedMessage,
+      imageSummary,
+      imageUrl,
+      hasImage
+    });
 
     res.json({
       reply: response.reply,
