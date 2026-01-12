@@ -117,7 +117,8 @@ function attachMultipartImage(req, res, next) {
 
 async function generateResponse({ message, imageSummary, imageUrl, hasImage }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
-  const ragResults = trimmedMessage ? await searchKnowledge(trimmedMessage) : [];
+  const ragQuery = trimmedMessage || (hasImage ? 'diagnostico visual impressao 3d resina defeitos comuns' : '');
+  const ragResults = ragQuery ? await searchKnowledge(ragQuery) : [];
   const ragContext = formatContext(ragResults);
   const hasRelevantContext = ragResults.length > 0;
 
@@ -131,9 +132,10 @@ async function generateResponse({ message, imageSummary, imageUrl, hasImage }) {
     3. Responda de forma objetiva (máximo de 6 a 8 linhas), com tópicos quando fizer sentido.
     4. Só apresente causas prováveis quando houver CONTEXTO_RELEVANTE=SIM ou o cliente fornecer dados técnicos claros.
     5. Se CONTEXTO_RELEVANTE=NAO, NÃO diagnostique. Peça informações objetivas (modelo da impressora, resina, tempo de exposição, altura de camada, velocidade de lift, temperatura, orientação/suportes) e ofereça ajuda humana no WhatsApp (31) 98334-0053.
-    6. Se IMAGEM=SIM, descreva rapidamente o que você observa sem afirmar a causa. Evite sugerir pós-cura, limpeza ou ajustes específicos sem dados ou contexto.
-    7. Nunca mencione uma resina específica (ex: Pyroblast+) se o cliente não citou ou se não estiver no contexto.
-    8. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
+    6. Se IMAGEM=SIM, descreva rapidamente o que você observa sem afirmar a causa. Liste no máximo 2-3 hipóteses e peça dados antes de recomendar ajustes.
+    7. Só forneça valores numéricos quando o cliente informar impressora e resina, ou quando o contexto trouxer parâmetros explícitos.
+    8. Nunca mencione uma resina específica (ex: Pyroblast+) se o cliente não citou ou se não estiver no contexto.
+    9. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
   `;
 
   const prompt = [
