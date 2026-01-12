@@ -35,7 +35,7 @@ function hasImagePayload(body = {}) {
   );
 }
 
-function normalizeImagePayload(body = {}) {
+function resolveImagePayload(body = {}) {
   if (body.imageUrl) {
     return { type: 'url', value: body.imageUrl };
   }
@@ -74,45 +74,15 @@ function normalizeImagePayload(body = {}) {
   return null;
 }
 
-function normalizeImagePayload(body = {}) {
-  if (body.imageUrl) {
-    return { type: 'url', value: body.imageUrl };
-  }
-
-  const raw = body.image || body.imageBase64 || body.imageData || body.attachment;
-  if (!raw) return null;
-
-  if (typeof raw === 'string') {
-    if (raw.startsWith('data:')) {
-      return { type: 'data', value: raw };
-    }
-    return { type: 'data', value: `data:image/jpeg;base64,${raw}` };
-  }
-
-  if (typeof raw === 'object') {
-    const url = raw.url || raw.imageUrl;
-    if (typeof url === 'string' && url.length > 0) {
-      return { type: 'url', value: url };
-    }
-    const base64 = raw.base64 || raw.data || raw.imageBase64;
-    if (typeof base64 === 'string' && base64.length > 0) {
-      const mimeType = raw.mimeType || raw.type || raw.contentType || 'image/jpeg';
-      return { type: 'data', value: `data:${mimeType};base64,${base64}` };
-    }
-  }
-
-  return null;
-}
-
 function summarizeImagePayload(body = {}) {
-  const normalized = normalizeImagePayload(body);
+  const normalized = resolveImagePayload(body);
   if (!normalized) return '';
   if (normalized.type === 'url') return `Imagem recebida via URL: ${normalized.value}`;
   return 'Imagem recebida em formato base64/anexo.';
 }
 
 function extractImageUrl(body = {}) {
-  const normalized = normalizeImagePayload(body);
+  const normalized = resolveImagePayload(body);
   return normalized ? normalized.value : null;
 }
 
