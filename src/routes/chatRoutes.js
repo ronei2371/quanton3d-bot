@@ -5,6 +5,7 @@ import { searchKnowledge, formatContext } from '../../rag-search.js';
 const router = express.Router();
 
 const DEFAULT_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini';
+const DEFAULT_VISION_MODEL = process.env.OPENAI_VISION_MODEL || 'gpt-4o-mini';
 let openaiClient = null;
 
 function getOpenAIClient() {
@@ -23,23 +24,66 @@ router.get('/ping', (req, res) => {
 });
 
 function hasImagePayload(body = {}) {
-  return Boolean(body.imageUrl || body.image || body.imageBase64 || body.imageData || body.attachment);
+  return Boolean(
+    body.imageUrl ||
+    body.image ||
+    body.imageBase64 ||
+    body.imageData ||
+    body.attachment ||
+    body.selectedImage ||
+    body.imageFile
+  );
+}
+
+function resolveImagePayload(body = {}) {
+  if (body.imageUrl) {
+    return { type: 'url', value: body.imageUrl };
+  }
+
+  const raw =
+    body.image ||
+    body.imageBase64 ||
+    body.imageData ||
+    body.attachment ||
+    body.selectedImage ||
+    body.imageFile;
+  if (!raw) return null;
+
+  if (typeof raw === 'string') {
+    if (raw.startsWith('data:')) {
+      return { type: 'data', value: raw };
+    }
+    return { type: 'data', value: `data:image/jpeg;base64,${raw}` };
+  }
+
+  if (typeof raw === 'object') {
+    if (typeof raw.dataUrl === 'string' && raw.dataUrl.startsWith('data:')) {
+      return { type: 'data', value: raw.dataUrl };
+    }
+    const url = raw.url || raw.imageUrl || raw.preview || raw.src;
+    if (typeof url === 'string' && url.length > 0) {
+      return { type: 'url', value: url };
+    }
+    const base64 = raw.base64 || raw.data || raw.imageBase64 || raw.dataUrl;
+    if (typeof base64 === 'string' && base64.length > 0) {
+      const mimeType = raw.mimeType || raw.type || raw.contentType || 'image/jpeg';
+      return { type: 'data', value: `data:${mimeType};base64,${base64}` };
+    }
+  }
+
+  return null;
 }
 
 function summarizeImagePayload(body = {}) {
-  if (body.imageUrl) return `Imagem recebida via URL: ${body.imageUrl}`;
-  if (body.image) return 'Imagem recebida (campo image).';
-  if (body.imageBase64 || body.imageData || body.attachment) return 'Imagem recebida em formato base64/anexo.';
-  return '';
+  const normalized = resolveImagePayload(body);
+  if (!normalized) return '';
+  if (normalized.type === 'url') return `Imagem recebida via URL: ${normalized.value}`;
+  return 'Imagem recebida em formato base64/anexo.';
 }
 
 function extractImageUrl(body = {}) {
-  if (body.imageUrl) return body.imageUrl;
-  const raw = body.image || body.imageBase64 || body.imageData || body.attachment;
-  if (!raw) return null;
-  if (typeof raw === 'string' && raw.startsWith('data:')) return raw;
-  if (typeof raw === 'string') return `data:image/jpeg;base64,${raw}`;
-  return null;
+  const normalized = resolveImagePayload(body);
+  return normalized ? normalized.value : null;
 }
 
 async function generateResponse({ message, imageSummary, imageUrl }) {
@@ -75,8 +119,10 @@ async function generateResponse({ message, imageSummary, imageUrl }) {
       ]
     : prompt;
 
+  const model = imageUrl ? DEFAULT_VISION_MODEL : DEFAULT_CHAT_MODEL;
+
   const completion = await client.chat.completions.create({
-    model: DEFAULT_CHAT_MODEL,
+    model,
     temperature: 0.3,
     max_tokens: 500,
     messages: [
