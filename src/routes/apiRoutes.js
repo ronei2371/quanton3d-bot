@@ -121,3 +121,7 @@ index 419a3789e5558b6561de490c8f884b498749154a..aee73788e5873a7fc5f0789b568f4caa
          error: "Nome, email e imagem sao obrigatorios"
        });
      }
+     
+     const mongoReady = await ensureMongoReady();
+     if (!mongoReady) {
+       return res.status(503).json({
