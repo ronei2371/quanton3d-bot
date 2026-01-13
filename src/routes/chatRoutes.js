@@ -1,4 +1,95 @@
-@@ -93,120 +93,136 @@ function summarizeImagePayload(body = {}) {
+import express from 'express';
+import OpenAI from 'openai';
+import multer from 'multer';
+import { searchKnowledge, formatContext } from '../../rag-search.js';
+
+const router = express.Router();
+
+const DEFAULT_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini';
+const DEFAULT_VISION_MODEL = process.env.OPENAI_VISION_MODEL || 'gpt-4o-mini';
+let openaiClient = null;
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 }
+});
+
+function getOpenAIClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY não configurada');
+  }
+  if (!openaiClient) {
+    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return openaiClient;
+}
+
+// Rota de teste
+router.get('/ping', (req, res) => {
+  res.json({ status: 'ok', message: 'Chat route working' });
+});
+
+function hasImagePayload(body = {}) {
+  return Boolean(
+    body.imageUrl ||
+    body.image ||
+    body.imageBase64 ||
+    body.imageData ||
+    body.attachment ||
+    body.selectedImage ||
+    body.imageFile
+  );
+}
+
+function resolveImagePayload(body = {}) {
+  if (body.imageUrl) {
+    if (typeof body.imageUrl === 'string' && body.imageUrl.startsWith('blob:')) {
+      return null;
+    }
+    return { type: 'url', value: body.imageUrl };
+  }
+
+  const raw =
+    body.image ||
+    body.imageBase64 ||
+    body.imageData ||
+    body.attachment ||
+    body.selectedImage ||
+    body.imageFile;
+  if (!raw) return null;
+
+  if (typeof raw === 'string') {
+    if (raw.startsWith('data:')) {
+      return { type: 'data', value: raw };
+    }
+    return { type: 'data', value: `data:image/jpeg;base64,${raw}` };
+  }
+
+  if (typeof raw === 'object') {
+    if (typeof raw.dataUrl === 'string' && raw.dataUrl.startsWith('data:')) {
+      return { type: 'data', value: raw.dataUrl };
+    }
+    const url = raw.url || raw.imageUrl || raw.preview || raw.src;
+    if (typeof url === 'string' && url.startsWith('blob:')) {
+      return null;
+    }
+    if (typeof url === 'string' && url.length > 0) {
+      return { type: 'url', value: url };
+    }
+    const base64 = raw.base64 || raw.data || raw.imageBase64 || raw.dataUrl;
+    if (typeof base64 === 'string' && base64.length > 0) {
+      const mimeType = raw.mimeType || raw.type || raw.contentType || 'image/jpeg';
+      return { type: 'data', value: `data:${mimeType};base64,${base64}` };
+    }
+  }
+
+  return null;
+}
+
+function summarizeImagePayload(body = {}) {
+  const normalized = resolveImagePayload(body);
+  if (!normalized) return '';
+  if (normalized.type === 'url') return `Imagem recebida via URL: ${normalized.value}`;
+  return 'Imagem recebida em formato base64/anexo.';
 }
 
 function extractImageUrl(body = {}) {
@@ -24,10 +115,8 @@ function attachMultipartImage(req, res, next) {
   next();
 }
 
-async function generateResponse({ message, imageSummary, imageUrl }) {
 async function generateResponse({ message, imageSummary, imageUrl, hasImage }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
-  const ragResults = trimmedMessage ? await searchKnowledge(trimmedMessage) : [];
   const ragQuery = trimmedMessage || (hasImage ? 'diagnostico visual impressao 3d resina defeitos comuns' : '');
   const ragResults = ragQuery ? await searchKnowledge(ragQuery) : [];
   const ragContext = formatContext(ragResults);
@@ -45,9 +134,6 @@ async function generateResponse({ message, imageSummary, imageUrl, hasImage }) {
     1. JAMAIS cite fontes explicitamente como "(Fonte: Documento 1)" ou "[Doc 1]". Use o conhecimento naturalmente no texto.
     2. Seja cordial, direto e profissional. Aja como um consultor técnico experiente.
     3. Responda de forma objetiva (máximo de 6 a 8 linhas), com tópicos quando fizer sentido.
-    4. Se o usuário relatar falhas (como "peça sem definição"), aja como suporte técnico: analise as causas prováveis (cura, limpeza, parâmetros) baseando-se no contexto.
-    5. Se a resposta não estiver no contexto, diga que precisa de mais detalhes e sugira contato humano pelo WhatsApp (31) 98334-0053.
-    6. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
     4. Só apresente causas prováveis quando houver CONTEXTO_RELEVANTE=SIM ou o cliente fornecer dados técnicos claros.
     5. Se CONTEXTO_RELEVANTE=NAO, NÃO diagnostique. Peça informações objetivas (modelo da impressora, resina, tempo de exposição, altura de camada, velocidade de lift, temperatura, orientação/suportes) e ofereça ajuda humana no WhatsApp (31) 98334-0053.
     6. Se IMAGEM=SIM, descreva rapidamente o que você observa sem afirmar a causa. Liste no máximo 2-3 hipóteses e peça dados antes de recomendar ajustes.
@@ -109,7 +195,6 @@ async function handleChatRequest(req, res) {
     }
 
     const imageSummary = hasImage ? summarizeImagePayload(req.body) : '';
-    const response = await generateResponse({ message: trimmedMessage, imageSummary, imageUrl });
     const response = await generateResponse({
       message: trimmedMessage,
       imageSummary,
@@ -140,3 +225,5 @@ router.post(
   attachMultipartImage,
   handleChatRequest
 );
+
+export default router;
