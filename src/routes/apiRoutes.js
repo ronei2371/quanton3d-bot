@@ -353,5 +353,4 @@ router.get("/params/stats", async (_req, res) => {
     res.status(500).json({ success: false, error: "Erro ao obter estatísticas" });
   }
 });
-
-// (restante do arquivo segue igual ao seu atual)
+export { router as apiRoutes };
