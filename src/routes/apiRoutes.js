@@ -17,6 +17,7 @@ const MAX_PARAMS_PAGE_SIZE = 200;
 const getMessagesCollection = () => getCollection('messages');
 const getGalleryCollection = () => getCollection('gallery');
 const getPartnersCollection = () => getCollection('partners');
+const getCustomRequestsCollection = () => getCollection('custom_requests');
 
 router.post("/register-user", async (req, res) => {
   try {
@@ -115,6 +116,132 @@ router.post("/contact", async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Erro ao enviar mensagem"
+    });
+  }
+});
+
+router.post("/custom-request", async (req, res) => {
+  try {
+    const {
+      name,
+      phone,
+      email,
+      desiredFeature,
+      color,
+      details
+    } = req.body;
+
+    if (!name || !phone || !email || !desiredFeature) {
+      return res.status(400).json({
+        success: false,
+        error: "Nome, telefone, email e caracteristica desejada sao obrigatorios"
+      });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({
+        success: false,
+        error: "Banco de dados indisponivel"
+      });
+    }
+
+    const customRequestsCollection = getCustomRequestsCollection();
+    const newRequest = {
+      name,
+      phone,
+      email,
+      desiredFeature,
+      color: color || null,
+      details: details || null,
+      status: "pending",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await customRequestsCollection.insertOne(newRequest);
+    console.log(`[API] Pedido de formulacao customizada: ${name} (${email})`);
+
+    res.json({
+      success: true,
+      message: "Pedido enviado com sucesso! Entraremos em contato em breve.",
+      id: result.insertedId
+    });
+  } catch (err) {
+    console.error("[API] Erro ao enviar pedido customizado:", err);
+    res.status(500).json({
+      success: false,
+      error: "Erro ao enviar pedido"
+    });
+  }
+});
+
+router.post("/gallery", async (req, res) => {
+  try {
+    const {
+      name,
+      resin,
+      printer,
+      settings,
+      image,
+      images,
+      note
+    } = req.body;
+
+    if (!resin || !printer) {
+      return res.status(400).json({
+        success: false,
+        error: "Resina e impressora sao obrigatorias"
+      });
+    }
+
+    const payloadImages = Array.isArray(images)
+      ? images.filter(Boolean)
+      : image
+        ? [image]
+        : [];
+
+    if (payloadImages.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Envie ao menos uma imagem"
+      });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({
+        success: false,
+        error: "Banco de dados indisponivel"
+      });
+    }
+
+    const galleryCollection = getGalleryCollection();
+    const newEntry = {
+      name: name || null,
+      resin,
+      printer,
+      settings: settings || {},
+      images: payloadImages,
+      note: note || null,
+      status: "pending",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await galleryCollection.insertOne(newEntry);
+    console.log(`[API] Nova foto enviada para galeria: ${resin} / ${printer}`);
+
+    res.json({
+      success: true,
+      message: "Fotos enviadas com sucesso! Em breve aparecerão na galeria.",
+      id: result.insertedId
+    });
+  } catch (err) {
+    console.error("[API] Erro ao enviar fotos para galeria:", err);
+    res.status(500).json({
+      success: false,
+      error: "Erro ao enviar fotos"
     });
   }
 });
