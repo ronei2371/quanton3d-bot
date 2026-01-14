@@ -263,18 +263,12 @@ function normalizeParams(params = {}) {
   };
 
   return {
-    layerHeightMm: pickValue(base.layerHeightMm ?? base.layerHeight ?? null),
-    exposureTimeS: pickValue(base.exposureTimeS ?? base.exposureTime ?? null),
-    baseExposureTimeS: pickValue(base.baseExposureTimeS ?? base.baseExposureTime ?? null),
-    baseLayers: pickValue(base.baseLayers ?? null),
-    uvOffDelayS: pickValue(base.uvOffDelayS ?? base.uvOffDelay ?? null),
+
     uvOffDelayBaseS: pickValue(base.uvOffDelayBaseS ?? null),
     restBeforeLiftS: pickValue(base.restBeforeLiftS ?? null),
     restAfterLiftS: pickValue(base.restAfterLiftS ?? null),
     restAfterRetractS: pickValue(base.restAfterRetractS ?? null),
     uvPower: pickValue(base.uvPower ?? null),
-    liftDistanceMm: pickValue(base.liftDistanceMm ?? pickNested(base.liftDistance ?? base.lowerLiftDistance)),
-    retractSpeedMmS: pickValue(base.retractSpeedMmS ?? pickNested(base.retractSpeed ?? base.lowerRetractSpeed))
   };
 }
 
