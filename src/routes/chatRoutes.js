@@ -140,6 +140,7 @@ async function generateResponse({ message, imageSummary, imageUrl, hasImage }) {
     7. Só forneça valores numéricos quando o cliente informar impressora e resina, ou quando o contexto trouxer parâmetros explícitos.
     8. Nunca mencione uma resina específica (ex: Pyroblast+) se o cliente não citou ou se não estiver no contexto.
     9. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
+    10. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
   `;
 
   const prompt = [

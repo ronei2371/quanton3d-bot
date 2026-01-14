@@ -17,6 +17,7 @@ const MAX_PARAMS_PAGE_SIZE = 200;
 const getMessagesCollection = () => getCollection('messages');
 const getGalleryCollection = () => getCollection('gallery');
 const getPartnersCollection = () => getCollection('partners');
+const getCustomRequestsCollection = () => getCollection('custom_requests');
 
 router.post("/register-user", async (req, res) => {
   try {
@@ -119,32 +120,175 @@ router.post("/contact", async (req, res) => {
   }
 });
 
+router.post("/custom-request", async (req, res) => {
+  try {
+    const {
+      name,
+      phone,
+      email,
+      desiredFeature,
+      color,
+      details
+    } = req.body;
+
+    if (!name || !phone || !email || !desiredFeature) {
+      return res.status(400).json({
+        success: false,
+        error: "Nome, telefone, email e caracteristica desejada sao obrigatorios"
+      });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({
+        success: false,
+        error: "Banco de dados indisponivel"
+      });
+    }
+
+    const customRequestsCollection = getCustomRequestsCollection();
+    const newRequest = {
+      name,
+      phone,
+      email,
+      desiredFeature,
+      color: color || null,
+      details: details || null,
+      status: "pending",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await customRequestsCollection.insertOne(newRequest);
+    console.log(`[API] Pedido de formulacao customizada: ${name} (${email})`);
+
+    res.json({
+      success: true,
+      message: "Pedido enviado com sucesso! Entraremos em contato em breve.",
+      id: result.insertedId
+    });
+  } catch (err) {
+    console.error("[API] Erro ao enviar pedido customizado:", err);
+    res.status(500).json({
+      success: false,
+      error: "Erro ao enviar pedido"
+    });
+  }
+});
+
+router.post("/gallery", async (req, res) => {
+  try {
+    const {
+      name,
+      resin,
+      printer,
+      settings,
+      image,
+      images,
+      note
+    } = req.body;
+
+    if (!resin || !printer) {
+      return res.status(400).json({
+        success: false,
+        error: "Resina e impressora sao obrigatorias"
+      });
+    }
+
+    const payloadImages = Array.isArray(images)
+      ? images.filter(Boolean)
+      : image
+        ? [image]
+        : [];
+
+    if (payloadImages.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Envie ao menos uma imagem"
+      });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({
+        success: false,
+        error: "Banco de dados indisponivel"
+      });
+    }
+
+    const galleryCollection = getGalleryCollection();
+    const newEntry = {
+      name: name || null,
+      resin,
+      printer,
+      settings: settings || {},
+      images: payloadImages,
+      note: note || null,
+      status: "pending",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await galleryCollection.insertOne(newEntry);
+    console.log(`[API] Nova foto enviada para galeria: ${resin} / ${printer}`);
+
+    res.json({
+      success: true,
+      message: "Fotos enviadas com sucesso! Em breve aparecerão na galeria.",
+      id: result.insertedId
+    });
+  } catch (err) {
+    console.error("[API] Erro ao enviar fotos para galeria:", err);
+    res.status(500).json({
+      success: false,
+      error: "Erro ao enviar fotos"
+    });
+  }
+});
+
 function normalizeParams(params = {}) {
+  const base = params.parametros ?? params;
+  const pickValue = (value, fallback = null) => {
+    if (value === undefined || value === null || value === "") {
+      return fallback;
+    }
+    return value;
+  };
+  const pickNested = (field) => {
+    if (!field) return null;
+    if (typeof field === "object") {
+      return pickValue(field.value1 ?? field.value2 ?? null, null);
+    }
+    return pickValue(field, null);
+  };
+
   return {
-    layerHeightMm: params.layerHeightMm ?? null,
-    exposureTimeS: params.exposureTimeS ?? null,
-    baseExposureTimeS: params.baseExposureTimeS ?? null,
-    baseLayers: params.baseLayers ?? null,
-    uvOffDelayS: params.uvOffDelayS ?? null,
-    uvOffDelayBaseS: params.uvOffDelayBaseS ?? null,
-    restBeforeLiftS: params.restBeforeLiftS ?? null,
-    restAfterLiftS: params.restAfterLiftS ?? null,
-    restAfterRetractS: params.restAfterRetractS ?? null,
-    uvPower: params.uvPower ?? null,
-    liftDistanceMm: params.liftDistanceMm ?? null,
-    retractSpeedMmS: params.retractSpeedMmS ?? null
+    layerHeightMm: pickValue(base.layerHeightMm, base.layerHeight ?? null),
+    exposureTimeS: pickValue(base.exposureTimeS, base.exposureTime ?? null),
+    baseExposureTimeS: pickValue(base.baseExposureTimeS, base.baseExposureTime ?? null),
+    baseLayers: pickValue(base.baseLayers ?? null),
+    uvOffDelayS: pickValue(base.uvOffDelayS, base.uvOffDelay ?? null),
+    uvOffDelayBaseS: pickValue(base.uvOffDelayBaseS ?? null),
+    restBeforeLiftS: pickValue(base.restBeforeLiftS ?? null),
+    restAfterLiftS: pickValue(base.restAfterLiftS ?? null),
+    restAfterRetractS: pickValue(base.restAfterRetractS ?? null),
+    uvPower: pickValue(base.uvPower ?? null),
+    liftDistanceMm: pickValue(base.liftDistanceMm, pickNested(base.liftDistance ?? base.lowerLiftDistance)),
+    retractSpeedMmS: pickValue(base.retractSpeedMmS, pickNested(base.retractSpeed ?? base.lowerRetractSpeed))
   };
 }
 
 function buildProfileResponse(doc) {
+  const resinName = doc.resinName ?? doc.resin ?? doc.name ?? "Sem nome";
+  const printerLabel = doc.model ?? doc.printer ?? "";
   return {
-    id: doc.id,
-    resinId: doc.resinId,
-    resinName: doc.resinName,
-    printerId: doc.printerId,
-    brand: doc.brand,
-    model: doc.model,
-    params: normalizeParams(doc.params || doc.raw || {}),
+    id: doc.id ?? doc._id?.toString?.(),
+    resinId: doc.resinId ?? resinName.toLowerCase().replace(/\s+/g, "-"),
+    resinName,
+    printerId: doc.printerId ?? printerLabel.toLowerCase().replace(/\s+/g, "-"),
+    brand: doc.brand ?? "",
+    model: doc.model ?? doc.printer ?? "",
+    params: normalizeParams(doc.params || doc.parametros || doc.raw || {}),
     status: doc.status || "ok",
     updatedAt: doc.updatedAt || doc.createdAt || null
   };
@@ -172,10 +316,10 @@ async function listParamResins() {
       {
         $group: {
           _id: {
-            $ifNull: ["$resinId", { $ifNull: ["$resinName", "$name"] }]
+            $ifNull: ["$resinId", { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }]
           },
           name: {
-            $first: { $ifNull: ["$resinName", "$name"] }
+            $first: { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }
           },
           profiles: { $sum: 1 }
         }
@@ -246,17 +390,20 @@ router.get("/params/printers", async (req, res) => {
     }
 
     const { resinId } = req.query;
-    const filter = resinId ? { resinId } : {};
+    const filter = {};
+    if (resinId) {
+      filter.$or = [{ resinId }, { resin: resinId }, { resinName: resinId }];
+    }
     const collection = getPrintParametersCollection();
     const printers = await collection
       .aggregate([
         { $match: filter },
         {
           $group: {
-            _id: "$printerId",
+            _id: { $ifNull: ["$printerId", "$printer"] },
             brand: { $first: "$brand" },
-            model: { $first: "$model" },
-            resinIds: { $addToSet: "$resinId" }
+            model: { $first: { $ifNull: ["$model", "$printer"] } },
+            resinIds: { $addToSet: { $ifNull: ["$resinId", "$resin"] } }
           }
         },
         { $sort: { brand: 1, model: 1 } }
@@ -300,8 +447,13 @@ router.get("/params/profiles", async (req, res) => {
     const skip = limit ? (page - 1) * limit : 0;
 
     const filter = {};
-    if (resinId) filter.resinId = resinId;
-    if (printerId) filter.printerId = printerId;
+    if (resinId) {
+      filter.$or = [{ resinId }, { resin: resinId }, { resinName: resinId }];
+    }
+    if (printerId) {
+      filter.$and = filter.$and || [];
+      filter.$and.push({ $or: [{ printerId }, { printer: printerId }, { model: printerId }] });
+    }
     if (status) filter.status = status;
 
     const collection = getPrintParametersCollection();
