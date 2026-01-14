@@ -10,7 +10,16 @@ const DEFAULT_VISION_MODEL = process.env.OPENAI_VISION_MODEL || 'gpt-4o-mini';
 let openaiClient = null;
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 8 * 1024 * 1024 }
+  limits: { fileSize: 4 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype?.startsWith('image/')) {
+      return cb(null, true);
+    }
+    const error = new Error('Apenas imagens são permitidas.');
+    error.status = 400;
+    error.code = 'LIMIT_FILE_TYPE';
+    return cb(error);
+  }
 });
 
 function getOpenAIClient() {
@@ -226,5 +235,24 @@ router.post(
   attachMultipartImage,
   handleChatRequest
 );
+
+router.use((err, _req, res, next) => {
+  if (!err) {
+    return next();
+  }
+
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'Arquivo excede o limite de 4MB.' });
+    }
+    return res.status(400).json({ error: 'Falha no upload do arquivo.' });
+  }
+
+  if (err.code === 'LIMIT_FILE_TYPE' || err.status === 400) {
+    return res.status(400).json({ error: err.message || 'Upload inválido.' });
+  }
+
+  return next(err);
+});
 
 export default router;
