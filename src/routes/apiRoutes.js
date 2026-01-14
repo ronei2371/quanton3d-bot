@@ -247,7 +247,8 @@ router.post("/gallery", async (req, res) => {
 });
 
 function normalizeParams(params = {}) {
-  const base = params.parametros ?? params;
+  const root = params ?? {};
+  const base = root.parametros ?? {};
   const pickValue = (value, fallback = null) => {
     if (value === undefined || value === null || value === "") {
       return fallback;
@@ -261,14 +262,18 @@ function normalizeParams(params = {}) {
     }
     return pickValue(field, null);
   };
+  const pickWithFallback = (key) => {
+    const primary = pickNested(base[key]);
+    return pickValue(primary, pickNested(root[key]));
+  };
 
   return {
 
-    uvOffDelayBaseS: pickValue(base.uvOffDelayBaseS ?? null),
-    restBeforeLiftS: pickValue(base.restBeforeLiftS ?? null),
-    restAfterLiftS: pickValue(base.restAfterLiftS ?? null),
-    restAfterRetractS: pickValue(base.restAfterRetractS ?? null),
-    uvPower: pickValue(base.uvPower ?? null),
+    uvOffDelayBaseS: pickWithFallback("uvOffDelayBaseS"),
+    restBeforeLiftS: pickWithFallback("restBeforeLiftS"),
+    restAfterLiftS: pickWithFallback("restAfterLiftS"),
+    restAfterRetractS: pickWithFallback("restAfterRetractS"),
+    uvPower: pickWithFallback("uvPower"),
   };
 }
 
