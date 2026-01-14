@@ -4,9 +4,15 @@ import jwt from "jsonwebtoken";
 const router = express.Router();
 
 // Configurações
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || process.env.ADMIN_SECRET || 'rmartins1201';
-const ADMIN_USER = process.env.ADMIN_USER || 'admin';
-const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton3d_jwt_secret_key_2025';
+const REQUIRED_ENV_VARS = ["ADMIN_PASSWORD", "ADMIN_JWT_SECRET"];
+const missingEnvVars = REQUIRED_ENV_VARS.filter((key) => !process.env[key]);
+if (missingEnvVars.length > 0) {
+  throw new Error(`Missing required auth env vars: ${missingEnvVars.join(", ")}`);
+}
+
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const ADMIN_USER = process.env.ADMIN_USER;
+const JWT_SECRET = process.env.ADMIN_JWT_SECRET;
 const JWT_EXPIRATION = '24h';
 const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
 
@@ -27,7 +33,7 @@ router.post("/login", (req, res) => {
       });
     }
 
-    if (username && username !== ADMIN_USER) {
+    if (ADMIN_USER && username && username !== ADMIN_USER) {
       console.log(`❌ [AUTH] Tentativa de login com usuario incorreto`);
       return res.status(401).json({
         success: false,
