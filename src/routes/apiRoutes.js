@@ -166,10 +166,7 @@ router.post("/contact", async (req, res) => {
       updatedAt: new Date()
     };
     
-    const result = await retryMongoWrite(
-      () => messagesCollection.insertOne(newMessage),
-      { label: "mensagem de contato" }
-    );
+    const result = await messagesCollection.insertOne(newMessage);
     console.log(`[API] Mensagem de contato recebida de: ${name} (${email})`);
     
     res.json({
@@ -299,10 +296,7 @@ router.post("/gallery", upload.any(), async (req, res) => {
       updatedAt: new Date()
     };
 
-    const result = await retryMongoWrite(
-      () => galleryCollection.insertOne(newEntry),
-      { label: "entrada de galeria" }
-    );
+    const result = await galleryCollection.insertOne(newEntry);
     console.log(`[API] Nova foto enviada para galeria: ${sanitizedResin} / ${printer}`);
 
     res.json({
