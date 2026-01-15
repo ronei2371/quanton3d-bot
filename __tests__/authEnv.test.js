@@ -10,6 +10,8 @@ describe('authRoutes env validation', () => {
         env: {
           ...process.env,
           ADMIN_PASSWORD: '',
+          ADMIN_JWT_SECRET: '',
+          ADMIN_USER: ''
           ADMIN_USER: '',
           ADMIN_JWT_SECRET: ''
         }
@@ -18,5 +20,42 @@ describe('authRoutes env validation', () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr.toString()).toContain('Missing required auth env vars');
+  });
+
+  it('fails fast when ADMIN_USER is missing', () => {
+    const result = spawnSync(
+      'node',
+      ['-e', "import('./src/routes/authRoutes.js')"],
+      {
+        cwd: process.cwd(),
+        env: {
+          ...process.env,
+          ADMIN_PASSWORD: 'test-password',
+          ADMIN_JWT_SECRET: 'test-secret',
+          ADMIN_USER: ''
+        }
+      }
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr.toString()).toContain('Missing required auth env vars');
+  });
+
+  it('loads when all required auth env vars exist', () => {
+    const result = spawnSync(
+      'node',
+      ['-e', "import('./src/routes/authRoutes.js')"],
+      {
+        cwd: process.cwd(),
+        env: {
+          ...process.env,
+          ADMIN_PASSWORD: 'test-password',
+          ADMIN_JWT_SECRET: 'test-secret',
+          ADMIN_USER: 'admin'
+        }
+      }
+    );
+
+    expect(result.status).toBe(0);
   });
 });

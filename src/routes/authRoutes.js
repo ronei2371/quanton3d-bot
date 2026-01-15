@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 const router = express.Router();
 
 // Configurações
+const REQUIRED_ENV_VARS = ["ADMIN_PASSWORD", "ADMIN_JWT_SECRET", "ADMIN_USER"];
 const REQUIRED_ENV_VARS = ["ADMIN_PASSWORD", "ADMIN_USER", "ADMIN_JWT_SECRET"];
 const missingEnvVars = REQUIRED_ENV_VARS.filter((key) => !process.env[key]);
 if (missingEnvVars.length > 0) {
@@ -33,7 +34,7 @@ router.post("/login", (req, res) => {
       });
     }
 
-    if (username && username !== ADMIN_USER) {
+    if (username !== ADMIN_USER) {
       console.log(`❌ [AUTH] Tentativa de login com usuario incorreto`);
       return res.status(401).json({
         success: false,

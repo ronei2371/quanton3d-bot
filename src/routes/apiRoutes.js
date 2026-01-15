@@ -249,6 +249,8 @@ router.post("/gallery", async (req, res) => {
 function normalizeParams(params = {}) {
   const root = params ?? {};
   const base = root.parametros ?? {};
+  const isNil = (value) => value === undefined || value === null;
+  const pickValue = (value, fallback = null) => (isNil(value) ? fallback : value);
   const pickValue = (value, fallback = null) => {
     if (value === undefined || value === null || value === "") {
       return fallback;
@@ -256,7 +258,7 @@ function normalizeParams(params = {}) {
     return value;
   };
   const pickNested = (field) => {
-    if (!field) return null;
+    if (isNil(field)) return null;
     if (typeof field === "object") {
       return pickValue(field.value1 ?? field.value2 ?? null, null);
     }
