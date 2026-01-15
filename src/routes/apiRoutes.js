@@ -263,13 +263,33 @@ router.post("/gallery", async (req, res) => {
 function normalizeParams(params = {}) {
   const root = params ?? {};
   const base = root.parametros ?? {};
+  const isNil = (value) => value === undefined || value === null;
+  const pickValue = (value, fallback = null) => (isNil(value) ? fallback : value);
+  const pickValue = (value, fallback = null) => {
+    if (value === undefined || value === null || value === "") {
+      return fallback;
+    }
+    return value;
+  };
+  const pickNested = (field) => {
+    if (isNil(field)) return null;
+    if (typeof field === "object") {
+      return pickValue(field.value1 ?? field.value2 ?? null, null);
+    }
+    return pickValue(field, null);
+  };
+  const pickWithFallback = (key) => {
+    const primary = pickNested(base[key]);
+    return pickValue(primary, pickNested(root[key]));
+  };
 
   return {
-    uvOffDelayBaseS: pickWithFallback(base, root, "uvOffDelayBaseS"),
-    restBeforeLiftS: pickWithFallback(base, root, "restBeforeLiftS"),
-    restAfterLiftS: pickWithFallback(base, root, "restAfterLiftS"),
-    restAfterRetractS: pickWithFallback(base, root, "restAfterRetractS"),
-    uvPower: pickWithFallback(base, root, "uvPower"),
+
+    uvOffDelayBaseS: pickWithFallback("uvOffDelayBaseS"),
+    restBeforeLiftS: pickWithFallback("restBeforeLiftS"),
+    restAfterLiftS: pickWithFallback("restAfterLiftS"),
+    restAfterRetractS: pickWithFallback("restAfterRetractS"),
+    uvPower: pickWithFallback("uvPower"),
   };
 }
 
