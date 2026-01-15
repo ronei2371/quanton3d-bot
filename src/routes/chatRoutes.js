@@ -137,10 +137,10 @@ async function generateResponse({ message, imageSummary, imageUrl, hasImage }) {
 
   // --- AQUI ESTÁ A CORREÇÃO DA PERSONALIDADE ---
   const visionPriority = hasImage
-    ? 'IGNORE previous conversation history if it conflicts with the visual evidence in the uploaded image. The Image is the Source of Truth.\n\n'
+    ? '\n    11. Se IMAGEM=SIM, priorize a evidência visual. Não deixe histórico anterior de texto sobrepor o que está claramente visível na nova imagem.\n  '
     : '';
 
-  const systemPrompt = `${visionPriority}
+  const systemPrompt = `
     Você é a IA Oficial da Quanton3D, especialista técnica em resinas e impressão 3D.
     
     SUAS REGRAS DE OURO:
@@ -154,7 +154,7 @@ async function generateResponse({ message, imageSummary, imageUrl, hasImage }) {
     8. Nunca mencione uma resina específica (ex: Pyroblast+) se o cliente não citou ou se não estiver no contexto.
     9. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
     10. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
-    11. Se IMAGEM=SIM, priorize a evidência visual. Não deixe histórico anterior de texto sobrepor o que está claramente visível na nova imagem.
+    ${visionPriority}
   `;
 
   const prompt = [

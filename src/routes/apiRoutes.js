@@ -39,31 +39,38 @@ const pickWithFallback = (base, root, key) => {
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-const normalizeLooseId = (value) => value.toLowerCase().replace(/[^a-z0-9]/gi, "");
+const getQueryVariants = (value) => {
+  const normalized = value.trim();
+  if (!normalized) return [];
 
-const buildLooseRegex = (value) => {
-  const normalized = normalizeLooseId(value ?? "");
-  if (!normalized) return null;
-  const pieces = normalized.split("").map((char) => `${escapeRegex(char)}[^a-z0-9]*`);
-  return new RegExp(`^${pieces.join("")}$`, "i");
+  const variants = new Set([normalized]);
+  if (normalized.includes(" ")) {
+    variants.add(normalized.replace(/ +/g, "+"));
+  }
+  if (normalized.includes("+")) {
+    variants.add(normalized.replace(/\+/g, " "));
+  }
+
+  return Array.from(variants);
+};
+
+const buildCaseInsensitiveMatchers = (value) => {
+  const variants = getQueryVariants(value);
+  return variants.map((entry) => new RegExp(`^${escapeRegex(entry)}$`, "i"));
 };
 
 const buildResinFilter = (resinId) => {
-  const regex = buildLooseRegex(resinId);
-  if (!regex) return null;
-  return { $or: [{ resinId: { $regex: regex } }, { resin: { $regex: regex } }, { resinName: { $regex: regex } }] };
+  if (!resinId) return null;
+  const matchers = buildCaseInsensitiveMatchers(resinId);
+  if (matchers.length === 0) return null;
+  return { $or: [{ resinId: { $in: matchers } }, { resin: { $in: matchers } }, { resinName: { $in: matchers } }] };
 };
 
 const buildPrinterFilter = (printerId) => {
-  const normalized = typeof printerId === "string" ? printerId.trim() : "";
-  if (!normalized) return null;
-  const regex = new RegExp(`^${escapeRegex(normalized)}$`, "i");
-  return { $or: [{ printerId: { $regex: regex } }, { printer: { $regex: regex } }, { model: { $regex: regex } }] };
-};
-
-const sanitizeResinName = (value) => {
-  if (typeof value !== "string") return value;
-  return value.replace(/\+/g, "").replace(/\s+/g, " ").trim();
+  if (!printerId) return null;
+  const matchers = buildCaseInsensitiveMatchers(printerId);
+  if (matchers.length === 0) return null;
+  return { $or: [{ printerId: { $in: matchers } }, { printer: { $in: matchers } }, { model: { $in: matchers } }] };
 };
 
 const getMessagesCollection = () => getCollection('messages');
