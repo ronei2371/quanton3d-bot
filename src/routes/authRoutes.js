@@ -4,16 +4,22 @@ import jwt from "jsonwebtoken";
 const router = express.Router();
 
 // Configurações - CÓDIGO LIMPO (Apenas uma declaração)
-const REQUIRED_ENV_VARS = ["ADMIN_PASSWORD", "ADMIN_USER", "ADMIN_JWT_SECRET"];
+const JWT_SECRET = process.env.ADMIN_JWT_SECRET;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? process.env.ADMIN_SECRET;
+const ADMIN_USER = process.env.ADMIN_USER ?? process.env.ADMIN_USERNAME ?? "admin";
+const missingEnvVars = [];
 
-const missingEnvVars = REQUIRED_ENV_VARS.filter((key) => !process.env[key]);
+if (!JWT_SECRET) {
+  missingEnvVars.push("ADMIN_JWT_SECRET");
+}
+
+if (!ADMIN_PASSWORD) {
+  missingEnvVars.push("ADMIN_PASSWORD or ADMIN_SECRET");
+}
+
 if (missingEnvVars.length > 0) {
   throw new Error(`Missing required auth env vars: ${missingEnvVars.join(", ")}`);
 }
-
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-const ADMIN_USER = process.env.ADMIN_USER;
-const JWT_SECRET = process.env.ADMIN_JWT_SECRET;
 const JWT_EXPIRATION = '24h';
 const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
 
