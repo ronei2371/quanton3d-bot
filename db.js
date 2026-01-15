@@ -69,25 +69,8 @@ export const getMetricasCollection = () => getCollection('metricas')
 export const getParametrosCollection = () => getCollection('parametros')
 export const getPrintParametersCollection = () => getCollection('parametros')
 export const getConversasCollection = () => getCollection('conversas')
+export const getLearningCollection = () => getCollection('learning')
 
 const conversasSchema = new mongoose.Schema({}, { strict: false, collection: 'conversas' })
 
 export const Conversas = mongoose.models.Conversas || mongoose.model('Conversas', conversasSchema)
-
-export default {
-  connectToMongo,
-  getCollection,
-  getDb,
-  getDocumentsCollection,
-  getVisualKnowledgeCollection,
-  isConnected,
-  getGalleryCollection,
-  getSuggestionsCollection,
-  getSugestoesCollection,
-  getMetricasCollection,
-  getParametrosCollection,
-  getPrintParametersCollection,
-  getConversasCollection,
-  retryMongoWrite,
-  Conversas,
-}
