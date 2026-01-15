@@ -3,9 +3,9 @@ import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
-// Configurações
-const REQUIRED_ENV_VARS = ["ADMIN_PASSWORD", "ADMIN_JWT_SECRET", "ADMIN_USER"];
+// Configurações - CÓDIGO LIMPO (Apenas uma declaração)
 const REQUIRED_ENV_VARS = ["ADMIN_PASSWORD", "ADMIN_USER", "ADMIN_JWT_SECRET"];
+
 const missingEnvVars = REQUIRED_ENV_VARS.filter((key) => !process.env[key]);
 if (missingEnvVars.length > 0) {
   throw new Error(`Missing required auth env vars: ${missingEnvVars.join(", ")}`);
