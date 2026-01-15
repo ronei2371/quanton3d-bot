@@ -40,7 +40,7 @@ router.post("/login", (req, res) => {
       });
     }
 
-    if (username !== ADMIN_USER) {
+    if (username && username !== ADMIN_USER) {
       console.log(`❌ [AUTH] Tentativa de login com usuario incorreto`);
       return res.status(401).json({
         success: false,
