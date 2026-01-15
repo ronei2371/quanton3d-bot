@@ -9,7 +9,7 @@ import { suggestionsRoutes } from './src/routes/suggestionsRoutes.js'
 import { authRoutes } from './src/routes/authRoutes.js'
 import { buildAdminRoutes } from './src/routes/adminRoutes.js'
 import { metrics } from './src/utils/metrics.js'
-import * as db from './db.js'
+import { connectToMongo, isConnected } from './db.js'
 
 dotenv.config()
 
@@ -53,7 +53,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 // CONEXÃO MONGODB
 // ==========================================================
 if (MONGODB_URI) {
-  db.connectToMongo(MONGODB_URI)
+  connectToMongo(MONGODB_URI)
     .then(() => console.log('[MongoDB] ✅ Conectado'))
     .catch((error) => console.error('[MongoDB] ❌ Erro:', error))
 } else {
@@ -65,7 +65,7 @@ if (MONGODB_URI) {
 // ==========================================================
 app.get('/health', async (req, res) => {
   try {
-    const dbStatus = db.isConnected?.() ? 'connected' : 'disconnected'
+    const dbStatus = isConnected?.() ? 'connected' : 'disconnected'
     res.json({
       status: 'ok',
       database: dbStatus,
