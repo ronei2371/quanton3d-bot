@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer";
 import { ObjectId } from "mongodb";
 import {
   getSugestoesCollection,
@@ -13,6 +14,7 @@ import { ensureMongoReady } from "./common.js";
 
 const router = express.Router();
 const MAX_PARAMS_PAGE_SIZE = 200;
+const upload = multer();
 
 // --- AJUDANTES GLOBAIS (CORRIGIDOS PARA ACEITAR ZERO) ---
 const isNil = (value) => value === undefined || value === null;
@@ -34,6 +36,35 @@ const pickWithFallback = (base, root, key) => {
   return pickValue(primary, pickNested(root[key]));
 };
 // -------------------------------------------------------
+
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const normalizeLooseId = (value) => value.toLowerCase().replace(/[^a-z0-9]/gi, "");
+
+const buildLooseRegex = (value) => {
+  const normalized = normalizeLooseId(value ?? "");
+  if (!normalized) return null;
+  const pieces = normalized.split("").map((char) => `${escapeRegex(char)}[^a-z0-9]*`);
+  return new RegExp(`^${pieces.join("")}$`, "i");
+};
+
+const buildResinFilter = (resinId) => {
+  const regex = buildLooseRegex(resinId);
+  if (!regex) return null;
+  return { $or: [{ resinId: { $regex: regex } }, { resin: { $regex: regex } }, { resinName: { $regex: regex } }] };
+};
+
+const buildPrinterFilter = (printerId) => {
+  const normalized = typeof printerId === "string" ? printerId.trim() : "";
+  if (!normalized) return null;
+  const regex = new RegExp(`^${escapeRegex(normalized)}$`, "i");
+  return { $or: [{ printerId: { $regex: regex } }, { printer: { $regex: regex } }, { model: { $regex: regex } }] };
+};
+
+const sanitizeResinName = (value) => {
+  if (typeof value !== "string") return value;
+  return value.replace(/\+/g, "").replace(/\s+/g, " ").trim();
+};
 
 const getMessagesCollection = () => getCollection('messages');
 const getGalleryCollection = () => getCollection('gallery');
@@ -197,7 +228,7 @@ router.post("/custom-request", async (req, res) => {
   }
 });
 
-router.post("/gallery", async (req, res) => {
+router.post("/gallery", upload.any(), async (req, res) => {
   try {
     const {
       name,
@@ -208,8 +239,9 @@ router.post("/gallery", async (req, res) => {
       images,
       note
     } = req.body;
+    const sanitizedResin = sanitizeResinName(resin);
 
-    if (!resin || !printer) {
+    if (!sanitizedResin || !printer) {
       return res.status(400).json({
         success: false,
         error: "Resina e impressora sao obrigatorias"
@@ -240,7 +272,7 @@ router.post("/gallery", async (req, res) => {
     const galleryCollection = getGalleryCollection();
     const newEntry = {
       name: name || null,
-      resin,
+      resin: sanitizedResin,
       printer,
       settings: settings || {},
       images: payloadImages,
@@ -251,7 +283,7 @@ router.post("/gallery", async (req, res) => {
     };
 
     const result = await galleryCollection.insertOne(newEntry);
-    console.log(`[API] Nova foto enviada para galeria: ${resin} / ${printer}`);
+    console.log(`[API] Nova foto enviada para galeria: ${sanitizedResin} / ${printer}`);
 
     res.json({
       success: true,
@@ -400,7 +432,10 @@ router.get("/params/printers", async (req, res) => {
     const { resinId } = req.query;
     const filter = {};
     if (resinId) {
-      filter.$or = [{ resinId }, { resin: resinId }, { resinName: resinId }];
+      const resinFilter = buildResinFilter(resinId);
+      if (resinFilter) {
+        Object.assign(filter, resinFilter);
+      }
     }
     const collection = getPrintParametersCollection();
     const printers = await collection
@@ -456,11 +491,17 @@ router.get("/params/profiles", async (req, res) => {
 
     const filter = {};
     if (resinId) {
-      filter.$or = [{ resinId }, { resin: resinId }, { resinName: resinId }];
+      const resinFilter = buildResinFilter(resinId);
+      if (resinFilter) {
+        Object.assign(filter, resinFilter);
+      }
     }
     if (printerId) {
-      filter.$and = filter.$and || [];
-      filter.$and.push({ $or: [{ printerId }, { printer: printerId }, { model: printerId }] });
+      const printerFilter = buildPrinterFilter(printerId);
+      if (printerFilter) {
+        filter.$and = filter.$and || [];
+        filter.$and.push(printerFilter);
+      }
     }
     if (status) filter.status = status;
 
