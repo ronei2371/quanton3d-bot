@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer";
 import { ObjectId } from "mongodb";
 import {
   getSugestoesCollection,
@@ -13,6 +14,7 @@ import { ensureMongoReady } from "./common.js";
 
 const router = express.Router();
 const MAX_PARAMS_PAGE_SIZE = 200;
+const upload = multer();
 
 // --- AJUDANTES GLOBAIS (CORRIGIDOS PARA ACEITAR ZERO) ---
 const isNil = (value) => value === undefined || value === null;
@@ -34,6 +36,42 @@ const pickWithFallback = (base, root, key) => {
   return pickValue(primary, pickNested(root[key]));
 };
 // -------------------------------------------------------
+
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const getQueryVariants = (value) => {
+  const normalized = value.trim();
+  if (!normalized) return [];
+
+  const variants = new Set([normalized]);
+  if (normalized.includes(" ")) {
+    variants.add(normalized.replace(/ +/g, "+"));
+  }
+  if (normalized.includes("+")) {
+    variants.add(normalized.replace(/\+/g, " "));
+  }
+
+  return Array.from(variants);
+};
+
+const buildCaseInsensitiveMatchers = (value) => {
+  const variants = getQueryVariants(value);
+  return variants.map((entry) => new RegExp(`^${escapeRegex(entry)}$`, "i"));
+};
+
+const buildResinFilter = (resinId) => {
+  if (!resinId) return null;
+  const matchers = buildCaseInsensitiveMatchers(resinId);
+  if (matchers.length === 0) return null;
+  return { $or: [{ resinId: { $in: matchers } }, { resin: { $in: matchers } }, { resinName: { $in: matchers } }] };
+};
+
+const buildPrinterFilter = (printerId) => {
+  if (!printerId) return null;
+  const matchers = buildCaseInsensitiveMatchers(printerId);
+  if (matchers.length === 0) return null;
+  return { $or: [{ printerId: { $in: matchers } }, { printer: { $in: matchers } }, { model: { $in: matchers } }] };
+};
 
 const getMessagesCollection = () => getCollection('messages');
 const getGalleryCollection = () => getCollection('gallery');
@@ -197,7 +235,7 @@ router.post("/custom-request", async (req, res) => {
   }
 });
 
-router.post("/gallery", async (req, res) => {
+router.post("/gallery", upload.any(), async (req, res) => {
   try {
     const {
       name,
@@ -400,7 +438,10 @@ router.get("/params/printers", async (req, res) => {
     const { resinId } = req.query;
     const filter = {};
     if (resinId) {
-      filter.$or = [{ resinId }, { resin: resinId }, { resinName: resinId }];
+      const resinFilter = buildResinFilter(resinId);
+      if (resinFilter) {
+        Object.assign(filter, resinFilter);
+      }
     }
     const collection = getPrintParametersCollection();
     const printers = await collection
@@ -456,11 +497,17 @@ router.get("/params/profiles", async (req, res) => {
 
     const filter = {};
     if (resinId) {
-      filter.$or = [{ resinId }, { resin: resinId }, { resinName: resinId }];
+      const resinFilter = buildResinFilter(resinId);
+      if (resinFilter) {
+        Object.assign(filter, resinFilter);
+      }
     }
     if (printerId) {
-      filter.$and = filter.$and || [];
-      filter.$and.push({ $or: [{ printerId }, { printer: printerId }, { model: printerId }] });
+      const printerFilter = buildPrinterFilter(printerId);
+      if (printerFilter) {
+        filter.$and = filter.$and || [];
+        filter.$and.push(printerFilter);
+      }
     }
     if (status) filter.status = status;
 
