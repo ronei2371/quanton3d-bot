@@ -6,6 +6,28 @@ const DEFAULT_OPTIONS = {
 
 let connectPromise = null
 
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+export const retryMongoWrite = async (operation, options = {}) => {
+  const { retries = 3, delayMs = 500, label = 'operacao' } = options
+  let attempt = 0
+
+  while (attempt <= retries) {
+    try {
+      return await operation()
+    } catch (error) {
+      if (attempt >= retries) {
+        console.log(`[MongoDB] Falha ao salvar ${label} apos ${retries + 1} tentativas.`)
+        throw error
+      }
+      await wait(delayMs)
+      attempt += 1
+    }
+  }
+
+  return null
+}
+
 export const connectToMongo = async (uri = process.env.MONGODB_URI) => {
   if (!uri) return false
 
@@ -66,5 +88,6 @@ export default {
   getParametrosCollection,
   getPrintParametersCollection,
   getConversasCollection,
+  retryMongoWrite,
   Conversas,
 }
