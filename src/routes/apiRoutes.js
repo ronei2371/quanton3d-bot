@@ -8,7 +8,8 @@ import {
   getConversasCollection,
   getCollection,
   getDb,
-  isConnected
+  isConnected,
+  retryMongoWrite
 } from "../../db.js";
 import { ensureMongoReady } from "./common.js";
 
@@ -99,19 +100,22 @@ router.post("/register-user", async (req, res) => {
     
     if (sessionId) {
       const conversasCollection = getConversasCollection(); 
-      await conversasCollection.updateOne(
-        { sessionId },
-        {
-          $set: {
-            userName: name,
-            userPhone: phone,
-            userEmail: email,
-            resin: resin || null,
-            problemType: problemType || null,
-            updatedAt: new Date()
-          }
-        },
-        { upsert: true }
+      await retryMongoWrite(
+        () => conversasCollection.updateOne(
+          { sessionId },
+          {
+            $set: {
+              userName: name,
+              userPhone: phone,
+              userEmail: email,
+              resin: resin || null,
+              problemType: problemType || null,
+              updatedAt: new Date()
+            }
+          },
+          { upsert: true }
+        ),
+        { label: "conversa" }
       );
     }
     
@@ -162,7 +166,10 @@ router.post("/contact", async (req, res) => {
       updatedAt: new Date()
     };
     
-    const result = await messagesCollection.insertOne(newMessage);
+    const result = await retryMongoWrite(
+      () => messagesCollection.insertOne(newMessage),
+      { label: "mensagem de contato" }
+    );
     console.log(`[API] Mensagem de contato recebida de: ${name} (${email})`);
     
     res.json({
@@ -218,7 +225,10 @@ router.post("/custom-request", async (req, res) => {
       updatedAt: new Date()
     };
 
-    const result = await customRequestsCollection.insertOne(newRequest);
+    const result = await retryMongoWrite(
+      () => customRequestsCollection.insertOne(newRequest),
+      { label: "pedido customizado" }
+    );
     console.log(`[API] Pedido de formulacao customizada: ${name} (${email})`);
 
     res.json({
@@ -289,7 +299,10 @@ router.post("/gallery", upload.any(), async (req, res) => {
       updatedAt: new Date()
     };
 
-    const result = await galleryCollection.insertOne(newEntry);
+    const result = await retryMongoWrite(
+      () => galleryCollection.insertOne(newEntry),
+      { label: "entrada de galeria" }
+    );
     console.log(`[API] Nova foto enviada para galeria: ${sanitizedResin} / ${printer}`);
 
     res.json({
@@ -539,13 +552,21 @@ router.get("/params/stats", async (_req, res) => {
     }
 
     const collection = getPrintParametersCollection();
+    const activeProfileFilter = {
+      status: { $nin: ["deleted", "test"] },
+      isTest: { $ne: true }
+    };
+
     const [resinAgg, printerAgg, total] = await Promise.all([
       collection.distinct("resinId"),
       collection.distinct("printerId"),
-      collection.countDocuments()
+      collection.countDocuments(activeProfileFilter)
     ]);
 
-    const comingSoon = await collection.countDocuments({ status: "coming_soon" });
+    const comingSoon = await collection.countDocuments({
+      ...activeProfileFilter,
+      status: "coming_soon"
+    });
 
     res.json({
       success: true,

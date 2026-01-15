@@ -101,6 +101,11 @@ function summarizeImagePayload(body = {}) {
   return 'Imagem recebida em formato base64/anexo.';
 }
 
+function sanitizeChatText(value) {
+  if (typeof value !== 'string') return '';
+  return value.replace(/<[^>]*>/g, '').trim();
+}
+
 function extractImageUrl(body = {}) {
   const normalized = resolveImagePayload(body);
   return normalized ? normalized.value : null;
@@ -218,7 +223,7 @@ async function handleChatRequest(req, res) {
     });
 
     res.json({
-      reply: response.reply,
+      reply: sanitizeChatText(response.reply),
       sessionId: sessionId || 'session-auto',
       documentsUsed: response.documentsUsed
     });
