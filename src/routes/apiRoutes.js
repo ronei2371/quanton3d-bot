@@ -14,6 +14,20 @@ import { ensureMongoReady } from "./common.js";
 const router = express.Router();
 const MAX_PARAMS_PAGE_SIZE = 200;
 
+const isNil = (value) => value === undefined || value === null;
+const pickValue = (value, fallback = null) => (isNil(value) ? fallback : value);
+const pickNested = (field) => {
+  if (isNil(field)) return null;
+  if (typeof field === "object") {
+    return pickValue(field.value1 ?? field.value2 ?? null, null);
+  }
+  return pickValue(field, null);
+};
+const pickWithFallback = (base, root, key) => {
+  const primary = pickNested(base[key]);
+  return pickValue(primary, pickNested(root[key]));
+};
+
 const getMessagesCollection = () => getCollection('messages');
 const getGalleryCollection = () => getCollection('gallery');
 const getPartnersCollection = () => getCollection('partners');
@@ -247,28 +261,15 @@ router.post("/gallery", async (req, res) => {
 });
 
 function normalizeParams(params = {}) {
-  const base = params.parametros ?? params;
-  const pickValue = (value, fallback = null) => {
-    if (value === undefined || value === null || value === "") {
-      return fallback;
-    }
-    return value;
-  };
-  const pickNested = (field) => {
-    if (!field) return null;
-    if (typeof field === "object") {
-      return pickValue(field.value1 ?? field.value2 ?? null, null);
-    }
-    return pickValue(field, null);
-  };
+  const root = params ?? {};
+  const base = root.parametros ?? {};
 
   return {
-
-    uvOffDelayBaseS: pickValue(base.uvOffDelayBaseS ?? null),
-    restBeforeLiftS: pickValue(base.restBeforeLiftS ?? null),
-    restAfterLiftS: pickValue(base.restAfterLiftS ?? null),
-    restAfterRetractS: pickValue(base.restAfterRetractS ?? null),
-    uvPower: pickValue(base.uvPower ?? null),
+    uvOffDelayBaseS: pickWithFallback(base, root, "uvOffDelayBaseS"),
+    restBeforeLiftS: pickWithFallback(base, root, "restBeforeLiftS"),
+    restAfterLiftS: pickWithFallback(base, root, "restAfterLiftS"),
+    restAfterRetractS: pickWithFallback(base, root, "restAfterRetractS"),
+    uvPower: pickWithFallback(base, root, "uvPower"),
   };
 }
 
