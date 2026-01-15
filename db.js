@@ -28,6 +28,19 @@ export const retryMongoWrite = async (operation, options = {}) => {
   return null
 }
 
+export const ensureIndexes = async () => {
+  const db = mongoose.connection?.db
+  if (!db) return
+
+  try {
+    await db.collection('messages').createIndex({ status: 1, createdAt: -1 })
+    await db.collection('parametros').createIndex({ resin: 'text', printer: 'text' })
+    await db.collection('ResinSearches').createIndex({ createdAt: -1 })
+  } catch (error) {
+    console.warn('[MongoDB] Falha ao garantir indexes:', error)
+  }
+}
+
 export const connectToMongo = async (uri = process.env.MONGODB_URI) => {
   if (!uri) return false
 
@@ -38,7 +51,10 @@ export const connectToMongo = async (uri = process.env.MONGODB_URI) => {
   if (!connectPromise) {
     connectPromise = mongoose
       .connect(uri, DEFAULT_OPTIONS)
-      .then(() => true)
+      .then(async () => {
+        await ensureIndexes()
+        return true
+      })
       .catch((error) => {
         connectPromise = null
         throw error

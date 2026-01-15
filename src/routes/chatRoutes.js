@@ -212,6 +212,7 @@ async function logResinSearch({ message, sessionId, hasImage }) {
 
   const payload = {
     query: message || null,
+    timestamp: new Date(),
     sessionId: sessionId || null,
     hasImage: Boolean(hasImage),
     source: 'chat',
@@ -345,7 +346,7 @@ async function handleChatRequest(req, res) {
     }
 
     const imageSummary = hasImage ? summarizeImagePayload(req.body) : '';
-    await logResinSearch({ message: trimmedMessage, sessionId, hasImage });
+    void logResinSearch({ message: trimmedMessage, sessionId, hasImage });
 
     const response = await generateResponse({
       message: trimmedMessage,
