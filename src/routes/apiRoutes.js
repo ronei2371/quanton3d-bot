@@ -8,8 +8,7 @@ import {
   getConversasCollection,
   getCollection,
   getDb,
-  isConnected,
-  retryMongoWrite
+  isConnected
 } from "../../db.js";
 import { ensureMongoReady } from "./common.js";
 
@@ -100,22 +99,19 @@ router.post("/register-user", async (req, res) => {
     
     if (sessionId) {
       const conversasCollection = getConversasCollection(); 
-      await retryMongoWrite(
-        () => conversasCollection.updateOne(
-          { sessionId },
-          {
-            $set: {
-              userName: name,
-              userPhone: phone,
-              userEmail: email,
-              resin: resin || null,
-              problemType: problemType || null,
-              updatedAt: new Date()
-            }
-          },
-          { upsert: true }
-        ),
-        { label: "conversa" }
+      await conversasCollection.updateOne(
+        { sessionId },
+        {
+          $set: {
+            userName: name,
+            userPhone: phone,
+            userEmail: email,
+            resin: resin || null,
+            problemType: problemType || null,
+            updatedAt: new Date()
+          }
+        },
+        { upsert: true }
       );
     }
     
@@ -222,10 +218,7 @@ router.post("/custom-request", async (req, res) => {
       updatedAt: new Date()
     };
 
-    const result = await retryMongoWrite(
-      () => customRequestsCollection.insertOne(newRequest),
-      { label: "pedido customizado" }
-    );
+    const result = await customRequestsCollection.insertOne(newRequest);
     console.log(`[API] Pedido de formulacao customizada: ${name} (${email})`);
 
     res.json({
