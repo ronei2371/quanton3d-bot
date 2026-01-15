@@ -251,6 +251,12 @@ function normalizeParams(params = {}) {
   const base = root.parametros ?? {};
   const isNil = (value) => value === undefined || value === null;
   const pickValue = (value, fallback = null) => (isNil(value) ? fallback : value);
+  const pickValue = (value, fallback = null) => {
+    if (value === undefined || value === null || value === "") {
+      return fallback;
+    }
+    return value;
+  };
   const pickNested = (field) => {
     if (isNil(field)) return null;
     if (typeof field === "object") {

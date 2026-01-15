@@ -12,6 +12,8 @@ describe('authRoutes env validation', () => {
           ADMIN_PASSWORD: '',
           ADMIN_JWT_SECRET: '',
           ADMIN_USER: ''
+          ADMIN_USER: '',
+          ADMIN_JWT_SECRET: ''
         }
       }
     );
