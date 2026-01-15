@@ -3,7 +3,6 @@ import multer from "multer";
 import { ObjectId } from "mongodb";
 import {
   getSugestoesCollection,
-  getPrintParametersCollection,
   getVisualKnowledgeCollection,
   getConversasCollection,
   getCollection,
@@ -73,8 +72,6 @@ const buildPrinterFilter = (printerId) => {
   return { $or: [{ printerId: { $in: matchers } }, { printer: { $in: matchers } }, { model: { $in: matchers } }] };
 };
 
-const getMessagesCollection = () => getCollection('messages');
-const getGalleryCollection = () => getCollection('gallery');
 const getPartnersCollection = () => getCollection('partners');
 const getCustomRequestsCollection = () => getCollection('custom_requests');
 
@@ -150,7 +147,7 @@ router.post("/contact", async (req, res) => {
       });
     }
     
-    const messagesCollection = getMessagesCollection();
+    const messagesCollection = getCollection("messages");
     const newMessage = {
       name,
       email,
@@ -276,7 +273,7 @@ router.post("/gallery", upload.any(), async (req, res) => {
       });
     }
 
-    const galleryCollection = getGalleryCollection();
+    const galleryCollection = getCollection("gallery");
     const newEntry = {
       name: name || null,
       resin: sanitizedResin,
@@ -357,7 +354,7 @@ async function listParamResins() {
     return { resins: [] };
   }
 
-  const collection = getPrintParametersCollection();
+  const collection = getCollection("parametros");
   const resins = await collection
     .aggregate([
       {
@@ -444,7 +441,7 @@ router.get("/params/printers", async (req, res) => {
         Object.assign(filter, resinFilter);
       }
     }
-    const collection = getPrintParametersCollection();
+    const collection = getCollection("parametros");
     const printers = await collection
       .aggregate([
         { $match: filter },
@@ -512,7 +509,7 @@ router.get("/params/profiles", async (req, res) => {
     }
     if (status) filter.status = status;
 
-    const collection = getPrintParametersCollection();
+    const collection = getCollection("parametros");
     const total = await collection.countDocuments(filter);
     const cursor = collection.find(filter).sort({ updatedAt: -1, createdAt: -1 });
     if (limit) cursor.skip(skip).limit(limit);
@@ -538,7 +535,7 @@ router.get("/params/stats", async (_req, res) => {
       return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     }
 
-    const collection = getPrintParametersCollection();
+    const collection = getCollection("parametros");
     const activeProfileFilter = {
       status: { $nin: ["deleted", "test"] },
       isTest: { $ne: true }
