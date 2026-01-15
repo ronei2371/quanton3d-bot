@@ -14,19 +14,26 @@ import { ensureMongoReady } from "./common.js";
 const router = express.Router();
 const MAX_PARAMS_PAGE_SIZE = 200;
 
+// --- AJUDANTES GLOBAIS (CORRIGIDOS PARA ACEITAR ZERO) ---
 const isNil = (value) => value === undefined || value === null;
+
 const pickValue = (value, fallback = null) => (isNil(value) ? fallback : value);
+
 const pickNested = (field) => {
   if (isNil(field)) return null;
   if (typeof field === "object") {
+    // Tenta pegar value1 ou value2, se não der, retorna null
     return pickValue(field.value1 ?? field.value2 ?? null, null);
   }
   return pickValue(field, null);
 };
+
 const pickWithFallback = (base, root, key) => {
+  // Procura primeiro no 'base' (parametros), depois no 'root' (legado)
   const primary = pickNested(base[key]);
   return pickValue(primary, pickNested(root[key]));
 };
+// -------------------------------------------------------
 
 const getMessagesCollection = () => getCollection('messages');
 const getGalleryCollection = () => getCollection('gallery');
@@ -263,33 +270,19 @@ router.post("/gallery", async (req, res) => {
 function normalizeParams(params = {}) {
   const root = params ?? {};
   const base = root.parametros ?? {};
-  const isNil = (value) => value === undefined || value === null;
-  const pickValue = (value, fallback = null) => (isNil(value) ? fallback : value);
-  const pickValue = (value, fallback = null) => {
-    if (value === undefined || value === null || value === "") {
-      return fallback;
-    }
-    return value;
-  };
-  const pickNested = (field) => {
-    if (isNil(field)) return null;
-    if (typeof field === "object") {
-      return pickValue(field.value1 ?? field.value2 ?? null, null);
-    }
-    return pickValue(field, null);
-  };
-  const pickWithFallback = (key) => {
-    const primary = pickNested(base[key]);
-    return pickValue(primary, pickNested(root[key]));
-  };
+  
+  // AQUI ESTAVA O ERRO: REMOVEMOS AS DECLARAÇÕES DUPLICADAS.
+  // AGORA USAMOS AS FUNÇÕES GLOBAIS DEFINIDAS NO TOPO DO ARQUIVO.
+
+  // Helper local para simplificar a chamada usando as globais
+  const getParam = (key) => pickWithFallback(base, root, key);
 
   return {
-
-    uvOffDelayBaseS: pickWithFallback("uvOffDelayBaseS"),
-    restBeforeLiftS: pickWithFallback("restBeforeLiftS"),
-    restAfterLiftS: pickWithFallback("restAfterLiftS"),
-    restAfterRetractS: pickWithFallback("restAfterRetractS"),
-    uvPower: pickWithFallback("uvPower"),
+    uvOffDelayBaseS: getParam("uvOffDelayBaseS"),
+    restBeforeLiftS: getParam("restBeforeLiftS"),
+    restAfterLiftS: getParam("restAfterLiftS"),
+    restAfterRetractS: getParam("restAfterRetractS"),
+    uvPower: getParam("uvPower"),
   };
 }
 
