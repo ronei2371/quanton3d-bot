@@ -2,11 +2,14 @@ import express from 'express';
 import OpenAI from 'openai';
 import multer from 'multer';
 import { searchKnowledge, formatContext } from '../../rag-search.js';
+import { getCollection, retryMongoWrite } from '../../db.js';
+import { ensureMongoReady } from './common.js';
 
 const router = express.Router();
 
 const DEFAULT_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini';
 const DEFAULT_VISION_MODEL = process.env.OPENAI_VISION_MODEL || 'gpt-4o-mini';
+const MAX_HISTORY_TOKENS = 3000;
 let openaiClient = null;
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -106,9 +109,123 @@ function sanitizeChatText(value) {
   return value.replace(/<[^>]*>/g, '').trim();
 }
 
+function normalizeHistoryEntry(entry) {
+  if (!entry || typeof entry !== 'object') return null;
+  const role = entry.role || entry.sender || entry.from;
+  if (!['user', 'assistant', 'system'].includes(role)) return null;
+  const content = entry.content ?? entry.text ?? entry.message ?? '';
+  if (!content) return null;
+  return { role, content };
+}
+
+function getConversationHistory(body = {}) {
+  const rawHistory =
+    body.history ||
+    body.conversationHistory ||
+    body.messages ||
+    body.conversation ||
+    [];
+
+  if (!Array.isArray(rawHistory)) return [];
+
+  return rawHistory
+    .map(normalizeHistoryEntry)
+    .filter((entry) => entry && entry.role !== 'system');
+}
+
+function estimateTokensFromContent(content) {
+  if (!content) return 0;
+  if (typeof content === 'string') {
+    return Math.ceil(content.length / 4);
+  }
+  if (Array.isArray(content)) {
+    return content.reduce((sum, part) => {
+      if (part?.type === 'text') {
+        return sum + Math.ceil((part.text || '').length / 4);
+      }
+      if (part?.type === 'image_url') {
+        return sum + 200;
+      }
+      return sum;
+    }, 0);
+  }
+  return Math.ceil(JSON.stringify(content).length / 4);
+}
+
+function estimateTokensFromMessages(messages = []) {
+  return messages.reduce((sum, message) => sum + estimateTokensFromContent(message.content), 0);
+}
+
+function trimConversationHistory(history = [], systemPrompt, newUserMessage, maxTokens = MAX_HISTORY_TOKENS) {
+  const trimmed = [...history];
+  const buildMessages = () => [
+    { role: 'system', content: systemPrompt },
+    ...trimmed,
+    newUserMessage
+  ];
+
+  let tokenCount = estimateTokensFromMessages(buildMessages());
+  if (tokenCount <= maxTokens) return trimmed;
+
+  const protectedTurns = 2;
+  const protectedCount = Math.min(trimmed.length, protectedTurns * 2);
+
+  while (tokenCount > maxTokens) {
+    const protectedStart = Math.max(0, trimmed.length - protectedCount);
+    const removableIndex = trimmed.findIndex(
+      (message, index) => index < protectedStart && message.role === 'user'
+    );
+
+    if (removableIndex === -1) {
+      break;
+    }
+
+    trimmed.splice(removableIndex, 1);
+
+    if (trimmed[removableIndex]?.role === 'assistant' && removableIndex < trimmed.length - protectedCount) {
+      trimmed.splice(removableIndex, 1);
+    }
+
+    tokenCount = estimateTokensFromMessages(buildMessages());
+  }
+
+  return trimmed;
+}
+
 function extractImageUrl(body = {}) {
   const normalized = resolveImagePayload(body);
   return normalized ? normalized.value : null;
+}
+
+async function logResinSearch({ message, sessionId, hasImage }) {
+  const mongoReady = await ensureMongoReady();
+  if (!mongoReady) {
+    console.warn('[CHAT] MongoDB indisponível para log de buscas.');
+    return;
+  }
+
+  const searchesCollection = getCollection('ResinSearches');
+  if (!searchesCollection) {
+    console.warn('[CHAT] Coleção ResinSearches indisponível.');
+    return;
+  }
+
+  const payload = {
+    query: message || null,
+    sessionId: sessionId || null,
+    hasImage: Boolean(hasImage),
+    source: 'chat',
+    createdAt: new Date()
+  };
+
+  try {
+    await retryMongoWrite(
+      () => searchesCollection.insertOne(payload),
+      { label: 'registro de busca' }
+    );
+  } catch (error) {
+    console.error('[CHAT] Falha ao registrar busca:', error);
+  }
 }
 
 function attachMultipartImage(req, res, next) {
@@ -129,7 +246,7 @@ function attachMultipartImage(req, res, next) {
   next();
 }
 
-async function generateResponse({ message, imageSummary, imageUrl, hasImage }) {
+async function generateResponse({ message, imageSummary, imageUrl, hasImage, conversationHistory }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
   const ragQuery = trimmedMessage || (hasImage ? 'diagnostico visual impressao 3d resina defeitos comuns' : '');
   const ragResults = ragQuery ? await searchKnowledge(ragQuery) : [];
@@ -146,17 +263,21 @@ async function generateResponse({ message, imageSummary, imageUrl, hasImage }) {
     : '';
 
   const systemPrompt = `
-    Você é a IA Oficial da Quanton3D, especialista técnica em resinas e impressão 3D.
-    
-    SUAS REGRAS DE OURO:
+    Você é a IA Oficial da Quanton3D, uma técnica sênior em impressão 3D de resina, com foco no mercado brasileiro.
+
+    PERSONA TÉCNICA:
+    - Responda como uma especialista prática de chão de fábrica, com linguagem objetiva e precisa.
+    - Priorize referências e marcas populares no Brasil quando fizer sentido (Anycubic, Elegoo, Iron, Creality).
+
+    REGRAS DE OURO:
     1. JAMAIS cite fontes explicitamente como "(Fonte: Documento 1)" ou "[Doc 1]". Use o conhecimento naturalmente no texto.
-    2. Seja cordial, direto e profissional. Aja como um consultor técnico experiente.
-    3. Responda de forma objetiva (máximo de 6 a 8 linhas), com tópicos quando fizer sentido.
-    4. Só apresente causas prováveis quando houver CONTEXTO_RELEVANTE=SIM ou o cliente fornecer dados técnicos claros.
-    5. Se CONTEXTO_RELEVANTE=NAO, NÃO diagnostique. Peça informações objetivas (modelo da impressora, resina, tempo de exposição, altura de camada, velocidade de lift, temperatura, orientação/suportes) e ofereça ajuda humana no WhatsApp (31) 98334-0053.
-    6. Se IMAGEM=SIM, descreva rapidamente o que você observa sem afirmar a causa. Liste no máximo 2-3 hipóteses e peça dados antes de recomendar ajustes.
-    7. Só forneça valores numéricos quando o cliente informar impressora e resina, ou quando o contexto trouxer parâmetros explícitos.
-    8. Nunca mencione uma resina específica (ex: Pyroblast+) se o cliente não citou ou se não estiver no contexto.
+    2. Responda de forma objetiva (máximo de 6 a 8 linhas), com tópicos quando fizer sentido.
+    3. Sempre forneça faixas numéricas específicas quando recomendar ajustes (ex: "Exposição normal: 2,5–3,0 s").
+    4. Para resinas desconhecidas, use padrões conservadores (ex: "Comece com exposição normal de 3,0 s").
+    5. Nunca sugira temperaturas acima de 35°C para resinas padrão.
+    6. Só apresente causas prováveis quando houver CONTEXTO_RELEVANTE=SIM ou o cliente fornecer dados técnicos claros.
+    7. Se CONTEXTO_RELEVANTE=NAO, NÃO diagnostique. Peça informações objetivas (modelo da impressora, resina, exposição, altura de camada, lift, temperatura, orientação/suportes) e ofereça ajuda humana no WhatsApp (31) 98334-0053.
+    8. Se IMAGEM=SIM, descreva rapidamente o que você observa sem afirmar a causa. Liste no máximo 2-3 hipóteses e peça dados antes de recomendar ajustes.
     9. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
     10. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
     ${visionPriority}
@@ -181,13 +302,21 @@ async function generateResponse({ message, imageSummary, imageUrl, hasImage }) {
 
   const model = imageUrl ? DEFAULT_VISION_MODEL : DEFAULT_CHAT_MODEL;
 
+  const userMessage = { role: 'user', content: userContent };
+  const trimmedHistory = trimConversationHistory(
+    Array.isArray(conversationHistory) ? conversationHistory : [],
+    systemPrompt,
+    userMessage
+  );
+
   const completion = await client.chat.completions.create({
     model,
     temperature: 0.3,
     max_tokens: 500,
     messages: [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: userContent }
+      ...trimmedHistory,
+      userMessage
     ]
   });
 
@@ -206,6 +335,7 @@ async function handleChatRequest(req, res) {
     const resolvedImage = resolveImagePayload(req.body);
     const hasImage = Boolean(resolvedImage);
     const imageUrl = resolvedImage ? resolvedImage.value : null;
+    const conversationHistory = getConversationHistory(req.body);
 
     console.log(`[CHAT] Msg: ${trimmedMessage.substring(0, 50)}...`);
 
@@ -215,11 +345,14 @@ async function handleChatRequest(req, res) {
     }
 
     const imageSummary = hasImage ? summarizeImagePayload(req.body) : '';
+    await logResinSearch({ message: trimmedMessage, sessionId, hasImage });
+
     const response = await generateResponse({
       message: trimmedMessage,
       imageSummary,
       imageUrl,
-      hasImage
+      hasImage,
+      conversationHistory
     });
 
     res.json({
