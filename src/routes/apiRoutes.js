@@ -246,8 +246,9 @@ router.post("/gallery", upload.any(), async (req, res) => {
       images,
       note
     } = req.body;
+    const sanitizedResin = sanitizeResinName(resin);
 
-    if (!resin || !printer) {
+    if (!sanitizedResin || !printer) {
       return res.status(400).json({
         success: false,
         error: "Resina e impressora sao obrigatorias"
@@ -278,7 +279,7 @@ router.post("/gallery", upload.any(), async (req, res) => {
     const galleryCollection = getGalleryCollection();
     const newEntry = {
       name: name || null,
-      resin,
+      resin: sanitizedResin,
       printer,
       settings: settings || {},
       images: payloadImages,
@@ -289,7 +290,7 @@ router.post("/gallery", upload.any(), async (req, res) => {
     };
 
     const result = await galleryCollection.insertOne(newEntry);
-    console.log(`[API] Nova foto enviada para galeria: ${resin} / ${printer}`);
+    console.log(`[API] Nova foto enviada para galeria: ${sanitizedResin} / ${printer}`);
 
     res.json({
       success: true,
