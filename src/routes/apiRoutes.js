@@ -10,6 +10,7 @@ import {
   isConnected
 } from "../../db.js";
 import { ensureMongoReady } from "./common.js";
+import { legacyProfiles } from "../data/seedData.js";
 
 const router = express.Router();
 const MAX_PARAMS_PAGE_SIZE = 200;
@@ -713,6 +714,24 @@ router.get("/params/stats", async (_req, res) => {
   } catch (err) {
     console.error("[API] Erro ao obter estatísticas de parâmetros:", err);
     res.status(500).json({ success: false, error: "Erro ao obter estatísticas" });
+  }
+});
+
+router.get("/nuke-and-seed", async (_req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    }
+
+    const collection = getCollection("print_parameters");
+    await collection.deleteMany({});
+    await collection.insertMany(legacyProfiles);
+
+    return res.send("Database reset and seeded with CORRECT IDs");
+  } catch (err) {
+    console.error("[API] Erro ao resetar e semear print_parameters:", err);
+    return res.status(500).json({ success: false, error: "Erro ao resetar banco de dados" });
   }
 });
 export { router as apiRoutes };
