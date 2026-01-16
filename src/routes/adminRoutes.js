@@ -279,21 +279,19 @@ function buildAdminRoutes(adminConfig = {}) {
         .aggregate([
           {
             $group: {
-              _id: "$resinId",
-              name: { $first: "$resinName" },
+              _id: {
+                $ifNull: ["$resinId", { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }]
+              },
+              name: {
+                $first: { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }
+              },
               profiles: { $sum: 1 }
             }
           },
+          { $match: { name: { $ne: null } } },
           { $sort: { name: 1 } }
         ])
         .toArray();
-
-      if (!resins || resins.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: "Nenhuma resina encontrada no MongoDB"
-        });
-      }
 
       console.log(`✅ [ADMIN] Listando ${resins.length} resinas diretamente do MongoDB`);
 
