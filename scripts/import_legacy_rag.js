@@ -79,10 +79,15 @@ async function loadEntries() {
 async function run() {
   const data = await loadEntries();
 
+  const seenTexts = new Set();
   const blocks = data
     .map((entry) => {
       const text = entry?.text ?? '';
       if (!text) return null;
+      if (seenTexts.has(text)) {
+        return null;
+      }
+      seenTexts.add(text);
       const { resin, printer } = parseHeader(text);
       return `### ${resin} - ${printer}\n**Configurações Recomendadas:**\n${text}`;
     })
@@ -95,7 +100,9 @@ async function run() {
   const content = `${blocks.join('\n\n')}\n`;
   await fs.writeFile(OUTPUT_PATH, content, 'utf8');
 
-  console.log(`Arquivo gerado em ${OUTPUT_PATH} com ${blocks.length} entradas.`);
+  const skippedDuplicates = data.length - seenTexts.size;
+  const duplicateInfo = skippedDuplicates > 0 ? ` (${skippedDuplicates} duplicadas ignoradas)` : '';
+  console.log(`Arquivo gerado em ${OUTPUT_PATH} com ${blocks.length} entradas.${duplicateInfo}`);
 }
 
 run().catch((error) => {
