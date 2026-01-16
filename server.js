@@ -9,7 +9,8 @@ import { suggestionsRoutes } from './src/routes/suggestionsRoutes.js'
 import { authRoutes } from './src/routes/authRoutes.js'
 import { buildAdminRoutes } from './src/routes/adminRoutes.js'
 import { metrics } from './src/utils/metrics.js'
-import { connectToMongo, isConnected } from './db.js'
+import { connectToMongo, getPrintParametersCollection, isConnected } from './db.js'
+import { legacyProfiles, legacyResins } from './src/data/seedData.js'
 
 
 dotenv.config()
@@ -132,8 +133,17 @@ const startServer = async () => {
     console.log('\n🚀 INICIANDO QUANTON3D BOT...\n')
 
     if (MONGODB_URI) {
+      await connectToMongo(MONGODB_URI)
       await new Promise(resolve => setTimeout(resolve, 2000))
       console.log('[INIT] ✅ MongoDB')
+
+      const paramsCollection = getPrintParametersCollection()
+      const count = await paramsCollection.countDocuments()
+      if (count === 0) {
+        console.log('[INIT] ⚠️ Banco vazio! Injetando dados legacy...')
+        await paramsCollection.insertMany(legacyProfiles)
+        console.log('[INIT] ✅ Perfis inseridos com sucesso.')
+      }
     }
 
     if (!process.env.OPENAI_API_KEY) {
