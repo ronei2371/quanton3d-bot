@@ -6,6 +6,13 @@ const router = express.Router();
 
 const JWT_EXPIRATION = '24h';
 const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
+const ADMIN_USER = process.env.ADMIN_USER;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const JWT_SECRET = process.env.ADMIN_JWT_SECRET;
+
+if (!ADMIN_USER || !ADMIN_PASSWORD || !JWT_SECRET) {
+  throw new Error('Missing required auth env vars');
+}
 
 /**
  * POST /auth/login
@@ -13,7 +20,8 @@ const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
  */
 router.post("/login", (req, res) => {
   try {
-
+    const { password, username } = req.body ?? {};
+    const candidatePassword = typeof password === 'string' ? password : '';
 
     // Validar senha
     if (!candidatePassword) {
@@ -24,8 +32,16 @@ router.post("/login", (req, res) => {
       });
     }
 
+    if (username && username !== ADMIN_USER) {
+      console.log('❌ [AUTH] Tentativa de login com usuário incorreto');
+      return res.status(401).json({
+        success: false,
+        error: "Usuário incorreto"
+      });
+    }
 
-      console.log(`❌ [AUTH] Tentativa de login com senha incorreta`);
+    if (candidatePassword !== ADMIN_PASSWORD) {
+      console.log('❌ [AUTH] Tentativa de login com senha incorreta');
       return res.status(401).json({
         success: false,
         error: "Senha incorreta"
