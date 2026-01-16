@@ -97,6 +97,7 @@ function resolveImagePayload(body = {}) {
 }
 
 
+
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
   const ragQuery = trimmedMessage || (hasImage ? 'diagnostico visual impressao 3d resina defeitos comuns' : '');
   const ragResults = ragQuery ? await searchKnowledge(ragQuery) : [];
@@ -118,6 +119,16 @@ async function generateResponse({ message, ragContext }) {
     ? '\n    11. Se IMAGEM=SIM, priorize a evidência visual. Não deixe histórico anterior de texto sobrepor o que está claramente visível na nova imagem.\n  '
     : '';
 
+  const imageGuidelines = hasImage
+    ? `
+    DIRETRIZES PARA ANALISE VISUAL:
+    - Descreva o que voce ve antes de concluir causas.
+    - Se houver dados (resina, impressora, problema), use-os para ajustar o diagnostico.
+    - Se a imagem estiver clara e houver sinais evidentes, entregue: Defeitos -> Causa provavel -> Solucao imediata -> Parametros sugeridos (faixas).
+    - Se faltarem dados criticos, faca UMA pergunta objetiva por vez antes de recomendar ajustes.
+  `
+    : '';
+
   const systemPrompt = `
     Você é a IA Oficial da Quanton3D, uma técnica sênior em impressão 3D de resina, com foco no mercado brasileiro.
 
@@ -133,12 +144,19 @@ async function generateResponse({ message, ragContext }) {
     5. Nunca sugira temperaturas acima de 35°C para resinas padrão.
     6. Só apresente causas prováveis quando houver CONTEXTO_RELEVANTE=SIM ou o cliente fornecer dados técnicos claros.
     7. Se CONTEXTO_RELEVANTE=NAO, NÃO diagnostique. Ative o "Modo Entrevista Guiada": faça apenas UMA pergunta por vez, seguindo esta ordem fixa: (1) modelo da impressora, (2) tipo de resina, (3) tempo de exposição/configurações. Só avance para a próxima etapa quando a anterior for respondida. Não liste todos os requisitos de uma vez. Se necessário, ofereça ajuda humana no WhatsApp (31) 98334-0053.
-    8. Se IMAGEM=SIM, descreva rapidamente o que você observa sem afirmar a causa. Liste no máximo 2-3 hipóteses e peça dados antes de recomendar ajustes.
+    8. Se IMAGEM=SIM, descreva rapidamente o que você observa sem afirmar a causa. Liste no máximo 2-3 hipóteses e peça dados antes de recomendar ajustes, a menos que os sinais sejam evidentes e haja contexto suficiente.
     9. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
     10. SEMPRE consulte a "TABELA_COMPLETA" ou "resins_db" antes de responder perguntas sobre parâmetros. Confie nesses valores acima de conhecimento geral.
     11. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
     ${visionPriority}
+    ${imageGuidelines}
   `;
+
+  const contextLines = [];
+  if (customerContext?.userName) contextLines.push(`Nome do cliente: ${customerContext.userName}`);
+  if (customerContext?.resin) contextLines.push(`Resina: ${customerContext.resin}`);
+  if (customerContext?.printer) contextLines.push(`Impressora: ${customerContext.printer}`);
+  if (customerContext?.problemType) contextLines.push(`Problema relatado: ${customerContext.problemType}`);
 
   const prompt = [
     ragContext ? `Contexto Técnico (Use isso para basear sua resposta):\n${ragContext}` : null,
@@ -237,6 +255,7 @@ async function handleChatRequest(req, res) {
       // Se não tem msg nem imagem, pode ser um "ping" de início de sessão
       return res.json({ reply: 'Olá! Sou a IA da Quanton3D. Como posso ajudar com suas impressões hoje?', sessionId: sessionId || 'new' });
     }
+
 
 
     res.json({
