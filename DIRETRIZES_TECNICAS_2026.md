@@ -12,6 +12,8 @@ Coleção de Resinas: Os dados das 459 resinas estão armazenados na coleção d
 
 Leitura de Dados: O endpoint /resins deve ler diretamente do MongoDB usando db.collection('parametros'). Não use fallback para arquivos JSON locais para evitar dados desatualizados.
 
+Pasta de dados local: qualquer JSON em /data (ex: resins_extracted.json) serve apenas para migração/backup. Não é a fonte de verdade das resinas.
+
 3. Configurações de Build e Deploy
 
 Variável CI: Sempre definir CI=true no Render.
