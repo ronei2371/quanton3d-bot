@@ -4,12 +4,7 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import chatRoutes from './src/routes/chatRoutes.js'
-import { apiRoutes } from './src/routes/apiRoutes.js'
-import { suggestionsRoutes } from './src/routes/suggestionsRoutes.js'
-import { authRoutes } from './src/routes/authRoutes.js'
-import { buildAdminRoutes } from './src/routes/adminRoutes.js'
-import { metrics } from './src/utils/metrics.js'
-import { connectToMongo, isConnected } from './db.js'
+
 
 dotenv.config()
 
@@ -101,6 +96,7 @@ app.use('/admin', adminRoutes)
 // ==========================================================
 // ROTAS DO CHAT
 // ==========================================================
+
 app.use('/api', chatRoutes)
 app.use('/chat', chatRoutes)
 app.use('/', chatRoutes)

@@ -3,27 +3,7 @@ import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
-// Configurações - CÓDIGO LIMPO (Apenas uma declaração)
-const JWT_SECRET = process.env.ADMIN_JWT_SECRET;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? process.env.ADMIN_SECRET;
-const ADMIN_USER = process.env.ADMIN_USER ?? process.env.ADMIN_USERNAME;
-const missingEnvVars = [];
 
-if (!JWT_SECRET) {
-  missingEnvVars.push("ADMIN_JWT_SECRET");
-}
-
-if (!ADMIN_PASSWORD) {
-  missingEnvVars.push("ADMIN_PASSWORD or ADMIN_SECRET");
-}
-
-if (!ADMIN_USER) {
-  missingEnvVars.push("ADMIN_USER or ADMIN_USERNAME");
-}
-
-if (missingEnvVars.length > 0) {
-  throw new Error(`Missing required auth env vars: ${missingEnvVars.join(", ")}`);
-}
 const JWT_EXPIRATION = '24h';
 const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
 
@@ -33,10 +13,10 @@ const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
  */
 router.post("/login", (req, res) => {
   try {
-    const { password, username } = req.body;
+
 
     // Validar senha
-    if (!password) {
+    if (!candidatePassword) {
       console.log('⚠️ [AUTH] Tentativa de login sem senha');
       return res.status(400).json({
         success: false,
@@ -44,15 +24,7 @@ router.post("/login", (req, res) => {
       });
     }
 
-    if (username && username !== ADMIN_USER) {
-      console.log(`❌ [AUTH] Tentativa de login com usuario incorreto`);
-      return res.status(401).json({
-        success: false,
-        error: "Usuário incorreto"
-      });
-    }
 
-    if (password !== ADMIN_PASSWORD) {
       console.log(`❌ [AUTH] Tentativa de login com senha incorreta`);
       return res.status(401).json({
         success: false,
