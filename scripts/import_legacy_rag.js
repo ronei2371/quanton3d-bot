@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const INPUT_PATH = path.resolve('rag-knowledge/resins_db.json');
+const PARTS_DIR = path.resolve('rag-knowledge/resins_db_parts');
 const OUTPUT_PATH = path.resolve('rag-knowledge/TABELA_COMPLETA.md');
 
 function parseHeader(text) {
@@ -28,13 +29,55 @@ function parseHeader(text) {
   return { resin: 'Desconhecida', printer: 'Desconhecida' };
 }
 
-async function run() {
-  const raw = await fs.readFile(INPUT_PATH, 'utf8');
-  const data = JSON.parse(raw);
-
-  if (!Array.isArray(data)) {
-    throw new Error('resins_db.json deve conter um array JSON.');
+function normalizeEntries(payload, sourceLabel) {
+  if (Array.isArray(payload)) {
+    return payload;
   }
+  if (payload && Array.isArray(payload.items)) {
+    return payload.items;
+  }
+  if (payload && Array.isArray(payload.data)) {
+    return payload.data;
+  }
+  throw new Error(`Arquivo ${sourceLabel} deve conter um array JSON ou { items: [] }.`);
+}
+
+async function loadEntries() {
+  const entries = [];
+
+  try {
+    const raw = await fs.readFile(INPUT_PATH, 'utf8');
+    const payload = JSON.parse(raw);
+    entries.push(...normalizeEntries(payload, 'resins_db.json'));
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  try {
+    const files = await fs.readdir(PARTS_DIR);
+    const jsonFiles = files.filter((name) => name.endsWith('.json')).sort();
+    for (const filename of jsonFiles) {
+      const raw = await fs.readFile(path.join(PARTS_DIR, filename), 'utf8');
+      const payload = JSON.parse(raw);
+      entries.push(...normalizeEntries(payload, filename));
+    }
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  if (entries.length === 0) {
+    throw new Error('Nenhuma entrada encontrada em resins_db.json ou resins_db_parts/*.json.');
+  }
+
+  return entries;
+}
+
+async function run() {
+  const data = await loadEntries();
 
   const blocks = data
     .map((entry) => {
@@ -46,7 +89,7 @@ async function run() {
     .filter(Boolean);
 
   if (blocks.length === 0) {
-    throw new Error('Nenhum item com campo "text" encontrado em resins_db.json.');
+    throw new Error('Nenhum item com campo "text" encontrado nos arquivos de entrada.');
   }
 
   const content = `${blocks.join('\n\n')}\n`;
