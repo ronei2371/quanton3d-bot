@@ -6,7 +6,7 @@ const DEFAULT_OPTIONS = {
 
 let connectPromise = null
 
-export const connectToMongo = async (uri) => {
+export const connectToMongo = async (uri = process.env.MONGODB_URI) => {
   if (!uri) return false
 
   if (mongoose.connection.readyState === 1) {
@@ -27,10 +27,12 @@ export const connectToMongo = async (uri) => {
 }
 
 // Funções utilitárias para pegar coleções
-const getCollection = (name) => {
+export const getCollection = (name) => {
   if (!mongoose.connection?.db) return null
   return mongoose.connection.db.collection(name)
 }
+
+export const getDb = () => mongoose.connection?.db || null
 
 // Exportações que o RAG precisa
 export const getDocumentsCollection = () => getCollection('documents')
@@ -49,6 +51,8 @@ export const Conversas = mongoose.models.Conversas || mongoose.model('Conversas'
 
 export default {
   connectToMongo,
+  getCollection,
+  getDb,
   getDocumentsCollection,
   getVisualKnowledgeCollection,
   isConnected,
