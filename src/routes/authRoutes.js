@@ -6,7 +6,7 @@ const router = express.Router();
 // Configurações - CÓDIGO LIMPO (Apenas uma declaração)
 const JWT_SECRET = process.env.ADMIN_JWT_SECRET;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? process.env.ADMIN_SECRET;
-const ADMIN_USER = process.env.ADMIN_USER ?? process.env.ADMIN_USERNAME ?? "admin";
+const ADMIN_USER = process.env.ADMIN_USER ?? process.env.ADMIN_USERNAME;
 const missingEnvVars = [];
 
 if (!JWT_SECRET) {
@@ -15,6 +15,10 @@ if (!JWT_SECRET) {
 
 if (!ADMIN_PASSWORD) {
   missingEnvVars.push("ADMIN_PASSWORD or ADMIN_SECRET");
+}
+
+if (!ADMIN_USER) {
+  missingEnvVars.push("ADMIN_USER or ADMIN_USERNAME");
 }
 
 if (missingEnvVars.length > 0) {
