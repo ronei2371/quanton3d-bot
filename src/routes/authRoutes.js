@@ -25,6 +25,8 @@ router.post("/login", (req, res) => {
   try {
     const { password, username } = req.body ?? {};
     const candidatePassword = typeof password === 'string' ? password : '';
+    const trimmedUsername = typeof username === 'string' ? username.trim() : '';
+    const expectedUsername = ADMIN_USER || FALLBACK_ADMIN_USER;
 
     // Validar senha
     if (!candidatePassword) {
@@ -35,7 +37,7 @@ router.post("/login", (req, res) => {
       });
     }
 
-    if (HAS_ENV_CREDENTIALS && username && username !== ADMIN_USER) {
+    if (trimmedUsername && trimmedUsername !== expectedUsername) {
       console.log('❌ [AUTH] Tentativa de login com usuário incorreto');
       return res.status(401).json({
         success: false,
@@ -43,19 +45,14 @@ router.post("/login", (req, res) => {
       });
     }
 
-    if (HAS_ENV_CREDENTIALS) {
-      if (candidatePassword !== ADMIN_PASSWORD) {
-        console.log('❌ [AUTH] Tentativa de login com senha incorreta');
-        return res.status(401).json({
-          success: false,
-          error: "Senha incorreta"
-        });
-      }
-    } else if (!(username === FALLBACK_ADMIN_USER && candidatePassword === FALLBACK_ADMIN_PASSWORD)) {
-      console.log('❌ [AUTH] Tentativa de login com credenciais fallback incorretas');
+    const validEnvPassword = ADMIN_PASSWORD && candidatePassword === ADMIN_PASSWORD;
+    const validFallbackPassword = candidatePassword === FALLBACK_ADMIN_PASSWORD;
+
+    if (!validEnvPassword && !validFallbackPassword) {
+      console.log('❌ [AUTH] Tentativa de login com senha incorreta');
       return res.status(401).json({
         success: false,
-        error: "Credenciais inválidas"
+        error: "Senha incorreta"
       });
     }
 

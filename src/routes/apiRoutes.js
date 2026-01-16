@@ -13,6 +13,7 @@ import { ensureMongoReady } from "./common.js";
 
 const router = express.Router();
 const MAX_PARAMS_PAGE_SIZE = 200;
+const MAX_GALLERY_PAGE_SIZE = 100;
 const upload = multer();
 const FISPQ_DOCUMENTS = [
   { resin: "Iron 7030", slug: "iron-7030" },
@@ -187,14 +188,15 @@ router.post("/contact", async (req, res) => {
 
 router.post("/custom-request", async (req, res) => {
   try {
+    const body = req.body ?? {};
     const {
       name,
       phone,
       email,
-      desiredFeature,
-      color,
       details
-    } = req.body;
+    } = body;
+    const desiredFeature = body.desiredFeature ?? body.caracteristica;
+    const color = body.color ?? body.cor;
 
     if (!name || !phone || !email || !desiredFeature) {
       return res.status(400).json({
@@ -250,6 +252,7 @@ router.post("/gallery", upload.any(), async (req, res) => {
       settings,
       image,
       images,
+      imageUrl,
       note
     } = req.body;
     const sanitizedResin = sanitizeResinName(resin);
@@ -267,7 +270,25 @@ router.post("/gallery", upload.any(), async (req, res) => {
         ? [image]
         : [];
 
-    if (payloadImages.length === 0) {
+    const imageUrlPayload = Array.isArray(imageUrl)
+      ? imageUrl.filter(Boolean)
+      : typeof imageUrl === "string" && imageUrl.trim()
+        ? [imageUrl.trim()]
+        : [];
+
+    const multipartImages = Array.isArray(req.files)
+      ? req.files
+        .filter((file) => file?.buffer)
+        .map((file) => {
+          const mimeType = file.mimetype || "application/octet-stream";
+          const base64 = file.buffer.toString("base64");
+          return `data:${mimeType};base64,${base64}`;
+        })
+      : [];
+
+    const finalImages = imageUrlPayload.length > 0 ? imageUrlPayload : payloadImages.length > 0 ? payloadImages : multipartImages;
+
+    if (finalImages.length === 0) {
       return res.status(400).json({
         success: false,
         error: "Envie ao menos uma imagem"
@@ -288,7 +309,7 @@ router.post("/gallery", upload.any(), async (req, res) => {
       resin: sanitizedResin,
       printer,
       settings: settings || {},
-      images: payloadImages,
+      images: finalImages,
       note: note || null,
       status: "pending",
       createdAt: new Date(),
@@ -312,6 +333,101 @@ router.post("/gallery", upload.any(), async (req, res) => {
   }
 });
 
+const buildGalleryResponse = (doc) => ({
+  id: doc._id?.toString?.(),
+  name: doc.name ?? null,
+  resin: doc.resin ?? null,
+  printer: doc.printer ?? null,
+  settings: doc.settings ?? {},
+  images: Array.isArray(doc.images) ? doc.images : [],
+  note: doc.note ?? null,
+  status: doc.status ?? "pending",
+  createdAt: doc.createdAt ?? null,
+  updatedAt: doc.updatedAt ?? null
+});
+
+const normalizeGalleryPagination = (req) => {
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const limitRaw = parseInt(req.query.limit, 10);
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0
+    ? Math.min(limitRaw, MAX_GALLERY_PAGE_SIZE)
+    : 20;
+  return { page, limit, skip: (page - 1) * limit };
+};
+
+router.get("/gallery", async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({
+        success: false,
+        error: "Banco de dados indisponivel"
+      });
+    }
+
+    const { page, limit, skip } = normalizeGalleryPagination(req);
+    const galleryCollection = getCollection("gallery");
+    const filter = { status: "approved" };
+    const total = await galleryCollection.countDocuments(filter);
+    const docs = await galleryCollection
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    res.json({
+      success: true,
+      total,
+      page,
+      limit,
+      images: docs.map(buildGalleryResponse)
+    });
+  } catch (err) {
+    console.error("[API] Erro ao listar galeria:", err);
+    res.status(500).json({
+      success: false,
+      error: "Erro ao listar galeria"
+    });
+  }
+});
+
+router.get("/gallery/all", async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({
+        success: false,
+        error: "Banco de dados indisponivel"
+      });
+    }
+
+    const { page, limit, skip } = normalizeGalleryPagination(req);
+    const galleryCollection = getCollection("gallery");
+    const total = await galleryCollection.countDocuments({});
+    const docs = await galleryCollection
+      .find({})
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    res.json({
+      success: true,
+      total,
+      page,
+      limit,
+      images: docs.map(buildGalleryResponse)
+    });
+  } catch (err) {
+    console.error("[API] Erro ao listar galeria completa:", err);
+    res.status(500).json({
+      success: false,
+      error: "Erro ao listar galeria"
+    });
+  }
+});
+
 function normalizeParams(params = {}) {
   const root = params ?? {};
   const base = root.parametros ?? {};
@@ -321,8 +437,20 @@ function normalizeParams(params = {}) {
 
   // Helper local para simplificar a chamada usando as globais
   const getParam = (key) => pickWithFallback(base, root, key);
+  const getBottomExposure = () => {
+    const direct = getParam("bottomExposureS");
+    if (!isNil(direct)) return direct;
+    const baseExposure = getParam("baseExposureTimeS");
+    if (!isNil(baseExposure)) return baseExposure;
+    return getParam("bottomExposureTimeS");
+  };
 
   return {
+    layerHeightMm: getParam("layerHeightMm") ?? getParam("layerHeight"),
+    exposureTimeS: getParam("exposureTimeS") ?? getParam("exposureTime") ?? getParam("normalExposureS"),
+    bottomExposureS: getBottomExposure(),
+    bottomLayers: getParam("bottomLayers") ?? getParam("baseLayers"),
+    liftSpeedMmMin: getParam("liftSpeedMmMin") ?? getParam("liftSpeed") ?? getParam("liftSpeedMmM"),
     uvOffDelayBaseS: getParam("uvOffDelayBaseS"),
     restBeforeLiftS: getParam("restBeforeLiftS"),
     restAfterLiftS: getParam("restAfterLiftS"),
