@@ -14,6 +14,15 @@ import { ensureMongoReady } from "./common.js";
 const router = express.Router();
 const MAX_PARAMS_PAGE_SIZE = 200;
 const upload = multer();
+const FISPQ_DOCUMENTS = [
+  { resin: "Iron 7030", slug: "iron-7030" },
+  { resin: "Spin+", slug: "spin-plus" },
+  { resin: "Iron Skin", slug: "iron-skin" },
+  { resin: "LowSmell", slug: "lowsmell" },
+  { resin: "Poseidon", slug: "poseidon" },
+  { resin: "Pyroblast+", slug: "pyroblast-plus" },
+  { resin: "Spark", slug: "spark" }
+];
 
 // --- AJUDANTES GLOBAIS (CORRIGIDOS PARA ACEITAR ZERO) ---
 const isNil = (value) => value === undefined || value === null;
@@ -424,6 +433,18 @@ router.get("/resins", async (_req, res) => {
     console.error("[API] Erro ao listar resinas:", err);
     res.status(500).json({ success: false, error: "Erro ao listar resinas" });
   }
+});
+
+router.get("/docs/fispqs", (_req, res) => {
+  res.json({
+    success: true,
+    updatedAt: new Date().toISOString(),
+    documents: FISPQ_DOCUMENTS.map((doc) => ({
+      ...doc,
+      status: "available",
+      requestEmail: "atendimento@quanton3d.com.br"
+    }))
+  });
 });
 
 router.get("/params/printers", async (req, res) => {
