@@ -6,6 +6,7 @@ const DEFAULT_OPTIONS = {
 
 let connectPromise = null
 
+
 export const connectToMongo = async (uri = process.env.MONGODB_URI) => {
   if (!uri) return false
 
@@ -16,7 +17,10 @@ export const connectToMongo = async (uri = process.env.MONGODB_URI) => {
   if (!connectPromise) {
     connectPromise = mongoose
       .connect(uri, DEFAULT_OPTIONS)
-      .then(() => true)
+      .then(async () => {
+        await ensureIndexes()
+        return true
+      })
       .catch((error) => {
         connectPromise = null
         throw error
@@ -41,24 +45,15 @@ export const isConnected = () => mongoose.connection.readyState === 1
 
 // Exportações que o SITE precisa
 export const getGalleryCollection = () => getCollection('gallery')
-export const getSuggestionsCollection = () => getCollection('suggestions')
+export const getSuggestionsCollection = () => getCollection('sugestoes')
+export const getSugestoesCollection = () => getCollection('sugestoes')
 export const getMetricasCollection = () => getCollection('metricas')
 export const getParametrosCollection = () => getCollection('parametros')
+export const getPrintParametersCollection = () => getCollection('parametros')
+export const getConversasCollection = () => getCollection('conversas')
+export const getLearningCollection = () => getCollection('learning')
 
 const conversasSchema = new mongoose.Schema({}, { strict: false, collection: 'conversas' })
 
 export const Conversas = mongoose.models.Conversas || mongoose.model('Conversas', conversasSchema)
 
-export default {
-  connectToMongo,
-  getCollection,
-  getDb,
-  getDocumentsCollection,
-  getVisualKnowledgeCollection,
-  isConnected,
-  getGalleryCollection,
-  getSuggestionsCollection,
-  getMetricasCollection,
-  getParametrosCollection,
-  Conversas,
-}

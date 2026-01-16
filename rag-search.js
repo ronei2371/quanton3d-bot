@@ -13,11 +13,11 @@ const EMBEDDING_MODEL = 'text-embedding-3-large';
 const EMBEDDING_DIMENSIONS = 3072; // Dimensao do text-embedding-3-large
 
 // Limiar minimo de relevancia para considerar um documento util (configuravel)
-const ENV_RELEVANCE = Number(process.env.RAG_MIN_RELEVANCE ?? 0.65);
+const ENV_RELEVANCE = Number(process.env.RAG_MIN_RELEVANCE ?? 0.6);
 const MIN_RELEVANCE_THRESHOLD =
   Number.isFinite(ENV_RELEVANCE) && ENV_RELEVANCE > 0 && ENV_RELEVANCE < 1
     ? ENV_RELEVANCE
-    : 0.65;
+    : 0.6;
 
 const LOG_DIR = 'logs';
 

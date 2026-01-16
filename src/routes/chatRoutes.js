@@ -1,12 +1,28 @@
 import express from 'express';
 import OpenAI from 'openai';
+import multer from 'multer';
 import { searchKnowledge, formatContext } from '../../rag-search.js';
+import { getCollection, retryMongoWrite } from '../../db.js';
+import { ensureMongoReady } from './common.js';
 
 const router = express.Router();
 
 const DEFAULT_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini';
-const DEFAULT_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-4o';
+
 let openaiClient = null;
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 4 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype?.startsWith('image/')) {
+      return cb(null, true);
+    }
+    const error = new Error('Apenas imagens são permitidas.');
+    error.status = 400;
+    error.code = 'LIMIT_FILE_TYPE';
+    return cb(error);
+  }
+});
 
 function getOpenAIClient() {
   if (!process.env.OPENAI_API_KEY) {
@@ -24,76 +40,72 @@ router.get('/ping', (req, res) => {
 });
 
 function hasImagePayload(body = {}) {
-  return Boolean(body.imageUrl || body.image || body.imageBase64 || body.imageData || body.attachment);
+  return Boolean(
+    body.imageUrl ||
+    body.image ||
+    body.imageBase64 ||
+    body.imageData ||
+    body.attachment ||
+    body.selectedImage ||
+    body.imageFile
+  );
 }
 
 function resolveImagePayload(body = {}) {
-  const possiblePayloads = [
-    body.imageUrl,
-    body.image,
-    body.imageBase64,
-    body.imageData,
-    body.attachment,
-    body.imageFile,
-    body.file,
-    body.files,
-    body.images
-  ];
-
-  let payload = possiblePayloads.find(Boolean);
-  if (Array.isArray(payload)) {
-    payload = payload.find(Boolean);
-  }
-  if (!payload) {
-    return { imageUrl: null, error: null };
-  }
-
-  let mimeType =
-    body.imageMimeType ||
-    body.mimeType ||
-    'image/jpeg';
-
-  if (typeof payload === 'object') {
-    if (payload.url) {
-      return { imageUrl: payload.url, error: null };
+  if (body.imageUrl) {
+    if (typeof body.imageUrl === 'string' && body.imageUrl.startsWith('blob:')) {
+      return null;
     }
-    if (payload.dataUrl) {
-      return { imageUrl: payload.dataUrl, error: null };
+    return { type: 'url', value: body.imageUrl };
+  }
+
+  const raw =
+    body.image ||
+    body.imageBase64 ||
+    body.imageData ||
+    body.attachment ||
+    body.selectedImage ||
+    body.imageFile;
+  if (!raw) return null;
+
+  if (typeof raw === 'string') {
+    if (raw.startsWith('data:')) {
+      return { type: 'data', value: raw };
     }
-    if (payload.data) {
-      mimeType = payload.mimeType || payload.type || mimeType;
-      payload = payload.data;
-    } else if (payload.base64) {
-      mimeType = payload.mimeType || payload.type || mimeType;
-      payload = payload.base64;
+    return { type: 'data', value: `data:image/jpeg;base64,${raw}` };
+  }
+
+  if (typeof raw === 'object') {
+    if (typeof raw.dataUrl === 'string' && raw.dataUrl.startsWith('data:')) {
+      return { type: 'data', value: raw.dataUrl };
+    }
+    const url = raw.url || raw.imageUrl || raw.preview || raw.src;
+    if (typeof url === 'string' && url.startsWith('blob:')) {
+      return null;
+    }
+    if (typeof url === 'string' && url.length > 0) {
+      return { type: 'url', value: url };
+    }
+    const base64 = raw.base64 || raw.data || raw.imageBase64 || raw.dataUrl;
+    if (typeof base64 === 'string' && base64.length > 0) {
+      const mimeType = raw.mimeType || raw.type || raw.contentType || 'image/jpeg';
+      return { type: 'data', value: `data:${mimeType};base64,${base64}` };
     }
   }
 
-  if (typeof payload !== 'string') {
-    return { imageUrl: null, error: 'Formato de imagem não suportado.' };
-  }
-
-  const trimmed = payload.trim();
-  if (!trimmed) {
-    return { imageUrl: null, error: 'Imagem vazia.' };
-  }
-  if (trimmed.startsWith('data:') || trimmed.startsWith('http')) {
-    return { imageUrl: trimmed, error: null };
-  }
-  if (trimmed.startsWith('blob:')) {
-    return {
-      imageUrl: null,
-      error: 'URL blob não suportada. Envie a imagem como base64 ou URL pública.'
-    };
-  }
-
-  return { imageUrl: `data:${mimeType};base64,${trimmed}`, error: null };
+  return null;
 }
 
-async function getRagContext(message) {
+
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
-  const ragResults = trimmedMessage ? await searchKnowledge(trimmedMessage) : [];
+  const ragQuery = trimmedMessage || (hasImage ? 'diagnostico visual impressao 3d resina defeitos comuns' : '');
+  const ragResults = ragQuery ? await searchKnowledge(ragQuery) : [];
   const ragContext = formatContext(ragResults);
+  const hasRelevantContext = ragResults.length > 0;
+  const adhesionIssueHint = /dificil|difícil|duro|presa|grudada|grudado/i.test(trimmedMessage)
+    && /mesa|plate|plataforma|base/i.test(trimmedMessage)
+    ? 'Nota de triagem: cliente relata peça muito presa na plataforma; evite sugerir AUMENTAR exposição base sem dados. Considere sobre-adesão e peça parâmetros antes de recomendar ajustes.'
+    : null;
 
   return { ragResults, ragContext, trimmedMessage };
 }
@@ -102,30 +114,63 @@ async function generateResponse({ message, ragContext }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
 
   // --- AQUI ESTÁ A CORREÇÃO DA PERSONALIDADE ---
+  const visionPriority = hasImage
+    ? '\n    11. Se IMAGEM=SIM, priorize a evidência visual. Não deixe histórico anterior de texto sobrepor o que está claramente visível na nova imagem.\n  '
+    : '';
+
   const systemPrompt = `
-    Você é a IA Oficial da Quanton3D, especialista técnica em resinas e impressão 3D.
-    
-    SUAS REGRAS DE OURO:
+    Você é a IA Oficial da Quanton3D, uma técnica sênior em impressão 3D de resina, com foco no mercado brasileiro.
+
+    PERSONA TÉCNICA:
+    - Responda como uma especialista prática de chão de fábrica, com linguagem objetiva e precisa.
+    - Priorize referências e marcas populares no Brasil quando fizer sentido (Anycubic, Elegoo, Iron, Creality).
+
+    REGRAS DE OURO:
     1. JAMAIS cite fontes explicitamente como "(Fonte: Documento 1)" ou "[Doc 1]". Use o conhecimento naturalmente no texto.
-    2. Seja cordial, direto e profissional. Aja como um consultor técnico experiente.
-    3. Use formatação (negrito, tópicos) para deixar a leitura fácil.
-    4. Se o usuário relatar falhas (como "peça sem definição"), aja como suporte técnico: analise as causas prováveis (cura, limpeza, parâmetros) baseando-se no contexto.
-    5. Se a resposta não estiver no contexto, sugira contato humano pelo WhatsApp (31) 98334-0053.
+    2. Responda de forma objetiva (máximo de 6 a 8 linhas), com tópicos quando fizer sentido.
+    3. Sempre forneça faixas numéricas específicas quando recomendar ajustes (ex: "Exposição normal: 2,5–3,0 s").
+    4. Para resinas desconhecidas, use padrões conservadores (ex: "Comece com exposição normal de 3,0 s").
+    5. Nunca sugira temperaturas acima de 35°C para resinas padrão.
+    6. Só apresente causas prováveis quando houver CONTEXTO_RELEVANTE=SIM ou o cliente fornecer dados técnicos claros.
+    7. Se CONTEXTO_RELEVANTE=NAO, NÃO diagnostique. Ative o "Modo Entrevista Guiada": faça apenas UMA pergunta por vez, seguindo esta ordem fixa: (1) modelo da impressora, (2) tipo de resina, (3) tempo de exposição/configurações. Só avance para a próxima etapa quando a anterior for respondida. Não liste todos os requisitos de uma vez. Se necessário, ofereça ajuda humana no WhatsApp (31) 98334-0053.
+    8. Se IMAGEM=SIM, descreva rapidamente o que você observa sem afirmar a causa. Liste no máximo 2-3 hipóteses e peça dados antes de recomendar ajustes.
+    9. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
+    10. SEMPRE consulte a "TABELA_COMPLETA" ou "resins_db" antes de responder perguntas sobre parâmetros. Confie nesses valores acima de conhecimento geral.
+    11. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
+    ${visionPriority}
   `;
 
   const prompt = [
     ragContext ? `Contexto Técnico (Use isso para basear sua resposta):\n${ragContext}` : null,
     '---',
-    trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : 'Cliente enviou uma imagem.'
+
   ].filter(Boolean).join('\n\n');
 
   const client = getOpenAIClient();
+  const userContent = imageUrl
+    ? [
+        { type: 'text', text: prompt },
+        { type: 'image_url', image_url: { url: imageUrl } }
+      ]
+    : prompt;
+
+  const model = imageUrl ? DEFAULT_VISION_MODEL : DEFAULT_CHAT_MODEL;
+
+  const userMessage = { role: 'user', content: userContent };
+  const trimmedHistory = trimConversationHistory(
+    Array.isArray(conversationHistory) ? conversationHistory : [],
+    systemPrompt,
+    userMessage
+  );
+
   const completion = await client.chat.completions.create({
-    model: DEFAULT_CHAT_MODEL,
-    temperature: 0.5, // Aumentei um pouco para ficar mais natural
+    model,
+    temperature: 0.3,
+    max_tokens: 500,
     messages: [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: prompt }
+      ...trimmedHistory,
+      userMessage
     ]
   });
 
@@ -184,8 +229,7 @@ async function generateImageResponse({ message, imageUrl, ragContext }) {
 async function handleChatRequest(req, res) {
   try {
     const { message, sessionId } = req.body ?? {};
-    const hasImage = hasImagePayload(req.body);
-    const { ragResults, ragContext, trimmedMessage } = await getRagContext(message);
+
 
     console.log(`[CHAT] Msg: ${trimmedMessage.substring(0, 50)}...`);
 
@@ -194,23 +238,9 @@ async function handleChatRequest(req, res) {
       return res.json({ reply: 'Olá! Sou a IA da Quanton3D. Como posso ajudar com suas impressões hoje?', sessionId: sessionId || 'new' });
     }
 
-    let response = null;
-    if (hasImage) {
-      const { imageUrl, error } = resolveImagePayload(req.body);
-      if (error || !imageUrl) {
-        return res.status(400).json({ error: error || 'Imagem inválida ou não suportada.' });
-      }
-      response = await generateImageResponse({
-        message: trimmedMessage,
-        imageUrl,
-        ragContext
-      });
-    } else {
-      response = await generateResponse({ message: trimmedMessage, ragContext });
-    }
 
     res.json({
-      reply: response.reply,
+      reply: sanitizeChatText(response.reply),
       sessionId: sessionId || 'session-auto',
       documentsUsed: ragResults.length || response.documentsUsed
     });
@@ -222,6 +252,34 @@ async function handleChatRequest(req, res) {
 
 router.post('/ask', handleChatRequest);
 router.post('/chat', handleChatRequest);
-router.post('/ask-with-image', handleChatRequest);
+router.post(
+  '/ask-with-image',
+  upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'file', maxCount: 1 },
+    { name: 'attachment', maxCount: 1 }
+  ]),
+  attachMultipartImage,
+  handleChatRequest
+);
+
+router.use((err, _req, res, next) => {
+  if (!err) {
+    return next();
+  }
+
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'Arquivo excede o limite de 4MB.' });
+    }
+    return res.status(400).json({ error: 'Falha no upload do arquivo.' });
+  }
+
+  if (err.code === 'LIMIT_FILE_TYPE' || err.status === 400) {
+    return res.status(400).json({ error: err.message || 'Upload inválido.' });
+  }
+
+  return next(err);
+});
 
 export default router;

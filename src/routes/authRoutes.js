@@ -3,12 +3,7 @@ import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
-// Configurações
-const ADMIN_PASSWORD =
-  process.env.ADMIN_PASSWORD ||
-  process.env.ADMIN_SECRET ||
-  'rmartins1201';
-const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton3d_jwt_secret_key_2025';
+
 const JWT_EXPIRATION = '24h';
 const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
 
@@ -18,9 +13,7 @@ const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
  */
 router.post("/login", (req, res) => {
   try {
-    const { password, token, adminToken } = req.body;
-    const headerToken = req.headers["x-admin-token"] || req.headers["admin-token"];
-    const candidatePassword = password || token || adminToken || headerToken;
+
 
     // Validar senha
     if (!candidatePassword) {
@@ -31,7 +24,7 @@ router.post("/login", (req, res) => {
       });
     }
 
-    if (candidatePassword !== ADMIN_PASSWORD) {
+
       console.log(`❌ [AUTH] Tentativa de login com senha incorreta`);
       return res.status(401).json({
         success: false,

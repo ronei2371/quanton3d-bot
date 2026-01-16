@@ -10,7 +10,8 @@ import { fileURLToPath } from "url";
 import { ObjectId } from "mongodb";
 import { requireJWT } from "./authRoutes.js";
 import {
-  getCollection, // ✅ CORREÇÃO: Importamos APENAS a função genérica e o isConnected
+  getSuggestionsCollection,
+  getMetricasCollection,
   isConnected
 } from "../../db.js";
 import {
@@ -26,11 +27,6 @@ const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "../../");
 
 const router = express.Router();
-
-// ✅ CORREÇÃO FINAL: Criamos as funções de acesso manualmente aqui
-// Isso resolve o problema de nomes (Inglês vs Português)
-const getSuggestionsCollection = () => getCollection('sugestoes');
-const getMetricasCollection = () => getCollection('metricas');
 
 // Middleware de autenticacao: aceita JWT ou token legado para compatibilidade
 const requireAuth = (req, res, next) => {

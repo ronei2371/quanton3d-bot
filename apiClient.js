@@ -17,7 +17,7 @@ function resolveApiBase() {
       ? window.API_BASE_URL || window.VITE_API_URL || window.env?.VITE_API_URL
       : undefined;
 
-  // Remove /api do final se existir
+  // Remove /api do final se existir (CORREÇÃO CRÍTICA)
   let baseUrl = viteApi || browserApi || DEFAULT_API_BASE;
   baseUrl = baseUrl.replace(/\/api\/?$/, "");
 
@@ -75,7 +75,7 @@ async function request(path, options = {}) {
 // =========================
 
 export async function fetchResins() {
-  return request("/resins");
+  return request("/api/resins");
 }
 
 export async function fetchPrinters(resinId) {
@@ -92,6 +92,13 @@ export async function registerUser(payload) {
 
 export async function sendChatMessage(payload) {
   return request("/api/ask", {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+}
+
+export async function sendChatWithImage(payload) {
+  return request("/api/ask-with-image", {
     method: "POST",
     body: JSON.stringify(payload || {})
   });
@@ -129,14 +136,23 @@ export async function uploadToGallery(payload) {
   });
 }
 
+export async function loginAdmin(credentials) {
+  return request("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(credentials || {})
+  });
+}
+
 export default {
   fetchResins,
   fetchPrinters,
   registerUser,
   sendChatMessage,
+  sendChatWithImage,
   sendContact,
   sendCustomRequest,
   sendSuggestion,
   fetchGallery,
-  uploadToGallery
+  uploadToGallery,
+  loginAdmin
 };

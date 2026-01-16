@@ -213,14 +213,19 @@ function showTypingIndicator() {
   const typingDiv = document.createElement('div');
   typingDiv.id = `typing-${id}`;
   typingDiv.className = 'message message-bot typing-indicator';
-  typingDiv.innerHTML = `
-    <div class="message-avatar">🤖</div>
-    <div class="message-content">
-      <span></span>
-      <span></span>
-      <span></span>
-    </div>
-  `;
+  
+  const avatar = document.createElement('div');
+  avatar.className = 'message-avatar';
+  avatar.textContent = '🤖';
+
+  const content = document.createElement('div');
+  content.className = 'message-content';
+  content.appendChild(document.createElement('span'));
+  content.appendChild(document.createElement('span'));
+  content.appendChild(document.createElement('span'));
+
+  typingDiv.appendChild(avatar);
+  typingDiv.appendChild(content);
   
   chatMessages?.appendChild(typingDiv);
   chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -236,10 +241,17 @@ function removeTypingIndicator(id) {
 function showErrorMessage(text) {
   const errorDiv = document.createElement('div');
   errorDiv.className = 'message message-error';
-  errorDiv.innerHTML = `
-    <div class="message-avatar">⚠️</div>
-    <div class="message-content">${text}</div>
-  `;
+  
+  const avatar = document.createElement('div');
+  avatar.className = 'message-avatar';
+  avatar.textContent = '⚠️';
+
+  const content = document.createElement('div');
+  content.className = 'message-content';
+  content.textContent = text;
+
+  errorDiv.appendChild(avatar);
+  errorDiv.appendChild(content);
   
   chatMessages?.appendChild(errorDiv);
   chatMessages.scrollTop = chatMessages.scrollHeight;
