@@ -8,8 +8,7 @@ import { ensureMongoReady } from './common.js';
 const router = express.Router();
 
 const DEFAULT_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini';
-const DEFAULT_VISION_MODEL = process.env.OPENAI_VISION_MODEL || 'gpt-4o-mini';
-const MAX_HISTORY_TOKENS = 3000;
+
 let openaiClient = null;
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -97,164 +96,8 @@ function resolveImagePayload(body = {}) {
   return null;
 }
 
-function summarizeImagePayload(body = {}) {
-  const normalized = resolveImagePayload(body);
-  if (!normalized) return '';
-  if (normalized.type === 'url') return `Imagem recebida via URL: ${normalized.value}`;
-  return 'Imagem recebida em formato base64/anexo.';
-}
 
-function sanitizeChatText(value) {
-  if (typeof value !== 'string') return '';
-  return value.replace(/<[^>]*>/g, '').trim();
-}
 
-function normalizeHistoryEntry(entry) {
-  if (!entry || typeof entry !== 'object') return null;
-  const role = entry.role || entry.sender || entry.from;
-  if (!['user', 'assistant', 'system'].includes(role)) return null;
-  const content = entry.content ?? entry.text ?? entry.message ?? '';
-  if (!content) return null;
-  return { role, content };
-}
-
-function getConversationHistory(body = {}) {
-  const rawHistory =
-    body.history ||
-    body.conversationHistory ||
-    body.messages ||
-    body.conversation ||
-    [];
-
-  if (!Array.isArray(rawHistory)) return [];
-
-  return rawHistory
-    .map(normalizeHistoryEntry)
-    .filter((entry) => entry && entry.role !== 'system');
-}
-
-function estimateTokensFromContent(content) {
-  if (!content) return 0;
-  if (typeof content === 'string') {
-    return Math.ceil(content.length / 4);
-  }
-  if (Array.isArray(content)) {
-    return content.reduce((sum, part) => {
-      if (part?.type === 'text') {
-        return sum + Math.ceil((part.text || '').length / 4);
-      }
-      if (part?.type === 'image_url') {
-        return sum + 200;
-      }
-      return sum;
-    }, 0);
-  }
-  return Math.ceil(JSON.stringify(content).length / 4);
-}
-
-function estimateTokensFromMessages(messages = []) {
-  return messages.reduce((sum, message) => sum + estimateTokensFromContent(message.content), 0);
-}
-
-function trimConversationHistory(history = [], systemPrompt, newUserMessage, maxTokens = MAX_HISTORY_TOKENS) {
-  const trimmed = [...history];
-  const buildMessages = () => [
-    { role: 'system', content: systemPrompt },
-    ...trimmed,
-    newUserMessage
-  ];
-
-  let tokenCount = estimateTokensFromMessages(buildMessages());
-  if (tokenCount <= maxTokens) return trimmed;
-
-  const protectedTurns = 2;
-  const protectedCount = Math.min(trimmed.length, protectedTurns * 2);
-
-  while (tokenCount > maxTokens) {
-    const protectedStart = Math.max(0, trimmed.length - protectedCount);
-    const removableIndex = trimmed.findIndex(
-      (message, index) => index < protectedStart && message.role === 'user'
-    );
-
-    if (removableIndex === -1) {
-      break;
-    }
-
-    trimmed.splice(removableIndex, 1);
-
-    if (trimmed[removableIndex]?.role === 'assistant' && removableIndex < trimmed.length - protectedCount) {
-      trimmed.splice(removableIndex, 1);
-    }
-
-    tokenCount = estimateTokensFromMessages(buildMessages());
-  }
-
-  return trimmed;
-}
-
-function extractImageUrl(body = {}) {
-  const normalized = resolveImagePayload(body);
-  return normalized ? normalized.value : null;
-}
-
-async function logResinSearch({ message, sessionId, hasImage }) {
-  const mongoReady = await ensureMongoReady();
-  if (!mongoReady) {
-    console.warn('[CHAT] MongoDB indisponível para log de buscas.');
-    return;
-  }
-
-  const searchesCollection = getCollection('ResinSearches');
-  if (!searchesCollection) {
-    console.warn('[CHAT] Coleção ResinSearches indisponível.');
-    return;
-  }
-
-  const payload = {
-    query: message || null,
-    timestamp: new Date(),
-    sessionId: sessionId || null,
-    hasImage: Boolean(hasImage),
-    source: 'chat',
-    createdAt: new Date()
-  };
-
-  try {
-    await retryMongoWrite(
-      () => searchesCollection.insertOne(payload),
-      { label: 'registro de busca' }
-    );
-  } catch (error) {
-    console.error('[CHAT] Falha ao registrar busca:', error);
-  }
-}
-
-function attachMultipartImage(req, res, next) {
-  const files = req.files || {};
-  const file =
-    files.image?.[0] ||
-    files.file?.[0] ||
-    files.attachment?.[0];
-
-  if (file?.buffer) {
-    req.body = req.body ?? {};
-    req.body.imageFile = {
-      base64: file.buffer.toString('base64'),
-      mimeType: file.mimetype
-    };
-  }
-
-  next();
-}
-
-async function generateResponse({
-  message,
-  imageSummary,
-  imageUrl,
-  hasImage,
-  conversationHistory,
-  customerContext
-}) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
   const ragQuery = trimmedMessage || (hasImage ? 'diagnostico visual impressao 3d resina defeitos comuns' : '');
   const ragResults = ragQuery ? await searchKnowledge(ragQuery) : [];
@@ -264,6 +107,12 @@ async function generateResponse({
     && /mesa|plate|plataforma|base/i.test(trimmedMessage)
     ? 'Nota de triagem: cliente relata peça muito presa na plataforma; evite sugerir AUMENTAR exposição base sem dados. Considere sobre-adesão e peça parâmetros antes de recomendar ajustes.'
     : null;
+
+  return { ragResults, ragContext, trimmedMessage };
+}
+
+async function generateResponse({ message, ragContext }) {
+  const trimmedMessage = typeof message === 'string' ? message.trim() : '';
 
   // --- AQUI ESTÁ A CORREÇÃO DA PERSONALIDADE ---
   const visionPriority = hasImage
@@ -310,13 +159,9 @@ async function generateResponse({
   if (customerContext?.problemType) contextLines.push(`Problema relatado: ${customerContext.problemType}`);
 
   const prompt = [
-    `Contexto Técnico (Use isso para basear sua resposta):\n${ragContext}`,
+    ragContext ? `Contexto Técnico (Use isso para basear sua resposta):\n${ragContext}` : null,
     '---',
-    `Sinalizadores: CONTEXTO_RELEVANTE=${hasRelevantContext ? 'SIM' : 'NAO'} | IMAGEM=${hasImage ? 'SIM' : 'NAO'}`,
-    contextLines.length ? `Contexto do cliente:\n${contextLines.join('\n')}` : null,
-    trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : 'Cliente enviou uma imagem.',
-    adhesionIssueHint,
-    imageSummary ? `Detalhes da imagem: ${imageSummary}` : null,
+
   ].filter(Boolean).join('\n\n');
 
   const client = getOpenAIClient();
@@ -351,24 +196,58 @@ async function generateResponse({
 
   return {
     reply: reply || 'Estou analisando sua solicitação, mas tive um breve soluço. Poderia repetir?',
-    documentsUsed: ragResults.length
+    documentsUsed: 0
+  };
+}
+
+async function generateImageResponse({ message, imageUrl, ragContext }) {
+  const trimmedMessage = typeof message === 'string' ? message.trim() : '';
+  const systemPrompt = `
+    Você é a IA Oficial da Quanton3D, especialista técnica em resinas e impressão 3D.
+    
+    SUAS REGRAS DE OURO:
+    1. JAMAIS cite fontes explicitamente como "(Fonte: Documento 1)" ou "[Doc 1]". Use o conhecimento naturalmente no texto.
+    2. Seja cordial, direto e profissional. Aja como um consultor técnico experiente.
+    3. Use formatação (negrito, tópicos) para deixar a leitura fácil.
+    4. Se o usuário relatar falhas (como "peça sem definição"), aja como suporte técnico: analise as causas prováveis (cura, limpeza, parâmetros) baseando-se no contexto.
+    5. Se a resposta não estiver no contexto, sugira contato humano pelo WhatsApp (31) 98334-0053.
+  `;
+
+  const prompt = [
+    ragContext ? `Contexto Técnico (Use isso para basear sua resposta):\n${ragContext}` : null,
+    '---',
+    trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : 'Cliente enviou uma imagem para análise.'
+  ].filter(Boolean).join('\n\n');
+
+  const client = getOpenAIClient();
+  const completion = await client.chat.completions.create({
+    model: DEFAULT_IMAGE_MODEL,
+    temperature: 0.4,
+    max_tokens: 1000,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: prompt },
+          { type: 'image_url', image_url: { url: imageUrl } }
+        ]
+      }
+    ]
+  });
+
+  const reply = completion?.choices?.[0]?.message?.content?.trim();
+
+  return {
+    reply: reply || 'Não consegui analisar a imagem agora. Pode tentar novamente?',
+    documentsUsed: 0
   };
 }
 
 async function handleChatRequest(req, res) {
   try {
     const { message, sessionId } = req.body ?? {};
-    const trimmedMessage = typeof message === 'string' ? message.trim() : '';
-    const resolvedImage = resolveImagePayload(req.body);
-    const hasImage = Boolean(resolvedImage);
-    const imageUrl = resolvedImage ? resolvedImage.value : null;
-    const conversationHistory = getConversationHistory(req.body);
-    const customerContext = {
-      resin: req.body?.resin || null,
-      printer: req.body?.printer || null,
-      problemType: req.body?.problemType || null,
-      userName: req.body?.userName || req.body?.name || null
-    };
+
 
     console.log(`[CHAT] Msg: ${trimmedMessage.substring(0, 50)}...`);
 
@@ -377,22 +256,12 @@ async function handleChatRequest(req, res) {
       return res.json({ reply: 'Olá! Sou a IA da Quanton3D. Como posso ajudar com suas impressões hoje?', sessionId: sessionId || 'new' });
     }
 
-    const imageSummary = hasImage ? summarizeImagePayload(req.body) : '';
-    void logResinSearch({ message: trimmedMessage, sessionId, hasImage });
 
-    const response = await generateResponse({
-      message: trimmedMessage,
-      imageSummary,
-      imageUrl,
-      hasImage,
-      conversationHistory,
-      customerContext
-    });
 
     res.json({
       reply: sanitizeChatText(response.reply),
       sessionId: sessionId || 'session-auto',
-      documentsUsed: response.documentsUsed
+      documentsUsed: ragResults.length || response.documentsUsed
     });
   } catch (error) {
     console.error('Erro Chat:', error);

@@ -6,40 +6,6 @@ const DEFAULT_OPTIONS = {
 
 let connectPromise = null
 
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-
-export const retryMongoWrite = async (operation, options = {}) => {
-  const { retries = 3, delayMs = 500, label = 'operacao' } = options
-  let attempt = 0
-
-  while (attempt <= retries) {
-    try {
-      return await operation()
-    } catch (error) {
-      if (attempt >= retries) {
-        console.log(`[MongoDB] Falha ao salvar ${label} apos ${retries + 1} tentativas.`)
-        throw error
-      }
-      await wait(delayMs)
-      attempt += 1
-    }
-  }
-
-  return null
-}
-
-export const ensureIndexes = async () => {
-  const db = mongoose.connection?.db
-  if (!db) return
-
-  try {
-    await db.collection('messages').createIndex({ status: 1, createdAt: -1 })
-    await db.collection('parametros').createIndex({ resin: 'text', printer: 'text' })
-    await db.collection('ResinSearches').createIndex({ createdAt: -1 })
-  } catch (error) {
-    console.warn('[MongoDB] Falha ao garantir indexes:', error)
-  }
-}
 
 export const connectToMongo = async (uri = process.env.MONGODB_URI) => {
   if (!uri) return false
@@ -90,3 +56,4 @@ export const getLearningCollection = () => getCollection('learning')
 const conversasSchema = new mongoose.Schema({}, { strict: false, collection: 'conversas' })
 
 export const Conversas = mongoose.models.Conversas || mongoose.model('Conversas', conversasSchema)
+
