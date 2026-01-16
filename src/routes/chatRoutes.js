@@ -2,12 +2,12 @@ import express from 'express';
 import OpenAI from 'openai';
 import multer from 'multer';
 import { searchKnowledge, formatContext } from '../../rag-search.js';
-import { getCollection, retryMongoWrite } from '../../db.js';
-import { ensureMongoReady } from './common.js';
 
 const router = express.Router();
 
 const DEFAULT_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini';
+const DEFAULT_VISION_MODEL = process.env.OPENAI_VISION_MODEL || DEFAULT_CHAT_MODEL;
+const DEFAULT_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || DEFAULT_VISION_MODEL;
 
 let openaiClient = null;
 const upload = multer({
@@ -96,8 +96,7 @@ function resolveImagePayload(body = {}) {
   return null;
 }
 
-
-
+async function buildRagContext({ message, hasImage }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
   const ragQuery = trimmedMessage || (hasImage ? 'diagnostico visual impressao 3d resina defeitos comuns' : '');
   const ragResults = ragQuery ? await searchKnowledge(ragQuery) : [];
@@ -108,10 +107,36 @@ function resolveImagePayload(body = {}) {
     ? 'Nota de triagem: cliente relata peça muito presa na plataforma; evite sugerir AUMENTAR exposição base sem dados. Considere sobre-adesão e peça parâmetros antes de recomendar ajustes.'
     : null;
 
-  return { ragResults, ragContext, trimmedMessage };
+  return { ragResults, ragContext, trimmedMessage, hasRelevantContext, adhesionIssueHint };
 }
 
-async function generateResponse({ message, ragContext }) {
+function sanitizeChatText(text) {
+  if (typeof text !== 'string') return '';
+  return text.replace(/\u0000/g, '').trim();
+}
+
+function trimConversationHistory(history, systemPrompt, userMessage) {
+  const maxMessages = 8;
+  const safeHistory = Array.isArray(history) ? history : [];
+  const trimmed = safeHistory.slice(-maxMessages).filter((entry) => entry && entry.role && entry.content);
+  return trimmed;
+}
+
+function attachMultipartImage(req, _res, next) {
+  const files = req.files || {};
+  const imageFile = files.image?.[0] || files.file?.[0] || files.attachment?.[0];
+  if (!imageFile || !imageFile.buffer) {
+    return next();
+  }
+
+  req.body = req.body || {};
+  const base64 = imageFile.buffer.toString('base64');
+  const mimeType = imageFile.mimetype || 'image/jpeg';
+  req.body.imageData = `data:${mimeType};base64,${base64}`;
+  return next();
+}
+
+async function generateResponse({ message, ragContext, hasImage, imageUrl, conversationHistory, customerContext }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
 
   // --- AQUI ESTÁ A CORREÇÃO DA PERSONALIDADE ---
@@ -160,8 +185,9 @@ async function generateResponse({ message, ragContext }) {
 
   const prompt = [
     ragContext ? `Contexto Técnico (Use isso para basear sua resposta):\n${ragContext}` : null,
+    contextLines.length ? contextLines.join('\n') : null,
     '---',
-
+    trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : null
   ].filter(Boolean).join('\n\n');
 
   const client = getOpenAIClient();
@@ -247,7 +273,17 @@ async function generateImageResponse({ message, imageUrl, ragContext }) {
 async function handleChatRequest(req, res) {
   try {
     const { message, sessionId } = req.body ?? {};
+    const hasImage = hasImagePayload(req.body);
+    const imagePayload = resolveImagePayload(req.body);
+    const imageUrl = imagePayload?.value || null;
+    const conversationHistory = req.body?.conversationHistory || [];
+    const customerContext = req.body?.customerContext || {};
 
+    const {
+      ragResults,
+      ragContext,
+      trimmedMessage
+    } = await buildRagContext({ message, hasImage });
 
     console.log(`[CHAT] Msg: ${trimmedMessage.substring(0, 50)}...`);
 
@@ -256,7 +292,16 @@ async function handleChatRequest(req, res) {
       return res.json({ reply: 'Olá! Sou a IA da Quanton3D. Como posso ajudar com suas impressões hoje?', sessionId: sessionId || 'new' });
     }
 
-
+    const response = imageUrl
+      ? await generateImageResponse({ message: trimmedMessage, imageUrl, ragContext })
+      : await generateResponse({
+          message: trimmedMessage,
+          ragContext,
+          hasImage,
+          imageUrl,
+          conversationHistory,
+          customerContext
+        });
 
     res.json({
       reply: sanitizeChatText(response.reply),
