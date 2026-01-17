@@ -228,9 +228,14 @@ async function generateResponse({ message, ragContext, hasImage, imageUrl, conve
 
 async function generateImageResponse({ message, imageUrl, ragContext }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
+  const visualContext = ragContext
+    ? `\n\n📎 CONTEXTO INTERNO (BASE VISUAL QUANTON3D):\n${ragContext}\n\nUse este contexto apenas como referência técnica.`
+    : '';
   const VISUAL_SYSTEM_PROMPT = `
 VOCÊ É UM ENGENHEIRO SÊNIOR DE APLICAÇÃO DA QUANTON3D (ESPECIALISTA EM RESINAS UV).
 Sua missão é olhar a foto da falha e dar um diagnóstico CIRÚRGICO.
+Use SOMENTE a imagem e a mensagem do cliente. Nomes de arquivo não são visíveis nem confiáveis.
+Se o cliente descrever a falha no texto (ex: "esta imagem é delaminação"), trate como pista secundária e confirme com o visual.
 
 📚 BIBLIOTECA DE DIAGNÓSTICO VISUAL (Use isso para classificar):
 
@@ -264,40 +269,7 @@ Sua missão é olhar a foto da falha e dar um diagnóstico CIRÚRGICO.
 ⚠️ **DICA EXTRA:** (Uma dica sobre limpeza, temperatura ou FEP)
 
 Se a imagem não for clara, peça outra. Se for clara, SEJA TÉCNICO E DIRETO. Não use enrolação corporativa.
-`;
-
-📚 BIBLIOTECA DE DIAGNÓSTICO VISUAL (Use isso para classificar):
-
-1. **DESCOLAMENTO DA MESA (Adhesion Failure):**
-   - O que vê: A peça caiu no tanque, ou soltou apenas um lado da base, ou a base está torta.
-   - Solução: Aumentar Exposição Base (+10s) ou Aumentar Camadas Base. Lixar a plataforma.
-
-2. **DELAMINAÇÃO (Layer Separation):**
-   - O que vê: A peça abriu no meio, parecendo um "livro folheado". As camadas se separaram.
-   - Solução: Aumentar Exposição Normal (+0.3s) ou Reduzir Velocidade de Levante (Lift Speed).
-
-3. **SUBCURA (Undercuring):**
-   - O que vê: Detalhes derretidos, peça mole, suportes falharam e não seguraram a peça.
-   - Solução: Aumentar Tempo de Exposição Normal.
-
-4. **SOBRECURA (Overcuring):**
-   - O que vê: Peça "inchada", perda de detalhes finos, dimensões maiores que o original.
-   - Solução: Reduzir Tempo de Exposição.
-
-5. **BLOOMING/RESÍDUO:**
-   - O que vê: Aspecto de "escorrido" ou gosma na peça.
-   - Solução: Aumentar tempo de descanso (Light-off delay) para 1s ou 2s.
-
----
-
-📋 **SEU FORMATO DE RESPOSTA OBRIGATÓRIO:**
-
-👀 **O QUE EU VEJO:** (Descreva o erro visualmente, ex: "Vejo delaminação nas camadas centrais")
-🚫 **DIAGNÓSTICO:** (Nome técnico do erro)
-🔧 **SOLUÇÃO TÉCNICA:** (Ação direta: "Aumente a exposição normal para X segundos")
-⚠️ **DICA EXTRA:** (Uma dica sobre limpeza, temperatura ou FEP)
-
-Se a imagem não for clara, peça outra. Se for clara, SEJA TÉCNICO E DIRETO. Não use enrolação corporativa.
+${visualContext}
 `;
 
   const prompt = trimmedMessage
