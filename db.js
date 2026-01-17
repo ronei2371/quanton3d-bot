@@ -6,6 +6,20 @@ const DEFAULT_OPTIONS = {
 
 let connectPromise = null
 
+const ensureIndexes = async () => {
+  const db = mongoose.connection?.db
+  if (!db) return
+
+  try {
+    await Promise.all([
+      db.collection('documents').createIndex({ createdAt: -1 }),
+      db.collection('conversas').createIndex({ createdAt: -1 })
+    ])
+  } catch (error) {
+    console.warn('Aviso: falha ao garantir indexes do MongoDB.', error)
+  }
+}
+
 
 export const connectToMongo = async (uri = process.env.MONGODB_URI) => {
   if (!uri) return false
@@ -56,4 +70,3 @@ export const getLearningCollection = () => getCollection('learning')
 const conversasSchema = new mongoose.Schema({}, { strict: false, collection: 'conversas' })
 
 export const Conversas = mongoose.models.Conversas || mongoose.model('Conversas', conversasSchema)
-
