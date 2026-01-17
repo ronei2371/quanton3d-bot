@@ -724,13 +724,13 @@ router.get("/nuke-and-seed", async (_req, res) => {
       return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     }
 
-    const collection = getCollection("print_parameters");
+    const collection = getCollection("parametros");
     await collection.deleteMany({});
     await collection.insertMany(legacyProfiles);
 
     return res.send("Database reset and seeded with CORRECT IDs");
   } catch (err) {
-    console.error("[API] Erro ao resetar e semear print_parameters:", err);
+    console.error("[API] Erro ao resetar e semear parametros:", err);
     return res.status(500).json({ success: false, error: "Erro ao resetar banco de dados" });
   }
 });
