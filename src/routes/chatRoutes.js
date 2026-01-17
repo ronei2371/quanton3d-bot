@@ -246,6 +246,7 @@ Se o cliente descrever a falha no texto (ex: "esta imagem é delaminação"), tr
 
 2. **DELAMINAÇÃO (Layer Separation):**
    - O que vê: A peça abriu no meio, parecendo um "livro folheado". As camadas se separaram.
+   - Só use este diagnóstico quando a separação no meio estiver claramente visível. Se a base não aparece ou a falha não está nítida, peça confirmação sobre onde ocorreu a quebra.
    - Solução: Aumentar Exposição Normal (+0.3s) ou Reduzir Velocidade de Levante (Lift Speed).
 
 3. **SUBCURA (Undercuring):**
@@ -270,6 +271,7 @@ Se o cliente descrever a falha no texto (ex: "esta imagem é delaminação"), tr
 ⚠️ **DICA EXTRA:** (Uma dica sobre limpeza, temperatura ou FEP)
 
 Se a imagem não for clara, peça outra. Se for clara, SEJA TÉCNICO E DIRETO. Não use enrolação corporativa.
+Se houver dúvida entre descolamento de base e delaminação, pergunte: "A falha aconteceu nas primeiras camadas (base) ou no meio da peça?" antes de fechar o diagnóstico.
 Se o cliente não enviou texto, finalize com: "Se quiser contextualizar, envie uma frase curta (ex: 'esta imagem é delaminação'). O nome do arquivo não é lido."
 ${visualContext}
 `;
