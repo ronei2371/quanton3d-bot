@@ -2,7 +2,7 @@ Diretrizes Técnicas Atualizadas: Projeto Quanton3D (Jan 2026)
 
 1. Visão Geral da Arquitetura
 
-Frontend (quanton3dia): Site estático em React/Vite. NUNCA deve conter chaves secretas (MONGODB_URI ou OPENAI_API_KEY).
+Frontend (quanton3dia): Site estático em React/Vite. NUNCA deve conter chaves secretas (MONGODB_URI ou OPENAI_API_KEY). URL de produção: https://quanton3dia.onrender.com
 
 Backend (quanton3d-bot-v2): Servidor Node.js que hospeda a API, conecta no MongoDB e processa a IA.
 
@@ -21,6 +21,8 @@ Variável CI: Sempre definir CI=true no Render.
 Dependências: Usar pnpm install --no-frozen-lockfile.
 
 Instalação no Render: Garantir que a variável SKIP_INSTALL esteja como false quando houver atualizações de código.
+
+RAG (opcional): RAG_MIN_RELEVANCE controla o limiar de relevância (padrão 0.55). Só defina no Render se quiser ajustar o nível de fallback.
 
 4. Integração de API e Rotas
 

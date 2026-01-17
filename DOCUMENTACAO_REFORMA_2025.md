@@ -79,7 +79,7 @@ Rotas de administração agora exigem Bearer Token, como:
 - `OPENAI_MODEL` — modelo base do chat (padrão: `gpt-4o`).
 - `OPENAI_TEMPERATURE` — controle de criatividade (padrão: `0.0`).
 - `RAG_EMBEDDING_MODEL` — embedding para RAG (padrão: `text-embedding-3-large`).
-- `RAG_MIN_RELEVANCE` — threshold de relevância para RAG (padrão: `0.7`).
+- `RAG_MIN_RELEVANCE` — threshold de relevância para RAG (padrão: `0.55`).
 - `CLOUDINARY_CLOUD_NAME`
 - `CLOUDINARY_API_KEY`
 - `CLOUDINARY_API_SECRET`
