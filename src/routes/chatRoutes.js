@@ -241,6 +241,7 @@ Se o cliente descrever a falha no texto (ex: "esta imagem é delaminação"), tr
 
 1. **DESCOLAMENTO DA MESA (Adhesion Failure):**
    - O que vê: A peça caiu no tanque, ou soltou apenas um lado da base, ou a base está torta.
+   - Se a falha está na base (primeiras camadas) ou a peça ficou pendurada no suporte, PRIORIZE este diagnóstico antes de delaminação.
    - Solução: Aumentar Exposição Base (+10s) ou Aumentar Camadas Base. Lixar a plataforma.
 
 2. **DELAMINAÇÃO (Layer Separation):**
