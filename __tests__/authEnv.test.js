@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
 describe('authRoutes env validation', () => {
-  it('fails fast when required auth env vars are missing', () => {
+  it('loads with fallback when required auth env vars are missing', () => {
     const result = spawnSync(
       'node',
       ['-e', "import('./src/routes/authRoutes.js').catch((err) => { console.error(err.message); process.exit(1); })"],
@@ -16,11 +16,11 @@ describe('authRoutes env validation', () => {
       }
     );
 
-    expect(result.status).toBe(1);
-    expect(result.stderr.toString()).toContain('Missing required auth env vars');
+    expect(result.status).toBe(0);
+    expect(result.stderr.toString()).toContain('Credenciais admin ausentes');
   });
 
-  it('fails fast when ADMIN_USER is missing', () => {
+  it('loads with fallback when ADMIN_USER is missing', () => {
     const result = spawnSync(
       'node',
       ['-e', "import('./src/routes/authRoutes.js')"],
@@ -35,8 +35,8 @@ describe('authRoutes env validation', () => {
       }
     );
 
-    expect(result.status).toBe(1);
-    expect(result.stderr.toString()).toContain('Missing required auth env vars');
+    expect(result.status).toBe(0);
+    expect(result.stderr.toString()).toContain('Credenciais admin ausentes');
   });
 
   it('loads when all required auth env vars exist', () => {
@@ -55,5 +55,6 @@ describe('authRoutes env validation', () => {
     );
 
     expect(result.status).toBe(0);
+    expect(result.stderr.toString()).not.toContain('Credenciais admin ausentes');
   });
 });
