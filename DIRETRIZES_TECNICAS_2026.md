@@ -2,7 +2,7 @@ Diretrizes Técnicas Atualizadas: Projeto Quanton3D (Jan 2026)
 
 1. Visão Geral da Arquitetura
 
-Frontend (quanton3dia): Site estático em React/Vite. NUNCA deve conter chaves secretas (MONGODB_URI ou OPENAI_API_KEY). URL de produção: https://quanton3dia.onrender.com
+Frontend (quanton3dia): Site estático em React/Vite. NUNCA deve conter chaves secretas (MONGODB_URI ou OPENAI_API_KEY).
 
 Backend (quanton3d-bot-v2): Servidor Node.js que hospeda a API, conecta no MongoDB e processa a IA.
 
@@ -12,9 +12,6 @@ Coleção de Resinas: Os dados das 459 resinas estão armazenados na coleção d
 
 Leitura de Dados: O endpoint /resins deve ler diretamente do MongoDB usando db.collection('parametros'). Não use fallback para arquivos JSON locais para evitar dados desatualizados.
 
-Banco de dados: não existe pasta local de banco. A fonte de verdade é sempre o MongoDB.
-Pasta de dados local: qualquer JSON em /data (ex: resins_extracted.json) serve apenas para migração/backup. Não é a fonte de verdade das resinas.
-
 3. Configurações de Build e Deploy
 
 Variável CI: Sempre definir CI=true no Render.
@@ -22,8 +19,6 @@ Variável CI: Sempre definir CI=true no Render.
 Dependências: Usar pnpm install --no-frozen-lockfile.
 
 Instalação no Render: Garantir que a variável SKIP_INSTALL esteja como false quando houver atualizações de código.
-
-RAG (opcional): RAG_MIN_RELEVANCE controla o limiar de relevância (padrão 0.55). Só defina no Render se quiser ajustar o nível de fallback.
 
 4. Integração de API e Rotas
 
