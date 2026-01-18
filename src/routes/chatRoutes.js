@@ -165,6 +165,31 @@ function mergeCustomerContext(base, override) {
   return { ...base, ...sanitizedOverride };
 }
 
+function inferContextFromHistory(history, message) {
+  const trimmedMessage = typeof message === 'string' ? message.trim() : '';
+  if (!trimmedMessage) return {};
+
+  const safeHistory = Array.isArray(history) ? history : [];
+  const lastAssistant = [...safeHistory].reverse().find((entry) => entry?.role === 'assistant');
+  const lastAssistantText = typeof lastAssistant?.content === 'string' ? lastAssistant.content.toLowerCase() : '';
+
+  if (!lastAssistantText) return {};
+
+  if (/modelo da sua impressora|qual é o modelo da sua impressora|modelo da impressora/.test(lastAssistantText)) {
+    return { printer: trimmedMessage };
+  }
+
+  if (/tipo de resina|qual resina|qual a resina|qual resina você/.test(lastAssistantText)) {
+    return { resin: trimmedMessage };
+  }
+
+  if (/qual o seu problema|qual o problema|que problema/.test(lastAssistantText)) {
+    return { problemType: trimmedMessage };
+  }
+
+  return {};
+}
+
 async function generateResponse({ message, ragContext, hasImage, imageUrl, conversationHistory, customerContext }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
 
@@ -347,7 +372,11 @@ async function handleChatRequest(req, res) {
     const conversationHistory = req.body?.conversationHistory || [];
     const customerContext = req.body?.customerContext || {};
     const storedContext = await loadCustomerContext(sessionId);
-    const mergedCustomerContext = mergeCustomerContext(storedContext, customerContext);
+    const inferredContext = inferContextFromHistory(conversationHistory, message);
+    const mergedCustomerContext = mergeCustomerContext(
+      mergeCustomerContext(storedContext, inferredContext),
+      customerContext
+    );
 
     const {
       ragResults,
