@@ -2,6 +2,8 @@ import express from 'express';
 import OpenAI from 'openai';
 import multer from 'multer';
 import { searchKnowledge, formatContext } from '../../rag-search.js';
+import { ensureMongoReady } from './common.js';
+import { getConversasCollection } from '../../db.js';
 
 const router = express.Router();
 
@@ -136,6 +138,58 @@ function attachMultipartImage(req, _res, next) {
   return next();
 }
 
+async function loadCustomerContext(sessionId) {
+  if (!sessionId) return {};
+
+  const mongoReady = await ensureMongoReady();
+  if (!mongoReady) return {};
+
+  const collection = getConversasCollection();
+  if (!collection) return {};
+
+  const record = await collection.findOne({ sessionId });
+  if (!record) return {};
+
+  return {
+    userName: record.userName ?? record.name ?? null,
+    resin: record.resin ?? record.resinUsed ?? null,
+    printer: record.printer ?? record.printerModel ?? null,
+    problemType: record.problemType ?? record.problem ?? null
+  };
+}
+
+function mergeCustomerContext(base, override) {
+  const sanitizedOverride = Object.fromEntries(
+    Object.entries(override || {}).filter(([, value]) => value !== null && value !== undefined && value !== '')
+  );
+  return { ...base, ...sanitizedOverride };
+}
+
+function inferContextFromHistory(history, message) {
+  const trimmedMessage = typeof message === 'string' ? message.trim() : '';
+  if (!trimmedMessage) return {};
+
+  const safeHistory = Array.isArray(history) ? history : [];
+  const lastAssistant = [...safeHistory].reverse().find((entry) => entry?.role === 'assistant');
+  const lastAssistantText = typeof lastAssistant?.content === 'string' ? lastAssistant.content.toLowerCase() : '';
+
+  if (!lastAssistantText) return {};
+
+  if (/modelo da sua impressora|qual é o modelo da sua impressora|modelo da impressora/.test(lastAssistantText)) {
+    return { printer: trimmedMessage };
+  }
+
+  if (/tipo de resina|qual resina|qual a resina|qual resina você/.test(lastAssistantText)) {
+    return { resin: trimmedMessage };
+  }
+
+  if (/qual o seu problema|qual o problema|que problema/.test(lastAssistantText)) {
+    return { problemType: trimmedMessage };
+  }
+
+  return {};
+}
+
 async function generateResponse({ message, ragContext, hasImage, imageUrl, conversationHistory, customerContext }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
 
@@ -167,12 +221,14 @@ async function generateResponse({ message, ragContext, hasImage, imageUrl, conve
     3. Sempre forneça faixas numéricas específicas quando recomendar ajustes (ex: "Exposição normal: 2,5–3,0 s").
     4. Para resinas desconhecidas, use padrões conservadores (ex: "Comece com exposição normal de 3,0 s").
     5. Nunca sugira temperaturas acima de 35°C para resinas padrão.
-    6. Só apresente causas prováveis quando houver CONTEXTO_RELEVANTE=SIM ou o cliente fornecer dados técnicos claros.
-    7. Se CONTEXTO_RELEVANTE=NAO, NÃO diagnostique. Ative o "Modo Entrevista Guiada": faça apenas UMA pergunta por vez, seguindo esta ordem fixa: (1) modelo da impressora, (2) tipo de resina, (3) tempo de exposição/configurações. Só avance para a próxima etapa quando a anterior for respondida. Não liste todos os requisitos de uma vez. Se necessário, ofereça ajuda humana no WhatsApp (31) 98334-0053.
-    8. Se IMAGEM=SIM, descreva rapidamente o que você observa sem afirmar a causa. Liste no máximo 2-3 hipóteses e peça dados antes de recomendar ajustes, a menos que os sinais sejam evidentes e haja contexto suficiente.
-    9. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
-    10. SEMPRE consulte a "TABELA_COMPLETA" ou "resins_db" antes de responder perguntas sobre parâmetros. Confie nesses valores acima de conhecimento geral.
-    11. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
+    6. Se houver dados no contexto (nome, resina, impressora, problema), reconheça no início e NÃO pergunte novamente pelo que já foi informado.
+    7. Só apresente causas prováveis quando houver CONTEXTO_RELEVANTE=SIM ou o cliente fornecer dados técnicos claros.
+    8. Se CONTEXTO_RELEVANTE=NAO, NÃO diagnostique. Ative o "Modo Entrevista Guiada": faça apenas UMA pergunta por vez, seguindo esta ordem fixa: (1) modelo da impressora, (2) tipo de resina, (3) tempo de exposição/configurações. Só avance para a próxima etapa quando a anterior for respondida. Não liste todos os requisitos de uma vez. Se necessário, ofereça ajuda humana no WhatsApp (31) 98334-0053.
+    9. Se IMAGEM=SIM, descreva rapidamente o que você observa sem afirmar a causa. Liste no máximo 2-3 hipóteses e peça dados antes de recomendar ajustes, a menos que os sinais sejam evidentes e haja contexto suficiente.
+    10. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
+    11. SEMPRE consulte a "TABELA_COMPLETA" ou "resins_db" antes de responder perguntas sobre parâmetros. Confie nesses valores acima de conhecimento geral.
+    12. Evite repetir cumprimentos se o cliente já foi saudado no histórico.
+    13. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
     ${visionPriority}
     ${imageGuidelines}
   `;
@@ -182,10 +238,12 @@ async function generateResponse({ message, ragContext, hasImage, imageUrl, conve
   if (customerContext?.resin) contextLines.push(`Resina: ${customerContext.resin}`);
   if (customerContext?.printer) contextLines.push(`Impressora: ${customerContext.printer}`);
   if (customerContext?.problemType) contextLines.push(`Problema relatado: ${customerContext.problemType}`);
+  const contextFlag = ragContext || contextLines.length ? 'SIM' : 'NAO';
 
   const prompt = [
     ragContext ? `Contexto Técnico (Use isso para basear sua resposta):\n${ragContext}` : null,
     contextLines.length ? contextLines.join('\n') : null,
+    `CONTEXTO_RELEVANTE=${contextFlag}`,
     '---',
     trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : null
   ].filter(Boolean).join('\n\n');
@@ -268,7 +326,10 @@ Se o cliente descrever a falha no texto (ex: "esta imagem é delaminação"), tr
 👀 **O QUE EU VEJO:** (Descreva o erro visualmente, ex: "Vejo delaminação nas camadas centrais")
 🚫 **DIAGNÓSTICO:** (Nome técnico do erro)
 🔧 **SOLUÇÃO TÉCNICA:** (Ação direta: "Aumente a exposição normal para X segundos")
-⚠️ **DICA EXTRA:** Se quiser, me diga resina, impressora e exposição para uma dica mais certeira. Verifique as configurações de suporte (penetração) e veja se o ângulo de impressão está correto.
+codex/fix-local-changes-before-git-pull-pu5i9q
+⚠️ **DICA EXTRA:** Se quiser, me diga resina, impressora e exposição para uma dica mais certeira. Verifique a configuração de suporte/penetração e o ângulo de impressão.
+
+main
 
 Se a imagem não for clara, peça outra. Se for clara, SEJA TÉCNICO E DIRETO. Não use enrolação corporativa.
 Se houver dúvida entre descolamento de base e delaminação, pergunte: "A falha aconteceu nas primeiras camadas (base) ou no meio da peça?" antes de fechar o diagnóstico.
@@ -313,6 +374,12 @@ async function handleChatRequest(req, res) {
     const imageUrl = imagePayload?.value || null;
     const conversationHistory = req.body?.conversationHistory || [];
     const customerContext = req.body?.customerContext || {};
+    const storedContext = await loadCustomerContext(sessionId);
+    const inferredContext = inferContextFromHistory(conversationHistory, message);
+    const mergedCustomerContext = mergeCustomerContext(
+      mergeCustomerContext(storedContext, inferredContext),
+      customerContext
+    );
 
     const {
       ragResults,
@@ -335,7 +402,7 @@ async function handleChatRequest(req, res) {
           hasImage,
           imageUrl,
           conversationHistory,
-          customerContext
+          customerContext: mergedCustomerContext
         });
 
     res.json({
