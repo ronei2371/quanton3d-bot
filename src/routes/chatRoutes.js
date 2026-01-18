@@ -7,8 +7,8 @@ import { ensureMongoReady } from './common.js';
 
 const router = express.Router();
 
-const DEFAULT_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini';
-const DEFAULT_VISION_MODEL = process.env.OPENAI_VISION_MODEL || 'gpt-4o-mini';
+const DEFAULT_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || 'gpt-4o';
+const DEFAULT_VISION_MODEL = process.env.OPENAI_VISION_MODEL || 'gpt-4o';
 const MAX_HISTORY_TOKENS = 3000;
 let openaiClient = null;
 const upload = multer({
@@ -280,7 +280,10 @@ async function generateResponse({ message, imageSummary, imageUrl, hasImage, con
     7. Se CONTEXTO_RELEVANTE=NAO, NÃO diagnostique. Ative o "Modo Entrevista Guiada": faça apenas UMA pergunta por vez, seguindo esta ordem fixa: (1) modelo da impressora, (2) tipo de resina, (3) tempo de exposição/configurações. Só avance para a próxima etapa quando a anterior for respondida. Não liste todos os requisitos de uma vez. Se necessário, ofereça ajuda humana no WhatsApp (31) 98334-0053.
     8. Se IMAGEM=SIM, descreva rapidamente o que você observa sem afirmar a causa. Liste no máximo 2-3 hipóteses e peça dados antes de recomendar ajustes.
     9. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
-    10. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
+    10. SEMPRE consulte a "TABELA_COMPLETA" ou "resins_db" antes de responder perguntas sobre parâmetros. Confie nesses valores acima de conhecimento geral.
+    11. Quando o cliente relatar peça branca após a cura, priorize estas causas: peça não estava totalmente seca (IPA/água) antes da pós-cura ou houve excesso de pós-cura. Recomende secagem completa antes da cura e limite a pós-cura a no máximo 8 minutos.
+    12. Se a imagem estiver escura/indefinida ou não mostrar claramente o problema, diga que não é possível concluir pela imagem e peça uma foto mais nítida. Não descreva detalhes que não estejam claramente visíveis.
+    13. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
     ${visionPriority}
   `;
 
@@ -342,7 +345,7 @@ async function handleChatRequest(req, res) {
 
     if (!trimmedMessage && !hasImage) {
       // Se não tem msg nem imagem, pode ser um "ping" de início de sessão
-      return res.json({ reply: 'Olá! Sou a IA da Quanton3D. Como posso ajudar com suas impressões hoje?', sessionId: sessionId || 'new' });
+      return res.json({ reply: null, sessionId: sessionId || 'new', skipped: true });
     }
 
     const imageSummary = hasImage ? summarizeImagePayload(req.body) : '';
