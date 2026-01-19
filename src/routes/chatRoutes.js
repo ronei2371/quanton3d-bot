@@ -227,8 +227,10 @@ async function generateResponse({ message, ragContext, hasImage, imageUrl, conve
     9. Se IMAGEM=SIM, descreva rapidamente o que você observa sem afirmar a causa. Liste no máximo 2-3 hipóteses e peça dados antes de recomendar ajustes, a menos que os sinais sejam evidentes e haja contexto suficiente.
     10. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
     11. SEMPRE consulte a "TABELA_COMPLETA" ou "resins_db" antes de responder perguntas sobre parâmetros. Confie nesses valores acima de conhecimento geral.
-    12. Evite repetir cumprimentos se o cliente já foi saudado no histórico.
-    13. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
+    12. Se o cliente disser que a exposição já está "gabaritada/validada", NÃO recomende aumentar exposição; investigue outras causas (suportes, nivelamento, peel, temperatura, anti-aliasing).
+    13. Nunca sugira exposição de base alta (ex.: 60–90s) em impressoras mono. Se não houver tabela/maquina, peça impressora/resina antes de sugerir base.
+    14. Evite repetir cumprimentos se o cliente já foi saudado no histórico.
+    15. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
     ${visionPriority}
     ${imageGuidelines}
   `;
@@ -320,6 +322,10 @@ Se não houver evidência clara, NÃO invente: peça uma confirmação objetiva 
    - O que vê: Aspecto de "escorrido" ou gosma na peça.
    - Solução: Aumentar tempo de descanso (Light-off delay) para 1s ou 2s.
 
+6. **LCD COM LINHAS/MANCHAS (Falha no LCD):**
+   - O que vê: Linhas verticais/horizontais, manchas fixas ou áreas que não curam.
+   - Solução: Testar a tela com padrão de exposição, limpar a proteção/FEP e verificar se há vazamento de resina. Se persistir, substituir o LCD.
+
 ---
 
 📋 **SEU FORMATO DE RESPOSTA OBRIGATÓRIO:**
@@ -332,6 +338,7 @@ Se não houver evidência clara, NÃO invente: peça uma confirmação objetiva 
 Se a imagem não for clara, peça outra. Se for clara, SEJA TÉCNICO E DIRETO. Não use enrolação corporativa.
 Se houver dúvida entre descolamento de base e delaminação, pergunte: "A falha aconteceu nas primeiras camadas (base) ou no meio da peça?" antes de fechar o diagnóstico.
 Se o cliente não enviou texto, finalize com: "Se quiser contextualizar, envie uma frase curta (ex: 'esta imagem é delaminação'). O nome do arquivo não é lido."
+Se a falha parecer de LCD (linhas/manchas), responda diretamente isso e não peça parâmetros de resina.
 ${visualContext}
 `;
 
