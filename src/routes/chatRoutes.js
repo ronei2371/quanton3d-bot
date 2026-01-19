@@ -226,6 +226,7 @@ async function generateResponse({ message, ragContext, hasImage, imageUrl, conve
     8. Se CONTEXTO_RELEVANTE=NAO, NÃO diagnostique. Ative o "Modo Entrevista Guiada": faça apenas UMA pergunta por vez, seguindo esta ordem fixa: (1) modelo da impressora, (2) tipo de resina, (3) tempo de exposição/configurações. Só avance para a próxima etapa quando a anterior for respondida. Não liste todos os requisitos de uma vez. Se necessário, ofereça ajuda humana no WhatsApp (31) 98334-0053.
     9. Se IMAGEM=SIM, descreva rapidamente o que você observa sem afirmar a causa. Liste no máximo 2-3 hipóteses e peça dados antes de recomendar ajustes, a menos que os sinais sejam evidentes e haja contexto suficiente.
     10. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
+ codex/corrigir-erro-filho-de3kgw
     11. SEMPRE consulte a "TABELA_COMPLETA" ou "resins_db" antes de responder perguntas sobre parâmetros. Se não houver tabela, diga que não encontrou e peça o modelo de impressora/resina.
     12. Nunca reutilize parâmetros de outra impressora como base (ex.: "use Mars 3 para Saturn 4"). Sem tabela, peça dados ou encaminhe ao suporte.
     13. Se o cliente disser que a exposição já está "gabaritada/validada", NÃO recomende aumentar exposição; investigue outras causas (suportes, nivelamento, peel, temperatura, anti-aliasing).
@@ -233,6 +234,13 @@ async function generateResponse({ message, ragContext, hasImage, imageUrl, conve
     15. Se o cliente já respondeu uma pergunta da entrevista guiada, avance para a próxima etapa; não repita a mesma pergunta.
     16. Evite repetir cumprimentos se o cliente já foi saudado no histórico.
     17. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
+
+    11. SEMPRE consulte a "TABELA_COMPLETA" ou "resins_db" antes de responder perguntas sobre parâmetros. Confie nesses valores acima de conhecimento geral.
+    12. Se o cliente disser que a exposição já está "gabaritada/validada", NÃO recomende aumentar exposição; investigue outras causas (suportes, nivelamento, peel, temperatura, anti-aliasing).
+    13. Nunca sugira exposição de base alta (ex.: 60–90s) em impressoras mono. Se não houver tabela/maquina, peça impressora/resina antes de sugerir base.
+    14. Evite repetir cumprimentos se o cliente já foi saudado no histórico.
+    15. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
+main
     ${visionPriority}
     ${imageGuidelines}
   `;
@@ -326,9 +334,12 @@ Se não houver evidência clara, NÃO invente: peça uma confirmação objetiva 
 
 6. **LCD COM LINHAS/MANCHAS (Falha no LCD):**
    - O que vê: Linhas verticais/horizontais, manchas fixas ou áreas que não curam.
+codex/corrigir-erro-filho-de3kgw
    - Solução: Rodar teste de exposição da tela; se a mancha/linha aparecer no teste, o LCD está defeituoso e deve ser substituído.
 
----
+   - Solução: Testar a tela com padrão de exposição, limpar a proteção/FEP e verificar se há vazamento de resina. Se persistir, substituir o LCD.
+main
+
 
 📋 **SEU FORMATO DE RESPOSTA OBRIGATÓRIO:**
 
