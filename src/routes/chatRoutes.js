@@ -190,7 +190,16 @@ function inferContextFromHistory(history, message) {
   return {};
 }
 
-async function generateResponse({ message, ragContext, hasImage, imageUrl, conversationHistory, customerContext }) {
+async function generateResponse({
+  message,
+  ragContext,
+  hasRelevantContext,
+  adhesionIssueHint,
+  hasImage,
+  imageUrl,
+  conversationHistory,
+  customerContext
+}) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
 
   // --- AQUI ESTÁ A CORREÇÃO DA PERSONALIDADE ---
@@ -231,9 +240,11 @@ async function generateResponse({ message, ragContext, hasImage, imageUrl, conve
     13. Se o cliente disser que a exposição já está "gabaritada/validada", NÃO recomende aumentar exposição; investigue outras causas (suportes, nivelamento, peel, temperatura, anti-aliasing).
     14. Nunca sugira exposição de base alta (ex.: 60–90s) em impressoras mono. Se não houver tabela/maquina, peça impressora/resina antes de sugerir base.
     15. Use exatamente o nome de resina informado pelo cliente. Não troque por variações ou similares (ex.: "Iron" != "Iron 70/30"). Se não encontrar, peça confirmação do nome correto.
-    16. Se o cliente já respondeu uma pergunta da entrevista guiada, avance para a próxima etapa; não repita a mesma pergunta.
-    17. Evite repetir cumprimentos se o cliente já foi saudado no histórico.
-    18. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
+    16. Mesmo com resina/impressora informadas, se a tabela não existir no contexto, responda que não há parâmetros confirmados e peça confirmação do modelo ou encaminhe ao suporte.
+    17. Se o cliente pedir ajustes ou diagnóstico e faltar modelo da impressora OU tempos de exposição, faça UMA pergunta objetiva antes de recomendar parâmetros.
+    18. Se o cliente já respondeu uma pergunta da entrevista guiada, avance para a próxima etapa; não repita a mesma pergunta.
+    19. Evite repetir cumprimentos se o cliente já foi saudado no histórico.
+    20. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
     ${visionPriority}
     ${imageGuidelines}
   `;
@@ -243,11 +254,12 @@ async function generateResponse({ message, ragContext, hasImage, imageUrl, conve
   if (customerContext?.resin) contextLines.push(`Resina: ${customerContext.resin}`);
   if (customerContext?.printer) contextLines.push(`Impressora: ${customerContext.printer}`);
   if (customerContext?.problemType) contextLines.push(`Problema relatado: ${customerContext.problemType}`);
-  const contextFlag = ragContext || contextLines.length ? 'SIM' : 'NAO';
+  const contextFlag = hasRelevantContext || contextLines.length ? 'SIM' : 'NAO';
 
   const prompt = [
     ragContext ? `Contexto Técnico (Use isso para basear sua resposta):\n${ragContext}` : null,
     contextLines.length ? contextLines.join('\n') : null,
+    adhesionIssueHint,
     `CONTEXTO_RELEVANTE=${contextFlag}`,
     '---',
     trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : null
@@ -392,7 +404,9 @@ async function handleChatRequest(req, res) {
     const {
       ragResults,
       ragContext,
-      trimmedMessage
+      trimmedMessage,
+      hasRelevantContext,
+      adhesionIssueHint
     } = await buildRagContext({ message, hasImage });
 
     console.log(`[CHAT] Msg: ${trimmedMessage.substring(0, 50)}...`);
@@ -406,6 +420,8 @@ async function handleChatRequest(req, res) {
       : await generateResponse({
           message: trimmedMessage,
           ragContext,
+          hasRelevantContext,
+          adhesionIssueHint,
           hasImage,
           imageUrl,
           conversationHistory,
