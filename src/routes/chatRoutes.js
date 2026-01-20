@@ -218,29 +218,22 @@ async function generateResponse({ message, ragContext, hasImage, imageUrl, conve
     REGRAS DE OURO:
     1. JAMAIS cite fontes explicitamente como "(Fonte: Documento 1)" ou "[Doc 1]". Use o conhecimento naturalmente no texto.
     2. Responda de forma objetiva (máximo de 6 a 8 linhas), com tópicos quando fizer sentido.
-    3. Sempre forneça faixas numéricas específicas quando recomendar ajustes (ex: "Exposição normal: 2,5–3,0 s").
-    4. Para resinas desconhecidas, use padrões conservadores (ex: "Comece com exposição normal de 3,0 s").
+    3. Sempre forneça faixas numéricas específicas quando recomendar ajustes com base em tabela ou dados confirmados (ex: "Exposição normal: 2,5–3,0 s").
+    4. Se a resina/impressora não estiver na tabela, NÃO invente parâmetros nem use "valores padrão". Peça o modelo exato ou encaminhe ao suporte.
     5. Nunca sugira temperaturas acima de 35°C para resinas padrão.
     6. Se houver dados no contexto (nome, resina, impressora, problema), reconheça no início e NÃO pergunte novamente pelo que já foi informado.
     7. Só apresente causas prováveis quando houver CONTEXTO_RELEVANTE=SIM ou o cliente fornecer dados técnicos claros.
     8. Se CONTEXTO_RELEVANTE=NAO, NÃO diagnostique. Ative o "Modo Entrevista Guiada": faça apenas UMA pergunta por vez, seguindo esta ordem fixa: (1) modelo da impressora, (2) tipo de resina, (3) tempo de exposição/configurações. Só avance para a próxima etapa quando a anterior for respondida. Não liste todos os requisitos de uma vez. Se necessário, ofereça ajuda humana no WhatsApp (31) 98334-0053.
     9. Se IMAGEM=SIM, descreva rapidamente o que você observa sem afirmar a causa. Liste no máximo 2-3 hipóteses e peça dados antes de recomendar ajustes, a menos que os sinais sejam evidentes e haja contexto suficiente.
     10. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
- codex/corrigir-erro-filho-de3kgw
     11. SEMPRE consulte a "TABELA_COMPLETA" ou "resins_db" antes de responder perguntas sobre parâmetros. Se não houver tabela, diga que não encontrou e peça o modelo de impressora/resina.
     12. Nunca reutilize parâmetros de outra impressora como base (ex.: "use Mars 3 para Saturn 4"). Sem tabela, peça dados ou encaminhe ao suporte.
     13. Se o cliente disser que a exposição já está "gabaritada/validada", NÃO recomende aumentar exposição; investigue outras causas (suportes, nivelamento, peel, temperatura, anti-aliasing).
     14. Nunca sugira exposição de base alta (ex.: 60–90s) em impressoras mono. Se não houver tabela/maquina, peça impressora/resina antes de sugerir base.
-    15. Se o cliente já respondeu uma pergunta da entrevista guiada, avance para a próxima etapa; não repita a mesma pergunta.
-    16. Evite repetir cumprimentos se o cliente já foi saudado no histórico.
-    17. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
-
-    11. SEMPRE consulte a "TABELA_COMPLETA" ou "resins_db" antes de responder perguntas sobre parâmetros. Confie nesses valores acima de conhecimento geral.
-    12. Se o cliente disser que a exposição já está "gabaritada/validada", NÃO recomende aumentar exposição; investigue outras causas (suportes, nivelamento, peel, temperatura, anti-aliasing).
-    13. Nunca sugira exposição de base alta (ex.: 60–90s) em impressoras mono. Se não houver tabela/maquina, peça impressora/resina antes de sugerir base.
-    14. Evite repetir cumprimentos se o cliente já foi saudado no histórico.
-    15. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
-main
+    15. Use exatamente o nome de resina informado pelo cliente. Não troque por variações ou similares (ex.: "Iron" != "Iron 70/30"). Se não encontrar, peça confirmação do nome correto.
+    16. Se o cliente já respondeu uma pergunta da entrevista guiada, avance para a próxima etapa; não repita a mesma pergunta.
+    17. Evite repetir cumprimentos se o cliente já foi saudado no histórico.
+    18. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
     ${visionPriority}
     ${imageGuidelines}
   `;
@@ -334,12 +327,9 @@ Se não houver evidência clara, NÃO invente: peça uma confirmação objetiva 
 
 6. **LCD COM LINHAS/MANCHAS (Falha no LCD):**
    - O que vê: Linhas verticais/horizontais, manchas fixas ou áreas que não curam.
-codex/corrigir-erro-filho-de3kgw
-   - Solução: Rodar teste de exposição da tela; se a mancha/linha aparecer no teste, o LCD está defeituoso e deve ser substituído.
+   - Solução: Se a falha estiver visível na foto, indique substituição do LCD. Se houver dúvida, rodar teste de exposição; se a mancha/linha aparecer no teste, o LCD está defeituoso e deve ser substituído. Não sugerir limpeza como solução.
 
-   - Solução: Testar a tela com padrão de exposição, limpar a proteção/FEP e verificar se há vazamento de resina. Se persistir, substituir o LCD.
-main
-
+---
 
 📋 **SEU FORMATO DE RESPOSTA OBRIGATÓRIO:**
 
@@ -351,7 +341,7 @@ main
 Se a imagem não for clara, peça outra. Se for clara, SEJA TÉCNICO E DIRETO. Não use enrolação corporativa.
 Se houver dúvida entre descolamento de base e delaminação, pergunte: "A falha aconteceu nas primeiras camadas (base) ou no meio da peça?" antes de fechar o diagnóstico.
 Se o cliente não enviou texto, finalize com: "Se quiser contextualizar, envie uma frase curta (ex: 'esta imagem é delaminação'). O nome do arquivo não é lido."
-Se a falha parecer de LCD (linhas/manchas), responda diretamente isso e não peça parâmetros de resina.
+Se a falha parecer de LCD (linhas/manchas), responda diretamente isso, recomende substituição e não peça parâmetros de resina.
 ${visualContext}
 `;
 
@@ -408,7 +398,6 @@ async function handleChatRequest(req, res) {
     console.log(`[CHAT] Msg: ${trimmedMessage.substring(0, 50)}...`);
 
     if (!trimmedMessage && !hasImage) {
-      // Se não tem msg nem imagem, pode ser um "ping" de início de sessão
       return res.json({ reply: 'Olá! Sou a IA da Quanton3D. Como posso ajudar com suas impressões hoje?', sessionId: sessionId || 'new' });
     }
 
