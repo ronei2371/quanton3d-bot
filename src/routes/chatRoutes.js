@@ -398,7 +398,6 @@ async function handleChatRequest(req, res) {
     console.log(`[CHAT] Msg: ${trimmedMessage.substring(0, 50)}...`);
 
     if (!trimmedMessage && !hasImage) {
-      // Se não tem msg nem imagem, pode ser um "ping" de início de sessão
       return res.json({ reply: 'Olá! Sou a IA da Quanton3D. Como posso ajudar com suas impressões hoje?', sessionId: sessionId || 'new' });
     }
 
