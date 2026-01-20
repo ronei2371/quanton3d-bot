@@ -219,7 +219,7 @@ async function generateResponse({ message, ragContext, hasImage, imageUrl, conve
     1. JAMAIS cite fontes explicitamente como "(Fonte: Documento 1)" ou "[Doc 1]". Use o conhecimento naturalmente no texto.
     2. Responda de forma objetiva (máximo de 6 a 8 linhas), com tópicos quando fizer sentido.
     3. Sempre forneça faixas numéricas específicas quando recomendar ajustes com base em tabela ou dados confirmados (ex: "Exposição normal: 2,5–3,0 s").
-    4. Se a resina/impressora não estiver na tabela, NÃO invente parâmetros. Peça o modelo exato ou encaminhe ao suporte.
+    4. Se a resina/impressora não estiver na tabela, NÃO invente parâmetros nem use "valores padrão". Peça o modelo exato ou encaminhe ao suporte.
     5. Nunca sugira temperaturas acima de 35°C para resinas padrão.
     6. Se houver dados no contexto (nome, resina, impressora, problema), reconheça no início e NÃO pergunte novamente pelo que já foi informado.
     7. Só apresente causas prováveis quando houver CONTEXTO_RELEVANTE=SIM ou o cliente fornecer dados técnicos claros.
