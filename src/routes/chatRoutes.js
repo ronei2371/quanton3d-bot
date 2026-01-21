@@ -117,6 +117,48 @@ function sanitizeChatText(text) {
   return text.replace(/\u0000/g, '').trim();
 }
 
+function normalizeForMatch(text = '') {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractResinFromMessage(message = '') {
+  const match = message.match(/resina\s+([^\n,.;]+)/i);
+  if (!match) return null;
+  return match[1].replace(/\b(na|no|para|com)\b.*$/i, '').trim();
+}
+
+function extractPrinterFromMessage(message = '') {
+  const match = message.match(/(?:impressora|printer)\s+([^\n,.;]+)/i);
+  if (match?.[1]) {
+    return match[1].replace(/\b(com|na|no|para)\b.*$/i, '').trim();
+  }
+  const fallback = message.match(/\b(saturn|mars|photon|anycubic|elegoo|phrozen|creality)\b[^\n,.;]*/i);
+  return fallback ? fallback[0].trim() : null;
+}
+
+function isParameterQuestion(message = '') {
+  return /configura|parametro|exposi[cç][aã]o|tempo de exposi|camada base|base layer|altura de camada/i.test(message);
+}
+
+function isDiagnosticQuestion(message = '') {
+  return /descolamento|delamina|warping|falha|erro|problema|nao cura|não cura|peeling|suporte/i.test(message);
+}
+
+function hasExposureInfo(message = '') {
+  return /exposi[cç][aã]o|\b\d+([.,]\d+)?\s*s\b|\bsegundos?\b/i.test(message);
+}
+
+function buildParameterBlockReply({ resinName, printerName }) {
+  const resinLabel = resinName ? `resina ${resinName}` : 'resina';
+  const printerLabel = printerName ? `impressora ${printerName}` : 'impressora';
+  return `Não encontrei parâmetros confirmados para ${resinLabel} na ${printerLabel}. Por favor, confirme o modelo exato da impressora e a resina para eu verificar a tabela oficial ou acione o suporte técnico.`;
+}
+
 function trimConversationHistory(history, systemPrompt, userMessage) {
   const maxMessages = 8;
   const safeHistory = Array.isArray(history) ? history : [];
@@ -201,6 +243,34 @@ async function generateResponse({
   customerContext
 }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
+  const resinFromMessage = extractResinFromMessage(trimmedMessage);
+  const printerFromMessage = extractPrinterFromMessage(trimmedMessage);
+  const knownResin = customerContext?.resin || resinFromMessage;
+  const knownPrinter = customerContext?.printer || printerFromMessage;
+
+  if (isParameterQuestion(trimmedMessage)) {
+    const normalizedContext = normalizeForMatch(ragContext || '');
+    const resinOk = knownResin ? normalizedContext.includes(normalizeForMatch(knownResin)) : false;
+    const printerOk = knownPrinter ? normalizedContext.includes(normalizeForMatch(knownPrinter)) : false;
+    if (!hasRelevantContext || (knownResin && !resinOk) || (knownPrinter && !printerOk)) {
+      return {
+        reply: buildParameterBlockReply({ resinName: knownResin, printerName: knownPrinter }),
+        documentsUsed: 0
+      };
+    }
+  }
+
+  if (isDiagnosticQuestion(trimmedMessage)) {
+    if (!knownPrinter) {
+      return { reply: 'Qual é o modelo exato da sua impressora?', documentsUsed: 0 };
+    }
+    if (!knownResin) {
+      return { reply: 'Qual é a resina que você está usando?', documentsUsed: 0 };
+    }
+    if (!hasExposureInfo(trimmedMessage) && !hasExposureInfo((ragContext || '').toString())) {
+      return { reply: 'Qual é o tempo de exposição normal e de base que você está usando?', documentsUsed: 0 };
+    }
+  }
 
   // --- AQUI ESTÁ A CORREÇÃO DA PERSONALIDADE ---
   const visionPriority = hasImage
@@ -340,6 +410,10 @@ Se não houver evidência clara, NÃO invente: peça uma confirmação objetiva 
 6. **LCD COM LINHAS/MANCHAS (Falha no LCD):**
    - O que vê: Linhas verticais/horizontais, manchas fixas ou áreas que não curam.
    - Solução: Se a falha estiver visível na foto, indique substituição do LCD. Se houver dúvida, rodar teste de exposição; se a mancha/linha aparecer no teste, o LCD está defeituoso e deve ser substituído. Não sugerir limpeza como solução.
+ codex/corrigir-erro-filho-zanxgs
+   - Se não tiver certeza da orientação das linhas, descreva apenas "linhas na tela" sem dizer vertical/horizontal.
+=======
+ main
 
 ---
 
