@@ -410,9 +410,8 @@ Se não houver evidência clara, NÃO invente: peça uma confirmação objetiva 
 6. **LCD COM LINHAS/MANCHAS (Falha no LCD):**
    - O que vê: Linhas verticais/horizontais, manchas fixas ou áreas que não curam.
    - Solução: Se a falha estiver visível na foto, indique substituição do LCD. Se houver dúvida, rodar teste de exposição; se a mancha/linha aparecer no teste, o LCD está defeituoso e deve ser substituído. Não sugerir limpeza como solução.
- codex/corrigir-erro-filho-zanxgs
+ codex/corrigir-erro-filho-xnbe1g
    - Se não tiver certeza da orientação das linhas, descreva apenas "linhas na tela" sem dizer vertical/horizontal.
-=======
  main
 
 ---
