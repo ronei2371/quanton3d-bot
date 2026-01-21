@@ -117,6 +117,48 @@ function sanitizeChatText(text) {
   return text.replace(/\u0000/g, '').trim();
 }
 
+function normalizeForMatch(text = '') {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractResinFromMessage(message = '') {
+  const match = message.match(/resina\s+([^\n,.;]+)/i);
+  if (!match) return null;
+  return match[1].replace(/\b(na|no|para|com)\b.*$/i, '').trim();
+}
+
+function extractPrinterFromMessage(message = '') {
+  const match = message.match(/(?:impressora|printer)\s+([^\n,.;]+)/i);
+  if (match?.[1]) {
+    return match[1].replace(/\b(com|na|no|para)\b.*$/i, '').trim();
+  }
+  const fallback = message.match(/\b(saturn|mars|photon|anycubic|elegoo|phrozen|creality)\b[^\n,.;]*/i);
+  return fallback ? fallback[0].trim() : null;
+}
+
+function isParameterQuestion(message = '') {
+  return /configura|parametro|exposi[cç][aã]o|tempo de exposi|camada base|base layer|altura de camada/i.test(message);
+}
+
+function isDiagnosticQuestion(message = '') {
+  return /descolamento|delamina|warping|falha|erro|problema|nao cura|não cura|peeling|suporte/i.test(message);
+}
+
+function hasExposureInfo(message = '') {
+  return /exposi[cç][aã]o|\b\d+([.,]\d+)?\s*s\b|\bsegundos?\b/i.test(message);
+}
+
+function buildParameterBlockReply({ resinName, printerName }) {
+  const resinLabel = resinName ? `resina ${resinName}` : 'resina';
+  const printerLabel = printerName ? `impressora ${printerName}` : 'impressora';
+  return `Não encontrei parâmetros confirmados para ${resinLabel} na ${printerLabel}. Por favor, confirme o modelo exato da impressora e a resina para eu verificar a tabela oficial ou acione o suporte técnico.`;
+}
+
 function trimConversationHistory(history, systemPrompt, userMessage) {
   const maxMessages = 8;
   const safeHistory = Array.isArray(history) ? history : [];
@@ -190,8 +232,45 @@ function inferContextFromHistory(history, message) {
   return {};
 }
 
-async function generateResponse({ message, ragContext, hasImage, imageUrl, conversationHistory, customerContext }) {
+async function generateResponse({
+  message,
+  ragContext,
+  hasRelevantContext,
+  adhesionIssueHint,
+  hasImage,
+  imageUrl,
+  conversationHistory,
+  customerContext
+}) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
+  const resinFromMessage = extractResinFromMessage(trimmedMessage);
+  const printerFromMessage = extractPrinterFromMessage(trimmedMessage);
+  const knownResin = customerContext?.resin || resinFromMessage;
+  const knownPrinter = customerContext?.printer || printerFromMessage;
+
+  if (isParameterQuestion(trimmedMessage)) {
+    const normalizedContext = normalizeForMatch(ragContext || '');
+    const resinOk = knownResin ? normalizedContext.includes(normalizeForMatch(knownResin)) : false;
+    const printerOk = knownPrinter ? normalizedContext.includes(normalizeForMatch(knownPrinter)) : false;
+    if (!hasRelevantContext || (knownResin && !resinOk) || (knownPrinter && !printerOk)) {
+      return {
+        reply: buildParameterBlockReply({ resinName: knownResin, printerName: knownPrinter }),
+        documentsUsed: 0
+      };
+    }
+  }
+
+  if (isDiagnosticQuestion(trimmedMessage)) {
+    if (!knownPrinter) {
+      return { reply: 'Qual é o modelo exato da sua impressora?', documentsUsed: 0 };
+    }
+    if (!knownResin) {
+      return { reply: 'Qual é a resina que você está usando?', documentsUsed: 0 };
+    }
+    if (!hasExposureInfo(trimmedMessage) && !hasExposureInfo((ragContext || '').toString())) {
+      return { reply: 'Qual é o tempo de exposição normal e de base que você está usando?', documentsUsed: 0 };
+    }
+  }
 
   // --- AQUI ESTÁ A CORREÇÃO DA PERSONALIDADE ---
   const visionPriority = hasImage
@@ -218,17 +297,24 @@ async function generateResponse({ message, ragContext, hasImage, imageUrl, conve
     REGRAS DE OURO:
     1. JAMAIS cite fontes explicitamente como "(Fonte: Documento 1)" ou "[Doc 1]". Use o conhecimento naturalmente no texto.
     2. Responda de forma objetiva (máximo de 6 a 8 linhas), com tópicos quando fizer sentido.
-    3. Sempre forneça faixas numéricas específicas quando recomendar ajustes (ex: "Exposição normal: 2,5–3,0 s").
-    4. Para resinas desconhecidas, use padrões conservadores (ex: "Comece com exposição normal de 3,0 s").
+    3. Sempre forneça faixas numéricas específicas quando recomendar ajustes com base em tabela ou dados confirmados (ex: "Exposição normal: 2,5–3,0 s").
+    4. Se a resina/impressora não estiver na tabela, NÃO invente parâmetros nem use "valores padrão". Peça o modelo exato ou encaminhe ao suporte.
     5. Nunca sugira temperaturas acima de 35°C para resinas padrão.
     6. Se houver dados no contexto (nome, resina, impressora, problema), reconheça no início e NÃO pergunte novamente pelo que já foi informado.
     7. Só apresente causas prováveis quando houver CONTEXTO_RELEVANTE=SIM ou o cliente fornecer dados técnicos claros.
     8. Se CONTEXTO_RELEVANTE=NAO, NÃO diagnostique. Ative o "Modo Entrevista Guiada": faça apenas UMA pergunta por vez, seguindo esta ordem fixa: (1) modelo da impressora, (2) tipo de resina, (3) tempo de exposição/configurações. Só avance para a próxima etapa quando a anterior for respondida. Não liste todos os requisitos de uma vez. Se necessário, ofereça ajuda humana no WhatsApp (31) 98334-0053.
     9. Se IMAGEM=SIM, descreva rapidamente o que você observa sem afirmar a causa. Liste no máximo 2-3 hipóteses e peça dados antes de recomendar ajustes, a menos que os sinais sejam evidentes e haja contexto suficiente.
     10. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
-    11. SEMPRE consulte a "TABELA_COMPLETA" ou "resins_db" antes de responder perguntas sobre parâmetros. Confie nesses valores acima de conhecimento geral.
-    12. Evite repetir cumprimentos se o cliente já foi saudado no histórico.
-    13. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
+    11. SEMPRE consulte a "TABELA_COMPLETA" ou "resins_db" antes de responder perguntas sobre parâmetros. Se não houver tabela, diga que não encontrou e peça o modelo de impressora/resina.
+    12. Nunca reutilize parâmetros de outra impressora como base (ex.: "use Mars 3 para Saturn 4"). Sem tabela, peça dados ou encaminhe ao suporte.
+    13. Se o cliente disser que a exposição já está "gabaritada/validada", NÃO recomende aumentar exposição; investigue outras causas (suportes, nivelamento, peel, temperatura, anti-aliasing).
+    14. Nunca sugira exposição de base alta (ex.: 60–90s) em impressoras mono. Se não houver tabela/maquina, peça impressora/resina antes de sugerir base.
+    15. Use exatamente o nome de resina informado pelo cliente. Não troque por variações ou similares (ex.: "Iron" != "Iron 70/30"). Se não encontrar, peça confirmação do nome correto.
+    16. Mesmo com resina/impressora informadas, se a tabela não existir no contexto, responda que não há parâmetros confirmados e peça confirmação do modelo ou encaminhe ao suporte.
+    17. Se o cliente pedir ajustes ou diagnóstico e faltar modelo da impressora OU tempos de exposição, faça UMA pergunta objetiva antes de recomendar parâmetros.
+    18. Se o cliente já respondeu uma pergunta da entrevista guiada, avance para a próxima etapa; não repita a mesma pergunta.
+    19. Evite repetir cumprimentos se o cliente já foi saudado no histórico.
+    20. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
     ${visionPriority}
     ${imageGuidelines}
   `;
@@ -238,11 +324,12 @@ async function generateResponse({ message, ragContext, hasImage, imageUrl, conve
   if (customerContext?.resin) contextLines.push(`Resina: ${customerContext.resin}`);
   if (customerContext?.printer) contextLines.push(`Impressora: ${customerContext.printer}`);
   if (customerContext?.problemType) contextLines.push(`Problema relatado: ${customerContext.problemType}`);
-  const contextFlag = ragContext || contextLines.length ? 'SIM' : 'NAO';
+  const contextFlag = hasRelevantContext || contextLines.length ? 'SIM' : 'NAO';
 
   const prompt = [
     ragContext ? `Contexto Técnico (Use isso para basear sua resposta):\n${ragContext}` : null,
     contextLines.length ? contextLines.join('\n') : null,
+    adhesionIssueHint,
     `CONTEXTO_RELEVANTE=${contextFlag}`,
     '---',
     trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : null
@@ -291,16 +378,17 @@ async function generateImageResponse({ message, imageUrl, ragContext }) {
     : '';
   const VISUAL_SYSTEM_PROMPT = `
 VOCÊ É UM ENGENHEIRO SÊNIOR DE APLICAÇÃO DA QUANTON3D (ESPECIALISTA EM RESINAS UV).
-Sua missão é olhar a foto da falha e dar um diagnóstico CIRÚRGICO.
+Sua missão é olhar a foto da falha e dar um diagnóstico CIRÚRGICO, técnico e direto.
 Use SOMENTE a imagem e a mensagem do cliente. Nomes de arquivo não são visíveis nem confiáveis.
 Se o cliente descrever a falha no texto (ex: "esta imagem é delaminação"), trate como pista secundária e confirme com o visual.
+Se não houver evidência clara, NÃO invente: peça uma confirmação objetiva ou uma nova foto.
 
 📚 BIBLIOTECA DE DIAGNÓSTICO VISUAL (Use isso para classificar):
 
 1. **DESCOLAMENTO DA MESA (Adhesion Failure):**
    - O que vê: A peça caiu no tanque, ou soltou apenas um lado da base, ou a base está torta.
    - Se a falha está na base (primeiras camadas) ou a peça ficou pendurada no suporte, PRIORIZE este diagnóstico antes de delaminação.
-   - Solução: Aumentar Exposição Base (+10s) ou Aumentar Camadas Base. Lixar a plataforma.
+   - Solução: Aumentar Exposição Base (+2s a +3s) ou Aumentar Camadas Base (máx. 5-6). Lixar a plataforma.
 
 2. **DELAMINAÇÃO (Layer Separation):**
    - O que vê: A peça abriu no meio, parecendo um "livro folheado". As camadas se separaram.
@@ -319,6 +407,11 @@ Se o cliente descrever a falha no texto (ex: "esta imagem é delaminação"), tr
    - O que vê: Aspecto de "escorrido" ou gosma na peça.
    - Solução: Aumentar tempo de descanso (Light-off delay) para 1s ou 2s.
 
+6. **LCD COM LINHAS/MANCHAS (Falha no LCD):**
+   - O que vê: Linhas verticais/horizontais, manchas fixas ou áreas que não curam.
+   - Solução: Se a falha estiver visível na foto, indique substituição do LCD. Se houver dúvida, rodar teste de exposição; se a mancha/linha aparecer no teste, o LCD está defeituoso e deve ser substituído. Não sugerir limpeza como solução.
+   - Se não tiver certeza da orientação das linhas, descreva apenas "linhas na tela" sem dizer vertical/horizontal.
+
 ---
 
 📋 **SEU FORMATO DE RESPOSTA OBRIGATÓRIO:**
@@ -326,14 +419,12 @@ Se o cliente descrever a falha no texto (ex: "esta imagem é delaminação"), tr
 👀 **O QUE EU VEJO:** (Descreva o erro visualmente, ex: "Vejo delaminação nas camadas centrais")
 🚫 **DIAGNÓSTICO:** (Nome técnico do erro)
 🔧 **SOLUÇÃO TÉCNICA:** (Ação direta: "Aumente a exposição normal para X segundos")
-codex/fix-local-changes-before-git-pull-pu5i9q
 ⚠️ **DICA EXTRA:** Se quiser, me diga resina, impressora e exposição para uma dica mais certeira. Verifique a configuração de suporte/penetração e o ângulo de impressão.
-
-main
 
 Se a imagem não for clara, peça outra. Se for clara, SEJA TÉCNICO E DIRETO. Não use enrolação corporativa.
 Se houver dúvida entre descolamento de base e delaminação, pergunte: "A falha aconteceu nas primeiras camadas (base) ou no meio da peça?" antes de fechar o diagnóstico.
 Se o cliente não enviou texto, finalize com: "Se quiser contextualizar, envie uma frase curta (ex: 'esta imagem é delaminação'). O nome do arquivo não é lido."
+Se a falha parecer de LCD (linhas/manchas), responda diretamente isso, recomende substituição e não peça parâmetros de resina.
 ${visualContext}
 `;
 
@@ -384,7 +475,9 @@ async function handleChatRequest(req, res) {
     const {
       ragResults,
       ragContext,
-      trimmedMessage
+      trimmedMessage,
+      hasRelevantContext,
+      adhesionIssueHint
     } = await buildRagContext({ message, hasImage });
 
     console.log(`[CHAT] Msg: ${trimmedMessage.substring(0, 50)}...`);
@@ -399,6 +492,8 @@ async function handleChatRequest(req, res) {
       : await generateResponse({
           message: trimmedMessage,
           ragContext,
+          hasRelevantContext,
+          adhesionIssueHint,
           hasImage,
           imageUrl,
           conversationHistory,
