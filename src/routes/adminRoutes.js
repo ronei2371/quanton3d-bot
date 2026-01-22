@@ -442,9 +442,11 @@ function buildAdminRoutes(adminConfig = {}) {
       }
 
       const collection = getPrintParametersCollection();
+ codex/restore-administrative-interface-layout-jxg4os
       if (!collection) {
         return res.status(503).json({ success: false, error: "MongoDB indisponível" });
       }
+main
       const categories = await collection
         .aggregate([
           {
@@ -490,7 +492,11 @@ function buildAdminRoutes(adminConfig = {}) {
 
       const collection = getCollection("users");
       if (!collection) {
+codex/restore-administrative-interface-layout-jxg4os
         return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+
+        return res.json({ success: true, clients: [] });
+ main
       }
 
       const clients = await collection
@@ -529,7 +535,10 @@ function buildAdminRoutes(adminConfig = {}) {
 
       const collection = getCollection("conversas");
       if (!collection) {
+ codex/restore-administrative-interface-layout-jxg4os
         return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+        return res.json({ success: true, conversations: [] });
+ main
       }
 
       const conversations = await collection
