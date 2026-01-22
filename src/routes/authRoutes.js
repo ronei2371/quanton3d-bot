@@ -5,17 +5,12 @@ const router = express.Router();
 
 const JWT_EXPIRATION = '24h';
 const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
-const ADMIN_USER = process.env.ADMIN_USER || process.env.ADMIN_USERNAME;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || process.env.ADMIN_SECRET;
-const ADMIN_SECRET = process.env.ADMIN_SECRET;
-const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton-admin-fallback-secret';
-const FALLBACK_ADMIN_USER = 'admin';
-const FALLBACK_ADMIN_PASSWORD = 'quanton2026';
-const HAS_ENV_CREDENTIALS = Boolean(ADMIN_USER && ADMIN_PASSWORD && process.env.ADMIN_JWT_SECRET);
 
-if (!HAS_ENV_CREDENTIALS) {
-  console.warn('[AUTH] ⚠️ Credenciais admin ausentes. Fallback emergencial habilitado.');
-}
+// Carrega as variáveis de ambiente
+const ADMIN_USER = process.env.ADMIN_USER || "admin";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const ADMIN_SECRET = process.env.ADMIN_SECRET; // Sua chave mestra (quanton3d_admin_secret)
+const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton-admin-fallback-secret';
 
 /**
  * POST /auth/login
@@ -23,64 +18,54 @@ if (!HAS_ENV_CREDENTIALS) {
  */
 router.post("/login", (req, res) => {
   try {
-    const { password, username } = req.body ?? {};
-    const candidatePassword = typeof password === 'string' ? password : '';
+    // Pega os dados que vêm da tela
+    const { password, username, secret } = req.body ?? {};
+    
+    // Normaliza a senha (pega do campo password ou do campo secret)
+    const candidatePassword = (typeof password === 'string' ? password : '') || 
+                              (typeof secret === 'string' ? secret : '');
+
+    // 1. REGRA DE OURO (Chave Mestra):
+    // Se a senha digitada for igual à chave mestra, LIBERA GERAL.
+    // Ignora qual nome de usuário foi digitado.
+    if (ADMIN_SECRET && candidatePassword === ADMIN_SECRET) {
+      console.log(`✅ [AUTH] Login liberado via Chave Mestra!`);
+      const token = jwt.sign(
+        { role: 'admin', user: ADMIN_USER, timestamp: Date.now() },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRATION }
+      );
+      return res.json({ success: true, token, expiresIn: JWT_EXPIRATION });
+    }
+
+    // 2. Se não for chave mestra, verifica usuário e senha normais
+    // Aqui ele vai ser rigoroso com o nome de usuário
     const trimmedUsername = typeof username === 'string' ? username.trim() : '';
-    const expectedUsername = ADMIN_USER || FALLBACK_ADMIN_USER;
-
-    // Validar senha
-    if (!candidatePassword) {
-      console.log('⚠️ [AUTH] Tentativa de login sem senha');
-      return res.status(400).json({
-        success: false,
-        error: "Senha é obrigatória"
-      });
+    
+    // Se tiver usuário definido e não bater, erro
+    if (trimmedUsername && trimmedUsername !== ADMIN_USER && trimmedUsername !== "admin") {
+      console.log(`❌ [AUTH] Usuário incorreto: ${trimmedUsername}`);
+      return res.status(401).json({ success: false, error: "Usuário incorreto" });
     }
 
-    if (trimmedUsername && trimmedUsername !== expectedUsername) {
-      console.log('❌ [AUTH] Tentativa de login com usuário incorreto');
-      return res.status(401).json({
-        success: false,
-        error: "Usuário incorreto"
-      });
+    // Verifica a senha normal
+    if (ADMIN_PASSWORD && candidatePassword === ADMIN_PASSWORD) {
+      console.log(`✅ [AUTH] Login liberado via Senha de Usuário!`);
+      const token = jwt.sign(
+        { role: 'admin', user: ADMIN_USER, timestamp: Date.now() },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRATION }
+      );
+      return res.json({ success: true, token, expiresIn: JWT_EXPIRATION });
     }
 
-    const validEnvPassword = (ADMIN_PASSWORD && candidatePassword === ADMIN_PASSWORD) ||
-      (ADMIN_SECRET && candidatePassword === ADMIN_SECRET);
-    const validFallbackPassword = candidatePassword === FALLBACK_ADMIN_PASSWORD;
-
-    if (!validEnvPassword && !validFallbackPassword) {
-      console.log('❌ [AUTH] Tentativa de login com senha incorreta');
-      return res.status(401).json({
-        success: false,
-        error: "Senha incorreta"
-      });
-    }
-
-    // Gerar JWT token
-    const token = jwt.sign(
-      {
-        role: 'admin',
-        timestamp: Date.now()
-      },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRATION }
-    );
-
-    console.log(`✅ [AUTH] Login bem-sucedido! Token gerado.`);
-
-    res.json({
-      success: true,
-      token,
-      expiresIn: JWT_EXPIRATION
-    });
+    // Se chegou aqui, nada bateu
+    console.log('❌ [AUTH] Credenciais inválidas');
+    return res.status(401).json({ success: false, error: "Senha incorreta" });
 
   } catch (err) {
     console.error('❌ [AUTH] Erro no login:', err);
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -91,59 +76,34 @@ router.post("/login", (req, res) => {
 router.post("/verify", (req, res) => {
   try {
     const { token } = req.body;
-
-    if (!token) {
-      return res.json({
-        success: true,
-        valid: false,
-        reason: 'no_token'
-      });
-    }
+    if (!token) return res.json({ success: true, valid: false, reason: 'no_token' });
 
     jwt.verify(token, JWT_SECRET);
-    
-    console.log('✅ [AUTH] Token válido verificado');
-    
-    res.json({
-      success: true,
-      valid: true
-    });
-
+    res.json({ success: true, valid: true });
   } catch (err) {
-    console.log('⚠️ [AUTH] Token inválido ou expirado');
-    res.json({
-      success: true,
-      valid: false,
-      reason: 'invalid_token'
-    });
+    res.json({ success: true, valid: false, reason: 'invalid_token' });
   }
 });
 
 /**
  * Middleware para proteger rotas com JWT
  */
-const verifyJWT = (req, res, next) => {
+export const verifyJWT = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.warn('⚠️ [AUTH] Requisição sem token JWT');
     return res.status(401).json(INVALID_TOKEN_RESPONSE);
   }
 
   const token = authHeader.slice(7);
-
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
-    console.log('✅ [AUTH] Requisição autenticada com sucesso');
     return next();
   } catch (err) {
-    console.error('❌ [AUTH] Token inválido:', err.message);
     return res.status(401).json(INVALID_TOKEN_RESPONSE);
   }
 };
 
 export const requireJWT = verifyJWT;
-export { verifyJWT };
-
-export { router as authRoutes };
+export const authRoutes = router;
