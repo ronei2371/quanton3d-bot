@@ -127,9 +127,17 @@ function normalizeForMatch(text = '') {
 }
 
 function extractResinFromMessage(message = '') {
-  const match = message.match(/resina\s+([^\n,.;]+)/i);
-  if (!match) return null;
-  return match[1].replace(/\b(na|no|para|com)\b.*$/i, '').trim();
+  const resinMatch = message.match(/resina\s+([^\n,.;]+)/i);
+  if (resinMatch?.[1]) {
+    return resinMatch[1].replace(/\b(na|no|para|com)\b.*$/i, '').trim();
+  }
+
+  const configMatch = message.match(/(?:configura|parametr)[^.\n]*\b(?:da|do|de)\s+(.+?)\s+\b(?:para|na|no)\b/i);
+  if (configMatch?.[1]) {
+    return configMatch[1].trim();
+  }
+
+  return null;
 }
 
 function extractPrinterFromMessage(message = '') {
@@ -315,6 +323,7 @@ async function generateResponse({
     18. Se o cliente já respondeu uma pergunta da entrevista guiada, avance para a próxima etapa; não repita a mesma pergunta.
     19. Evite repetir cumprimentos se o cliente já foi saudado no histórico.
     20. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
+    21. Em descolamento sem tabela confirmada, priorize nivelamento e ajustes pequenos (Exposição Base +2s a +3s e Camadas Base máx. 6). Não sugerir aumentos de 10-20s.
     ${visionPriority}
     ${imageGuidelines}
   `;
@@ -388,7 +397,7 @@ Se não houver evidência clara, NÃO invente: peça uma confirmação objetiva 
 1. **DESCOLAMENTO DA MESA (Adhesion Failure):**
    - O que vê: A peça caiu no tanque, ou soltou apenas um lado da base, ou a base está torta.
    - Se a falha está na base (primeiras camadas) ou a peça ficou pendurada no suporte, PRIORIZE este diagnóstico antes de delaminação.
-   - Solução: Aumentar Exposição Base (+2s a +3s) ou Aumentar Camadas Base (máx. 5-6). Lixar a plataforma.
+   - Solução: Verificar nivelamento da plataforma e aumentar Exposição Base (+2s a +3s) ou Camadas Base (máx. 5-6). Lixar a plataforma.
 
 2. **DELAMINAÇÃO (Layer Separation):**
    - O que vê: A peça abriu no meio, parecendo um "livro folheado". As camadas se separaram.
@@ -407,13 +416,16 @@ Se não houver evidência clara, NÃO invente: peça uma confirmação objetiva 
    - O que vê: Aspecto de "escorrido" ou gosma na peça.
    - Solução: Aumentar tempo de descanso (Light-off delay) para 1s ou 2s.
 
-6. **LCD COM LINHAS/MANCHAS (Falha no LCD):**
+6. **VAZAMENTO DE RESINA / FEP FURADO:**
+   - O que vê: Poça de resina na tela/LCD, manchas grandes fora da área de impressão ou resina sob o FEP.
+   - Solução: Parar a impressão, remover e limpar com cuidado, substituir o FEP, inspecionar a tela e testar vazamentos antes de imprimir novamente.
+
+7. **LCD COM LINHAS/MANCHAS (Falha no LCD):**
    - O que vê: Linhas verticais/horizontais, manchas fixas ou áreas que não curam.
    - Solução: Se a falha estiver visível na foto, indique substituição do LCD. Se houver dúvida, rodar teste de exposição; se a mancha/linha aparecer no teste, o LCD está defeituoso e deve ser substituído. Não sugerir limpeza como solução.
-codex/corrigir-erro-filho-u19xtn
    - Se não tiver certeza da orientação das linhas, descreva apenas "linhas na tela" sem dizer vertical/horizontal.
 
-main
+---
 
 📋 **SEU FORMATO DE RESPOSTA OBRIGATÓRIO:**
 
@@ -484,6 +496,7 @@ async function handleChatRequest(req, res) {
     console.log(`[CHAT] Msg: ${trimmedMessage.substring(0, 50)}...`);
 
     if (!trimmedMessage && !hasImage) {
+      // Se não tem msg nem imagem, pode ser um "ping" de início de sessão
       return res.json({ reply: 'Olá! Sou a IA da Quanton3D. Como posso ajudar com suas impressões hoje?', sessionId: sessionId || 'new' });
     }
 
