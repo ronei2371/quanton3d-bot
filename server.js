@@ -102,7 +102,12 @@ app.use('/', chatRoutes)
 // FRONTEND
 // ==========================================================
 const distPath = path.join(__dirname, 'dist')
+const adminPanelPath = path.join(__dirname, 'public', 'params-panel.html')
 app.use(express.static(distPath))
+
+app.get(['/admin', '/admin/'], (req, res) => {
+  res.sendFile(adminPanelPath)
+})
 
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) {
