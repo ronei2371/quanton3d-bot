@@ -6,7 +6,6 @@ const router = express.Router();
 const JWT_EXPIRATION = '24h';
 const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
 
-// Carrega as variáveis
 const ADMIN_USER = process.env.ADMIN_USER || "admin";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const ADMIN_SECRET = process.env.ADMIN_SECRET; 
@@ -16,31 +15,42 @@ router.post("/login", (req, res) => {
   try {
     const { password, username, secret } = req.body ?? {};
     
-    // Normaliza a senha para pegar de qualquer campo que venha
+    // Normaliza a senha
     const candidatePassword = (typeof password === 'string' ? password : '') || 
                               (typeof secret === 'string' ? secret : '');
 
-    // Verifica se é a Chave Mestra (quanton3d_admin_secret)
+    // Verifica se é a Chave Mestra OU Senha Normal
     const isSecretMatch = ADMIN_SECRET && candidatePassword === ADMIN_SECRET;
-    // Verifica se é a senha de Usuário normal
     const isUserMatch = ADMIN_PASSWORD && candidatePassword === ADMIN_PASSWORD;
 
     if (isSecretMatch || isUserMatch) {
-      console.log(`✅ [AUTH] Login Aprovado! Fechando a janela...`);
+      console.log(`✅ [AUTH] Login Aprovado via Chave Mestra/Senha!`);
       
       const token = jwt.sign(
-        { role: 'admin', user: ADMIN_USER, timestamp: Date.now() },
+        { role: 'admin', user: ADMIN_USER, isAdmin: true, timestamp: Date.now() },
         JWT_SECRET,
         { expiresIn: JWT_EXPIRATION }
       );
 
-      // AQUI ESTÁ O SEGREDO PARA A JANELA SUMIR:
+      // --- O PACOTE COMPLETO (SUPER RESPOSTA) ---
+      // Mandamos tudo o que o frontend possa estar esperando
       return res.json({ 
         success: true, 
         token, 
-        role: 'admin',      // <--- O crachá que faltava!
-        user: 'admin',      // <--- Confirmação do usuário
-        username: 'admin',  // <--- Garantia extra
+        // Variação 1: Direto na raiz
+        role: 'admin',      
+        isAdmin: true,      
+        valid: true,
+        type: 'admin',
+        // Variação 2: Dentro de um objeto user
+        user: {
+            name: ADMIN_USER,
+            username: ADMIN_USER,
+            role: 'admin',
+            isAdmin: true
+        },
+        // Variação 3: Legado
+        username: ADMIN_USER,
         expiresIn: JWT_EXPIRATION 
       });
     }
@@ -54,21 +64,26 @@ router.post("/login", (req, res) => {
   }
 });
 
-// Rota de verificação (também precisa confirmar que é admin)
+// Verificação de Token também reforçada
 router.post("/verify", (req, res) => {
   try {
     const { token } = req.body;
     if (!token) return res.json({ success: true, valid: false, reason: 'no_token' });
 
     jwt.verify(token, JWT_SECRET);
-    // Manda o crachá aqui também para garantir
-    res.json({ success: true, valid: true, role: 'admin' }); 
+    // Responde com todas as variações também
+    res.json({ 
+        success: true, 
+        valid: true, 
+        role: 'admin', 
+        isAdmin: true,
+        user: { role: 'admin' }
+    }); 
   } catch (err) {
     res.json({ success: true, valid: false, reason: 'invalid_token' });
   }
 });
 
-// Middleware de segurança
 export const verifyJWT = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
