@@ -1103,10 +1103,15 @@
         if (!ensureAuthenticated()) return;
         await loadStats();
         metricsBody.innerHTML = "";
+        metricsEmpty.textContent = "Nenhuma categoria encontrada.";
         try {
           const response = await fetchWithAuth(`${API_BASE}/admin/metrics/resins`);
           const data = await response.json();
-          if (!data.success) return;
+          if (!data.success) {
+            metricsEmpty.hidden = false;
+            metricsEmpty.textContent = "Falha ao carregar métricas.";
+            return;
+          }
           const categories = data.categories || [];
           metricsEmpty.hidden = categories.length > 0;
           categories.forEach((item) => {
@@ -1119,6 +1124,8 @@
           });
         } catch (error) {
           console.error("Erro ao carregar métricas de resina", error);
+          metricsEmpty.hidden = false;
+          metricsEmpty.textContent = "Erro ao carregar métricas.";
         }
       };
 
