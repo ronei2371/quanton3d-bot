@@ -381,6 +381,11 @@
         justify-content: center;
         z-index: 30;
       }
+      
+      /* A CORREÇÃO MÁGICA ESTÁ AQUI: */
+      .login-overlay[hidden] {
+        display: none !important;
+      }
 
       .login-card {
         background: var(--card);
@@ -914,6 +919,7 @@
       };
 
       const setLoginVisible = (visible) => {
+        // Agora o CSS [hidden] { display: none !important } vai garantir que suma!
         loginOverlay.hidden = !visible;
       };
 
