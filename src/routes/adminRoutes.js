@@ -413,9 +413,11 @@ function buildAdminRoutes(adminConfig = {}) {
       }
 
       const collection = getPrintParametersCollection();
+ codex/restore-administrative-interface-layout-q5flmd
       if (!collection) {
         return res.status(503).json({ success: false, error: "MongoDB indisponível" });
       }
+ main
       const query = mongoose.Types.ObjectId.isValid(id)
         ? { _id: new mongoose.Types.ObjectId(id) }
         : { _id: id };
@@ -448,9 +450,16 @@ function buildAdminRoutes(adminConfig = {}) {
       }
 
       const collection = getPrintParametersCollection();
+ codex/restore-administrative-interface-layout-q5flmd
       if (!collection) {
         return res.status(503).json({ success: false, error: "MongoDB indisponível" });
       }
+ codex/restore-administrative-interface-layout-jxg4os
+      if (!collection) {
+        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      }
+main
+main
       const categories = await collection
         .aggregate([
           {
@@ -496,7 +505,15 @@ function buildAdminRoutes(adminConfig = {}) {
 
       const collection = getCollection("users");
       if (!collection) {
+ codex/restore-administrative-interface-layout-q5flmd
         return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+
+codex/restore-administrative-interface-layout-jxg4os
+        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+
+        return res.json({ success: true, clients: [] });
+ main
+ main
       }
 
       const clients = await collection
@@ -535,7 +552,14 @@ function buildAdminRoutes(adminConfig = {}) {
 
       const collection = getCollection("conversas");
       if (!collection) {
+ codex/restore-administrative-interface-layout-q5flmd
         return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+
+ codex/restore-administrative-interface-layout-jxg4os
+        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+        return res.json({ success: true, conversations: [] });
+ main
+ main
       }
 
       const conversations = await collection
