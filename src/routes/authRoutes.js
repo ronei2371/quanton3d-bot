@@ -6,8 +6,8 @@ const router = express.Router();
 
 const JWT_EXPIRATION = '24h';
 const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
-const ADMIN_USER = process.env.ADMIN_USER;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const ADMIN_USER = process.env.ADMIN_USER || process.env.ADMIN_USERNAME;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || process.env.ADMIN_SECRET;
 const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton-admin-fallback-secret';
 const FALLBACK_ADMIN_USER = 'admin';
 const FALLBACK_ADMIN_PASSWORD = 'quanton2026';

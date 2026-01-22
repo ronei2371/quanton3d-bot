@@ -3,12 +3,14 @@ import fs from "fs";
 import fsPromises from "fs/promises";
 import jwt from "jsonwebtoken";
 import path from "path";
+import mongoose from "mongoose";
 import { fileURLToPath } from "url";
 import {
   addDocument,
   clearKnowledgeCollection
 } from "../../rag-search.js";
 import {
+  getCollection,
   getDocumentsCollection,
   getPrintParametersCollection
 } from "../../db.js";
@@ -52,6 +54,28 @@ function buildAdminRoutes(adminConfig = {}) {
   const ADMIN_SECRET = adminConfig.adminSecret ?? process.env.ADMIN_SECRET;
   const ADMIN_JWT_SECRET = adminConfig.adminJwtSecret ?? process.env.ADMIN_JWT_SECRET;
   const adminGuard = requireAdmin(ADMIN_SECRET, ADMIN_JWT_SECRET);
+
+  router.post("/login", (req, res) => {
+    const { user, password, secret } = req.body ?? {};
+    const adminUser = process.env.ADMIN_USER || "admin";
+    const adminPass = process.env.ADMIN_PASSWORD || "admin";
+    const jwtSecret = process.env.ADMIN_JWT_SECRET;
+
+    if (!jwtSecret) {
+      return res.status(500).json({ success: false, error: "JWT secret ausente" });
+    }
+
+    const validUser = user === adminUser && password === adminPass;
+    const validSecret = (secret && secret === process.env.ADMIN_SECRET) ||
+      (password && password === process.env.ADMIN_SECRET);
+
+    if (validUser || validSecret) {
+      const token = jwt.sign({ user: adminUser }, jwtSecret, { expiresIn: "24h" });
+      return res.json({ success: true, token });
+    }
+
+    return res.status(401).json({ success: false, error: "Credenciais inválidas" });
+  });
 
   router.post("/knowledge/import", adminGuard, async (req, res) => {
     try {
@@ -275,6 +299,9 @@ function buildAdminRoutes(adminConfig = {}) {
       }
 
       const collection = getPrintParametersCollection();
+      if (!collection) {
+        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      }
       const resins = await collection
         .aggregate([
           {
@@ -352,6 +379,205 @@ function buildAdminRoutes(adminConfig = {}) {
       });
     } catch (err) {
       console.error('❌ Erro ao deletar resina:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // PATCH /admin/params/profiles/:id - Atualizar parâmetros do perfil
+  router.patch("/params/profiles/:id", adminGuard, async (req, res) => {
+    try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+
+      const { id } = req.params;
+      const {
+        resinName,
+        resinId,
+        brand,
+        model,
+        status,
+        params
+      } = req.body ?? {};
+
+      const updateFields = { updatedAt: new Date() };
+
+      if (typeof resinName === "string" && resinName.trim()) {
+        const trimmedName = resinName.trim();
+        updateFields.resinName = trimmedName;
+        updateFields.resin = trimmedName;
+      }
+
+      if (typeof resinId === "string" && resinId.trim()) {
+        updateFields.resinId = resinId.trim();
+      }
+
+      if (typeof brand === "string") {
+        updateFields.brand = brand.trim();
+      }
+
+      if (typeof model === "string") {
+        updateFields.model = model.trim();
+      }
+
+      if (typeof status === "string" && status.trim()) {
+        updateFields.status = status.trim();
+      }
+
+      if (params && typeof params === "object") {
+        updateFields.params = params;
+        updateFields.parametros = params;
+      }
+
+      const collection = getPrintParametersCollection();
+      if (!collection) {
+        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      }
+      const query = mongoose.Types.ObjectId.isValid(id)
+        ? { _id: new mongoose.Types.ObjectId(id) }
+        : { _id: id };
+
+      const result = await collection.updateOne(query, { $set: updateFields });
+      if (!result.matchedCount) {
+        return res.status(404).json({ success: false, error: "Perfil não encontrado" });
+      }
+
+      res.json({
+        success: true,
+        message: "Perfil atualizado com sucesso"
+      });
+    } catch (err) {
+      console.error("❌ [ADMIN] Erro ao atualizar perfil:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // GET /admin/metrics/resins - Contagem por categoria de resina
+  router.get("/metrics/resins", adminGuard, async (_req, res) => {
+    try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+
+      const collection = getPrintParametersCollection();
+      if (!collection) {
+        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      }
+      const categories = await collection
+        .aggregate([
+          {
+            $group: {
+              _id: {
+                $ifNull: ["$resinCategory", { $ifNull: ["$resinType", { $ifNull: ["$resinName", "$resin"] }] }]
+              },
+              name: {
+                $first: { $ifNull: ["$resinCategory", { $ifNull: ["$resinType", { $ifNull: ["$resinName", "$resin"] }] }] }
+              },
+              count: { $sum: 1 }
+            }
+          },
+          { $match: { name: { $ne: null } } },
+          { $sort: { count: -1 } }
+        ])
+        .toArray();
+
+      res.json({
+        success: true,
+        categories: categories.map((item) => ({
+          name: item.name,
+          count: item.count ?? 0
+        }))
+      });
+    } catch (err) {
+      console.error("❌ [ADMIN] Erro ao obter métricas de resinas:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // GET /admin/clients - Lista de clientes cadastrados
+  router.get("/clients", adminGuard, async (_req, res) => {
+    try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+
+      const collection = getCollection("users");
+      if (!collection) {
+        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      }
+
+      const clients = await collection
+        .find({})
+        .sort({ createdAt: -1 })
+        .limit(200)
+        .toArray();
+
+      res.json({
+        success: true,
+        clients: clients.map((client) => ({
+          id: client._id?.toString?.(),
+          name: client.name || client.fullName || client.companyName || "Cliente",
+          email: client.email || client.contactEmail || null,
+          phone: client.phone || client.contactPhone || null,
+          createdAt: client.createdAt || client.created || null
+        }))
+      });
+    } catch (err) {
+      console.error("❌ [ADMIN] Erro ao listar clientes:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // GET /admin/conversations - Últimas conversas
+  router.get("/conversations", adminGuard, async (_req, res) => {
+    try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+
+      const collection = getCollection("conversas");
+      if (!collection) {
+        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      }
+
+      const conversations = await collection
+        .find({})
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .toArray();
+
+      res.json({
+        success: true,
+        conversations: conversations.map((item) => ({
+          id: item._id?.toString?.(),
+          user: item.userName || item.user || item.client || "Usuário",
+          prompt: item.userMessage || item.question || item.prompt || "",
+          response: item.botResponse || item.answer || item.response || "",
+          createdAt: item.createdAt || item.timestamp || null
+        }))
+      });
+    } catch (err) {
+      console.error("❌ [ADMIN] Erro ao listar conversas:", err);
       res.status(500).json({ success: false, error: err.message });
     }
   });
