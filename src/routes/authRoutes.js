@@ -3,11 +3,11 @@ import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
-
 const JWT_EXPIRATION = '24h';
 const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
 const ADMIN_USER = process.env.ADMIN_USER || process.env.ADMIN_USERNAME;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || process.env.ADMIN_SECRET;
+const ADMIN_SECRET = process.env.ADMIN_SECRET;
 const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton-admin-fallback-secret';
 const FALLBACK_ADMIN_USER = 'admin';
 const FALLBACK_ADMIN_PASSWORD = 'quanton2026';
@@ -45,7 +45,8 @@ router.post("/login", (req, res) => {
       });
     }
 
-    const validEnvPassword = ADMIN_PASSWORD && candidatePassword === ADMIN_PASSWORD;
+    const validEnvPassword = (ADMIN_PASSWORD && candidatePassword === ADMIN_PASSWORD) ||
+      (ADMIN_SECRET && candidatePassword === ADMIN_SECRET);
     const validFallbackPassword = candidatePassword === FALLBACK_ADMIN_PASSWORD;
 
     if (!validEnvPassword && !validFallbackPassword) {
