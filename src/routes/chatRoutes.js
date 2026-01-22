@@ -141,16 +141,22 @@ function extractResinFromMessage(message = '') {
 }
 
 function extractPrinterFromMessage(message = '') {
-function extractPrinterFromMessage(message = '') {
   const safeMessage = typeof message === 'string' ? message : '';
+  
+  // Tenta achar "Impressora X"
   const match = safeMessage.match(/(?:impressora|printer)\s+([^\n,.;]+)/i);
   if (match?.[1]) {
     return match[1].replace(/\b(com|na|no|para)\b.*$/i, '').trim();
   }
+
+  // Fallback: Tenta achar marcas conhecidas se não tiver a palavra "impressora"
+  const fallback = safeMessage.match(/\b(saturn|mars|photon|anycubic|elegoo|phrozen|creality)\b[^\n,.;]*/i);
+  if (fallback?.[0]) {
+      return fallback[0].trim();
+  }
+  
   return null;
 }
-
-
 
 function isParameterQuestion(message = '') {
   return /configura|parametro|exposi[cç][aã]o|tempo de exposi|camada base|base layer|altura de camada/i.test(message);
