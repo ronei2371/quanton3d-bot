@@ -145,8 +145,12 @@ function extractPrinterFromMessage(message = '') {
   if (match?.[1]) {
     return match[1].replace(/\b(com|na|no|para)\b.*$/i, '').trim();
   }
+codex/corrigir-erro-filho-taum2x
+  return null;
+
   const fallback = message.match(/\b(saturn|mars|photon|anycubic|elegoo|phrozen|creality)\b[^\n,.;]*/i);
-  return fallback ? fallback[0].trim() : null;
+  return null;
+ main
 }
 
 function isParameterQuestion(message = '') {
