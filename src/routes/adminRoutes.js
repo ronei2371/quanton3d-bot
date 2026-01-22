@@ -55,6 +55,27 @@ function buildAdminRoutes(adminConfig = {}) {
   const ADMIN_JWT_SECRET = adminConfig.adminJwtSecret ?? process.env.ADMIN_JWT_SECRET;
   const adminGuard = requireAdmin(ADMIN_SECRET, ADMIN_JWT_SECRET);
 
+  router.post("/login", (req, res) => {
+    const { user, password, secret } = req.body ?? {};
+    const adminUser = process.env.ADMIN_USER || "admin";
+    const adminPass = process.env.ADMIN_PASSWORD || "admin";
+    const jwtSecret = process.env.ADMIN_JWT_SECRET;
+
+    if (!jwtSecret) {
+      return res.status(500).json({ success: false, error: "JWT secret ausente" });
+    }
+
+    const validUser = user === adminUser && password === adminPass;
+    const validSecret = secret && secret === process.env.ADMIN_SECRET;
+
+    if (validUser || validSecret) {
+      const token = jwt.sign({ user: adminUser }, jwtSecret, { expiresIn: "24h" });
+      return res.json({ success: true, token });
+    }
+
+    return res.status(401).json({ success: false, error: "Credenciais inválidas" });
+  });
+
   router.post("/knowledge/import", adminGuard, async (req, res) => {
     try {
       if (!shouldInitRAG()) {
@@ -413,11 +434,9 @@ function buildAdminRoutes(adminConfig = {}) {
       }
 
       const collection = getPrintParametersCollection();
-
       if (!collection) {
         return res.status(503).json({ success: false, error: "MongoDB indisponível" });
       }
-
       const query = mongoose.Types.ObjectId.isValid(id)
         ? { _id: new mongoose.Types.ObjectId(id) }
         : { _id: id };
@@ -450,11 +469,6 @@ function buildAdminRoutes(adminConfig = {}) {
       }
 
       const collection = getPrintParametersCollection();
-
-      if (!collection) {
-        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
-      }
-
       if (!collection) {
         return res.status(503).json({ success: false, error: "MongoDB indisponível" });
       }
@@ -503,15 +517,7 @@ function buildAdminRoutes(adminConfig = {}) {
 
       const collection = getCollection("users");
       if (!collection) {
-
         return res.status(503).json({ success: false, error: "MongoDB indisponível" });
-
-
-        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
-
-        return res.json({ success: true, clients: [] });
-
-
       }
 
       const clients = await collection
@@ -550,12 +556,7 @@ function buildAdminRoutes(adminConfig = {}) {
 
       const collection = getCollection("conversas");
       if (!collection) {
-
         return res.status(503).json({ success: false, error: "MongoDB indisponível" });
-
-
-        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
-        return res.json({ success: true, conversations: [] });
       }
 
       const conversations = await collection
