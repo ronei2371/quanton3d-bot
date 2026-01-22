@@ -141,6 +141,7 @@ function extractResinFromMessage(message = '') {
 }
 
 function extractPrinterFromMessage(message = '') {
+function extractPrinterFromMessage(message = '') {
   const safeMessage = typeof message === 'string' ? message : '';
   const match = safeMessage.match(/(?:impressora|printer)\s+([^\n,.;]+)/i);
   if (match?.[1]) {
@@ -148,6 +149,8 @@ function extractPrinterFromMessage(message = '') {
   }
   return null;
 }
+
+
 
 function isParameterQuestion(message = '') {
   return /configura|parametro|exposi[cç][aã]o|tempo de exposi|camada base|base layer|altura de camada/i.test(message);
