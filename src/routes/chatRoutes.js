@@ -141,17 +141,16 @@ function extractResinFromMessage(message = '') {
 }
 
 function extractPrinterFromMessage(message = '') {
-  const match = message.match(/(?:impressora|printer)\s+([^\n,.;]+)/i);
+function extractPrinterFromMessage(message = '') {
+  const safeMessage = typeof message === 'string' ? message : '';
+  const match = safeMessage.match(/(?:impressora|printer)\s+([^\n,.;]+)/i);
   if (match?.[1]) {
     return match[1].replace(/\b(com|na|no|para)\b.*$/i, '').trim();
   }
-codex/corrigir-erro-filho-taum2x
   return null;
-
-  const fallback = message.match(/\b(saturn|mars|photon|anycubic|elegoo|phrozen|creality)\b[^\n,.;]*/i);
-  return null;
- main
 }
+
+
 
 function isParameterQuestion(message = '') {
   return /configura|parametro|exposi[cç][aã]o|tempo de exposi|camada base|base layer|altura de camada/i.test(message);
