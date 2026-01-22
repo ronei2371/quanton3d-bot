@@ -66,7 +66,8 @@ function buildAdminRoutes(adminConfig = {}) {
     }
 
     const validUser = user === adminUser && password === adminPass;
-    const validSecret = secret && secret === process.env.ADMIN_SECRET;
+    const validSecret = (secret && secret === process.env.ADMIN_SECRET) ||
+      (password && password === process.env.ADMIN_SECRET);
 
     if (validUser || validSecret) {
       const token = jwt.sign({ user: adminUser }, jwtSecret, { expiresIn: "24h" });
