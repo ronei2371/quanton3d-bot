@@ -60,6 +60,99 @@
         flex-wrap: wrap;
       }
 
+      .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 24px;
+      }
+
+      .tab-button {
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--muted);
+        padding: 10px 16px;
+        border-radius: 999px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s ease, color 0.2s ease, border 0.2s ease;
+      }
+
+      .tab-button.active {
+        background: var(--electric-blue);
+        color: #fff;
+        border-color: var(--electric-blue);
+      }
+
+      .tab-panel {
+        display: none;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .tab-panel.active {
+        display: flex;
+      }
+
+      .panel-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+      }
+
+      .section-header,
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .section-header h2,
+      .panel-header h2 {
+        margin: 0;
+        font-size: 20px;
+      }
+
+      .panel-header p {
+        margin: 4px 0 0;
+        color: var(--muted);
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .card label {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: var(--muted);
+        letter-spacing: 0.04em;
+      }
+
+      .card input,
+      .card textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        font-size: 14px;
+        font-family: inherit;
+      }
+
+      .card textarea {
+        min-height: 180px;
+        resize: vertical;
+      }
+
       .stat-card {
         background: var(--card);
         border: 1px solid var(--border);
@@ -279,6 +372,150 @@
         color: var(--muted);
       }
 
+      .login-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.65);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 30;
+      }
+
+      .login-card {
+        background: var(--card);
+        border-radius: 16px;
+        padding: 24px;
+        width: min(420px, 92vw);
+        box-shadow: 0 22px 40px rgba(15, 23, 42, 0.24);
+        border: 1px solid var(--border);
+      }
+
+      .login-card h2 {
+        margin: 0 0 6px;
+        font-size: 22px;
+      }
+
+      .login-card p {
+        margin: 0 0 18px;
+        color: var(--muted);
+      }
+
+      .login-card label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 6px;
+      }
+
+      .login-card input {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        margin-bottom: 12px;
+        font-size: 14px;
+      }
+
+      .login-card .btn {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .login-error {
+        color: #b91c1c;
+        font-size: 13px;
+        margin-top: 10px;
+        min-height: 18px;
+      }
+
+      .modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 23, 42, 0.5);
+        z-index: 40;
+        padding: 24px;
+      }
+
+      .modal.active {
+        display: flex;
+      }
+
+      .modal-content {
+        width: min(680px, 95vw);
+        background: var(--card);
+        border-radius: 18px;
+        padding: 20px 24px;
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+        border: 1px solid var(--border);
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .modal-header h3 {
+        margin: 0;
+        font-size: 20px;
+      }
+
+      .modal-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .modal-grid label {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: var(--muted);
+        letter-spacing: 0.04em;
+        margin-bottom: 6px;
+        display: block;
+      }
+
+      .modal-grid input,
+      .modal-grid select,
+      .modal-content textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        font-size: 14px;
+        font-family: inherit;
+      }
+
+      .modal-content textarea {
+        min-height: 160px;
+        resize: vertical;
+      }
+
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
       @media (max-width: 768px) {
         .page {
           padding: 24px 16px 40px;
@@ -346,76 +583,269 @@
     <div class="page">
       <header>
         <div>
-          <h1>Painel de Parâmetros Quanton3D</h1>
-          <p>Filtros inteligentes para navegar pelos 459 perfis com clareza, direto do banco (coleção parametros).</p>
+          <h1>Painel Administrativo Quanton3D</h1>
+          <p>Gestão centralizada dos módulos CRM, RAG e parâmetros com identidade Quanton3D.</p>
         </div>
-        <div class="stats" id="stats"></div>
       </header>
 
-      <section class="filters">
-        <div>
-          <label for="resin-select">Resina</label>
-          <select id="resin-select">
-            <option value="">Todas as resinas</option>
-          </select>
+      <nav class="tabs">
+        <button class="tab-button active" data-tab="metrics">Métricas</button>
+        <button class="tab-button" data-tab="clients">Clientes</button>
+        <button class="tab-button" data-tab="conversations">Conversas</button>
+        <button class="tab-button" data-tab="knowledge">Conhecimento</button>
+        <button class="tab-button" data-tab="suggestions">Sugestões</button>
+        <button class="tab-button" data-tab="params">Parâmetros</button>
+      </nav>
+
+      <section class="tab-panel active" data-panel="metrics">
+        <div class="panel-grid">
+          <div class="stat-card">
+            <span>Resinas</span>
+            <strong id="stat-resins">--</strong>
+          </div>
+          <div class="stat-card">
+            <span>Impressoras</span>
+            <strong id="stat-printers">--</strong>
+          </div>
+          <div class="stat-card">
+            <span>Perfis</span>
+            <strong id="stat-profiles">--</strong>
+          </div>
+          <div class="stat-card">
+            <span>Em Breve</span>
+            <strong id="stat-coming">--</strong>
+          </div>
         </div>
-        <div>
-          <label for="printer-select">Impressora</label>
-          <select id="printer-select">
-            <option value="">Todas as impressoras</option>
-          </select>
+
+        <div class="section-header">
+          <h2>Contagem por categoria de resina</h2>
+          <button class="btn secondary" id="refresh-metrics">Atualizar</button>
         </div>
-        <div>
-          <label for="status-select">Status</label>
-          <select id="status-select">
-            <option value="">Todos</option>
-            <option value="ok">Ativo</option>
-            <option value="coming_soon">Em Breve</option>
-          </select>
-        </div>
-        <div>
-          <label for="search-input">Busca rápida</label>
-          <input id="search-input" type="text" placeholder="Resina, marca ou modelo" />
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Categoria</th>
+                <th>Perfis</th>
+              </tr>
+            </thead>
+            <tbody id="metrics-body"></tbody>
+          </table>
+          <div class="empty-state" id="metrics-empty" hidden>Nenhuma categoria encontrada.</div>
         </div>
       </section>
 
-      <div class="actions-bar">
-        <div id="count-info">Carregando perfis...</div>
-        <div>
-          <button class="btn" id="refresh-button">Atualizar</button>
-          <button class="btn secondary" id="clear-button">Limpar filtros</button>
+      <section class="tab-panel" data-panel="clients">
+        <div class="section-header">
+          <h2>Clientes cadastrados</h2>
+          <button class="btn secondary" id="refresh-clients">Atualizar</button>
         </div>
-      </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Telefone</th>
+                <th>Cadastro</th>
+              </tr>
+            </thead>
+            <tbody id="clients-body"></tbody>
+          </table>
+          <div class="empty-state" id="clients-empty" hidden>Nenhum cliente encontrado.</div>
+        </div>
+      </section>
 
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Resina</th>
-              <th>Impressora</th>
-              <th>Parâmetros</th>
-              <th>Status</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody id="profiles-body"></tbody>
-        </table>
-        <div class="empty-state" id="empty-state" hidden>Nenhum perfil encontrado.</div>
-        <div class="pagination" id="pagination"></div>
+      <section class="tab-panel" data-panel="conversations">
+        <div class="section-header">
+          <h2>Últimas conversas</h2>
+          <button class="btn secondary" id="refresh-conversations">Atualizar</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Usuário</th>
+                <th>Pergunta</th>
+                <th>Resposta</th>
+                <th>Data</th>
+              </tr>
+            </thead>
+            <tbody id="conversations-body"></tbody>
+          </table>
+          <div class="empty-state" id="conversations-empty" hidden>Nenhuma conversa encontrada.</div>
+        </div>
+      </section>
+
+      <section class="tab-panel" data-panel="knowledge">
+        <div class="section-header">
+          <h2>Adicionar novo conhecimento ao RAG</h2>
+        </div>
+        <div class="card">
+          <label for="knowledge-title">Título</label>
+          <input id="knowledge-title" type="text" placeholder="Título do documento" />
+          <label for="knowledge-content">Conteúdo</label>
+          <textarea id="knowledge-content" placeholder="Cole o conteúdo do conhecimento..."></textarea>
+          <div class="modal-actions">
+            <button class="btn secondary" id="clear-knowledge">Limpar</button>
+            <button class="btn" id="submit-knowledge">Adicionar ao RAG</button>
+          </div>
+          <div class="tag" id="knowledge-status"></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" data-panel="suggestions">
+        <div class="section-header">
+          <h2>Sugestões de usuários</h2>
+          <button class="btn secondary" id="refresh-suggestions">Atualizar</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Usuário</th>
+                <th>Mensagem</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="suggestions-body"></tbody>
+          </table>
+          <div class="empty-state" id="suggestions-empty" hidden>Nenhuma sugestão encontrada.</div>
+        </div>
+      </section>
+
+      <section class="tab-panel" data-panel="params">
+        <div class="panel-header">
+          <div>
+            <h2>Parâmetros</h2>
+            <p>Filtros inteligentes para navegar pelos 459 perfis com clareza, direto do banco (coleção parametros).</p>
+          </div>
+          <div class="stats" id="stats"></div>
+        </div>
+
+        <section class="filters">
+          <div>
+            <label for="resin-select">Resina</label>
+            <select id="resin-select">
+              <option value="">Todas as resinas</option>
+            </select>
+          </div>
+          <div>
+            <label for="printer-select">Impressora</label>
+            <select id="printer-select">
+              <option value="">Todas as impressoras</option>
+            </select>
+          </div>
+          <div>
+            <label for="status-select">Status</label>
+            <select id="status-select">
+              <option value="">Todos</option>
+              <option value="ok">Ativo</option>
+              <option value="coming_soon">Em Breve</option>
+            </select>
+          </div>
+          <div>
+            <label for="search-input">Busca rápida</label>
+            <input id="search-input" type="text" placeholder="Resina, marca ou modelo" />
+          </div>
+        </section>
+
+        <div class="actions-bar">
+          <div id="count-info">Carregando perfis...</div>
+          <div>
+            <button class="btn" id="refresh-button">Atualizar</button>
+            <button class="btn secondary" id="clear-button">Limpar filtros</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Resina</th>
+                <th>Impressora</th>
+                <th>Parâmetros</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="profiles-body"></tbody>
+          </table>
+          <div class="empty-state" id="empty-state" hidden>Nenhum perfil encontrado.</div>
+          <div class="pagination" id="pagination"></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="login-overlay" id="login-overlay" hidden>
+      <div class="login-card">
+        <h2>Entrada administrativa</h2>
+        <p>Use a senha de administrador definida no Render para liberar o painel.</p>
+        <label for="login-username">Usuário (opcional)</label>
+        <input id="login-username" type="text" placeholder="admin" />
+        <label for="login-password">Senha</label>
+        <input id="login-password" type="password" placeholder="Digite a senha" />
+        <button class="btn" id="login-button">Entrar</button>
+        <div class="login-error" id="login-error"></div>
+      </div>
+    </div>
+
+    <div class="modal" id="edit-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Editar parâmetros</h3>
+          <button class="btn secondary" id="close-modal">Fechar</button>
+        </div>
+        <div class="modal-grid">
+          <div>
+            <label for="edit-resin">Resina</label>
+            <input id="edit-resin" type="text" />
+          </div>
+          <div>
+            <label for="edit-brand">Marca</label>
+            <input id="edit-brand" type="text" />
+          </div>
+          <div>
+            <label for="edit-model">Impressora</label>
+            <input id="edit-model" type="text" />
+          </div>
+          <div>
+            <label for="edit-status">Status</label>
+            <select id="edit-status">
+              <option value="ok">Ativo</option>
+              <option value="coming_soon">Em breve</option>
+            </select>
+          </div>
+        </div>
+        <label for="edit-params">Parâmetros (JSON)</label>
+        <textarea id="edit-params"></textarea>
+        <div class="tag" id="edit-id"></div>
+        <div class="modal-actions">
+          <button class="btn secondary" id="cancel-edit">Cancelar</button>
+          <button class="btn" id="save-edit">Salvar alterações</button>
+        </div>
       </div>
     </div>
 
     <script>
-      const API_BASE = "https://quanton3d-bot-v2.onrender.com";
+      const API_BASE = window.location.origin || "https://quanton3d-bot-v2.onrender.com";
+      const AUTH_TOKEN_KEY = "quanton3d_admin_token";
       const state = {
         resins: [],
         printers: [],
         profiles: [],
         page: 1,
         limit: null,
-        total: 0
+        total: 0,
+        authToken: localStorage.getItem(AUTH_TOKEN_KEY) || "",
+        editingProfile: null,
+        loadedTabs: new Set()
       };
 
+      const tabButtons = Array.from(document.querySelectorAll(".tab-button"));
+      const tabPanels = Array.from(document.querySelectorAll(".tab-panel"));
       const resinSelect = document.getElementById("resin-select");
       const printerSelect = document.getElementById("printer-select");
       const statusSelect = document.getElementById("status-select");
@@ -424,6 +854,33 @@
       const countInfo = document.getElementById("count-info");
       const emptyState = document.getElementById("empty-state");
       const pagination = document.getElementById("pagination");
+      const loginOverlay = document.getElementById("login-overlay");
+      const loginError = document.getElementById("login-error");
+      const loginButton = document.getElementById("login-button");
+      const loginUsername = document.getElementById("login-username");
+      const loginPassword = document.getElementById("login-password");
+      const editModal = document.getElementById("edit-modal");
+      const editResin = document.getElementById("edit-resin");
+      const editBrand = document.getElementById("edit-brand");
+      const editModel = document.getElementById("edit-model");
+      const editStatus = document.getElementById("edit-status");
+      const editParams = document.getElementById("edit-params");
+      const editId = document.getElementById("edit-id");
+      const statResins = document.getElementById("stat-resins");
+      const statPrinters = document.getElementById("stat-printers");
+      const statProfiles = document.getElementById("stat-profiles");
+      const statComing = document.getElementById("stat-coming");
+      const metricsBody = document.getElementById("metrics-body");
+      const metricsEmpty = document.getElementById("metrics-empty");
+      const clientsBody = document.getElementById("clients-body");
+      const clientsEmpty = document.getElementById("clients-empty");
+      const conversationsBody = document.getElementById("conversations-body");
+      const conversationsEmpty = document.getElementById("conversations-empty");
+      const suggestionsBody = document.getElementById("suggestions-body");
+      const suggestionsEmpty = document.getElementById("suggestions-empty");
+      const knowledgeTitle = document.getElementById("knowledge-title");
+      const knowledgeContent = document.getElementById("knowledge-content");
+      const knowledgeStatus = document.getElementById("knowledge-status");
 
       const statusLabels = {
         ok: "Ativo",
@@ -445,6 +902,88 @@
         return entries.length
           ? entries.map(([label, value]) => `<span>${label}: ${value}</span>`).join("")
           : "<span>Parâmetros em revisão</span>";
+      };
+
+      const setAuthToken = (token) => {
+        state.authToken = token;
+        if (token) {
+          localStorage.setItem(AUTH_TOKEN_KEY, token);
+        } else {
+          localStorage.removeItem(AUTH_TOKEN_KEY);
+        }
+      };
+
+      const setLoginVisible = (visible) => {
+        loginOverlay.hidden = !visible;
+      };
+
+      const ensureAuthenticated = () => {
+        if (!state.authToken) {
+          setLoginVisible(true);
+          return false;
+        }
+        setLoginVisible(false);
+        return true;
+      };
+
+      const fetchWithAuth = async (url, options = {}) => {
+        const headers = {
+          ...(options.headers || {}),
+          Authorization: `Bearer ${state.authToken}`
+        };
+        return fetch(url, { ...options, headers });
+      };
+
+      const formatDateTime = (value) => {
+        if (!value) return "--";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "--";
+        return date.toLocaleString("pt-BR");
+      };
+
+      const switchTab = async (tabId) => {
+        tabButtons.forEach((button) => {
+          button.classList.toggle("active", button.dataset.tab === tabId);
+        });
+        tabPanels.forEach((panel) => {
+          panel.classList.toggle("active", panel.dataset.panel === tabId);
+        });
+
+        if (!state.loadedTabs.has(tabId)) {
+          if (tabId === "metrics") await loadMetrics();
+          if (tabId === "clients") await loadClients();
+          if (tabId === "conversations") await loadConversations();
+          if (tabId === "suggestions") await loadSuggestions();
+          if (tabId === "params") await initParamsTab();
+          state.loadedTabs.add(tabId);
+        }
+      };
+
+      const login = async () => {
+        loginError.textContent = "";
+        loginButton.disabled = true;
+        try {
+          const response = await fetch(`${API_BASE}/admin/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: loginUsername.value.trim(),
+              password: loginPassword.value
+            })
+          });
+          const data = await response.json();
+          if (!response.ok || !data.success) {
+            loginError.textContent = data.error || "Senha incorreta.";
+            return;
+          }
+          setAuthToken(data.token);
+          setLoginVisible(false);
+          await initPanel();
+        } catch (error) {
+          loginError.textContent = "Falha ao autenticar. Tente novamente.";
+        } finally {
+          loginButton.disabled = false;
+        }
       };
 
       const renderProfiles = () => {
@@ -478,6 +1017,7 @@
               <div class="action-buttons">
                 <button class="btn" data-copy="${profile.id}">Copiar</button>
                 <button class="btn secondary" data-detail="${profile.id}">Detalhes</button>
+                <button class="btn secondary" data-edit="${profile.id}">Editar</button>
               </div>
             </td>
           `;
@@ -531,6 +1071,10 @@
           if (!data.success) return;
 
           const stats = data.stats;
+          statResins.textContent = stats.totalResins ?? "--";
+          statPrinters.textContent = stats.totalPrinters ?? "--";
+          statProfiles.textContent = stats.totalProfiles ?? "--";
+          statComing.textContent = stats.comingSoonProfiles ?? "--";
           const statsEl = document.getElementById("stats");
           statsEl.innerHTML = `
             <div class="stat-card">
@@ -555,13 +1099,120 @@
         }
       };
 
+      const loadMetrics = async () => {
+        if (!ensureAuthenticated()) return;
+        await loadStats();
+        metricsBody.innerHTML = "";
+        metricsEmpty.textContent = "Nenhuma categoria encontrada.";
+        try {
+          const response = await fetchWithAuth(`${API_BASE}/admin/metrics/resins`);
+          const data = await response.json();
+          if (!data.success) {
+            metricsEmpty.hidden = false;
+            metricsEmpty.textContent = "Falha ao carregar métricas.";
+            return;
+          }
+          const categories = data.categories || [];
+          metricsEmpty.hidden = categories.length > 0;
+          categories.forEach((item) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td data-label="Categoria">${item.name}</td>
+              <td data-label="Perfis">${item.count}</td>
+            `;
+            metricsBody.appendChild(row);
+          });
+        } catch (error) {
+          console.error("Erro ao carregar métricas de resina", error);
+          metricsEmpty.hidden = false;
+          metricsEmpty.textContent = "Erro ao carregar métricas.";
+        }
+      };
+
+      const loadClients = async () => {
+        if (!ensureAuthenticated()) return;
+        clientsBody.innerHTML = "";
+        try {
+          const response = await fetchWithAuth(`${API_BASE}/admin/clients`);
+          const data = await response.json();
+          if (!data.success) return;
+          const clients = data.clients || [];
+          clientsEmpty.hidden = clients.length > 0;
+          clients.forEach((client) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td data-label="Nome">${client.name || "--"}</td>
+              <td data-label="Email">${client.email || "--"}</td>
+              <td data-label="Telefone">${client.phone || "--"}</td>
+              <td data-label="Cadastro">${formatDateTime(client.createdAt)}</td>
+            `;
+            clientsBody.appendChild(row);
+          });
+        } catch (error) {
+          console.error("Erro ao carregar clientes", error);
+        }
+      };
+
+      const loadConversations = async () => {
+        if (!ensureAuthenticated()) return;
+        conversationsBody.innerHTML = "";
+        try {
+          const response = await fetchWithAuth(`${API_BASE}/admin/conversations`);
+          const data = await response.json();
+          if (!data.success) return;
+          const conversations = data.conversations || [];
+          conversationsEmpty.hidden = conversations.length > 0;
+          conversations.forEach((item) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td data-label="Usuário">${item.user || "--"}</td>
+              <td data-label="Pergunta">${item.prompt || "--"}</td>
+              <td data-label="Resposta">${item.response || "--"}</td>
+              <td data-label="Data">${formatDateTime(item.createdAt)}</td>
+            `;
+            conversationsBody.appendChild(row);
+          });
+        } catch (error) {
+          console.error("Erro ao carregar conversas", error);
+        }
+      };
+
+      const loadSuggestions = async () => {
+        if (!ensureAuthenticated()) return;
+        suggestionsBody.innerHTML = "";
+        try {
+          const response = await fetchWithAuth(`${API_BASE}/suggestions`);
+          const data = await response.json();
+          if (!data.success) return;
+          const suggestions = data.suggestions || [];
+          suggestionsEmpty.hidden = suggestions.length > 0;
+          suggestions.forEach((item) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td data-label="Usuário">${item.userName || "--"}</td>
+              <td data-label="Mensagem">${item.suggestion || "--"}</td>
+              <td data-label="Status">${item.status || "pending"}</td>
+              <td data-label="Ações">
+                <div class="action-buttons">
+                  <button class="btn" data-approve="${item.id}">Aprovar</button>
+                  <button class="btn secondary" data-reject="${item.id}">Rejeitar</button>
+                </div>
+              </td>
+            `;
+            suggestionsBody.appendChild(row);
+          });
+        } catch (error) {
+          console.error("Erro ao carregar sugestões", error);
+        }
+      };
+
       const loadResins = async () => {
         const response = await fetch(`${API_BASE}/params/resins`);
         const data = await response.json();
         if (!data.success) return;
         state.resins = data.resins;
         resinSelect.innerHTML = `<option value="">Todas as resinas</option>` +
-          data.resins.map((resin) => `<option value="${resin.id}">${resin.name}</option>`).join("");
+          data.resins.map((resin) => `<option value="${resin._id || resin.id}">${resin.name}</option>`).join("");
       };
 
       const loadPrinters = async (resinId = "") => {
@@ -636,6 +1287,7 @@
       profilesBody.addEventListener("click", async (event) => {
         const copyId = event.target.getAttribute("data-copy");
         const detailId = event.target.getAttribute("data-detail");
+        const editIdAttr = event.target.getAttribute("data-edit");
         if (copyId) {
           const profile = state.profiles.find((item) => item.id === copyId);
           if (!profile) return;
@@ -660,12 +1312,164 @@
             )}`
           );
         }
+
+        if (editIdAttr) {
+          const profile = state.profiles.find((item) => item.id === editIdAttr);
+          if (!profile) return;
+          if (!ensureAuthenticated()) return;
+          state.editingProfile = profile;
+          editResin.value = profile.resinName || "";
+          editBrand.value = profile.brand || "";
+          editModel.value = profile.model || "";
+          editStatus.value = profile.status || "ok";
+          editParams.value = JSON.stringify(profile.params || {}, null, 2);
+          editId.textContent = `ID: ${profile.id}`;
+          editModal.classList.add("active");
+        }
       });
 
-      loadStats();
-      loadResins();
-      loadPrinters();
-      loadProfiles();
+      suggestionsBody.addEventListener("click", async (event) => {
+        const approveId = event.target.getAttribute("data-approve");
+        const rejectId = event.target.getAttribute("data-reject");
+        if (!approveId && !rejectId) return;
+        if (!ensureAuthenticated()) return;
+
+        try {
+          const endpoint = approveId ? "approve-suggestion" : "reject-suggestion";
+          const targetId = approveId || rejectId;
+          const response = await fetchWithAuth(`${API_BASE}/${endpoint}/${targetId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" }
+          });
+          const data = await response.json();
+          if (!data.success) {
+            throw new Error(data.message || "Erro ao atualizar sugestão.");
+          }
+          loadSuggestions();
+        } catch (error) {
+          alert(error.message);
+        }
+      });
+
+      const closeEditModal = () => {
+        editModal.classList.remove("active");
+        state.editingProfile = null;
+      };
+
+      const saveEdit = async () => {
+        if (!state.editingProfile) return;
+        if (!ensureAuthenticated()) return;
+
+        let parsedParams = {};
+        try {
+          parsedParams = editParams.value ? JSON.parse(editParams.value) : {};
+        } catch (error) {
+          alert("Parâmetros em JSON inválido. Revise antes de salvar.");
+          return;
+        }
+
+        const payload = {
+          resinName: editResin.value.trim(),
+          brand: editBrand.value.trim(),
+          model: editModel.value.trim(),
+          status: editStatus.value,
+          params: parsedParams
+        };
+
+        try {
+          const response = await fetch(`${API_BASE}/admin/params/profiles/${state.editingProfile.id}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${state.authToken}`
+            },
+            body: JSON.stringify(payload)
+          });
+          const data = await response.json();
+          if (!response.ok || !data.success) {
+            if (response.status === 401) {
+              setAuthToken("");
+              setLoginVisible(true);
+            }
+            throw new Error(data.error || "Erro ao atualizar perfil.");
+          }
+          closeEditModal();
+          loadProfiles();
+        } catch (error) {
+          alert(error.message);
+        }
+      };
+
+      const initPanel = async () => {
+        if (!ensureAuthenticated()) return;
+        await switchTab("metrics");
+      };
+
+      const initParamsTab = async () => {
+        await loadStats();
+        await loadResins();
+        await loadPrinters();
+        await loadProfiles();
+      };
+
+      const submitKnowledge = async () => {
+        if (!ensureAuthenticated()) return;
+        const title = knowledgeTitle.value.trim();
+        const content = knowledgeContent.value.trim();
+        if (!title || !content) {
+          knowledgeStatus.textContent = "Preencha título e conteúdo.";
+          return;
+        }
+        knowledgeStatus.textContent = "Enviando...";
+        try {
+          const response = await fetchWithAuth(`${API_BASE}/admin/knowledge/import`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              documents: [
+                {
+                  title,
+                  content,
+                  tags: ["admin", "manual"],
+                  source: "admin_panel"
+                }
+              ]
+            })
+          });
+          const data = await response.json();
+          if (!response.ok || !data.success) {
+            throw new Error(data.error || "Falha ao adicionar conhecimento.");
+          }
+          knowledgeStatus.textContent = "Conhecimento enviado ao RAG.";
+          knowledgeTitle.value = "";
+          knowledgeContent.value = "";
+        } catch (error) {
+          knowledgeStatus.textContent = error.message;
+        }
+      };
+
+      document.getElementById("close-modal").addEventListener("click", closeEditModal);
+      document.getElementById("cancel-edit").addEventListener("click", closeEditModal);
+      document.getElementById("save-edit").addEventListener("click", saveEdit);
+      loginButton.addEventListener("click", login);
+      loginPassword.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") login();
+      });
+      tabButtons.forEach((button) => {
+        button.addEventListener("click", () => switchTab(button.dataset.tab));
+      });
+      document.getElementById("refresh-metrics").addEventListener("click", loadMetrics);
+      document.getElementById("refresh-clients").addEventListener("click", loadClients);
+      document.getElementById("refresh-conversations").addEventListener("click", loadConversations);
+      document.getElementById("refresh-suggestions").addEventListener("click", loadSuggestions);
+      document.getElementById("submit-knowledge").addEventListener("click", submitKnowledge);
+      document.getElementById("clear-knowledge").addEventListener("click", () => {
+        knowledgeTitle.value = "";
+        knowledgeContent.value = "";
+        knowledgeStatus.textContent = "";
+      });
+
+      initPanel();
     </script>
   </body>
 </html>
