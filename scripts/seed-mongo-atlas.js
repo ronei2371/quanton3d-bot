@@ -1,6 +1,6 @@
 // Seed de dados para MongoDB Atlas
 // - Importa data/resins_extracted.json -> parametros
-// - Importa knowledge/suggestions.json -> suggestions
+// - Importa knowledge/suggestions.json -> suggestions (quando existir)
 
 import fs from 'fs';
 import path from 'path';
@@ -15,16 +15,16 @@ const PRINT_PARAMETERS_COLLECTION = 'parametros';
 const SUGGESTIONS_COLLECTION = 'suggestions';
 
 const PRINT_PARAMETERS_FILE = path.join(process.cwd(), 'data', 'resins_extracted.json');
-const SUGGESTIONS_FILE = path.join(process.cwd(), 'knowledge', 'suggestions.json');
+const SUGGESTIONS_FILE_CANDIDATES = [
+  path.join(process.cwd(), 'knowledge', 'suggestions.json'),
+  path.join(process.cwd(), 'data', 'suggestions.json'),
+  path.join(process.cwd(), 'suggestions.json')
+];
 
-function ensureFileExists(filePath) {
+function loadJson(filePath) {
   if (!fs.existsSync(filePath)) {
     throw new Error(`Arquivo nao encontrado: ${filePath}`);
   }
-}
-
-function loadJson(filePath) {
-  ensureFileExists(filePath);
   const raw = fs.readFileSync(filePath, 'utf-8');
   return JSON.parse(raw);
 }
@@ -73,7 +73,14 @@ async function seedPrintParameters(db) {
 
 async function seedSuggestions(db) {
   console.log('[2/3] Importando sugestoes...');
-  const raw = loadJson(SUGGESTIONS_FILE);
+  const suggestionsFile = SUGGESTIONS_FILE_CANDIDATES.find(filePath => fs.existsSync(filePath));
+
+  if (!suggestionsFile) {
+    console.log('⚠️ Nenhum arquivo de sugestoes encontrado. Pulando etapa de sugestoes.');
+    return;
+  }
+
+  const raw = loadJson(suggestionsFile);
   const suggestions = normalizeSuggestions(raw);
 
   if (suggestions.length === 0) {

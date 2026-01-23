@@ -14,7 +14,7 @@ const FALLBACK_ADMIN_PASSWORD = 'quanton2026';
 const HAS_ENV_CREDENTIALS = Boolean(ADMIN_USER && ADMIN_PASSWORD && process.env.ADMIN_JWT_SECRET);
 
 if (!HAS_ENV_CREDENTIALS) {
-  console.warn('[AUTH] ⚠️ Credenciais admin ausentes. Fallback emergencial habilitado.');
+  console.error('[AUTH] ⚠️ Credenciais admin ausentes. Fallback emergencial habilitado.');
 }
 
 /**
