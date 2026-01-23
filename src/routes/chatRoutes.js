@@ -142,19 +142,46 @@ function extractResinFromMessage(message = '') {
 
 function extractPrinterFromMessage(message = '') {
   const safeMessage = typeof message === 'string' ? message : '';
-  
-  // Tenta achar "Impressora X"
+  // Não usar fallback por marca aqui para evitar confundir nome de resina com impressora.
   const match = safeMessage.match(/(?:impressora|printer)\s+([^\n,.;]+)/i);
   if (match?.[1]) {
     return match[1].replace(/\b(com|na|no|para)\b.*$/i, '').trim();
   }
+  return null;
+}
 
-  // Fallback: Tenta achar marcas conhecidas se não tiver a palavra "impressora"
-  const fallback = safeMessage.match(/\b(saturn|mars|photon|anycubic|elegoo|phrozen|creality)\b[^\n,.;]*/i);
-  if (fallback?.[0]) {
-      return fallback[0].trim();
+function getGuidedNextQuestion({
+  trimmedMessage,
+  conversationHistory,
+  knownPrinter,
+  knownResin,
+  ragContext
+}) {
+  const safeHistory = Array.isArray(conversationHistory) ? conversationHistory : [];
+  const lastAssistant = [...safeHistory].reverse().find((entry) => entry?.role === 'assistant');
+  const lastAssistantText = typeof lastAssistant?.content === 'string' ? lastAssistant.content.toLowerCase() : '';
+  const messageIsAnswer =
+    trimmedMessage
+    && !isParameterQuestion(trimmedMessage)
+    && !isDiagnosticQuestion(trimmedMessage)
+    && !/\?/.test(trimmedMessage);
+  if (!messageIsAnswer) return null;
+
+  const hasExposure = hasExposureInfo(trimmedMessage) || hasExposureInfo((ragContext || '').toString());
+
+  if (/modelo da sua impressora|qual é o modelo da sua impressora|modelo da impressora/.test(lastAssistantText)) {
+    if (!knownResin) return 'Qual é a resina que você está usando?';
+    if (!hasExposure) return 'Qual é o tempo de exposição normal e de base que você está usando?';
   }
-  
+
+  if (/tipo de resina|qual resina|qual a resina|qual resina você/.test(lastAssistantText)) {
+    if (!hasExposure) return 'Qual é o tempo de exposição normal e de base que você está usando?';
+  }
+
+  if (/tempo de exposi[cç][aã]o|tempo de base|exposi[cç][aã]o normal/.test(lastAssistantText)) {
+    if (!hasExposure) return 'Pode informar o tempo de exposição normal e de base que está usando?';
+  }
+
   return null;
 }
 
@@ -265,6 +292,17 @@ async function generateResponse({
   const knownResin = customerContext?.resin || resinFromMessage;
   const knownPrinter = customerContext?.printer || printerFromMessage;
 
+  const guidedNextQuestion = getGuidedNextQuestion({
+    trimmedMessage,
+    conversationHistory,
+    knownPrinter,
+    knownResin,
+    ragContext
+  });
+  if (guidedNextQuestion) {
+    return { reply: guidedNextQuestion, documentsUsed: 0 };
+  }
+
   if (isParameterQuestion(trimmedMessage)) {
     const normalizedContext = normalizeForMatch(ragContext || '');
     const resinOk = knownResin ? normalizedContext.includes(normalizeForMatch(knownResin)) : false;
@@ -316,7 +354,7 @@ async function generateResponse({
     2. Responda de forma objetiva (máximo de 6 a 8 linhas), com tópicos quando fizer sentido.
     3. Sempre forneça faixas numéricas específicas quando recomendar ajustes com base em tabela ou dados confirmados (ex: "Exposição normal: 2,5–3,0 s").
     4. Se a resina/impressora não estiver na tabela, NÃO invente parâmetros nem use "valores padrão". Peça o modelo exato ou encaminhe ao suporte.
-    5. Nunca sugira temperaturas acima de 35°C para resinas padrão.
+    5. Nunca sugira temperaturas acima de 35C para resinas padrão.
     6. Se houver dados no contexto (nome, resina, impressora, problema), reconheça no início e NÃO pergunte novamente pelo que já foi informado.
     7. Só apresente causas prováveis quando houver CONTEXTO_RELEVANTE=SIM ou o cliente fornecer dados técnicos claros.
     8. Se CONTEXTO_RELEVANTE=NAO, NÃO diagnostique. Ative o "Modo Entrevista Guiada": faça apenas UMA pergunta por vez, seguindo esta ordem fixa: (1) modelo da impressora, (2) tipo de resina, (3) tempo de exposição/configurações. Só avance para a próxima etapa quando a anterior for respondida. Não liste todos os requisitos de uma vez. Se necessário, ofereça ajuda humana no WhatsApp (31) 98334-0053.
@@ -333,6 +371,8 @@ async function generateResponse({
     19. Evite repetir cumprimentos se o cliente já foi saudado no histórico.
     20. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
     21. Em descolamento sem tabela confirmada, priorize nivelamento e ajustes pequenos (Exposição Base +2s a +3s e Camadas Base máx. 6). Não sugerir aumentos de 10-20s.
+    22. Nunca sugira lixar/abrasionar a plataforma sem pedido explícito do cliente; priorize limpeza adequada e checagens básicas.
+    23. Se a peça ainda estiver na impressora (na plataforma ou dentro da máquina), não mencione pós-cura ou lavagem.
     ${visionPriority}
     ${imageGuidelines}
   `;
@@ -406,12 +446,12 @@ Se não houver evidência clara, NÃO invente: peça uma confirmação objetiva 
 1. **DESCOLAMENTO DA MESA (Adhesion Failure):**
    - O que vê: A peça caiu no tanque, ou soltou apenas um lado da base, ou a base está torta.
    - Se a falha está na base (primeiras camadas) ou a peça ficou pendurada no suporte, PRIORIZE este diagnóstico antes de delaminação.
-   - Solução: Verificar nivelamento da plataforma e aumentar Exposição Base (+2s a +3s) ou Camadas Base (máx. 5-6). Lixar a plataforma.
+   - Solução: Verificar nivelamento da plataforma e aumentar Exposição Base (+2s a +3s) ou Camadas Base (máx. 5-6).
 
 2. **DELAMINAÇÃO (Layer Separation):**
    - O que vê: A peça abriu no meio, parecendo um "livro folheado". As camadas se separaram.
    - Só use este diagnóstico quando a separação no meio estiver claramente visível. Se a base não aparece ou a falha não está nítida, peça confirmação sobre onde ocorreu a quebra.
-   - Solução: Aumentar Exposição Normal (+0.3s) ou Reduzir Velocidade de Levante (Lift Speed).
+   - Solução: Aumentar Exposição Normal (+0.3s) ou reduzir velocidade de levante se houver essa opção no slicer.
 
 3. **SUBCURA (Undercuring):**
    - O que vê: Detalhes derretidos, peça mole, suportes falharam e não seguraram a peça.
@@ -447,6 +487,7 @@ Se a imagem não for clara, peça outra. Se for clara, SEJA TÉCNICO E DIRETO. N
 Se houver dúvida entre descolamento de base e delaminação, pergunte: "A falha aconteceu nas primeiras camadas (base) ou no meio da peça?" antes de fechar o diagnóstico.
 Se o cliente não enviou texto, finalize com: "Se quiser contextualizar, envie uma frase curta (ex: 'esta imagem é delaminação'). O nome do arquivo não é lido."
 Se a falha parecer de LCD (linhas/manchas), responda diretamente isso, recomende substituição e não peça parâmetros de resina.
+Se a peça ainda estiver presa na plataforma ou dentro da impressora, não cite pós-cura ou lavagem.
 ${visualContext}
 `;
 
