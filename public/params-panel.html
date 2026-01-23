@@ -16,6 +16,7 @@
         --border: #e2e8f0;
         --ok: #16a34a;
         --soon: #1e63d6;
+        --danger: #dc2626;
       }
 
       * {
@@ -346,10 +347,13 @@
     <div class="page">
       <header>
         <div>
-          <h1>Painel de Parâmetros Quanton3D</h1>
-          <p>Filtros inteligentes para navegar pelos 459 perfis com clareza, direto do banco (coleção parametros).</p>
+          <h1>Painel Administrativo Quanton3D</h1>
+          <p>Gestão centralizada dos módulos CRM, RAG e parâmetros.</p>
         </div>
-        <div class="stats" id="stats"></div>
+        <div style="display: flex; gap: 10px;">
+          <a href="https://quanton3dia.onrender.com" class="btn secondary" style="text-decoration: none; display: flex; align-items: center;">⬅ Voltar ao Site</a>
+          <button id="logout-btn" class="btn" style="background: var(--danger);">🔒 Sair</button>
+        </div>
       </header>
 
       <section class="filters">
@@ -407,6 +411,27 @@
 
     <script>
       const API_BASE = "https://quanton3d-bot-v2.onrender.com";
+      const AUTH_TOKEN_KEY = "quanton3d_admin_token";
+      let authToken = localStorage.getItem(AUTH_TOKEN_KEY) || "";
+
+      const ensureAuthenticated = () => {
+        if (!authToken) {
+          alert("Faça login para continuar.");
+          return false;
+        }
+        return true;
+      };
+
+      const fetchWithAuth = (url, options = {}) => {
+        authToken = localStorage.getItem(AUTH_TOKEN_KEY) || "";
+        return fetch(url, {
+          ...options,
+          headers: {
+            ...(options.headers || {}),
+            Authorization: `Bearer ${authToken}`
+          }
+        });
+      };
       const state = {
         resins: [],
         printers: [],
@@ -424,6 +449,9 @@
       const countInfo = document.getElementById("count-info");
       const emptyState = document.getElementById("empty-state");
       const pagination = document.getElementById("pagination");
+      const knowledgeTitle = document.getElementById("knowledge-title");
+      const knowledgeContent = document.getElementById("knowledge-content");
+      const knowledgeStatus = document.getElementById("knowledge-status");
 
       const statusLabels = {
         ok: "Ativo",
@@ -666,6 +694,44 @@
       loadResins();
       loadPrinters();
       loadProfiles();
+
+      // Lógica de Logout
+      document.getElementById("logout-btn")?.addEventListener("click", () => {
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        window.location.reload();
+      });
+
+      // Correção do Envio de Conhecimento
+      const submitKnowledge = async () => {
+        if (!ensureAuthenticated()) return;
+        if (!knowledgeTitle || !knowledgeContent || !knowledgeStatus) return;
+        const title = knowledgeTitle.value.trim();
+        const content = knowledgeContent.value.trim();
+        if (!title || !content) {
+          knowledgeStatus.textContent = "Preencha título e conteúdo.";
+          return;
+        }
+        knowledgeStatus.textContent = "Enviando...";
+        try {
+          const response = await fetchWithAuth(`${API_BASE}/admin/knowledge/import`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ documents: [{ title, content, tags: ["admin_fix"], source: "painel" }] })
+          });
+          const data = await response.json();
+          if (!data.success) throw new Error(data.error);
+          knowledgeStatus.textContent = "✅ Salvo com sucesso!";
+          knowledgeTitle.value = "";
+          knowledgeContent.value = "";
+        } catch (error) {
+          knowledgeStatus.textContent = "Erro: " + error.message;
+        }
+      };
+      // Reatribuir o evento ao novo botão
+      const submitKnowledgeButton = document.getElementById("submit-knowledge");
+      if (submitKnowledgeButton) {
+        submitKnowledgeButton.onclick = submitKnowledge;
+      }
     </script>
   </body>
 </html>
