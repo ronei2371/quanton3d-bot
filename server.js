@@ -10,6 +10,7 @@ import { authRoutes } from './src/routes/authRoutes.js'
 import { buildAdminRoutes } from './src/routes/adminRoutes.js'
 import { metrics } from './src/utils/metrics.js'
 import { connectToMongo, getPrintParametersCollection, isConnected } from './db.js'
+import { initializeRAG } from './rag-search.js'
 import { legacyProfiles, legacyResins } from './src/data/seedData.js'
 
 
@@ -50,17 +51,6 @@ app.use(
 
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
-
-// ==========================================================
-// CONEXÃO MONGODB
-// ==========================================================
-if (MONGODB_URI) {
-  connectToMongo(MONGODB_URI)
-    .then(() => console.log('[MongoDB] ✅ Conectado'))
-    .catch((error) => console.error('[MongoDB] ❌ Erro:', error))
-} else {
-  console.warn('[MongoDB] ⚠️ MONGODB_URI não configurada')
-}
 
 // ==========================================================
 // HEALTH CHECK
@@ -134,6 +124,7 @@ const startServer = async () => {
 
     if (MONGODB_URI) {
       await connectToMongo(MONGODB_URI)
+      console.log('[MongoDB] ✅ Conectado')
       await new Promise(resolve => setTimeout(resolve, 2000))
       console.log('[INIT] ✅ MongoDB')
 
@@ -144,6 +135,8 @@ const startServer = async () => {
         await paramsCollection.insertMany(legacyProfiles)
         console.log('[INIT] ✅ Perfis inseridos com sucesso.')
       }
+    } else {
+      console.warn('[MongoDB] ⚠️ MONGODB_URI não configurada')
     }
 
     if (!process.env.OPENAI_API_KEY) {
@@ -152,15 +145,15 @@ const startServer = async () => {
       console.log('[INIT] ✅ OpenAI API')
     }
 
-    // ✅ CORREÇÃO: Caminho correto sem duplicação
     try {
-      const ragModule = await import('./src/services/ragService.js')
-      if (ragModule && ragModule.initRAG) {
-        await ragModule.initRAG()
-        console.log('[INIT] ✅ RAG inicializado')
+      if (!isConnected()) {
+        throw new Error('MongoDB nao conectado antes do RAG');
       }
+      await initializeRAG();
+      console.log('[INIT] ✅ RAG inicializado');
     } catch (error) {
-      console.log('[INIT] ⚠️ RAG não disponível (continuando sem RAG)')
+      console.error('[INIT] ⚠️ RAG não disponível (continuando sem RAG)');
+      console.error('[INIT] ❌ Detalhes RAG:', error?.message || error);
     }
 
     console.log('\n✨ Serviços prontos!\n')

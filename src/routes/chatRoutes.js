@@ -117,6 +117,92 @@ function sanitizeChatText(text) {
   return text.replace(/\u0000/g, '').trim();
 }
 
+function normalizeForMatch(text = '') {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractResinFromMessage(message = '') {
+  const resinMatch = message.match(/resina\s+([^\n,.;]+)/i);
+  if (resinMatch?.[1]) {
+    return resinMatch[1].replace(/\b(na|no|para|com)\b.*$/i, '').trim();
+  }
+
+  const configMatch = message.match(/(?:configura|parametr)[^.\n]*\b(?:da|do|de)\s+(.+?)\s+\b(?:para|na|no)\b/i);
+  if (configMatch?.[1]) {
+    return configMatch[1].trim();
+  }
+
+  return null;
+}
+
+function extractPrinterFromMessage(message = '') {
+  const safeMessage = typeof message === 'string' ? message : '';
+  // Não usar fallback por marca aqui para evitar confundir nome de resina com impressora.
+  const match = safeMessage.match(/(?:impressora|printer)\s+([^\n,.;]+)/i);
+  if (match?.[1]) {
+    return match[1].replace(/\b(com|na|no|para)\b.*$/i, '').trim();
+  }
+  return null;
+}
+
+function getGuidedNextQuestion({
+  trimmedMessage,
+  conversationHistory,
+  knownPrinter,
+  knownResin,
+  ragContext
+}) {
+  const safeHistory = Array.isArray(conversationHistory) ? conversationHistory : [];
+  const lastAssistant = [...safeHistory].reverse().find((entry) => entry?.role === 'assistant');
+  const lastAssistantText = typeof lastAssistant?.content === 'string' ? lastAssistant.content.toLowerCase() : '';
+  const messageIsAnswer =
+    trimmedMessage
+    && !isParameterQuestion(trimmedMessage)
+    && !isDiagnosticQuestion(trimmedMessage)
+    && !/\?/.test(trimmedMessage);
+  if (!messageIsAnswer) return null;
+
+  const hasExposure = hasExposureInfo(trimmedMessage) || hasExposureInfo((ragContext || '').toString());
+
+  if (/modelo da sua impressora|qual é o modelo da sua impressora|modelo da impressora/.test(lastAssistantText)) {
+    if (!knownResin) return 'Qual é a resina que você está usando?';
+    if (!hasExposure) return 'Qual é o tempo de exposição normal e de base que você está usando?';
+  }
+
+  if (/tipo de resina|qual resina|qual a resina|qual resina você/.test(lastAssistantText)) {
+    if (!hasExposure) return 'Qual é o tempo de exposição normal e de base que você está usando?';
+  }
+
+  if (/tempo de exposi[cç][aã]o|tempo de base|exposi[cç][aã]o normal/.test(lastAssistantText)) {
+    if (!hasExposure) return 'Pode informar o tempo de exposição normal e de base que está usando?';
+  }
+
+  return null;
+}
+
+function isParameterQuestion(message = '') {
+  return /configura|parametro|exposi[cç][aã]o|tempo de exposi|camada base|base layer|altura de camada/i.test(message);
+}
+
+function isDiagnosticQuestion(message = '') {
+  return /descolamento|delamina|warping|falha|erro|problema|nao cura|não cura|peeling|suporte/i.test(message);
+}
+
+function hasExposureInfo(message = '') {
+  return /exposi[cç][aã]o|\b\d+([.,]\d+)?\s*s\b|\bsegundos?\b/i.test(message);
+}
+
+function buildParameterBlockReply({ resinName, printerName }) {
+  const resinLabel = resinName ? `resina ${resinName}` : 'resina';
+  const printerLabel = printerName ? `impressora ${printerName}` : 'impressora';
+  return `Não encontrei parâmetros confirmados para ${resinLabel} na ${printerLabel}. Por favor, confirme o modelo exato da impressora e a resina para eu verificar a tabela oficial ou acione o suporte técnico.`;
+}
+
 function trimConversationHistory(history, systemPrompt, userMessage) {
   const maxMessages = 8;
   const safeHistory = Array.isArray(history) ? history : [];
@@ -190,8 +276,56 @@ function inferContextFromHistory(history, message) {
   return {};
 }
 
-async function generateResponse({ message, ragContext, hasImage, imageUrl, conversationHistory, customerContext }) {
+async function generateResponse({
+  message,
+  ragContext,
+  hasRelevantContext,
+  adhesionIssueHint,
+  hasImage,
+  imageUrl,
+  conversationHistory,
+  customerContext
+}) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
+  const resinFromMessage = extractResinFromMessage(trimmedMessage);
+  const printerFromMessage = extractPrinterFromMessage(trimmedMessage);
+  const knownResin = customerContext?.resin || resinFromMessage;
+  const knownPrinter = customerContext?.printer || printerFromMessage;
+
+  const guidedNextQuestion = getGuidedNextQuestion({
+    trimmedMessage,
+    conversationHistory,
+    knownPrinter,
+    knownResin,
+    ragContext
+  });
+  if (guidedNextQuestion) {
+    return { reply: guidedNextQuestion, documentsUsed: 0 };
+  }
+
+  if (isParameterQuestion(trimmedMessage)) {
+    const normalizedContext = normalizeForMatch(ragContext || '');
+    const resinOk = knownResin ? normalizedContext.includes(normalizeForMatch(knownResin)) : false;
+    const printerOk = knownPrinter ? normalizedContext.includes(normalizeForMatch(knownPrinter)) : false;
+    if (!hasRelevantContext || (knownResin && !resinOk) || (knownPrinter && !printerOk)) {
+      return {
+        reply: buildParameterBlockReply({ resinName: knownResin, printerName: knownPrinter }),
+        documentsUsed: 0
+      };
+    }
+  }
+
+  if (isDiagnosticQuestion(trimmedMessage)) {
+    if (!knownPrinter) {
+      return { reply: 'Qual é o modelo exato da sua impressora?', documentsUsed: 0 };
+    }
+    if (!knownResin) {
+      return { reply: 'Qual é a resina que você está usando?', documentsUsed: 0 };
+    }
+    if (!hasExposureInfo(trimmedMessage) && !hasExposureInfo((ragContext || '').toString())) {
+      return { reply: 'Qual é o tempo de exposição normal e de base que você está usando?', documentsUsed: 0 };
+    }
+  }
 
   // --- AQUI ESTÁ A CORREÇÃO DA PERSONALIDADE ---
   const visionPriority = hasImage
@@ -209,26 +343,12 @@ async function generateResponse({ message, ragContext, hasImage, imageUrl, conve
     : '';
 
   const systemPrompt = `
-    Você é a IA Oficial da Quanton3D, uma técnica sênior em impressão 3D de resina, com foco no mercado brasileiro.
-
-    PERSONA TÉCNICA:
-    - Responda como uma especialista prática de chão de fábrica, com linguagem objetiva e precisa.
-    - Priorize referências e marcas populares no Brasil quando fizer sentido (Anycubic, Elegoo, Iron, Creality).
-
-    REGRAS DE OURO:
-    1. JAMAIS cite fontes explicitamente como "(Fonte: Documento 1)" ou "[Doc 1]". Use o conhecimento naturalmente no texto.
-    2. Responda de forma objetiva (máximo de 6 a 8 linhas), com tópicos quando fizer sentido.
-    3. Sempre forneça faixas numéricas específicas quando recomendar ajustes (ex: "Exposição normal: 2,5–3,0 s").
-    4. Para resinas desconhecidas, use padrões conservadores (ex: "Comece com exposição normal de 3,0 s").
-    5. Nunca sugira temperaturas acima de 35°C para resinas padrão.
-    6. Se houver dados no contexto (nome, resina, impressora, problema), reconheça no início e NÃO pergunte novamente pelo que já foi informado.
-    7. Só apresente causas prováveis quando houver CONTEXTO_RELEVANTE=SIM ou o cliente fornecer dados técnicos claros.
-    8. Se CONTEXTO_RELEVANTE=NAO, NÃO diagnostique. Ative o "Modo Entrevista Guiada": faça apenas UMA pergunta por vez, seguindo esta ordem fixa: (1) modelo da impressora, (2) tipo de resina, (3) tempo de exposição/configurações. Só avance para a próxima etapa quando a anterior for respondida. Não liste todos os requisitos de uma vez. Se necessário, ofereça ajuda humana no WhatsApp (31) 98334-0053.
-    9. Se IMAGEM=SIM, descreva rapidamente o que você observa sem afirmar a causa. Liste no máximo 2-3 hipóteses e peça dados antes de recomendar ajustes, a menos que os sinais sejam evidentes e haja contexto suficiente.
-    10. Não invente parâmetros nem diagnósticos; peça dados específicos quando necessário.
-    11. SEMPRE consulte a "TABELA_COMPLETA" ou "resins_db" antes de responder perguntas sobre parâmetros. Confie nesses valores acima de conhecimento geral.
-    12. Evite repetir cumprimentos se o cliente já foi saudado no histórico.
-    13. Se a pergunta for sobre tarefas, prazos internos ou qualquer assunto fora de impressão 3D/resinas, explique que você não tem acesso a sistemas internos e peça mais detalhes ou direcione ao suporte humano.
+    PERSONA: Você é Ronei Fonseca, especialista prático.
+    REGRAS DE OURO (LEI ABSOLUTA):
+    1. SOBRE RESINA SPARK (AMARELAMENTO): JAMAIS sugira curas longas. A regra é: Curas rápidas de 3 segundos, espere esfriar, repita 3 vezes. Dica: Colocar na água para evitar UV direto. NUNCA sugira 3-5 minutos.
+    2. SOBRE PEÇAS OCAS/VAZAMENTO: O vazamento é resina presa. Solução: Furos de drenagem + Lavagem interna com SERINGA. PROIBIDO sugerir "escova macia" (risca e não limpa dentro) ou cura de 20 minutos (quebra a peça). Cura máx 5-7 min.
+    3. SOBRE DESCOLAMENTO: Se soltou da mesa, é NIVELAMENTO ou EXPOSIÇÃO BASE. Não fale de suportes se a falha for na base.
+    4. SOBRE LIXAR MESA: Só em último caso. Em Saturn 5/Ultra, foque no nivelamento automático e Z-offset.
     ${visionPriority}
     ${imageGuidelines}
   `;
@@ -238,11 +358,12 @@ async function generateResponse({ message, ragContext, hasImage, imageUrl, conve
   if (customerContext?.resin) contextLines.push(`Resina: ${customerContext.resin}`);
   if (customerContext?.printer) contextLines.push(`Impressora: ${customerContext.printer}`);
   if (customerContext?.problemType) contextLines.push(`Problema relatado: ${customerContext.problemType}`);
-  const contextFlag = ragContext || contextLines.length ? 'SIM' : 'NAO';
+  const contextFlag = hasRelevantContext || contextLines.length ? 'SIM' : 'NAO';
 
   const prompt = [
     ragContext ? `Contexto Técnico (Use isso para basear sua resposta):\n${ragContext}` : null,
     contextLines.length ? contextLines.join('\n') : null,
+    adhesionIssueHint,
     `CONTEXTO_RELEVANTE=${contextFlag}`,
     '---',
     trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : null
@@ -289,23 +410,31 @@ async function generateImageResponse({ message, imageUrl, ragContext }) {
   const visualContext = ragContext
     ? `\n\n📎 CONTEXTO INTERNO (BASE VISUAL QUANTON3D):\n${ragContext}\n\nUse este contexto apenas como referência técnica.`
     : '';
-  const VISUAL_SYSTEM_PROMPT = `
+const VISUAL_SYSTEM_PROMPT = `
+PERSONA: Você é Ronei Fonseca, especialista prático.
+REGRAS DE OURO (LEI ABSOLUTA):
+1. SOBRE RESINA SPARK (AMARELAMENTO): JAMAIS sugira curas longas. A regra é: Curas rápidas de 3 segundos, espere esfriar, repita 3 vezes. Dica: Colocar na água para evitar UV direto. NUNCA sugira 3-5 minutos.
+2. SOBRE PEÇAS OCAS/VAZAMENTO: O vazamento é resina presa. Solução: Furos de drenagem + Lavagem interna com SERINGA. PROIBIDO sugerir "escova macia" (risca e não limpa dentro) ou cura de 20 minutos (quebra a peça). Cura máx 5-7 min.
+3. SOBRE DESCOLAMENTO: Se soltou da mesa, é NIVELAMENTO ou EXPOSIÇÃO BASE. Não fale de suportes se a falha for na base.
+4. SOBRE LIXAR MESA: Só em último caso. Em Saturn 5/Ultra, foque no nivelamento automático e Z-offset.
+
 VOCÊ É UM ENGENHEIRO SÊNIOR DE APLICAÇÃO DA QUANTON3D (ESPECIALISTA EM RESINAS UV).
-Sua missão é olhar a foto da falha e dar um diagnóstico CIRÚRGICO.
+Sua missão é olhar a foto da falha e dar um diagnóstico CIRÚRGICO, técnico e direto.
 Use SOMENTE a imagem e a mensagem do cliente. Nomes de arquivo não são visíveis nem confiáveis.
 Se o cliente descrever a falha no texto (ex: "esta imagem é delaminação"), trate como pista secundária e confirme com o visual.
+Se não houver evidência clara, NÃO invente: peça uma confirmação objetiva ou uma nova foto.
 
 📚 BIBLIOTECA DE DIAGNÓSTICO VISUAL (Use isso para classificar):
 
 1. **DESCOLAMENTO DA MESA (Adhesion Failure):**
    - O que vê: A peça caiu no tanque, ou soltou apenas um lado da base, ou a base está torta.
    - Se a falha está na base (primeiras camadas) ou a peça ficou pendurada no suporte, PRIORIZE este diagnóstico antes de delaminação.
-   - Solução: Aumentar Exposição Base (+10s) ou Aumentar Camadas Base. Lixar a plataforma.
+   - Solução: Verificar nivelamento da plataforma e aumentar Exposição Base (+2s a +3s) ou Camadas Base (máx. 5-6).
 
 2. **DELAMINAÇÃO (Layer Separation):**
    - O que vê: A peça abriu no meio, parecendo um "livro folheado". As camadas se separaram.
    - Só use este diagnóstico quando a separação no meio estiver claramente visível. Se a base não aparece ou a falha não está nítida, peça confirmação sobre onde ocorreu a quebra.
-   - Solução: Aumentar Exposição Normal (+0.3s) ou Reduzir Velocidade de Levante (Lift Speed).
+   - Solução: Aumentar Exposição Normal (+0.3s) ou reduzir velocidade de levante se houver essa opção no slicer.
 
 3. **SUBCURA (Undercuring):**
    - O que vê: Detalhes derretidos, peça mole, suportes falharam e não seguraram a peça.
@@ -319,6 +448,15 @@ Se o cliente descrever a falha no texto (ex: "esta imagem é delaminação"), tr
    - O que vê: Aspecto de "escorrido" ou gosma na peça.
    - Solução: Aumentar tempo de descanso (Light-off delay) para 1s ou 2s.
 
+6. **VAZAMENTO DE RESINA / FEP FURADO:**
+   - O que vê: Poça de resina na tela/LCD, manchas grandes fora da área de impressão ou resina sob o FEP.
+   - Solução: Parar a impressão, remover e limpar com cuidado, substituir o FEP, inspecionar a tela e testar vazamentos antes de imprimir novamente.
+
+7. **LCD COM LINHAS/MANCHAS (Falha no LCD):**
+   - O que vê: Linhas verticais/horizontais, manchas fixas ou áreas que não curam.
+   - Solução: Se a falha estiver visível na foto, indique substituição do LCD. Se houver dúvida, rodar teste de exposição; se a mancha/linha aparecer no teste, o LCD está defeituoso e deve ser substituído. Não sugerir limpeza como solução.
+   - Se não tiver certeza da orientação das linhas, descreva apenas "linhas na tela" sem dizer vertical/horizontal.
+
 ---
 
 📋 **SEU FORMATO DE RESPOSTA OBRIGATÓRIO:**
@@ -326,14 +464,13 @@ Se o cliente descrever a falha no texto (ex: "esta imagem é delaminação"), tr
 👀 **O QUE EU VEJO:** (Descreva o erro visualmente, ex: "Vejo delaminação nas camadas centrais")
 🚫 **DIAGNÓSTICO:** (Nome técnico do erro)
 🔧 **SOLUÇÃO TÉCNICA:** (Ação direta: "Aumente a exposição normal para X segundos")
-codex/fix-local-changes-before-git-pull-pu5i9q
 ⚠️ **DICA EXTRA:** Se quiser, me diga resina, impressora e exposição para uma dica mais certeira. Verifique a configuração de suporte/penetração e o ângulo de impressão.
-
-main
 
 Se a imagem não for clara, peça outra. Se for clara, SEJA TÉCNICO E DIRETO. Não use enrolação corporativa.
 Se houver dúvida entre descolamento de base e delaminação, pergunte: "A falha aconteceu nas primeiras camadas (base) ou no meio da peça?" antes de fechar o diagnóstico.
 Se o cliente não enviou texto, finalize com: "Se quiser contextualizar, envie uma frase curta (ex: 'esta imagem é delaminação'). O nome do arquivo não é lido."
+Se a falha parecer de LCD (linhas/manchas), responda diretamente isso, recomende substituição e não peça parâmetros de resina.
+Se a peça ainda estiver presa na plataforma ou dentro da impressora, não cite pós-cura ou lavagem.
 ${visualContext}
 `;
 
@@ -384,7 +521,9 @@ async function handleChatRequest(req, res) {
     const {
       ragResults,
       ragContext,
-      trimmedMessage
+      trimmedMessage,
+      hasRelevantContext,
+      adhesionIssueHint
     } = await buildRagContext({ message, hasImage });
 
     console.log(`[CHAT] Msg: ${trimmedMessage.substring(0, 50)}...`);
@@ -399,6 +538,8 @@ async function handleChatRequest(req, res) {
       : await generateResponse({
           message: trimmedMessage,
           ragContext,
+          hasRelevantContext,
+          adhesionIssueHint,
           hasImage,
           imageUrl,
           conversationHistory,

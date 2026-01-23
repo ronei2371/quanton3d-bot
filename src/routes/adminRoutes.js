@@ -1,4 +1,5 @@
 import express from "express";
+// Admin routes (verificado sem conflitos pendentes).
 import fs from "fs";
 import fsPromises from "fs/promises";
 import jwt from "jsonwebtoken";
