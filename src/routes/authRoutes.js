@@ -10,6 +10,19 @@ const ADMIN_USER = process.env.ADMIN_USER || "admin";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const ADMIN_SECRET = process.env.ADMIN_SECRET; 
 const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton-admin-fallback-secret';
+const JWT_EXPIRATION = '24h';
+const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
+const ADMIN_USER = process.env.ADMIN_USER;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton-admin-fallback-secret';
+const FALLBACK_ADMIN_USER = 'admin';
+const FALLBACK_ADMIN_PASSWORD = 'quanton2026';
+const HAS_ENV_CREDENTIALS = Boolean(ADMIN_USER && ADMIN_PASSWORD && process.env.ADMIN_JWT_SECRET);
+
+if (!HAS_ENV_CREDENTIALS) {
+  console.error('[AUTH] ⚠️ Credenciais admin ausentes. Fallback emergencial habilitado.');
+}
+
 
 router.post("/login", (req, res) => {
   try {
