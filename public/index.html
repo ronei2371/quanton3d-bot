@@ -514,7 +514,7 @@
               ...(userName ? { userName } : {}),
               ...(userEmail ? { userEmail } : {})
             };
-            const result = await fetchJson("/ask", {
+            const result = await fetchJson("/api/ask", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(payload)
