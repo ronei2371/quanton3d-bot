@@ -142,6 +142,7 @@ function extractResinFromMessage(message = '') {
 
 function extractPrinterFromMessage(message = '') {
   const safeMessage = typeof message === 'string' ? message : '';
+  // Não usar fallback por marca aqui para evitar confundir nome de resina com impressora.
   const match = safeMessage.match(/(?:impressora|printer)\s+([^\n,.;]+)/i);
   if (match?.[1]) {
     return match[1].replace(/\b(com|na|no|para)\b.*$/i, '').trim();
