@@ -8,11 +8,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { ObjectId } from "mongodb";
 import { requireJWT } from "./authRoutes.js";
+import { ensureMongoReady } from "./common.js"; // <--- CORREÇÃO: Agora importado do lugar certo!
 import {
   getSuggestionsCollection,
   getMetricasCollection,
   isConnected,
-  ensureMongoReady, // Adicionado para garantir conexão na rota pública
   getDb
 } from "../../db.js";
 import {
