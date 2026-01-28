@@ -1,6 +1,5 @@
 // ====================================================================
-// ROTAS DE GERENCIAMENTO DE SUGESTOES E COMPATIBILIDADE ADMIN
-// Restaura endpoints que o admin-panel-test.html espera
+// ROTAS DE GERENCIAMENTO DE SUGESTOES (ADMIN + PÚBLICO)
 // ====================================================================
 
 import express from "express";
@@ -12,12 +11,13 @@ import { requireJWT } from "./authRoutes.js";
 import {
   getSuggestionsCollection,
   getMetricasCollection,
-  isConnected
+  isConnected,
+  ensureMongoReady, // Adicionado para garantir conexão na rota pública
+  getDb
 } from "../../db.js";
 import {
   checkRAGIntegrity,
   getRAGInfo,
-  initializeRAG,
   addDocument
 } from "../../rag-search.js";
 import { metrics } from "../utils/metrics.js";
@@ -28,7 +28,38 @@ const rootDir = path.resolve(__dirname, "../../");
 
 const router = express.Router();
 
-// Middleware de autenticacao: aceita JWT ou token legado para compatibilidade
+// ====================================================================
+// 1. ROTA PÚBLICA (Para o Chat enviar sugestões sem senha)
+// ====================================================================
+router.post('/suggestion', async (req, res) => {
+  try {
+    const { suggestion, history, userName } = req.body;
+    
+    // Garante que o banco está conectado
+    await ensureMongoReady();
+    const db = getDb();
+    
+    // Salva na coleção 'suggestions'
+    await db.collection('suggestions').insertOne({
+      suggestion: suggestion || "Sem texto",
+      userName: userName || "Anônimo do Chat",
+      history: history || [],
+      status: 'pending', // Fica pendente para você aprovar no painel
+      createdAt: new Date()
+    });
+    
+    // Responde SUCESSO para o site não dar erro
+    res.json({ success: true, message: "Sugestão recebida!" });
+
+  } catch (error) {
+    console.error("Erro ao salvar sugestão:", error);
+    res.status(500).json({ success: false, error: "Erro interno" });
+  }
+});
+
+// ====================================================================
+// 2. MIDDLEWARE DE AUTENTICAÇÃO (Para as rotas de baixo)
+// ====================================================================
 const requireAuth = (req, res, next) => {
   // Tentar JWT primeiro (novo sistema)
   const authHeader = req.headers.authorization;
@@ -45,6 +76,10 @@ const requireAuth = (req, res, next) => {
   
   return res.status(401).json({ success: false, message: 'Nao autorizado' });
 };
+
+// ====================================================================
+// 3. ROTAS ADMINISTRATIVAS (Painel Admin)
+// ====================================================================
 
 // GET /suggestions - Listar todas as sugestoes
 router.get("/suggestions", requireAuth, async (req, res) => {
