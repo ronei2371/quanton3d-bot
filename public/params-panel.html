@@ -586,13 +586,22 @@
   </head>
   <body>
     <div class="page">
-      <header>
-        <div>
-          <h1>Painel Administrativo Quanton3D</h1>
-          <p>Gestão centralizada dos módulos CRM, RAG e parâmetros com identidade Quanton3D.</p>
+     <header>
+        <div class="header-content" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <div class="logo-area">
+            <h1 style="margin: 0; font-size: 1.8rem;">Painel Administrativo</h1>
+            <p style="margin: 0; color: #666;">Gestão de Inteligência Quanton3D</p>
+          </div>
+          <div class="actions-area" style="display: flex; gap: 15px; align-items: center;">
+              <a href="https://quanton3dia.onrender.com" class="btn secondary" style="background-color: #444; color: white; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; display: flex; align-items: center; gap: 5px;">
+                  ⬅ Voltar ao Site
+              </a>
+              <button id="logout-btn" class="btn danger" style="background-color: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                  🔒 Sair
+              </button>
+          </div>
         </div>
       </header>
-
       <nav class="tabs">
         <button class="tab-button active" data-tab="metrics">Métricas</button>
         <button class="tab-button" data-tab="clients">Clientes</button>
