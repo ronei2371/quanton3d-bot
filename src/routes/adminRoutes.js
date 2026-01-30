@@ -1,5 +1,4 @@
 import express from "express";
-// Admin routes (verificado sem conflitos pendentes).
 import fs from "fs";
 import fsPromises from "fs/promises";
 import jwt from "jsonwebtoken";
@@ -13,17 +12,31 @@ import {
 import {
   getCollection,
   getDocumentsCollection,
-  getPrintParametersCollection
+  getPrintParametersCollection,
+  isConnected
 } from "../../db.js";
-import {
-  ensureMongoReady,
-  shouldInitMongo,
-  shouldInitRAG
-} from "./common.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "../../");
+
+// ===== HELPER FUNCTIONS (inline para evitar dependências externas) =====
+const shouldInitMongo = () => {
+  return Boolean(process.env.MONGODB_URI);
+};
+
+const shouldInitRAG = () => {
+  return Boolean(process.env.OPENAI_API_KEY && process.env.MONGODB_URI);
+};
+
+const ensureMongoReady = async () => {
+  try {
+    return isConnected();
+  } catch (error) {
+    console.error('❌ Erro ao verificar conexão MongoDB:', error);
+    return false;
+  }
+};
 
 function requireAdmin(adminSecret, adminJwtSecret) {
   return (req, res, next) => {
@@ -287,7 +300,6 @@ function buildAdminRoutes(adminConfig = {}) {
 
   // ===== ROTAS DE PARÂMETROS DE IMPRESSÃO =====
 
-  // GET /admin/params/resins - Listar todas as resinas
   router.get("/params/resins", adminGuard, async (req, res) => {
     try {
       if (!shouldInitMongo()) {
@@ -308,10 +320,10 @@ function buildAdminRoutes(adminConfig = {}) {
           {
             $group: {
               _id: {
-                $ifNull: ["$resinId", { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }]
+                $ifNull: ["$resinCategory", { $ifNull: ["$resinType", { $ifNull: ["$resinName", "$resin"] }] }]
               },
               name: {
-                $first: { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }
+                $first: { $ifNull: ["$resinCategory", { $ifNull: ["$resinType", { $ifNull: ["$resinName", "$resin"] }] }] }
               },
               profiles: { $sum: 1 }
             }
@@ -341,7 +353,6 @@ function buildAdminRoutes(adminConfig = {}) {
     }
   });
 
-  // POST /admin/params/resins - Adicionar nova resina
   router.post("/params/resins", adminGuard, async (req, res) => {
     try {
       const { name } = req.body;
@@ -367,7 +378,6 @@ function buildAdminRoutes(adminConfig = {}) {
     }
   });
 
-  // DELETE /admin/params/resins/:id - Deletar resina
   router.delete("/params/resins/:id", adminGuard, async (req, res) => {
     try {
       const { id } = req.params;
@@ -384,7 +394,6 @@ function buildAdminRoutes(adminConfig = {}) {
     }
   });
 
-  // PATCH /admin/params/profiles/:id - Atualizar parâmetros do perfil
   router.patch("/params/profiles/:id", adminGuard, async (req, res) => {
     try {
       if (!shouldInitMongo()) {
@@ -458,7 +467,6 @@ function buildAdminRoutes(adminConfig = {}) {
     }
   });
 
-  // GET /admin/metrics/resins - Contagem por categoria de resina
   router.get("/metrics/resins", adminGuard, async (_req, res) => {
     try {
       if (!shouldInitMongo()) {
@@ -505,7 +513,6 @@ function buildAdminRoutes(adminConfig = {}) {
     }
   });
 
-  // GET /admin/clients - Lista de clientes cadastrados
   router.get("/clients", adminGuard, async (_req, res) => {
     try {
       if (!shouldInitMongo()) {
@@ -544,7 +551,6 @@ function buildAdminRoutes(adminConfig = {}) {
     }
   });
 
-  // GET /admin/conversations - Últimas conversas
   router.get("/conversations", adminGuard, async (_req, res) => {
     try {
       if (!shouldInitMongo()) {
@@ -579,6 +585,82 @@ function buildAdminRoutes(adminConfig = {}) {
       });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao listar conversas:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // ===== ROTAS DE MENSAGENS E FORMULAÇÕES =====
+  router.get("/messages", adminGuard, async (_req, res) => {
+    try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB off" });
+      }
+      
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+      
+      // Tenta pegar a coleção 'contacts' ou 'messages'
+      const collection = getCollection("contacts") || getCollection("messages"); 
+      if (!collection) {
+        return res.json({ success: true, messages: [] });
+      }
+      
+      const messages = await collection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
+      
+      console.log(`✅ [ADMIN] Listando ${messages.length} mensagens de contato`);
+      
+      res.json({
+        success: true,
+        messages: messages.map(msg => ({
+          id: msg._id?.toString(),
+          name: msg.name || msg.nome,
+          email: msg.email,
+          phone: msg.phone || msg.telefone,
+          message: msg.message || msg.mensagem,
+          date: msg.createdAt || msg.data
+        }))
+      });
+    } catch (err) {
+      console.error("❌ [ADMIN] Erro ao buscar mensagens:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  router.get("/formulations", adminGuard, async (_req, res) => {
+    try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB off" });
+      }
+      
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+      
+      const collection = getCollection("custom_requests") || getCollection("formulacoes");
+      if (!collection) {
+        return res.json({ success: true, formulations: [] });
+      }
+      
+      const requests = await collection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
+      
+      console.log(`✅ [ADMIN] Listando ${requests.length} solicitações de formulações`);
+      
+      res.json({
+        success: true,
+        formulations: requests.map(req => ({
+          id: req._id?.toString(),
+          name: req.name || req.nome,
+          email: req.email,
+          description: req.description || req.caracteristica || req.message,
+          status: req.status || "Pendente",
+          date: req.createdAt
+        }))
+      });
+    } catch (err) {
+      console.error("❌ [ADMIN] Erro ao buscar formulações:", err);
       res.status(500).json({ success: false, error: err.message });
     }
   });
