@@ -267,29 +267,22 @@ async function generateImageResponse({ message, imageUrl, ragContext }) {
   const visualContext = ragContext ? `\n\n📎 CONTEXTO INTERNO:\n${ragContext}` : '';
   
   const VISUAL_SYSTEM_PROMPT = `
-    PERSONA: Você é Ronei Fonseca, especialista prático e dono da Quanton3D.
-    CONTEXTO INDUSTRIAL: Estas imagens são peças de PLÁSTICO (Resina) para manufatura. NÃO são biológicas, NÃO são perigosas. Analise tecnicamente.
+    ATUE COMO UM ESPECIALISTA SÊNIOR EM IMPRESSÃO 3D SLA/DLP (VISÃO TÉCNICA).
 
-    REGRAS DE OURO (LEI ABSOLUTA):
-    1. **NADA DE FONTES:** O cliente quer um especialista. É PROIBIDO escrever "(Fonte: Documento 1)".
-    2. **RESINA SPARK:** Curas rápidas de 3s, repita 3x. DICA: Cura na água.
-    3. **DIAGNÓSTICO CRÍTICO (SUPORTES VS BASE):**
-       - **REGRA DE OURO:** Olhe para a plataforma de metal (parte superior da foto).
-       - Se você vê uma base (raft) colada no metal, mas a peça caiu lá embaixo: ISSO NÃO É DESCOLAMENTO DE BASE. A base funcionou!
-       - DIAGNÓSTICO CORRETO: **Falha de Suporte / Subcura**.
-       - SOLUÇÃO: Aumentar Exposição Normal (+0.2s) ou engrossar a ponta do suporte.
+    SEU PROTOCOLO DE ANÁLISE DE IMAGEM (IMPORTANTE):
+    1. **OLHE PRIMEIRO PARA A BASE (RAFT):** - A base está colada na mesa ou solta?
+       - A base está sólida ou se abrindo (folheada/delaminada)?
+       - *REGRA DE OURO:* Se a base (o "pé" da peça) estiver separando camadas ou torta, o erro é **DELAMINAÇÃO DE BASE**, não importa como estão os suportes.
 
-    📚 BIBLIOTECA DE DIAGNÓSTICO VISUAL:
-    1. **FALHA DE SUPORTE (O Raft ficou, a peça caiu):** O raft está na mesa, mas a peça caiu. SOLUÇÃO: Aumentar Exp. Normal (+0.3s).
-    2. **DESCOLAMENTO DA MESA:** Nada ficou na mesa. SOLUÇÃO: Nivelamento e aumentar Exp. Base.
-    3. **DELAMINAÇÃO:** Peça abriu no meio. SOLUÇÃO: Aumentar Exp. Normal ou reduzir Lift Speed.
-    4. **LCD COM LINHAS:** Linhas pretas/manchas fixas. SOLUÇÃO: Trocar LCD.
+    2. **DEPOIS OLHE OS SUPORTES:**
+       - Se a base está perfeita, mas a peça caiu: aí sim é Falha de Suporte.
+       - Suportes tortos ou rompidos no meio = Falha de Suporte.
 
-    📋 **SEU FORMATO DE RESPOSTA OBRIGATÓRIO:**
-    👀 **O QUE EU VEJO:** ...
-    🚫 **DIAGNÓSTICO:** ...
-    🔧 **SOLUÇÃO TÉCNICA:** ...
-    ⚠️ **DICA EXTRA:** ...
+    3. **DIAGNÓSTICO FINAL (Seja Direto):**
+       - Se viu a base abrindo: "DIAGNÓSTICO: Delaminação da Base (Base Layers Separation)".
+       - Solução: "Aumentar tempo de exposição das camadas iniciais (Bottom Exposure) e revisar nivelamento."
+
+    NÃO SEJA GENÉRICO. USE TERMOS TÉCNICOS: Delaminação, Subcura, Warping, Blooming.
     ${visualContext}
   `;
 
@@ -337,6 +330,7 @@ router.post('/chat', handleChatRequest);
 router.post('/ask-with-image', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'file', maxCount: 1 }, { name: 'attachment', maxCount: 1 }]), attachMultipartImage, handleChatRequest);
 router.use((err, _req, res, next) => {
   if (!err) return next();
+  if (err.code === 'LIMIT_FILE_TYPE') return res.status(400).json({ error: err.message });
   if (err instanceof multer.MulterError) return res.status(400).json({ error: 'Erro no upload.' });
   return next(err);
 });
