@@ -330,6 +330,7 @@ router.post('/chat', handleChatRequest);
 router.post('/ask-with-image', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'file', maxCount: 1 }, { name: 'attachment', maxCount: 1 }]), attachMultipartImage, handleChatRequest);
 router.use((err, _req, res, next) => {
   if (!err) return next();
+  if (err.code === 'LIMIT_FILE_TYPE') return res.status(400).json({ error: err.message });
   if (err instanceof multer.MulterError) return res.status(400).json({ error: 'Erro no upload.' });
   return next(err);
 });
