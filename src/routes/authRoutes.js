@@ -2,14 +2,16 @@ import express from "express";
 import jwt from "jsonwebtoken";
 
 const router = express.Router();
-
 const JWT_EXPIRATION = '24h';
 const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
+
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton-admin-fallback-secret';
+
 const FALLBACK_ADMIN_USER = 'admin';
 const FALLBACK_ADMIN_PASSWORD = 'quanton2026';
+
 const HAS_ENV_CREDENTIALS = Boolean(ADMIN_USER && ADMIN_PASSWORD && process.env.ADMIN_JWT_SECRET);
 
 if (!HAS_ENV_CREDENTIALS) {
@@ -23,6 +25,7 @@ if (!HAS_ENV_CREDENTIALS) {
 router.post("/login", (req, res) => {
   try {
     const { password, username } = req.body ?? {};
+    
     const candidatePassword = typeof password === 'string' ? password : '';
     const trimmedUsername = typeof username === 'string' ? username.trim() : '';
     const expectedUsername = ADMIN_USER || FALLBACK_ADMIN_USER;
@@ -99,9 +102,9 @@ router.post("/verify", (req, res) => {
     }
 
     jwt.verify(token, JWT_SECRET);
-
+    
     console.log('✅ [AUTH] Token válido verificado');
-
+    
     res.json({
       success: true,
       valid: true
@@ -143,5 +146,4 @@ const verifyJWT = (req, res, next) => {
 
 export const requireJWT = verifyJWT;
 export { verifyJWT };
-
 export { router as authRoutes };
