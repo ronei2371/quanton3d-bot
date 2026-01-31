@@ -320,10 +320,10 @@ function buildAdminRoutes(adminConfig = {}) {
           {
             $group: {
               _id: {
-                $ifNull: ["$resinCategory", { $ifNull: ["$resinType", { $ifNull: ["$resinName", "$resin"] }] }]
+                $ifNull: ["$resinId", { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }]
               },
               name: {
-                $first: { $ifNull: ["$resinCategory", { $ifNull: ["$resinType", { $ifNull: ["$resinName", "$resin"] }] }] }
+                $first: { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }
               },
               profiles: { $sum: 1 }
             }
