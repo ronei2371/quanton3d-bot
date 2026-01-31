@@ -6,13 +6,13 @@ import dotenv from 'dotenv'
 import chatRoutes from './src/routes/chatRoutes.js'
 import { apiRoutes } from './src/routes/apiRoutes.js'
 import { suggestionsRoutes } from './src/routes/suggestionsRoutes.js'
+// IMPORTANTE: Trazendo as rotas de segurança
 import { authRoutes } from './src/routes/authRoutes.js'
 import { buildAdminRoutes } from './src/routes/adminRoutes.js'
 import { metrics } from './src/utils/metrics.js'
 import { connectToMongo, getPrintParametersCollection, isConnected } from './db.js'
 import { initializeRAG } from './rag-search.js'
 import { legacyProfiles, legacyResins } from './src/data/seedData.js'
-
 
 dotenv.config()
 
@@ -24,12 +24,12 @@ const PORT = process.env.PORT || 10000
 const MONGODB_URI = process.env.MONGODB_URI || ''
 
 // ==========================================================
-// CORS
+// CORS - Lista VIP (Permite seu site novo entrar)
 // ==========================================================
 const allowedOrigins = [
-  'https://quanton3dia.onrender.com',
+  'https://quanton3dia.onrender.com',           // SEU SITE NOVO
+  'https://quanton3d-bot-v2.onrender.com',      // SEU SERVIDOR
   'http://localhost:5173',
-  'https://quanton3d-bot-v2.onrender.com',
   'http://localhost:3000',
   'http://localhost:10000'
 ];
@@ -70,7 +70,24 @@ app.get('/health', async (req, res) => {
 })
 
 // ==========================================================
-// ROTAS DE API / ADMIN / MÉTRICAS
+// CONFIGURAÇÃO DAS ROTAS NOVAS (AQUI ESTAVA O ERRO!)
+// ==========================================================
+
+// 1. Configura as rotas de Admin
+const adminRoutes = buildAdminRoutes({
+  adminSecret: process.env.ADMIN_SECRET,
+  adminJwtSecret: process.env.ADMIN_JWT_SECRET
+})
+
+// 2. Rota de Login (Essencial para o painel entrar)
+app.use('/auth', authRoutes)
+
+// 3. Rotas da API Admin (CORRIGIDO: Agora usa /api/admin para casar com o frontend)
+app.use('/api/admin', adminRoutes)
+
+
+// ==========================================================
+// OUTRAS ROTAS DO SISTEMA
 // ==========================================================
 app.get('/health/metrics', (req, res) => {
   res.json({
@@ -80,26 +97,20 @@ app.get('/health/metrics', (req, res) => {
   })
 })
 
-const adminRoutes = buildAdminRoutes()
-
 app.use('/api', apiRoutes)
 app.use('/', apiRoutes)
 app.use('/api', suggestionsRoutes)
 app.use('/', suggestionsRoutes)
-app.use('/auth', authRoutes)
-app.use('/admin', authRoutes)
-app.use('/admin', adminRoutes)
 
 // ==========================================================
 // ROTAS DO CHAT
 // ==========================================================
-
 app.use('/api', chatRoutes)
 app.use('/chat', chatRoutes)
 app.use('/', chatRoutes)
 
 // ==========================================================
-// FRONTEND
+// SERVIR O FRONTEND (Fallback)
 // ==========================================================
 const distPath = path.join(__dirname, 'dist')
 const adminPanelPath = path.join(__dirname, 'public', 'params-panel.html')
@@ -131,47 +142,35 @@ const startServer = async () => {
       await connectToMongo(MONGODB_URI)
       console.log('[MongoDB] ✅ Conectado')
       await new Promise(resolve => setTimeout(resolve, 2000))
-      console.log('[INIT] ✅ MongoDB')
-
+      
       const paramsCollection = getPrintParametersCollection()
-      const count = await paramsCollection.countDocuments()
-      if (count === 0) {
-        console.log('[INIT] ⚠️ Banco vazio! Injetando dados legacy...')
-        await paramsCollection.insertMany(legacyProfiles)
-        console.log('[INIT] ✅ Perfis inseridos com sucesso.')
+      if (paramsCollection) {
+          const count = await paramsCollection.countDocuments()
+          if (count === 0) {
+            console.log('[INIT] ⚠️ Banco vazio! Injetando dados legacy...')
+            await paramsCollection.insertMany(legacyProfiles)
+            console.log('[INIT] ✅ Perfis inseridos com sucesso.')
+          }
       }
     } else {
       console.warn('[MongoDB] ⚠️ MONGODB_URI não configurada')
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      console.log('[INIT] ⚠️ OPENAI_API_KEY não configurada')
-    } else {
-      console.log('[INIT] ✅ OpenAI API')
+    // Inicializa RAG se possível
+    if (process.env.OPENAI_API_KEY && isConnected()) {
+        try {
+            await initializeRAG();
+            console.log('[INIT] ✅ RAG inicializado');
+        } catch (error) {
+            console.error('[INIT] ❌ Erro no RAG:', error.message);
+        }
     }
-
-    try {
-      if (!isConnected()) {
-        throw new Error('MongoDB nao conectado antes do RAG');
-      }
-      await initializeRAG();
-      console.log('[INIT] ✅ RAG inicializado');
-    } catch (error) {
-      console.error('[INIT] ⚠️ RAG não disponível (continuando sem RAG)');
-      console.error('[INIT] ❌ Detalhes RAG:', error?.message || error);
-    }
-
-    console.log('\n✨ Serviços prontos!\n')
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log('═══════════════════════════════════════════════')
       console.log('🤖 QUANTON3D BOT ONLINE!')
-      console.log('═══════════════════════════════════════════════')
       console.log(`📡 Porta: ${PORT}`)
-      console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`)
-      console.log(`💚 Health: /health`)
-      console.log(`🤖 Chat: /api/ask`)
-      console.log(`🖼️  Imagem: /api/ask-with-image`)
+      console.log(`🔓 CORS: ${allowedOrigins.join(', ')}`)
       console.log('═══════════════════════════════════════════════\n')
     })
 
