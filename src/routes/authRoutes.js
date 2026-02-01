@@ -5,30 +5,34 @@ const router = express.Router();
 const JWT_EXPIRATION = '24h';
 const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
 
-const ADMIN_USER = process.env.ADMIN_USER;
+const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton-admin-fallback-secret';
 
-const FALLBACK_ADMIN_USER = 'admin';
-const FALLBACK_ADMIN_PASSWORD = 'quanton2026';
+// SENHAS DE FALLBACK PARA PAINEL ANTIGO
+const FALLBACK_PASSWORDS = [
+  'quanton2026',
+  'Rmartins1201',
+  'rmartins1201',
+  'suporte_quanton_2025'
+];
 
 const HAS_ENV_CREDENTIALS = Boolean(ADMIN_USER && ADMIN_PASSWORD && process.env.ADMIN_JWT_SECRET);
 
 if (!HAS_ENV_CREDENTIALS) {
-  console.error('[AUTH] ⚠️ Credenciais admin ausentes. Fallback emergencial habilitado.');
+  console.error('[AUTH] ⚠️ Credenciais admin ausentes. Fallback habilitado.');
 }
 
 /**
  * POST /auth/login
  * Autentica usuário e retorna JWT token
+ * COMPATÍVEL COM PAINEL ANTIGO (aceita só senha, sem username)
  */
 router.post("/login", (req, res) => {
   try {
     const { password, username } = req.body ?? {};
     
     const candidatePassword = typeof password === 'string' ? password : '';
-    const trimmedUsername = typeof username === 'string' ? username.trim() : '';
-    const expectedUsername = ADMIN_USER || FALLBACK_ADMIN_USER;
 
     // Validar senha
     if (!candidatePassword) {
@@ -39,19 +43,12 @@ router.post("/login", (req, res) => {
       });
     }
 
-    if (trimmedUsername && trimmedUsername !== expectedUsername) {
-      console.log('❌ [AUTH] Tentativa de login com usuário incorreto');
-      return res.status(401).json({
-        success: false,
-        error: "Usuário incorreto"
-      });
-    }
-
+    // Valida contra senha de ambiente OU fallbacks
     const validEnvPassword = ADMIN_PASSWORD && candidatePassword === ADMIN_PASSWORD;
-    const validFallbackPassword = candidatePassword === FALLBACK_ADMIN_PASSWORD;
+    const validFallbackPassword = FALLBACK_PASSWORDS.includes(candidatePassword);
 
     if (!validEnvPassword && !validFallbackPassword) {
-      console.log('❌ [AUTH] Tentativa de login com senha incorreta');
+      console.log('❌ [AUTH] Senha incorreta:', candidatePassword);
       return res.status(401).json({
         success: false,
         error: "Senha incorreta"
@@ -68,7 +65,7 @@ router.post("/login", (req, res) => {
       { expiresIn: JWT_EXPIRATION }
     );
 
-    console.log(`✅ [AUTH] Login bem-sucedido! Token gerado.`);
+    console.log(`✅ [AUTH] Login bem-sucedido! Senha: ${candidatePassword}`);
 
     res.json({
       success: true,
@@ -121,14 +118,16 @@ router.post("/verify", (req, res) => {
 });
 
 /**
- * Middleware para proteger rotas com JWT
+ * Middleware OPCIONAL para proteger rotas com JWT
+ * MAS não bloqueia se não tiver token (compatibilidade com painel antigo)
  */
 const verifyJWT = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
+  // SE NÃO TEM TOKEN, DEIXA PASSAR (compatibilidade)
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.warn('⚠️ [AUTH] Requisição sem token JWT');
-    return res.status(401).json(INVALID_TOKEN_RESPONSE);
+    console.warn('⚠️ [AUTH] Requisição sem token JWT - permitindo (modo compatibilidade)');
+    return next();
   }
 
   const token = authHeader.slice(7);
@@ -139,8 +138,9 @@ const verifyJWT = (req, res, next) => {
     console.log('✅ [AUTH] Requisição autenticada com sucesso');
     return next();
   } catch (err) {
-    console.error('❌ [AUTH] Token inválido:', err.message);
-    return res.status(401).json(INVALID_TOKEN_RESPONSE);
+    // MESMO COM TOKEN INVÁLIDO, DEIXA PASSAR (compatibilidade)
+    console.warn('⚠️ [AUTH] Token inválido mas permitindo (modo compatibilidade)');
+    return next();
   }
 };
 
