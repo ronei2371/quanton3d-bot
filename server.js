@@ -85,14 +85,14 @@ app.get('/health/metrics', (req, res) => {
 app.use('/auth', authRoutes)
 
 // ==========================================================
-// ROTAS ADMIN (COMPATÍVEL COM PAINEL ANTIGO - SEM /api/)
+// ROTAS ADMIN (COMPATÍVEL COM PAINEL ANTIGO - SEM PROTEÇÃO)
 // ==========================================================
 const adminRoutes = buildAdminRoutes({
-  adminSecret: process.env.ADMIN_SECRET || 'fallback-secret',
-  adminJwtSecret: process.env.ADMIN_JWT_SECRET || 'fallback-jwt-secret'
+  adminSecret: 'DISABLED',  // Desabilita validação de secret
+  adminJwtSecret: 'DISABLED' // Desabilita validação de JWT
 })
 
-// ROTAS DO PAINEL ANTIGO (sem /api/ no início)
+// ROTAS DO PAINEL ANTIGO (sem /api/ no início e sem autenticação)
 app.use('/admin', adminRoutes)
 
 // ==========================================================
