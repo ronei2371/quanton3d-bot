@@ -302,6 +302,12 @@ async function handleChatRequest(req, res) {
     const hasImage = hasImagePayload(req.body);
     const imagePayload = resolveImagePayload(req.body);
     const imageUrl = imagePayload?.value || null;
+
+    if (hasImage && !imageUrl) {
+      return res.status(400).json({
+        error: 'Imagem inválida para análise. Envie data URL/base64, URL pública ou multipart em /api/ask-with-image.'
+      });
+    }
     const conversationHistory = req.body?.conversationHistory || [];
     const customerContext = req.body?.customerContext || {};
     const storedContext = await loadCustomerContext(sessionId);
