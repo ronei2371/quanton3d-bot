@@ -720,6 +720,83 @@ router.get("/params/stats", async (_req, res) => {
   }
 });
 
+
+
+const buildVisualKnowledgeResponse = (doc) => ({
+  id: doc._id?.toString?.() || doc.id || null,
+  title: doc.title || doc.name || 'Sem título',
+  description: doc.description || doc.summary || null,
+  imageUrl: doc.imageUrl || doc.image || null,
+  tags: Array.isArray(doc.tags) ? doc.tags : [],
+  source: doc.source || 'manual',
+  createdAt: doc.createdAt || null,
+  updatedAt: doc.updatedAt || null
+});
+
+router.get('/visual-knowledge', async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const { page, limit, skip } = normalizeGalleryPagination(req);
+    const collection = getVisualKnowledgeCollection();
+    const total = await collection.countDocuments({});
+    const docs = await collection
+      .find({})
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    return res.json({
+      success: true,
+      total,
+      page,
+      limit,
+      items: docs.map(buildVisualKnowledgeResponse)
+    });
+  } catch (err) {
+    console.error('[API] Erro ao listar conhecimento visual:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao listar conhecimento visual' });
+  }
+});
+
+router.post('/visual-knowledge', async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const payload = req.body || {};
+    const title = typeof payload.title === 'string' ? payload.title.trim() : '';
+    const imageUrl = typeof payload.imageUrl === 'string' ? payload.imageUrl.trim() : '';
+
+    if (!title || !imageUrl) {
+      return res.status(400).json({ success: false, error: 'title e imageUrl são obrigatórios' });
+    }
+
+    const collection = getVisualKnowledgeCollection();
+    const now = new Date();
+    const doc = {
+      title,
+      description: typeof payload.description === 'string' ? payload.description.trim() : null,
+      imageUrl,
+      tags: Array.isArray(payload.tags) ? payload.tags.filter(Boolean) : [],
+      source: typeof payload.source === 'string' && payload.source.trim() ? payload.source.trim() : 'manual',
+      createdAt: now,
+      updatedAt: now
+    };
+
+    const result = await collection.insertOne(doc);
+    return res.status(201).json({ success: true, item: buildVisualKnowledgeResponse({ ...doc, _id: result.insertedId }) });
+  } catch (err) {
+    console.error('[API] Erro ao criar conhecimento visual:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao criar conhecimento visual' });
+  }
+});
 router.get("/nuke-and-seed", async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
