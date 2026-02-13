@@ -17,4 +17,20 @@ describe('chatRoutes upload validation', () => {
     expect(response.status).toBe(400);
     expect(response.body.error).toBe('Apenas imagens são permitidas.');
   });
+
+  it('returns 400 when image payload exists but cannot be resolved', async () => {
+    const app = express();
+    app.use(express.json());
+    app.use('/api', chatRoutes);
+
+    const response = await request(app)
+      .post('/api/ask')
+      .send({
+        message: 'analise esta foto',
+        selectedImage: { url: 'blob:http://localhost/123' }
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toContain('Imagem inválida para análise');
+  });
 });
