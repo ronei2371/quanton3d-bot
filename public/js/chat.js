@@ -2,7 +2,7 @@
 const API_BASE = (window.API_BASE_URL || "https://quanton3d-bot-v2.onrender.com" || window.location.origin || "").replace(/\/$/, "");
 
 const CONFIG = {
-  API_URL: `${API_BASE}/api/chat`,
+  API_URL: `${API_BASE}/api/ask`,
   HEALTH_URL: `${API_BASE}/health`,
   MAX_RETRIES: 3,
   RETRY_DELAY: 2000
@@ -149,12 +149,13 @@ async function handleSubmit(e) {
     const data = await response.json();
     
     // Adiciona resposta do bot
-    addMessage(data.response, 'bot');
+    const botReply = data.reply || data.response || 'Não consegui responder agora.';
+    addMessage(botReply, 'bot');
 
     // Atualiza histórico
     conversationHistory.push(
       { role: 'user', content: message },
-      { role: 'assistant', content: data.response }
+      { role: 'assistant', content: botReply }
     );
 
     // Limita histórico a 10 mensagens

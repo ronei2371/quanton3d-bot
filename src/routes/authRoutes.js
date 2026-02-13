@@ -5,7 +5,7 @@ const router = express.Router();
 const JWT_EXPIRATION = '24h';
 const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
 
-const ADMIN_USER = process.env.ADMIN_USER || 'admin';
+const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton-admin-fallback-secret';
 
@@ -20,7 +20,7 @@ const FALLBACK_PASSWORDS = [
 const HAS_ENV_CREDENTIALS = Boolean(ADMIN_USER && ADMIN_PASSWORD && process.env.ADMIN_JWT_SECRET);
 
 if (!HAS_ENV_CREDENTIALS) {
-  console.error('[AUTH] ⚠️ Credenciais admin ausentes. Fallback habilitado.');
+  console.error('[AUTH] ⚠️ Credenciais admin ausentes. Fallback emergencial habilitado.');
 }
 
 /**
@@ -44,7 +44,7 @@ router.post("/login", (req, res) => {
     }
 
     // Valida contra senha de ambiente OU fallbacks
-    const validEnvPassword = ADMIN_PASSWORD && candidatePassword === ADMIN_PASSWORD;
+    const validEnvPassword = Boolean(ADMIN_PASSWORD) && candidatePassword === ADMIN_PASSWORD;
     const validFallbackPassword = FALLBACK_PASSWORDS.includes(candidatePassword);
 
     if (!validEnvPassword && !validFallbackPassword) {
