@@ -797,6 +797,7 @@ router.post('/visual-knowledge', async (req, res) => {
     return res.status(500).json({ success: false, error: 'Erro ao criar conhecimento visual' });
   }
 });
+ codex/revise-todo-bot-e-painel-administrativo-h33lji
 
 
 const parseObjectId = (id) => {
@@ -941,6 +942,7 @@ router.delete('/visual-knowledge/:id', async (req, res) => {
     return res.status(500).json({ success: false, error: 'Erro ao remover conhecimento visual' });
   }
 });
+ main
 router.get("/nuke-and-seed", async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
