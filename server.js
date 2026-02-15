@@ -11,7 +11,7 @@ import { buildAdminRoutes } from './src/routes/adminRoutes.js'
 import { metrics } from './src/utils/metrics.js'
 import { connectToMongo, getPrintParametersCollection, isConnected } from './db.js'
 import { initializeRAG } from './rag-search.js'
-import { legacyProfiles, legacyResins } from './src/data/seedData.js'
+import { legacyProfiles } from './src/data/seedData.js'
 
 dotenv.config()
 
@@ -23,7 +23,7 @@ const PORT = process.env.PORT || 10000
 const MONGODB_URI = process.env.MONGODB_URI || ''
 
 // ==========================================================
-// CORS - COMPATÍVEL COM PAINEL ANTIGO
+// CORS - PERMITE O FRONTEND
 // ==========================================================
 const allowedOrigins = [
   'https://quanton3dia.onrender.com',
@@ -41,7 +41,7 @@ app.use(
         callback(null, true);
       } else {
         console.log(`⚠️ Origem bloqueada: ${origin}`);
-        callback(null, true);
+        callback(null, true); // Permite mesmo assim (modo permissivo)
       }
     },
     credentials: true,
@@ -80,31 +80,28 @@ app.get('/health/metrics', (req, res) => {
 })
 
 // ==========================================================
-// ROTAS DE AUTENTICAÇÃO (SEM PROTEÇÃO PARA PAINEL ANTIGO)
+// AUTENTICAÇÃO (SEM VALIDAÇÃO PARA PAINEL ANTIGO)
 // ==========================================================
 app.use('/auth', authRoutes)
 
 // ==========================================================
-// ROTAS ADMIN (COMPATÍVEL COM PAINEL ANTIGO E NOVO)
+// ROTAS ADMIN - PAINEL ANTIGO (SEM /api/)
 // ==========================================================
-const adminRoutes = buildAdminRoutes()
+const adminRoutes = buildAdminRoutes({
+  adminSecret: 'DISABLED',  // Desabilita validação
+  adminJwtSecret: 'DISABLED'
+})
 
-// ROTAS DO PAINEL ANTIGO (sem /api/ no início)
+// Rotas do painel antigo - SEM o prefixo /api/
 app.use('/admin', adminRoutes)
 
-// ROTAS DO PAINEL NOVO (com /api/ no início) - MESMAS ROTAS, URL DIFERENTE
-app.use('/api/admin', adminRoutes)
-
 // ==========================================================
-// ROTAS DA API (COM COMPATIBILIDADE)
+// ROTAS DA API
 // ==========================================================
 app.use('/api', apiRoutes)
 app.use('/', apiRoutes)
-
-// SUGESTÕES - Múltiplas rotas para compatibilidade
 app.use('/api', suggestionsRoutes)
 app.use('/', suggestionsRoutes)
-app.use('/suggestions', suggestionsRoutes)  // Rota direta para painel antigo
 
 // ==========================================================
 // ROTAS DO CHAT
@@ -121,12 +118,16 @@ const adminPanelPath = path.join(__dirname, 'public', 'params-panel.html')
 app.use(express.static(distPath))
 
 app.get(['/admin', '/admin/'], (req, res) => {
-  res.sendFile(adminPanelPath)
+  res.sendFile(adminPanelPath, (err) => {
+    if (err) {
+      res.sendFile(path.join(distPath, 'index.html'))
+    }
+  })
 })
 
 app.get('*', (req, res) => {
-  if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ error: 'API não encontrada', path: req.path })
+  if (req.path.startsWith('/api/') || req.path.startsWith('/admin/')) {
+    return res.status(404).json({ error: 'Rota não encontrada', path: req.path })
   }
   res.sendFile(path.join(distPath, 'index.html'), (err) => {
     if (err) {
@@ -146,7 +147,6 @@ const startServer = async () => {
       await connectToMongo(MONGODB_URI)
       console.log('[MongoDB] ✅ Conectado')
       await new Promise(resolve => setTimeout(resolve, 2000))
-      console.log('[INIT] ✅ MongoDB')
 
       const paramsCollection = getPrintParametersCollection()
       if (paramsCollection) {
@@ -168,14 +168,12 @@ const startServer = async () => {
     }
 
     try {
-      if (!isConnected()) {
-        throw new Error('MongoDB nao conectado antes do RAG');
+      if (isConnected()) {
+        await initializeRAG();
+        console.log('[INIT] ✅ RAG inicializado');
       }
-      await initializeRAG();
-      console.log('[INIT] ✅ RAG inicializado');
     } catch (error) {
       console.error('[INIT] ⚠️ RAG não disponível (continuando sem RAG)');
-      console.error('[INIT] ❌ Detalhes RAG:', error?.message || error);
     }
 
     console.log('\n✨ Serviços prontos!\n')
@@ -187,9 +185,9 @@ const startServer = async () => {
       console.log(`📡 Porta: ${PORT}`)
       console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`)
       console.log(`💚 Health: /health`)
+      console.log(`🔐 Auth: /auth/login`)
+      console.log(`👤 Admin: /admin/*`)
       console.log(`🤖 Chat: /api/ask`)
-      console.log(`🖼️  Imagem: /api/ask-with-image`)
-      console.log(`🔐 Admin: /admin/*`)
       console.log('═══════════════════════════════════════════════\n')
     })
 
