@@ -40,7 +40,7 @@ const ensureMongoReady = async () => {
 
 function requireAdmin(adminSecret, adminJwtSecret) {
   return (req, res, next) => {
-    if (!adminSecret && !adminJwtSecret) {
+    if (!adminSecret || !adminJwtSecret) {
       return res.status(500).json({ success: false, error: "Admin authentication not configured" });
     }
 
@@ -66,16 +66,20 @@ function requireAdmin(adminSecret, adminJwtSecret) {
 function buildAdminRoutes(adminConfig = {}) {
   const router = express.Router();
   const ADMIN_SECRET = adminConfig.adminSecret ?? process.env.ADMIN_SECRET;
-  const ADMIN_JWT_SECRET = (adminConfig.adminJwtSecret ?? process.env.ADMIN_JWT_SECRET) || "quanton-admin-fallback-secret";
+  const ADMIN_JWT_SECRET = adminConfig.adminJwtSecret ?? process.env.ADMIN_JWT_SECRET;
   const adminGuard = requireAdmin(ADMIN_SECRET, ADMIN_JWT_SECRET);
 
   router.post("/login", (req, res) => {
     const { user, password, secret } = req.body ?? {};
-    const adminUser = process.env.ADMIN_USER;
-    const adminPass = process.env.ADMIN_PASSWORD;
-    const jwtSecret = process.env.ADMIN_JWT_SECRET || "quanton-admin-fallback-secret";
+    const adminUser = process.env.ADMIN_USER || "admin";
+    const adminPass = process.env.ADMIN_PASSWORD || "admin";
+    const jwtSecret = process.env.ADMIN_JWT_SECRET;
 
-    const validUser = Boolean(adminUser && adminPass) && user === adminUser && password === adminPass;
+    if (!jwtSecret) {
+      return res.status(500).json({ success: false, error: "JWT secret ausente" });
+    }
+
+    const validUser = user === adminUser && password === adminPass;
     const validSecret = (secret && secret === process.env.ADMIN_SECRET) ||
       (password && password === process.env.ADMIN_SECRET);
 
