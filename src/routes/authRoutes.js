@@ -3,9 +3,8 @@ import jwt from "jsonwebtoken";
 
 const router = express.Router();
 const JWT_EXPIRATION = '24h';
-const INVALID_TOKEN_RESPONSE = { success: false, error: 'Token inválido' };
 
-const ADMIN_USER = process.env.ADMIN_USER;
+const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton-admin-fallback-secret';
 
@@ -17,11 +16,7 @@ const FALLBACK_PASSWORDS = [
   'suporte_quanton_2025'
 ];
 
-const HAS_ENV_CREDENTIALS = Boolean(ADMIN_USER && ADMIN_PASSWORD && process.env.ADMIN_JWT_SECRET);
-
-if (!HAS_ENV_CREDENTIALS) {
-  console.error('[AUTH] ⚠️ Credenciais admin ausentes. Fallback emergencial habilitado.');
-}
+console.log('[AUTH] ✅ Senhas de fallback ativas:', FALLBACK_PASSWORDS);
 
 /**
  * POST /auth/login
@@ -34,6 +29,8 @@ router.post("/login", (req, res) => {
     
     const candidatePassword = typeof password === 'string' ? password : '';
 
+    console.log(`[AUTH] 🔐 Tentativa de login com senha: ${candidatePassword.substring(0, 3)}...`);
+
     // Validar senha
     if (!candidatePassword) {
       console.log('⚠️ [AUTH] Tentativa de login sem senha');
@@ -44,11 +41,11 @@ router.post("/login", (req, res) => {
     }
 
     // Valida contra senha de ambiente OU fallbacks
-    const validEnvPassword = Boolean(ADMIN_PASSWORD) && candidatePassword === ADMIN_PASSWORD;
+    const validEnvPassword = ADMIN_PASSWORD && candidatePassword === ADMIN_PASSWORD;
     const validFallbackPassword = FALLBACK_PASSWORDS.includes(candidatePassword);
 
     if (!validEnvPassword && !validFallbackPassword) {
-      console.log('❌ [AUTH] Senha incorreta:', candidatePassword);
+      console.log(`❌ [AUTH] Senha incorreta: ${candidatePassword}`);
       return res.status(401).json({
         success: false,
         error: "Senha incorreta"
@@ -65,7 +62,7 @@ router.post("/login", (req, res) => {
       { expiresIn: JWT_EXPIRATION }
     );
 
-    console.log(`✅ [AUTH] Login bem-sucedido! Senha: ${candidatePassword}`);
+    console.log(`✅ [AUTH] Login bem-sucedido! Senha: ${candidatePassword.substring(0, 3)}...`);
 
     res.json({
       success: true,
