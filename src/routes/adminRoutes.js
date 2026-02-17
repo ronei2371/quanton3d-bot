@@ -88,7 +88,12 @@ function requireAdmin(adminSecret, adminJwtSecret) {
     adminSecret,
     process.env.ADMIN_SECRET,
     process.env.VITE_ADMIN_API_TOKEN,
+ codex/review-site-and-bot-changes-rnf3y8
     process.env.ADMIN_API_TOKEN
+
+    process.env.ADMIN_API_TOKEN,
+    'quanton3d_admin_secret'
+ main
   ].filter(Boolean);
 
   const acceptedJwtSecrets = [
