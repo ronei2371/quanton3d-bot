@@ -8,6 +8,17 @@ const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton-admin-fallback-secret';
 
+const missingAuthEnv = [];
+if (!process.env.ADMIN_USER) missingAuthEnv.push('ADMIN_USER');
+if (!process.env.ADMIN_PASSWORD) missingAuthEnv.push('ADMIN_PASSWORD');
+if (!process.env.ADMIN_JWT_SECRET) missingAuthEnv.push('ADMIN_JWT_SECRET');
+
+if (missingAuthEnv.length > 0) {
+  console.warn(
+    `[AUTH] ⚠️ Fallback emergencial habilitado (variáveis ausentes: ${missingAuthEnv.join(', ')})`
+  );
+}
+
 // SENHAS DE FALLBACK PARA PAINEL ANTIGO
 const FALLBACK_PASSWORDS = [
   'quanton2026',
