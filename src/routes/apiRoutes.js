@@ -797,6 +797,153 @@ router.post('/visual-knowledge', async (req, res) => {
     return res.status(500).json({ success: false, error: 'Erro ao criar conhecimento visual' });
   }
 });
+codex/revise-todo-bot-e-painel-administrativo-t3a4re
+
+
+const parseObjectId = (id) => {
+  if (!ObjectId.isValid(id)) return null;
+  return new ObjectId(id);
+};
+
+router.get('/visual-knowledge/:id', async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const docId = parseObjectId(req.params.id);
+    if (!docId) {
+      return res.status(400).json({ success: false, error: 'ID inválido' });
+    }
+
+    const collection = getVisualKnowledgeCollection();
+    const doc = await collection.findOne({ _id: docId });
+    if (!doc) {
+      return res.status(404).json({ success: false, error: 'Item não encontrado' });
+    }
+
+    return res.json({ success: true, item: buildVisualKnowledgeResponse(doc) });
+  } catch (err) {
+    console.error('[API] Erro ao buscar item de conhecimento visual:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao buscar conhecimento visual' });
+  }
+});
+
+router.patch('/visual-knowledge/:id', async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const docId = parseObjectId(req.params.id);
+    if (!docId) {
+      return res.status(400).json({ success: false, error: 'ID inválido' });
+    }
+
+    const payload = req.body || {};
+    const update = {
+      updatedAt: new Date()
+    };
+
+    if (typeof payload.title === 'string' && payload.title.trim()) update.title = payload.title.trim();
+    if (typeof payload.description === 'string') update.description = payload.description.trim();
+    if (typeof payload.imageUrl === 'string' && payload.imageUrl.trim()) update.imageUrl = payload.imageUrl.trim();
+    if (Array.isArray(payload.tags)) update.tags = payload.tags.filter(Boolean);
+    if (typeof payload.source === 'string' && payload.source.trim()) update.source = payload.source.trim();
+    if (typeof payload.status === 'string' && payload.status.trim()) update.status = payload.status.trim();
+    if (typeof payload.defectType === 'string') update.defectType = payload.defectType.trim();
+    if (typeof payload.diagnosis === 'string') update.diagnosis = payload.diagnosis.trim();
+    if (typeof payload.solution === 'string') update.solution = payload.solution.trim();
+
+    const collection = getVisualKnowledgeCollection();
+    const result = await collection.findOneAndUpdate(
+      { _id: docId },
+      { $set: update },
+      { returnDocument: 'after' }
+    );
+
+    if (!result) {
+      return res.status(404).json({ success: false, error: 'Item não encontrado' });
+    }
+
+    return res.json({ success: true, item: buildVisualKnowledgeResponse(result) });
+  } catch (err) {
+    console.error('[API] Erro ao atualizar conhecimento visual:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao atualizar conhecimento visual' });
+  }
+});
+
+router.post('/visual-knowledge/:id/:action(approve|reject)', async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const docId = parseObjectId(req.params.id);
+    if (!docId) {
+      return res.status(400).json({ success: false, error: 'ID inválido' });
+    }
+
+    const action = req.params.action;
+    const body = req.body || {};
+    const status = action === 'approve' ? 'approved' : 'rejected';
+
+    const actionUpdate = {
+      status,
+      updatedAt: new Date(),
+      reviewedAt: new Date()
+    };
+    if (typeof body.defectType === 'string') actionUpdate.defectType = body.defectType;
+    if (typeof body.diagnosis === 'string') actionUpdate.diagnosis = body.diagnosis;
+    if (typeof body.solution === 'string') actionUpdate.solution = body.solution;
+
+    const collection = getVisualKnowledgeCollection();
+    const result = await collection.findOneAndUpdate(
+      { _id: docId },
+      { $set: actionUpdate },
+      { returnDocument: 'after' }
+    );
+
+    if (!result) {
+      return res.status(404).json({ success: false, error: 'Item não encontrado' });
+    }
+
+    return res.json({ success: true, item: buildVisualKnowledgeResponse(result) });
+  } catch (err) {
+    console.error('[API] Erro ao processar ação de conhecimento visual:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao atualizar status do conhecimento visual' });
+  }
+});
+
+router.delete('/visual-knowledge/:id', async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const docId = parseObjectId(req.params.id);
+    if (!docId) {
+      return res.status(400).json({ success: false, error: 'ID inválido' });
+    }
+
+    const collection = getVisualKnowledgeCollection();
+    const result = await collection.deleteOne({ _id: docId });
+    if (!result.deletedCount) {
+      return res.status(404).json({ success: false, error: 'Item não encontrado' });
+    }
+
+    return res.json({ success: true, deleted: true });
+  } catch (err) {
+    console.error('[API] Erro ao remover conhecimento visual:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao remover conhecimento visual' });
+  }
+});
+
+main
 router.get("/nuke-and-seed", async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
