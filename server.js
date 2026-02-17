@@ -142,6 +142,9 @@ const startServer = async () => {
     console.log('\n🚀 INICIANDO QUANTON3D BOT...\n')
 
     if (MONGODB_URI) {
+      if (!MONGODB_URI.includes('retryWrites=true')) {
+        console.warn('[MongoDB] ⚠️ Recomenda-se usar MONGODB_URI com retryWrites=true (Diretriz Jan/2026).')
+      }
       await connectToMongo(MONGODB_URI)
       console.log('[MongoDB] ✅ Conectado')
       await new Promise(resolve => setTimeout(resolve, 2000))
