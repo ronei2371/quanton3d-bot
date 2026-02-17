@@ -797,6 +797,113 @@ router.post('/visual-knowledge', async (req, res) => {
     return res.status(500).json({ success: false, error: 'Erro ao criar conhecimento visual' });
   }
 });
+const readAdminToken = (req) => (
+  req.headers["x-admin-secret"] ||
+  req.headers["admin-secret"] ||
+  req.query?.auth ||
+  req.body?.auth ||
+  req.query?.token
+);
+
+const isValidAdminToken = (req) => {
+  const token = readAdminToken(req);
+  if (!token) return false;
+  const accepted = [
+    process.env.ADMIN_SECRET,
+    process.env.VITE_ADMIN_API_TOKEN,
+    process.env.ADMIN_API_TOKEN
+  ].filter(Boolean);
+  return accepted.includes(token);
+};
+
+router.get('/partners', async (_req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const collection = getPartnersCollection();
+    if (!collection) {
+      return res.json({ success: true, partners: [] });
+    }
+
+    const partners = await collection.find({}).sort({ order: 1, createdAt: -1 }).toArray();
+    return res.json({ success: true, partners });
+  } catch (err) {
+    console.error('[API] Erro ao listar parceiros:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao listar parceiros' });
+  }
+});
+
+router.post('/partners', async (req, res) => {
+  try {
+    if (!isValidAdminToken(req)) {
+      return res.status(401).json({ success: false, error: 'unauthorized' });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const payload = req.body || {};
+    const name = typeof payload.name === 'string' ? payload.name.trim() : '';
+    if (!name) {
+      return res.status(400).json({ success: false, error: 'Nome é obrigatório' });
+    }
+
+    const collection = getPartnersCollection();
+    const now = new Date();
+    const doc = {
+      name,
+      description: typeof payload.description === 'string' ? payload.description.trim() : '',
+      imageUrl: payload.imageUrl || payload.image || '',
+      link: payload.link || payload.url || '',
+      specialty: payload.specialty || payload.category || '',
+      active: payload.active !== false,
+      order: Number.isFinite(Number(payload.order)) ? Number(payload.order) : 0,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    const result = await collection.insertOne(doc);
+    return res.status(201).json({ success: true, partner: { ...doc, _id: result.insertedId } });
+  } catch (err) {
+    console.error('[API] Erro ao criar parceiro:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao criar parceiro' });
+  }
+});
+
+router.get('/knowledge', async (_req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const collection = getCollection('documents');
+    if (!collection) {
+      return res.json({ success: true, documents: [] });
+    }
+
+    const documents = await collection
+      .find({}, { projection: { title: 1, tags: 1, source: 1, createdAt: 1 } })
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .toArray();
+
+    return res.json({ success: true, documents });
+  } catch (err) {
+    console.error('[API] Erro ao listar knowledge:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao listar knowledge' });
+  }
+});
+
+router.get('/visual-knowledge/pending', async (_req, res) => {
+  return res.json({ success: true, pending: [] });
+});
+
 router.get("/nuke-and-seed", async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();

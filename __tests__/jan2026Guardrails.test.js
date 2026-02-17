@@ -25,5 +25,15 @@ describe('Diretrizes Técnicas Jan/2026 guardrails', () => {
     expect(renderYaml).toContain('pnpm install --no-frozen-lockfile');
     expect(renderYaml).toContain('key: CI');
     expect(renderYaml).toContain('value: "true"');
+    expect(renderYaml).toContain('key: SKIP_INSTALL');
+    expect(renderYaml).toContain('value: "false"');
+  });
+
+  it('does not allow hardcoded admin token fallback', () => {
+    const adminRoutes = read('src/routes/adminRoutes.js');
+    const apiRoutes = read('src/routes/apiRoutes.js');
+
+    expect(adminRoutes).not.toContain('quanton3d_admin_secret');
+    expect(apiRoutes).not.toContain('quanton3d_admin_secret');
   });
 });

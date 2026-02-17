@@ -87,13 +87,11 @@ app.use('/auth', authRoutes)
 // ==========================================================
 // ROTAS ADMIN - PAINEL ANTIGO (SEM /api/)
 // ==========================================================
-const adminRoutes = buildAdminRoutes({
-  adminSecret: 'DISABLED',  // Desabilita validação
-  adminJwtSecret: 'DISABLED'
-})
+const adminRoutes = buildAdminRoutes()
 
-// Rotas do painel antigo - SEM o prefixo /api/
+// Compatibilidade: painel antigo (/admin/*) e frontend novo (/api/admin/*)
 app.use('/admin', adminRoutes)
+app.use('/api/admin', adminRoutes)
 
 // ==========================================================
 // ROTAS DA API
@@ -144,6 +142,9 @@ const startServer = async () => {
     console.log('\n🚀 INICIANDO QUANTON3D BOT...\n')
 
     if (MONGODB_URI) {
+      if (!MONGODB_URI.includes('retryWrites=true')) {
+        console.warn('[MongoDB] ⚠️ Recomenda-se usar MONGODB_URI com retryWrites=true (Diretriz Jan/2026).')
+      }
       await connectToMongo(MONGODB_URI)
       console.log('[MongoDB] ✅ Conectado')
       await new Promise(resolve => setTimeout(resolve, 2000))
