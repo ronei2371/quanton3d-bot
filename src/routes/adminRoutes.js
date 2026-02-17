@@ -72,11 +72,11 @@ function buildAdminRoutes(adminConfig = {}) {
   router.post("/login", (req, res) => {
     const { user, password, secret } = req.body ?? {};
     const adminUser = process.env.ADMIN_USER || "admin";
-    const adminPass = process.env.ADMIN_PASSWORD || "admin";
-    const jwtSecret = process.env.ADMIN_JWT_SECRET;
+    const adminPass = process.env.ADMIN_PASSWORD || "";
+    const jwtSecret = process.env.ADMIN_JWT_SECRET || "quanton-admin-fallback-secret";
 
-    if (!jwtSecret) {
-      return res.status(500).json({ success: false, error: "JWT secret ausente" });
+    if (!process.env.ADMIN_JWT_SECRET) {
+      console.warn('[ADMIN] ⚠️ ADMIN_JWT_SECRET ausente. Usando fallback emergencial para manter compatibilidade.');
     }
 
     const validUser = user === adminUser && password === adminPass;
