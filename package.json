@@ -8,7 +8,7 @@
     "start": "node server.js",
     "dev": "cross-env NODE_ENV=development node server.js",
     "build": "rm -rf dist && cp -r public dist",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --passWithNoTests",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --passWithNoTests --runInBand",
     "logs": "tail -f logs/app.log",
     "fix:params": "node scripts/fix-params-typo.js"
   },
