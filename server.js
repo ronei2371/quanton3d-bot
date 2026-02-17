@@ -2,6 +2,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import express from 'express'
 import cors from 'cors'
+import helmet from 'helmet'
 import dotenv from 'dotenv'
 import chatRoutes from './src/routes/chatRoutes.js'
 import { apiRoutes } from './src/routes/apiRoutes.js'
@@ -48,6 +49,7 @@ app.use(
   })
 )
 
+app.use(helmet())
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
