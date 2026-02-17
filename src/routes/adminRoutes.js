@@ -665,6 +665,323 @@ function buildAdminRoutes(adminConfig = {}) {
     }
   });
 
+  // ===== ROTAS DE CONHECIMENTO VISUAL (GALERIA) =====
+  router.get("/visual-knowledge", async (_req, res) => {
+    try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+      
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+      
+      const collection = getCollection("visual_knowledge") || getCollection("gallery");
+      if (!collection) {
+        return res.json({ success: true, documents: [] });
+      }
+      
+      const docs = await collection.find({ approved: true }).sort({ createdAt: -1 }).limit(100).toArray();
+      
+      console.log(`✅ [ADMIN] Listando ${docs.length} documentos visuais aprovados`);
+      
+      res.json({
+        success: true,
+        documents: docs.map(doc => ({
+          _id: doc._id?.toString(),
+          imageUrl: doc.imageUrl || doc.image,
+          defectType: doc.defectType || doc.tipo,
+          diagnosis: doc.diagnosis || doc.diagnostico,
+          solution: doc.solution || doc.solucao,
+          createdAt: doc.createdAt
+        }))
+      });
+    } catch (err) {
+      console.error("❌ [ADMIN] Erro ao buscar conhecimento visual:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  router.get("/visual-knowledge/pending", async (_req, res) => {
+    try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+      
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+      
+      const collection = getCollection("visual_knowledge_pending") || getCollection("gallery_pending");
+      if (!collection) {
+        return res.json({ success: true, pending: [] });
+      }
+      
+      const pending = await collection.find({ approved: false }).sort({ createdAt: -1 }).toArray();
+      
+      console.log(`✅ [ADMIN] Listando ${pending.length} fotos pendentes`);
+      
+      res.json({
+        success: true,
+        pending: pending.map(item => ({
+          _id: item._id?.toString(),
+          imageUrl: item.imageUrl || item.image,
+          userName: item.userName || item.user,
+          createdAt: item.createdAt
+        }))
+      });
+    } catch (err) {
+      console.error("❌ [ADMIN] Erro ao buscar fotos pendentes:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  router.post("/visual-knowledge/:id/approve", adminGuard, async (req, res) => {
+    try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+      
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+      
+      const { id } = req.params;
+      const { defectType, diagnosis, solution } = req.body;
+      
+      const pendingCollection = getCollection("visual_knowledge_pending");
+      const approvedCollection = getCollection("visual_knowledge");
+      
+      if (!pendingCollection || !approvedCollection) {
+        return res.status(503).json({ success: false, error: "Coleções não disponíveis" });
+      }
+      
+      const pendingDoc = await pendingCollection.findOne({ 
+        _id: mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id 
+      });
+      
+      if (!pendingDoc) {
+        return res.status(404).json({ success: false, error: "Foto não encontrada" });
+      }
+      
+      await approvedCollection.insertOne({
+        imageUrl: pendingDoc.imageUrl,
+        defectType,
+        diagnosis,
+        solution,
+        approved: true,
+        approvedAt: new Date(),
+        createdAt: pendingDoc.createdAt
+      });
+      
+      await pendingCollection.deleteOne({ _id: pendingDoc._id });
+      
+      console.log(`✅ [ADMIN] Foto ${id} aprovada e movida para galeria`);
+      
+      res.json({ success: true, message: "Foto aprovada com sucesso" });
+    } catch (err) {
+      console.error("❌ [ADMIN] Erro ao aprovar foto:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  router.delete("/visual-knowledge/:id", adminGuard, async (req, res) => {
+    try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+      
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+      
+      const { id } = req.params;
+      const collection = getCollection("visual_knowledge") || getCollection("visual_knowledge_pending");
+      
+      if (!collection) {
+        return res.status(503).json({ success: false, error: "Coleção não disponível" });
+      }
+      
+      await collection.deleteOne({ 
+        _id: mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id 
+      });
+      
+      console.log(`✅ [ADMIN] Foto ${id} deletada`);
+      
+      res.json({ success: true, message: "Foto deletada com sucesso" });
+    } catch (err) {
+      console.error("❌ [ADMIN] Erro ao deletar foto:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // ===== ROTAS DE SUGESTÕES =====
+  router.get("/suggestions", async (_req, res) => {
+    try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+      
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+      
+      const collection = getCollection("sugestoes") || getCollection("suggestions");
+      if (!collection) {
+        return res.json({ success: true, suggestions: [] });
+      }
+      
+      const suggestions = await collection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
+      
+      console.log(`✅ [ADMIN] Listando ${suggestions.length} sugestões`);
+      
+      res.json({
+        success: true,
+        suggestions: suggestions.map(sug => ({
+          _id: sug._id?.toString(),
+          title: sug.title || sug.titulo,
+          content: sug.content || sug.conteudo,
+          tags: sug.tags || [],
+          source: sug.source || 'user',
+          status: sug.status || 'pending',
+          createdAt: sug.createdAt
+        }))
+      });
+    } catch (err) {
+      console.error("❌ [ADMIN] Erro ao buscar sugestões:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  router.post("/suggest-knowledge", async (req, res) => {
+    try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+      
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+      
+      const { title, content, tags, source } = req.body;
+      
+      if (!title || !content) {
+        return res.status(400).json({ success: false, error: "Título e conteúdo são obrigatórios" });
+      }
+      
+      const collection = getCollection("sugestoes");
+      if (!collection) {
+        return res.status(503).json({ success: false, error: "Coleção não disponível" });
+      }
+      
+      const result = await collection.insertOne({
+        title,
+        content,
+        tags: tags || [],
+        source: source || 'user',
+        status: 'pending',
+        createdAt: new Date()
+      });
+      
+      console.log(`✅ [ADMIN] Nova sugestão criada: ${title}`);
+      
+      res.json({
+        success: true,
+        message: "Sugestão enviada com sucesso!",
+        suggestionId: result.insertedId.toString()
+      });
+    } catch (err) {
+      console.error("❌ [ADMIN] Erro ao criar sugestão:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  router.post("/suggestions/:id/approve", adminGuard, async (req, res) => {
+    try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+      
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+      
+      const { id } = req.params;
+      const collection = getCollection("sugestoes");
+      
+      if (!collection) {
+        return res.status(503).json({ success: false, error: "Coleção não disponível" });
+      }
+      
+      const suggestion = await collection.findOne({
+        _id: mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id
+      });
+      
+      if (!suggestion) {
+        return res.status(404).json({ success: false, error: "Sugestão não encontrada" });
+      }
+      
+      // Adiciona ao conhecimento
+      await addDocument(
+        suggestion.title,
+        suggestion.content,
+        'user_suggestion',
+        suggestion.tags || []
+      );
+      
+      // Atualiza status
+      await collection.updateOne(
+        { _id: suggestion._id },
+        { $set: { status: 'approved', approvedAt: new Date() } }
+      );
+      
+      console.log(`✅ [ADMIN] Sugestão ${id} aprovada e adicionada ao conhecimento`);
+      
+      res.json({ success: true, message: "Sugestão aprovada com sucesso" });
+    } catch (err) {
+      console.error("❌ [ADMIN] Erro ao aprovar sugestão:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  router.delete("/suggestions/:id", adminGuard, async (req, res) => {
+    try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+      
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+      
+      const { id } = req.params;
+      const collection = getCollection("sugestoes");
+      
+      if (!collection) {
+        return res.status(503).json({ success: false, error: "Coleção não disponível" });
+      }
+      
+      await collection.deleteOne({
+        _id: mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id
+      });
+      
+      console.log(`✅ [ADMIN] Sugestão ${id} deletada`);
+      
+      res.json({ success: true, message: "Sugestão deletada com sucesso" });
+    } catch (err) {
+      console.error("❌ [ADMIN] Erro ao deletar sugestão:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   return router;
 }
 
