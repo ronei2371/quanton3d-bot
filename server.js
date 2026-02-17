@@ -87,13 +87,11 @@ app.use('/auth', authRoutes)
 // ==========================================================
 // ROTAS ADMIN - PAINEL ANTIGO (SEM /api/)
 // ==========================================================
-const adminRoutes = buildAdminRoutes({
-  adminSecret: 'DISABLED',  // Desabilita validação
-  adminJwtSecret: 'DISABLED'
-})
+const adminRoutes = buildAdminRoutes()
 
-// Rotas do painel antigo - SEM o prefixo /api/
+// Compatibilidade: painel antigo (/admin/*) e frontend novo (/api/admin/*)
 app.use('/admin', adminRoutes)
+app.use('/api/admin', adminRoutes)
 
 // ==========================================================
 // ROTAS DA API
