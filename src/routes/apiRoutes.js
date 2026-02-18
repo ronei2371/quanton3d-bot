@@ -364,6 +364,52 @@ router.post("/gallery", upload.any(), async (req, res) => {
   }
 });
 
+router.post("/suggest-knowledge", async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    }
+
+    const collection = getCollection("sugestoes") || getCollection("suggestions");
+    if (!collection) {
+      return res.status(503).json({ success: false, error: "Coleção de sugestões indisponível" });
+    }
+
+    const {
+      suggestion,
+      userName,
+      userPhone,
+      sessionId,
+      lastUserMessage,
+      lastBotReply
+    } = req.body || {};
+
+    if (!suggestion || typeof suggestion !== "string" || !suggestion.trim()) {
+      return res.status(400).json({ success: false, error: "Sugestao é obrigatória" });
+    }
+
+    const doc = {
+      suggestion: suggestion.trim(),
+      userName: (userName || '').trim() || 'Usuário do site',
+      userPhone: userPhone || null,
+      sessionId: sessionId || null,
+      lastUserMessage: lastUserMessage || null,
+      lastBotReply: lastBotReply || null,
+      status: 'pending',
+      createdAt: new Date()
+    };
+
+    const result = await collection.insertOne(doc);
+    console.log(`[API] Sugestão registrada: ${doc.userName}`);
+
+    res.json({ success: true, message: 'Sugestão enviada com sucesso!', suggestionId: result.insertedId.toString() });
+  } catch (err) {
+    console.error('[API] Erro ao registrar sugestão:', err);
+    res.status(500).json({ success: false, error: 'Erro ao registrar sugestão' });
+  }
+});
+
 const buildGalleryResponse = (doc) => ({
   id: doc._id?.toString?.(),
   name: doc.name ?? null,
