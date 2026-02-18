@@ -809,13 +809,21 @@ function buildAdminRoutes(adminConfig = {}) {
         return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       }
       
-      // Tenta pegar a coleção 'contacts' ou 'messages'
-      const collection = getCollection("contacts") || getCollection("messages"); 
-      if (!collection) {
+      const contactsCollection = getCollection("contacts");
+      const fallbackCollection = getCollection("messages");
+
+      if (!contactsCollection && !fallbackCollection) {
         return res.json({ success: true, messages: [] });
       }
-      
-      const messages = await collection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
+
+      let messages = [];
+      if (contactsCollection) {
+        messages = await contactsCollection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
+      }
+
+      if ((!messages || messages.length === 0) && fallbackCollection && fallbackCollection !== contactsCollection) {
+        messages = await fallbackCollection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
+      }
       
       console.log(`✅ [ADMIN] Listando ${messages.length} mensagens de contato`);
       
