@@ -86,6 +86,36 @@ const buildPrinterFilter = (printerId) => {
 const getPartnersCollection = () => getCollection('partners');
 const getCustomRequestsCollection = () => getCollection('custom_requests');
 
+const RESIN_ALIASES = {
+  spin: 'Spin+',
+  'spin+': 'Spin+',
+  spim: 'Spin+',
+  'iron7030': 'Iron 7030',
+  'iron 7030': 'Iron 7030',
+  iron: 'Iron 7030',
+  spark: 'Spark',
+  pyroblast: 'Pyroblast+',
+  'pyroblast+': 'Pyroblast+',
+  poseidon: 'Poseidon',
+  lowsmell: 'LowSmell',
+  'low smell': 'LowSmell'
+};
+
+const sanitizeResinName = (raw) => {
+  if (!raw) return '';
+  const trimmed = String(raw).trim();
+  if (!trimmed) return '';
+  const normalized = trimmed.toLowerCase();
+  if (RESIN_ALIASES[normalized]) {
+    return RESIN_ALIASES[normalized];
+  }
+  const normalizedNoSpaces = normalized.replace(/\s+/g, '');
+  if (RESIN_ALIASES[normalizedNoSpaces]) {
+    return RESIN_ALIASES[normalizedNoSpaces];
+  }
+  return trimmed;
+};
+
 router.post("/register-user", async (req, res) => {
   try {
     const { name, phone, email, resin, problemType, sessionId } = req.body;
