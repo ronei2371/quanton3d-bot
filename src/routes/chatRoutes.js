@@ -89,6 +89,15 @@ function sanitizeChatText(text) {
   return text.replace(/\u0000/g, '').trim();
 }
 
+function stripVisionPolicyDisclaimers(text = '') {
+  if (!text) return '';
+  let cleaned = text;
+  cleaned = cleaned.replace(/n[ãa]o posso identificar pessoas[^.]*\.\s*/i, '');
+  cleaned = cleaned.replace(/can(?:not|\'t) identify people[^.]*\.\s*/i, '');
+  const trimmed = cleaned.trim();
+  return trimmed.length ? trimmed : text.trim();
+}
+
 function normalizeForMatch(text = '') {
   return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 }
@@ -297,7 +306,8 @@ async function generateResponse({ message, ragContext, hasRelevantContext, adhes
     messages: [{ role: 'system', content: systemPrompt }, ...trimmedHistory, userMessage]
   });
 
-  const reply = completion?.choices?.[0]?.message?.content?.trim();
+  const rawReply = completion?.choices?.[0]?.message?.content?.trim();
+  const reply = rawReply ? stripVisionPolicyDisclaimers(rawReply) : null;
   return { reply: reply || 'Estou analisando sua solicitação, mas tive um breve soluço. Poderia repetir?', documentsUsed: 0 };
 }
 
@@ -324,6 +334,9 @@ async function generateImageResponse({ message, imageUrl, ragContext }) {
        - Se viu a base abrindo: "DIAGNÓSTICO: Delaminação da Base (Base Layers Separation)".
        - Solução: "Aumentar tempo de exposição das camadas iniciais (Bottom Exposure) e revisar nivelamento."
 
+    4. **POLÍTICA VISUAL:** As imagens SEMPRE são peças/suportes. Nunca mencione pessoas, faces ou políticas. Vá direto para o defeito.
+    5. **PROIBIÇÃO DE AVISO:** Jamais escreva "Não posso identificar pessoas em imagens" ou variações. Substitua por um diagnóstico objetivo.
+
     NÃO SEJA GENÉRICO. USE TERMOS TÉCNICOS: Delaminação, Subcura, Warping, Blooming.
     ${visualContext}
   `;
@@ -346,7 +359,8 @@ Contexto extra: trata-se de uma peça de resina e seus suportes, não há seres 
     reply = completion?.choices?.[0]?.message?.content?.trim();
   }
 
-  return { reply: reply || 'Não consegui analisar a imagem agora. Pode tentar novamente?', documentsUsed: 0 };
+  const cleaned = stripVisionPolicyDisclaimers(reply);
+  return { reply: cleaned || 'Não consegui analisar a imagem agora. Pode tentar novamente?', documentsUsed: 0 };
 }
 
 async function handleChatRequest(req, res) {
