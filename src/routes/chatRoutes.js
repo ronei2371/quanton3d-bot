@@ -225,7 +225,7 @@ function inferContextFromHistory(history, message) {
 // =================================================================================
 // CÉREBRO TEXTUAL (REGRAS DO RONEI AQUI)
 // =================================================================================
-async function generateResponse({ message, ragContext, hasRelevantContext, adhesionIssueHint, hasImage, imageUrl, conversationHistory, customerContext }) {
+async function generateResponse({ message, ragContext, hasRelevantContext, adhesionIssueHint, hasImage, imageUrl, conversationHistory, customerContext, ragResultsCount = 0 }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
   const resinFromMessage = extractResinFromMessage(trimmedMessage);
   const printerFromMessage = extractPrinterFromMessage(trimmedMessage);
@@ -248,7 +248,7 @@ async function generateResponse({ message, ragContext, hasRelevantContext, adhes
   }
 
   if (mentionsRigidSupports(trimmedMessage) || mentionsDelayedCracking(trimmedMessage)) {
-    return { reply: buildSupportBrittleReply({ resinName: knownResin, printerName: knownPrinter }), documentsUsed: ragResults.length };
+    return { reply: buildSupportBrittleReply({ resinName: knownResin, printerName: knownPrinter }), documentsUsed: ragResultsCount };
   }
 
   const visionPriority = hasImage ? '\n    11. Se IMAGEM=SIM, priorize a evidência visual. Não deixe histórico anterior de texto sobrepor o que está claramente visível na nova imagem.\n  ' : '';
@@ -336,6 +336,8 @@ async function generateImageResponse({ message, imageUrl, ragContext }) {
 
     4. **POLÍTICA VISUAL:** As imagens SEMPRE são peças/suportes. Nunca mencione pessoas, faces ou políticas. Vá direto para o defeito.
     5. **PROIBIÇÃO DE AVISO:** Jamais escreva "Não posso identificar pessoas em imagens" ou variações. Substitua por um diagnóstico objetivo.
+    6. **MARCA DA RESINA:** Se o cliente citar Anycubic, Elegoo, Creality ou outra marca, explique que nosso suporte é exclusivo para resinas Quanton3D e ofereça comparação se enviar os parâmetros.
+    7. **PROIBIDO LIXAR:** Nunca recomende lixar ou raspar a plataforma. Foque em nivelamento e exposição base.
 
     NÃO SEJA GENÉRICO. USE TERMOS TÉCNICOS: Delaminação, Subcura, Warping, Blooming.
     ${visualContext}
@@ -389,7 +391,17 @@ async function handleChatRequest(req, res) {
 
     const response = imageUrl
       ? await generateImageResponse({ message: trimmedMessage, imageUrl, ragContext })
-      : await generateResponse({ message: trimmedMessage, ragContext, hasRelevantContext, adhesionIssueHint, hasImage, imageUrl, conversationHistory, customerContext: mergedCustomerContext });
+      : await generateResponse({
+          message: trimmedMessage,
+          ragContext,
+          hasRelevantContext,
+          adhesionIssueHint,
+          hasImage,
+          imageUrl,
+          conversationHistory,
+          customerContext: mergedCustomerContext,
+          ragResultsCount: ragResults.length
+        });
 
     res.json({ reply: sanitizeChatText(response.reply), sessionId: sessionId || 'session-auto', documentsUsed: ragResults.length || response.documentsUsed });
   } catch (error) {
