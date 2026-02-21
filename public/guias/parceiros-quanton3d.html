@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parceiros Quanton3D - Profissionais Recomendados</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .content {
+            padding: 50px 40px;
+        }
+
+        .intro-box {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 50px;
+            text-align: center;
+        }
+
+        .intro-box h2 {
+            font-size: 2.2em;
+            margin-bottom: 20px;
+        }
+
+        .intro-box p {
+            font-size: 1.2em;
+            line-height: 1.8;
+        }
+
+        /* CARD DE PARCEIRO INDIVIDUAL */
+        .partner-card {
+            background: white;
+            border-radius: 20px;
+            padding: 0;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            overflow: hidden;
+            border: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .partner-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+        }
+
+        /* Cores diferentes para cada parceiro */
+        .partner-card.color-purple { border-color: #667eea; }
+        .partner-card.color-pink { border-color: #f093fb; }
+        .partner-card.color-blue { border-color: #4facfe; }
+        .partner-card.color-orange { border-color: #fa709a; }
+        .partner-card.color-green { border-color: #30cfd0; }
+
+        .partner-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+        }
+
+        .partner-header.purple { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .partner-header.pink { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .partner-header.blue { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .partner-header.orange { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .partner-header.green { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
+
+        .partner-header h2 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .partner-header .subtitle {
+            font-size: 1.3em;
+            opacity: 0.9;
+        }
+
+        .partner-content {
+            padding: 40px;
+        }
+
+        .partner-description {
+            font-size: 1.15em;
+            line-height: 1.8;
+            margin-bottom: 25px;
+            color: #555;
+        }
+
+        .contact-info {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 25px 0;
+            text-align: center;
+        }
+
+        .contact-info h4 {
+            color: #667eea;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        .contact-info p {
+            font-size: 1.2em;
+            color: #667eea;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .gallery {
+            margin: 30px 0;
+        }
+
+        .gallery h3 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .gallery-item {
+            position: relative;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .add-partner-box {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            margin-top: 50px;
+            border: 3px dashed #667eea;
+        }
+
+        .add-partner-box h2 {
+            font-size: 2em;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .add-partner-box p {
+            font-size: 1.2em;
+            color: #666;
+        }
+
+        .contact-section {
+            background: #f8f9fa;
+            padding: 35px;
+            border-radius: 15px;
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .contact-section h3 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+        }
+
+        .contact-section p {
+            font-size: 1.15em;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        footer {
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 30px;
+        }
+
+        footer p {
+            margin: 5px 0;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2em;
+            }
+
+            .content {
+                padding: 30px 20px;
+            }
+
+            .gallery-item img {
+                height: 220px;
+            }
+
+            .partner-header h2 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤝 Parceiros Quanton3D</h1>
+            <p>Profissionais e serviços recomendados para levar suas impressões 3D ao próximo nível</p>
+        </header>
+
+        <div class="content">
+            <div class="intro-box">
+                <h2>Aprenda com os Melhores!</h2>
+                <p>A Quanton3D se orgulha de recomendar parceiros de excelência que compartilham nossa paixão por qualidade e profissionalismo. Confira nossos parceiros selecionados!</p>
+            </div>
+
+            <!-- PARCEIRO 1: ARTHUR MONTEIRO -->
+            <div class="partner-card color-purple">
+                <div class="partner-header purple">
+                    <h2>🎨 Arthur Monteiro</h2>
+                    <p class="subtitle">Especialista em Pintura Hiper-Realista</p>
+                </div>
+
+                <div class="partner-content">
+                    <p class="partner-description">
+                        <strong>Arthur Monteiro</strong> é reconhecido internacionalmente como um dos melhores pintores de action figures e bustos realistas do Brasil. Especialista em detalhes faciais hiper-realistas, texturas de pele e acabamentos profissionais, Arthur oferece cursos completos de pintura realista para quem deseja dominar técnicas avançadas de pintura em miniaturas e action figures.
+                    </p>
+
+                    <div class="contact-info">
+                        <h4>📱 Entre em Contato</h4>
+                        <p>(21) 99487-3812</p>
+                    </div>
+
+                    <div class="gallery">
+                        <h3>🖼️ Galeria de Trabalhos</h3>
+                        <div class="gallery-grid">
+                            <div class="gallery-item">
+                                <img src="parceiros-images/art2.jpg" alt="Trabalho de Arthur Monteiro - Busto realista">
+                            </div>
+                            <div class="gallery-item">
+                                <img src="parceiros-images/art4.jpg" alt="Trabalho de Arthur Monteiro - Action figure">
+                            </div>
+                            <div class="gallery-item">
+                                <img src="parceiros-images/art1.jpg" alt="Trabalho de Arthur Monteiro - Pintura facial">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PARCEIRO 2: CAROL OTTOLINI -->
+            <div class="partner-card color-pink">
+                <div class="partner-header pink">
+                    <h2>🎨 Carol Ottolini</h2>
+                    <p class="subtitle">Mestre em Weathering e Acabamentos Especiais</p>
+                </div>
+
+                <div class="partner-content">
+                    <p class="partner-description">
+                        <strong>Carol Ottolini</strong> é referência nacional em técnicas de weathering, envelhecimento e acabamentos especiais para miniaturas, dioramas e peças em escala. Com anos de experiência, Carol domina técnicas avançadas de texturização, pátina e efeitos realistas que transformam peças comuns em obras de arte profissionais.
+                    </p>
+
+                    <div class="contact-info">
+                        <h4>📱 Entre em Contato</h4>
+                        <p>(21) 97655-0050</p>
+                    </div>
+
+                    <div class="gallery">
+                        <h3>🖼️ Galeria de Trabalhos</h3>
+                        <div class="gallery-grid">
+                            <div class="gallery-item">
+                                <img src="parceiros-images/art3.jpg" alt="Trabalho de Carol Ottolini - Weathering">
+                            </div>
+                            <div class="gallery-item">
+                                <img src="parceiros-images/art5.jpg" alt="Trabalho de Carol Ottolini - Diorama">
+                            </div>
+                            <div class="gallery-item">
+                                <img src="parceiros-images/art6.jpg" alt="Trabalho de Carol Ottolini - Acabamento">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PLACEHOLDER PARA NOVOS PARCEIROS -->
+            <div class="add-partner-box">
+                <h2>➕ Adicionar Novo Parceiro</h2>
+                <p>
+                    Espaço reservado para novos parceiros. Copie e cole o bloco de código de parceiro acima para adicionar mais profissionais recomendados!
+                </p>
+            </div>
+
+            <!-- CONTATO -->
+            <div class="contact-section">
+                <h3>💬 Quer Ser Nosso Parceiro?</h3>
+                <p>
+                    Se você oferece cursos, serviços ou produtos de qualidade relacionados à impressão 3D e pós-processamento, entre em contato conosco!
+                </p>
+                <p style="color: #667eea; font-weight: bold;">
+                    📧 Email: contato@quanton3d.com.br<br>
+                    📱 WhatsApp: (31) 3271-6935
+                </p>
+            </div>
+        </div>
+
+        <footer>
+            <p><strong>Quanton3D</strong> - Resinas UV SLA de Alta Performance</p>
+            <p>Parceiros de Excelência para Resultados Profissionais</p>
+            <p style="margin-top: 15px; font-size: 0.9em; opacity: 0.8;">
+                © 2025 Quanton3D - Todos os direitos reservados
+            </p>
+        </footer>
+    </div>
+</body>
+</html>

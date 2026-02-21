@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia de Posicionamento de Suportes | Quanton3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+        }
+
+        .logo {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        .content {
+            padding: 60px 40px;
+        }
+
+        .intro {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .intro h2 {
+            font-size: 2em;
+            margin-bottom: 15px;
+        }
+
+        .intro p {
+            font-size: 1.1em;
+            line-height: 1.8;
+        }
+
+        .step {
+            margin: 50px 0;
+            padding: 40px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .step:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .step-number {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 60px;
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .step h3 {
+            font-size: 1.8em;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .step h4 {
+            font-size: 1.3em;
+            color: #764ba2;
+            margin: 25px 0 15px 0;
+        }
+
+        .step-description {
+            font-size: 1.1em;
+            line-height: 1.8;
+            margin-bottom: 25px;
+            color: #555;
+        }
+
+        .step-image {
+            width: 100%;
+            max-width: 900px;
+            height: auto;
+            border-radius: 10px;
+            margin: 25px 0;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .step-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .step-list li {
+            padding: 15px 20px;
+            margin: 10px 0;
+            background: white;
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            line-height: 1.8;
+        }
+
+        .step-list li strong {
+            color: #667eea;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .warning-box {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 30px 0;
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .warning-box h3 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        .warning-box p {
+            line-height: 1.8;
+            font-size: 1.05em;
+        }
+
+        .tip-box {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 30px 0;
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        .tip-box h4 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: white !important;
+        }
+
+        .tip-box p {
+            line-height: 1.8;
+            font-size: 1.05em;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: #333;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 30px 0;
+            box-shadow: 0 5px 15px rgba(250, 112, 154, 0.3);
+        }
+
+        .highlight-box h4 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #333 !important;
+        }
+
+        .highlight-box p {
+            line-height: 1.8;
+            font-size: 1.05em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .footer {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 30px;
+            font-size: 1.1em;
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .header p {
+                font-size: 1em;
+            }
+
+            .content {
+                padding: 30px 20px;
+            }
+
+            .step {
+                padding: 25px;
+            }
+
+            .step h3 {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🔬 QUANTON3D</div>
+            <h1>🏗️ Guia de Posicionamento de Suportes</h1>
+            <p>Domine a arte dos suportes para impressões perfeitas</p>
+        </div>
+
+        <div class="content">
+            <div class="intro">
+                <h2>🎯 Por que Suportes São Importantes?</h2>
+                <p>Suportes são estruturas temporárias essenciais na impressão 3D de resina. Eles sustentam áreas suspensas da peça durante a impressão, evitam deformações causadas pela força de sucção do FEP, e garantem que detalhes finos não quebrem durante o processo. Suportes mal posicionados resultam em falhas de impressão, marcas indesejadas na peça final e desperdício de resina. Este guia completo ensina como configurar e posicionar suportes perfeitamente usando o Chitubox!</p>
+            </div>
+
+            <!-- COMO FUNCIONAM OS SUPORTES -->
+            <div class="step">
+                <div class="step-number">📚</div>
+                <h3>Como Funcionam os Suportes</h3>
+                <img src="suportes-images/como-funcionam-suportes.png" alt="Como funcionam os suportes" class="step-image">
+                
+                <div class="step-description">
+                    <p>Os suportes em impressão de resina são compostos por três partes principais:</p>
+                </div>
+
+                <ul class="step-list">
+                    <li><strong>Ponto de Contato (Topo):</strong> Pequeno ponto que toca a peça. Deve ser grande o suficiente para sustentar, mas pequeno o suficiente para ser removido facilmente sem deixar marcas.</li>
+                    
+                    <li><strong>Pilar (Meio):</strong> Coluna que conecta o ponto de contato à base. Deve ser forte o suficiente para suportar o peso da peça e resistir às forças de sucção do FEP.</li>
+                    
+                    <li><strong>Base (Inferior):</strong> Ponto de ancoragem na plataforma ou no estrado (raft). Distribui a força e garante estabilidade durante toda a impressão.</li>
+                </ul>
+
+                <div class="highlight-box">
+                    <h4>🎯 Princípio Fundamental</h4>
+                    <p><strong>Regra dos 45°:</strong> Qualquer superfície com ângulo menor que 45° em relação à plataforma PRECISA de suporte!<br><br>
+                    <strong>Por quê?</strong> Abaixo de 45°, a nova camada não tem área suficiente da camada anterior para se apoiar, causando deformação ou falha.</p>
+                </div>
+            </div>
+
+            <!-- ANATOMIA DO SUPORTE NO CHITUBOX -->
+            <div class="step">
+                <div class="step-number">🔧</div>
+                <h3>Anatomia do Suporte no Chitubox</h3>
+                <img src="suportes-images/chitubox-suportes-config.png" alt="Configurações de suportes no Chitubox" class="step-image">
+                
+                <div class="step-description">
+                    <p>O Chitubox oferece controle completo sobre cada parte do suporte. Entenda TODOS os parâmetros:</p>
+                </div>
+
+                <h4 style="color: #667eea; margin: 30px 0 15px 0;">🔝 Seção: TOPO (Ponto de Contato)</h4>
+                
+                <ul class="step-list">
+                    <li><strong>Forma de Toque (Contact Shape):</strong>
+                    <br><strong>O que é:</strong> Formato do ponto que toca a peça
+                    <br><strong>Opções:</strong> Esfera, Cone
+                    <br><strong>Recomendado:</strong> Esfera para áreas planas. Cone para áreas curvas
+                    <br><strong>Por quê:</strong> Esfera distribui melhor a força. Cone penetra menos na superfície</li>
+                    
+                    <li><strong>Diâmetro Contato (Contact Diameter):</strong>
+                    <br><strong>O que é:</strong> Tamanho do ponto que toca a peça
+                    <br><strong>Valor típico:</strong> 0.50mm
+                    <br><strong>Como ajustar:</strong> 0.30mm para detalhes finos. 0.50-0.80mm para áreas robustas
+                    <br><strong>Impacto:</strong> Maior = mais forte, mais marca. Menor = menos marca, mais frágil</li>
+                    
+                    <li><strong>Prof. de Contato (Contact Depth):</strong>
+                    <br><strong>O que é:</strong> Profundidade que o suporte penetra na peça
+                    <br><strong>Valor típico:</strong> 0.30mm
+                    <br><strong>Como ajustar:</strong> 0.20mm para superfícies visíveis. 0.40mm para áreas ocultas
+                    <br><strong>Impacto:</strong> Mais profundo = mais forte, mais difícil remover</li>
+                </ul>
+
+                <h4 style="color: #667eea; margin: 30px 0 15px 0;">🏛️ Seção: MEIO (Pilar)</h4>
+                
+                <ul class="step-list">
+                    <li><strong>Forma (Shape):</strong>
+                    <br><strong>O que é:</strong> Formato do pilar central
+                    <br><strong>Opções:</strong> Cilindro, Cone
+                    <br><strong>Recomendado:</strong> Cilindro para peças pesadas. Cone para economizar resina
+                    <br><strong>Por quê:</strong> Cilindro é mais forte. Cone usa menos material</li>
+                    
+                    <li><strong>Diâmetro (Diameter):</strong>
+                    <br><strong>O que é:</strong> Espessura do pilar
+                    <br><strong>Valor típico:</strong> 0.80mm
+                    <br><strong>Como ajustar:</strong> 0.60mm para detalhes. 1.00-1.50mm para peças grandes
+                    <br><strong>Impacto:</strong> Mais grosso = mais forte, mais difícil remover</li>
+                    
+                    <li><strong>Ângulo (Angle):</strong>
+                    <br><strong>O que é:</strong> Inclinação do pilar em relação à vertical
+                    <br><strong>Valor típico:</strong> 70°
+                    <br><strong>Como ajustar:</strong> 60-80° conforme geometria da peça
+                    <br><strong>Por quê:</strong> Ângulos maiores facilitam remoção e reduzem marcas</li>
+                    
+                    <li><strong>Forma Pilar Pequeno (Small Pillar Shape):</strong>
+                    <br><strong>O que é:</strong> Formato de pilares curtos (para suportes próximos)
+                    <br><strong>Opções:</strong> Cone, Cilindro
+                    <br><strong>Recomendado:</strong> Cone
+                    <br><strong>Por quê:</strong> Economiza espaço e resina</li>
+                    
+                    <li><strong>Diâmetro Pilar Pequeno:</strong>
+                    <br><strong>O que é:</strong> Espessura de pilares curtos
+                    <br><strong>Valor típico:</strong> 0.40mm
+                    <br><strong>Uso:</strong> Suportes em áreas densas ou detalhadas</li>
+                    
+                    <li><strong>Profundidade Superior (Top Depth):</strong>
+                    <br><strong>O que é:</strong> Comprimento da transição entre ponto de contato e pilar
+                    <br><strong>Valor típico:</strong> 0.25mm
+                    <br><strong>Impacto:</strong> Transição mais suave reduz concentração de tensão</li>
+                    
+                    <li><strong>Profundidade Inferior (Bottom Depth):</strong>
+                    <br><strong>O que é:</strong> Comprimento da transição entre pilar e base
+                    <br><strong>Valor típico:</strong> 0.25mm
+                    <br><strong>Impacto:</strong> Melhora ancoragem na base</li>
+                    
+                    <li><strong>Espaçamento Máximo da Estrutura Cruzada:</strong>
+                    <br><strong>O que é:</strong> Distância máxima entre suportes antes de criar reforço cruzado
+                    <br><strong>Valor típico:</strong> 30.00mm
+                    <br><strong>Uso:</strong> Para áreas grandes e planas, cria estrutura em treliça</li>
+                    
+                    <li><strong>Altura Inicial Cruzada:</strong>
+                    <br><strong>O que é:</strong> Altura mínima do pilar para começar reforços cruzados
+                    <br><strong>Valor típico:</strong> 3.00mm
+                    <br><strong>Por quê:</strong> Pilares muito curtos não precisam de reforço</li>
+                </ul>
+
+                <h4 style="color: #667eea; margin: 30px 0 15px 0;">⚓ Seção: INFERIOR (Base)</h4>
+                
+                <ul class="step-list">
+                    <li><strong>Tipo de Contato na Mesa (Platform Contact Type):</strong>
+                    <br><strong>O que é:</strong> Formato da base que toca a plataforma
+                    <br><strong>Opções:</strong> Skate (patim), Cone
+                    <br><strong>Recomendado:</strong> Skate
+                    <br><strong>Por quê:</strong> Distribui melhor a força e é mais estável</li>
+                    
+                    <li><strong>Diâmetro Contato (Contact Diameter):</strong>
+                    <br><strong>O que é:</strong> Tamanho da base na plataforma
+                    <br><strong>Valor típico:</strong> 10.00mm (Skate)
+                    <br><strong>Impacto:</strong> Maior = mais estável, mais difícil remover da plataforma</li>
+                    
+                    <li><strong>Espessura (Thickness):</strong>
+                    <br><strong>O que é:</strong> Altura da base tipo Skate
+                    <br><strong>Valor típico:</strong> 0.80mm
+                    <br><strong>Impacto:</strong> Mais grosso = mais adesão, mais desperdício</li>
+                    
+                    <li><strong>Forma Contato no Modelo:</strong>
+                    <br><strong>O que é:</strong> Formato quando o suporte se conecta à própria peça (não à plataforma)
+                    <br><strong>Opções:</strong> Nenhum (None), Cone, Cilindro
+                    <br><strong>Recomendado:</strong> Nenhum ou Cone pequeno
+                    <br><strong>Uso:</strong> Para suportes que se apoiam em partes já impressas</li>
+                    
+                    <li><strong>Diâmetro Contato (Model Contact):</strong>
+                    <br><strong>Valor típico:</strong> 0.40mm
+                    <br><strong>Por quê:</strong> Pequeno para facilitar remoção</li>
+                    
+                    <li><strong>Prof. de Contato (Model Contact Depth):</strong>
+                    <br><strong>Valor típico:</strong> 0.20mm
+                    <br><strong>Por quê:</strong> Raso para não danificar a peça</li>
+                    
+                    <li><strong>Ponto de Contato (Contact Point):</strong>
+                    <br><strong>O que é:</strong> Número de pontos de ancoragem na base
+                    <br><strong>Valor típico:</strong> 1
+                    <br><strong>Uso:</strong> Múltiplos pontos para áreas muito pesadas</li>
+                </ul>
+
+                <h4 style="color: #667eea; margin: 30px 0 15px 0;">🏗️ Seção: ESTRADO (Raft)</h4>
+                
+                <ul class="step-list">
+                    <li><strong>Forma Raft:</strong>
+                    <br><strong>O que é:</strong> Formato da base comum para todos os suportes
+                    <br><strong>Opções:</strong> Nenhum (None), Retangular, Circular
+                    <br><strong>Recomendado:</strong> Nenhum para peças pequenas. Retangular para peças grandes
+                    <br><strong>Por quê:</strong> Raft melhora adesão mas usa mais resina</li>
+                    
+                    <li><strong>Proporção Área Raft (%):</strong>
+                    <br><strong>O que é:</strong> Tamanho do raft em relação à área da peça
+                    <br><strong>Valor típico:</strong> 110% (10% maior que a peça)
+                    <br><strong>Ajuste:</strong> 100-120% conforme estabilidade necessária</li>
+                    
+                    <li><strong>Espessura Raft:</strong>
+                    <br><strong>O que é:</strong> Altura do raft
+                    <br><strong>Valor típico:</strong> 1.00mm
+                    <br><strong>Impacto:</strong> Mais grosso = mais estável, mais desperdício</li>
+                    
+                    <li><strong>Altura Raft:</strong>
+                    <br><strong>O que é:</strong> Distância entre plataforma e raft
+                    <br><strong>Valor típico:</strong> 1.80mm
+                    <br><strong>Por quê:</strong> Espaço para resina fluir e facilitar remoção</li>
+                    
+                    <li><strong>Inclinação Raft (°):</strong>
+                    <br><strong>O que é:</strong> Ângulo das bordas do raft
+                    <br><strong>Valor típico:</strong> 30°
+                    <br><strong>Por quê:</strong> Facilita remoção e reduz força de sucção</li>
+                    
+                    <li><strong>Comprimento Lateral da Grade:</strong>
+                    <br><strong>O que é:</strong> Tamanho das células da grade interna do raft
+                    <br><strong>Valor típico:</strong> 2.00mm
+                    <br><strong>Por quê:</strong> Grade economiza resina mantendo resistência</li>
+                    
+                    <li><strong>Largura da Grade:</strong>
+                    <br><strong>O que é:</strong> Espessura das linhas da grade
+                    <br><strong>Valor típico:</strong> 2.00mm
+                    <br><strong>Ajuste:</strong> Mais grosso = mais forte, mais resina</li>
+                </ul>
+
+                <div class="warning-box">
+                    <h3>⚠️ ATENÇÃO - Diâmetro do Pilar</h3>
+                    <p><strong>O diâmetro do pilar é o parâmetro mais crítico!</strong><br><br>
+                    Pilares muito finos (< 0.60mm) quebram durante a impressão, causando falha total.<br>
+                    Pilares muito grossos (> 1.50mm) deixam marcas grandes e são difíceis de remover.<br><br>
+                    <strong>Regra geral:</strong><br>
+                    • Detalhes finos e miniaturas: 0.60-0.80mm<br>
+                    • Peças normais: 0.80-1.00mm<br>
+                    • Peças grandes e pesadas: 1.00-1.50mm</p>
+                </div>
+            </div>
+
+            <!-- CONFIGURAÇÕES BÁSICAS -->
+            <div class="step">
+                <div class="step-number">⚙️</div>
+                <h3>Configurações Básicas Recomendadas</h3>
+                
+                <div class="step-description">
+                    <p>Use estas configurações como ponto de partida e ajuste conforme necessário:</p>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parâmetro</th>
+                            <th>Suporte Leve</th>
+                            <th>Suporte Médio</th>
+                            <th>Suporte Pesado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Uso</strong></td>
+                            <td>Detalhes finos, miniaturas</td>
+                            <td>Peças normais, uso geral</td>
+                            <td>Peças grandes, áreas planas</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Diâmetro Contato Topo</strong></td>
+                            <td>0.30mm</td>
+                            <td>0.50mm</td>
+                            <td>0.80mm</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Profundidade Contato</strong></td>
+                            <td>0.20mm</td>
+                            <td>0.30mm</td>
+                            <td>0.40mm</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Diâmetro Pilar</strong></td>
+                            <td>0.60mm</td>
+                            <td>0.80mm</td>
+                            <td>1.20mm</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Ângulo</strong></td>
+                            <td>75°</td>
+                            <td>70°</td>
+                            <td>65°</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Base (Skate)</strong></td>
+                            <td>8.00mm</td>
+                            <td>10.00mm</td>
+                            <td>12.00mm</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="tip-box">
+                    <h4>💡 Dica Profissional</h4>
+                    <p>Salve estes três perfis no Chitubox com nomes descritivos:<br>
+                    • "Quanton3D - Suporte Leve"<br>
+                    • "Quanton3D - Suporte Médio"<br>
+                    • "Quanton3D - Suporte Pesado"<br><br>
+                    Assim você pode alternar rapidamente entre eles durante o posicionamento!</p>
+                </div>
+            </div>
+
+            <!-- SUPORTE AUTOMÁTICO VS MANUAL -->
+            <div class="step">
+                <div class="step-number">🤖</div>
+                <h3>Suporte Automático vs Manual</h3>
+                <img src="suportes-images/exemplo-suportes-1.jpg" alt="Exemplo de suportes automáticos" class="step-image">
+                
+                <div class="step-description">
+                    <p>O Chitubox oferece suporte automático, mas ele nem sempre é perfeito. Entenda quando usar cada método:</p>
+                </div>
+
+                <h4 style="color: #667eea; margin: 30px 0 15px 0;">🤖 Suporte Automático</h4>
+                
+                <ul class="step-list">
+                    <li><strong>Vantagens:</strong> Rápido, cobre todas as áreas críticas, bom ponto de partida</li>
+                    <li><strong>Desvantagens:</strong> Pode colocar suportes em áreas visíveis, às vezes usa suportes demais ou de menos</li>
+                    <li><strong>Quando usar:</strong> Como base inicial, depois revisar e ajustar manualmente</li>
+                    <li><strong>Configuração:</strong> Use modo "Normal" ou "Médio" como padrão</li>
+                </ul>
+
+                <h4 style="color: #667eea; margin: 30px 0 15px 0;">✋ Suporte Manual</h4>
+                
+                <ul class="step-list">
+                    <li><strong>Vantagens:</strong> Controle total, pode evitar áreas visíveis, otimiza quantidade de suportes</li>
+                    <li><strong>Desvantagens:</strong> Mais demorado, requer experiência, pode esquecer áreas críticas</li>
+                    <li><strong>Quando usar:</strong> Para peças com áreas visíveis importantes, miniaturas detalhadas, ou quando automático falha</li>
+                    <li><strong>Dica:</strong> Use automático primeiro, depois delete suportes ruins e adicione manualmente onde necessário</li>
+                </ul>
+
+                <div class="highlight-box">
+                    <h4>🎯 Método Híbrido Recomendado</h4>
+                    <p><strong>1.</strong> Gere suportes automáticos no modo "Médio"<br>
+                    <strong>2.</strong> Revise a peça em 360° procurando por:<br>
+                    &nbsp;&nbsp;&nbsp;• Suportes em áreas muito visíveis (rosto, superfícies lisas)<br>
+                    &nbsp;&nbsp;• Áreas sem suporte que deveriam ter (< 45°)<br>
+                    &nbsp;&nbsp;• Ilhas (áreas isoladas sem conexão)<br>
+                    <strong>3.</strong> Delete suportes problemáticos<br>
+                    <strong>4.</strong> Adicione suportes manuais nas áreas corrigidas<br>
+                    <strong>5.</strong> Verifique novamente antes de fatiar!</p>
+                </div>
+            </div>
+
+            <!-- ONDE COLOCAR SUPORTES -->
+            <div class="step">
+                <div class="step-number">📍</div>
+                <h3>Onde Colocar Suportes</h3>
+                <img src="suportes-images/exemplo-suportes-2.png" alt="Exemplos de posicionamento de suportes" class="step-image">
+                
+                <div class="step-description">
+                    <p>Saber ONDE colocar suportes é tão importante quanto saber COMO configurá-los:</p>
+                </div>
+
+                <h4 style="color: #667eea; margin: 30px 0 15px 0;">✅ SEMPRE Coloque Suportes Em:</h4>
+                
+                <ul class="step-list">
+                    <li><strong>Superfícies com ângulo < 45°:</strong> Qualquer área inclinada precisa de suporte. Use a visualização de ângulos do Chitubox (vermelho = precisa suporte).</li>
+                    
+                    <li><strong>Ilhas:</strong> Áreas que começam no meio do ar, sem conexão com camadas anteriores. São as principais causas de falha!</li>
+                    
+                    <li><strong>Pontes longas:</strong> Áreas horizontais suspensas com mais de 5mm de comprimento. Coloque suportes a cada 3-5mm.</li>
+                    
+                    <li><strong>Detalhes finos suspensos:</strong> Dedos, antenas, armas, cabelos. Use suportes leves mas abundantes.</li>
+                    
+                    <li><strong>Bordas de áreas planas:</strong> Mesmo que o centro esteja acima de 45°, as bordas podem precisar de suporte para evitar "curling" (enrolamento).</li>
+                    
+                    <li><strong>Áreas grandes e planas:</strong> Mesmo acima de 45°, áreas muito grandes sofrem força de sucção. Coloque suportes espaçados.</li>
+                </ul>
+
+                <h4 style="color: #667eea; margin: 30px 0 15px 0;">❌ EVITE Colocar Suportes Em:</h4>
+                
+                <ul class="step-list">
+                    <li><strong>Rostos e superfícies visíveis:</strong> Suportes deixam marcas! Se inevitável, use suportes muito leves (0.30mm) e pós-processe.</li>
+                    
+                    <li><strong>Áreas verticais (> 80°):</strong> Não precisam de suporte. Economize resina!</li>
+                    
+                    <li><strong>Topos de peças:</strong> A última camada não precisa de suporte (não tem nada acima dela).</li>
+                    
+                    <li><strong>Áreas que podem ser reorientadas:</strong> Às vezes girar a peça 45° elimina a necessidade de suportes.</li>
+                </ul>
+
+                <div class="warning-box">
+                    <h3>⚠️ CUIDADO COM ILHAS!</h3>
+                    <p><strong>Ilhas são a causa #1 de falhas de impressão!</strong><br><br>
+                    Uma ilha é qualquer área que começa sem conexão com camadas anteriores. Ela não tem onde se apoiar e vai falhar 100%.<br><br>
+                    <strong>Como detectar:</strong> Use a ferramenta "Island Detection" do Chitubox. Áreas em vermelho são ilhas!<br><br>
+                    <strong>Como corrigir:</strong> Adicione suportes manuais em TODAS as ilhas detectadas. Não deixe nenhuma sem suporte!</p>
+                </div>
+            </div>
+
+            <!-- ORIENTAÇÃO DA PEÇA -->
+            <div class="step">
+                <div class="step-number">🔄</div>
+                <h3>Orientação da Peça</h3>
+                
+                <div class="step-description">
+                    <p>Antes de adicionar suportes, oriente a peça corretamente! A orientação certa reduz drasticamente a necessidade de suportes:</p>
+                </div>
+
+                <h4 style="color: #667eea; margin: 30px 0 15px 0;">🎯 Princípios de Orientação:</h4>
+                
+                <ul class="step-list">
+                    <li><strong>Minimize áreas planas paralelas à plataforma:</strong> Áreas planas horizontais sofrem muita força de sucção. Incline a peça 30-45°.</li>
+                    
+                    <li><strong>Proteja detalhes importantes:</strong> Oriente a peça para que rostos e superfícies visíveis fiquem virados para cima (longe dos suportes).</li>
+                    
+                    <li><strong>Reduza área de seção transversal:</strong> Quanto menor a área de cada camada, menos força de sucção. Peças "altas e finas" são melhores que "baixas e largas".</li>
+                    
+                    <li><strong>Evite criar ilhas:</strong> Gire a peça para que áreas isoladas se conectem com o resto da geometria.</li>
+                    
+                    <li><strong>Considere linhas de camada:</strong> Linhas de camada horizontais são mais visíveis. Para superfícies lisas, oriente para que as linhas fiquem diagonais ou verticais.</li>
+                </ul>
+
+                <div class="tip-box">
+                    <h4>💡 Orientação Ideal Para Miniaturas</h4>
+                    <p><strong>Incline 30-45° para trás:</strong> Isso coloca o rosto virado para cima (sem suportes) e distribui melhor o peso.<br><br>
+                    <strong>Gire levemente para o lado:</strong> Evita que braços e armas criem ilhas.<br><br>
+                    <strong>Base sempre para baixo:</strong> A base da miniatura deve tocar a plataforma ou raft para máxima estabilidade.</p>
+                </div>
+            </div>
+
+            <!-- REMOÇÃO DE SUPORTES -->
+            <div class="step">
+                <div class="step-number">✂️</div>
+                <h3>Remoção de Suportes</h3>
+                
+                <div class="step-description">
+                    <p>Remover suportes corretamente é tão importante quanto posicioná-los bem:</p>
+                </div>
+
+                <h4 style="color: #667eea; margin: 30px 0 15px 0;">🛠️ Ferramentas Necessárias:</h4>
+                
+                <ul class="step-list">
+                    <li><strong>Alicate de corte rente (flush cutter):</strong> Essencial! Corta suportes sem danificar a peça</li>
+                    <li><strong>Estilete ou bisturi:</strong> Para suportes muito pequenos e detalhes finos</li>
+                    <li><strong>Lixa fina (400-600 grit):</strong> Para suavizar marcas de suportes</li>
+                    <li><strong>Primer e tinta:</strong> Para camuflar marcas em áreas visíveis</li>
+                </ul>
+
+                <h4 style="color: #667eea; margin: 30px 0 15px 0;">📋 Processo de Remoção:</h4>
+                
+                <ul class="step-list">
+                    <li><strong>1. Lave e cure parcialmente:</strong> Peça semi-curada é mais flexível e suportes saem mais fácil</li>
+                    
+                    <li><strong>2. Remova suportes grandes primeiro:</strong> Use alicate de corte rente, cortando o mais próximo possível da peça</li>
+                    
+                    <li><strong>3. Remova suportes pequenos:</strong> Use estilete para detalhes finos</li>
+                    
+                    <li><strong>4. Lixe as marcas:</strong> Lixa úmida 400 grit, depois 600 grit para suavizar</li>
+                    
+                    <li><strong>5. Cure completamente:</strong> Após remover todos os suportes, cure a peça final</li>
+                    
+                    <li><strong>6. Pós-processamento:</strong> Primer, tinta ou verniz para camuflar marcas restantes</li>
+                </ul>
+
+                <div class="warning-box">
+                    <h3>⚠️ NUNCA Puxe ou Torça!</h3>
+                    <p><strong>NUNCA puxe ou torça suportes para removê-los!</strong><br><br>
+                    Isso pode:<br>
+                    • Quebrar detalhes finos da peça<br>
+                    • Deixar marcas grandes e irregulares<br>
+                    • Danificar a superfície ao redor<br><br>
+                    <strong>SEMPRE corte com alicate de corte rente!</strong> Faça movimentos de corte limpo, não de torção.</p>
+                </div>
+            </div>
+
+            <!-- ERROS COMUNS -->
+            <div class="step">
+                <div class="step-number">❌</div>
+                <h3>Erros Comuns e Como Evitar</h3>
+                
+                <div class="step-description">
+                    <p>Aprenda com os erros mais comuns para economizar tempo e resina:</p>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Erro</th>
+                            <th>Sintoma</th>
+                            <th>Solução</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Suportes muito finos</strong></td>
+                            <td>Suportes quebram durante impressão, peça cai</td>
+                            <td>Aumente diâmetro do pilar para 0.80-1.00mm</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Suportes muito grossos</strong></td>
+                            <td>Marcas grandes na peça, difícil remover</td>
+                            <td>Reduza diâmetro de contato para 0.30-0.50mm</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Poucos suportes</strong></td>
+                            <td>Peça deforma, áreas caídas, detalhes quebrados</td>
+                            <td>Adicione mais suportes em áreas < 45°</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Muitos suportes</strong></td>
+                            <td>Desperdício de resina, tempo de remoção longo</td>
+                            <td>Revise e delete suportes desnecessários (> 80°)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Ilhas não suportadas</strong></td>
+                            <td>Falha total de impressão, resina solta no tanque</td>
+                            <td>Use "Island Detection" e suporte TODAS as ilhas</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Suportes em áreas visíveis</strong></td>
+                            <td>Marcas feias em rostos e superfícies importantes</td>
+                            <td>Reoriente a peça ou use suportes muito leves (0.30mm)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Ângulo de suporte errado</strong></td>
+                            <td>Suportes difíceis de remover, marcas profundas</td>
+                            <td>Use ângulos maiores (70-75°) para facilitar remoção</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Sem raft em peças grandes</strong></td>
+                            <td>Peça não adere à plataforma, falha no início</td>
+                            <td>Adicione raft retangular 110% para peças > 50mm</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- CHECKLIST FINAL -->
+            <div class="step">
+                <div class="step-number">✅</div>
+                <h3>Checklist Antes de Imprimir</h3>
+                
+                <div class="step-description">
+                    <p>Use este checklist para garantir que seus suportes estão perfeitos:</p>
+                </div>
+
+                <ul class="step-list">
+                    <li>☑️ <strong>Orientação otimizada:</strong> Peça inclinada 30-45°, detalhes importantes virados para cima</li>
+                    <li>☑️ <strong>Todas as áreas < 45° têm suportes:</strong> Use visualização de ângulos do Chitubox</li>
+                    <li>☑️ <strong>Todas as ilhas estão suportadas:</strong> Use "Island Detection" e verifique camada por camada</li>
+                    <li>☑️ <strong>Suportes não estão em áreas muito visíveis:</strong> Ou use suportes leves se inevitável</li>
+                    <li>☑️ <strong>Diâmetro do pilar adequado:</strong> 0.60-0.80mm para detalhes, 0.80-1.00mm para normal, 1.00-1.50mm para pesado</li>
+                    <li>☑️ <strong>Ângulo de suporte correto:</strong> 70-75° para facilitar remoção</li>
+                    <li>☑️ <strong>Raft adicionado se necessário:</strong> Para peças grandes (> 50mm) ou com base pequena</li>
+                    <li>☑️ <strong>Visualização 360° completa:</strong> Gire a peça e verifique todos os ângulos</li>
+                    <li>☑️ <strong>Simulação de fatiamento:</strong> Verifique camada por camada no modo de visualização</li>
+                    <li>☑️ <strong>Parâmetros de impressão corretos:</strong> Tempo de exposição calibrado com gabarito Quanton3D</li>
+                </ul>
+
+                <div class="highlight-box">
+                    <h4>🎯 Regra de Ouro</h4>
+                    <p><strong>"Melhor ter um suporte a mais do que um a menos!"</strong><br><br>
+                    Um suporte extra custa centavos de resina e 10 segundos para remover.<br>
+                    Uma impressão falhada custa horas de tempo e muito mais resina.<br><br>
+                    Quando em dúvida, adicione o suporte!</p>
+                </div>
+            </div>
+
+            <!-- DICAS AVANÇADAS -->
+            <div class="step">
+                <div class="step-number">🎓</div>
+                <h3>Dicas Avançadas</h3>
+                
+                <div class="step-description">
+                    <p>Para usuários experientes que querem levar seus suportes ao próximo nível:</p>
+                </div>
+
+                <ul class="step-list">
+                    <li><strong>Suportes em árvore (Tree Supports):</strong> Use para peças orgânicas complexas. Economizam resina e são mais fáceis de remover, mas requerem configuração manual cuidadosa.</li>
+                    
+                    <li><strong>Suportes internos:</strong> Para peças ocas, adicione suportes dentro da cavidade para evitar colapso. Lembre-se de fazer furos de drenagem!</li>
+                    
+                    <li><strong>Suportes graduais:</strong> Varie o diâmetro do pilar conforme a altura. Base mais grossa (1.2mm), topo mais fino (0.6mm) para otimizar resistência e remoção.</li>
+                    
+                    <li><strong>Suportes preventivos:</strong> Em áreas críticas (rostos, detalhes finos), adicione suportes extras "por segurança" mesmo que pareçam desnecessários.</li>
+                    
+                    <li><strong>Teste de suportes:</strong> Para peças caras ou complexas, imprima apenas os primeiros 10mm com suportes para validar antes de imprimir completo.</li>
+                    
+                    <li><strong>Documentação de suportes:</strong> Tire screenshots da configuração de suportes que funcionou bem. Reutilize em peças similares!</li>
+                    
+                    <li><strong>Suportes híbridos:</strong> Combine suportes automáticos leves com manuais pesados em áreas críticas para otimizar tempo e qualidade.</li>
+                    
+                    <li><strong>Pré-cura estratégica:</strong> Para peças muito grandes, pause a impressão a cada 50mm e cure parcialmente. Isso reduz força de sucção nas camadas superiores.</li>
+                </ul>
+
+                <div class="tip-box">
+                    <h4>💡 Truque Profissional: Suportes Invisíveis</h4>
+                    <p>Para miniaturas e peças artísticas onde marcas são inaceitáveis:<br><br>
+                    <strong>1.</strong> Use suportes ultra-leves: 0.25mm contato, 0.50mm pilar<br>
+                    <strong>2.</strong> Coloque suportes apenas em áreas que serão pintadas ou texturizadas<br>
+                    <strong>3.</strong> Use ângulo máximo (80°) para facilitar remoção<br>
+                    <strong>4.</strong> Adicione mais suportes para compensar a fragilidade<br>
+                    <strong>5.</strong> Remova com estilete afiado, não alicate<br>
+                    <strong>6.</strong> Preencha marcas com putty antes de pintar</p>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            <p>📘 Guia criado por <a href="https://quanton3d.com.br">Quanton3D</a></p>
+            <p>Resinas UV SLA de Alta Performance</p>
+            <p style="margin-top: 15px; font-size: 0.9em; opacity: 0.8;">
+                Para mais guias e tutoriais, visite nosso site!
+            </p>
+        </div>
+    </div>
+</body>
+</html>

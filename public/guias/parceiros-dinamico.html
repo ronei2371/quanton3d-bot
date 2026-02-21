@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parceiros Quanton3D - Cursos e Serviços Recomendados</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .content {
+            padding: 50px 40px;
+        }
+
+        .intro-box {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 50px;
+            text-align: center;
+        }
+
+        .intro-box h2 {
+            font-size: 2.2em;
+            margin-bottom: 20px;
+        }
+
+        .intro-box p {
+            font-size: 1.2em;
+            line-height: 1.8;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .partner-card {
+            background: white;
+            border-radius: 20px;
+            padding: 0;
+            margin-bottom: 50px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            overflow: hidden;
+            border: 3px solid #667eea;
+        }
+
+        .partner-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+        }
+
+        .partner-header h2 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .partner-header .subtitle {
+            font-size: 1.3em;
+            opacity: 0.9;
+        }
+
+        .partner-content {
+            padding: 40px;
+        }
+
+        .partner-description {
+            font-size: 1.15em;
+            line-height: 1.8;
+            margin-bottom: 30px;
+            color: #555;
+        }
+
+        .instructors {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .instructors h3 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .instructor-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .instructor-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .instructor-card h4 {
+            color: #667eea;
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+
+        .instructor-card p {
+            color: #666;
+            font-size: 1.05em;
+        }
+
+        .instructor-card .phone {
+            margin-top: 15px;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .gallery {
+            margin: 40px 0;
+        }
+
+        .gallery h3 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .gallery-item {
+            position: relative;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 350px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .course-highlights {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 35px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .course-highlights h3 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .highlights-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .highlight-item {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .highlight-icon {
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+
+        .cta-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 50px 40px;
+            border-radius: 20px;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .cta-section h3 {
+            font-size: 2.2em;
+            margin-bottom: 20px;
+        }
+
+        .cta-section p {
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            opacity: 0.95;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: white;
+            color: #667eea;
+            padding: 18px 50px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-size: 1.2em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+            background: #f8f9fa;
+        }
+
+        .contact-info {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .contact-info h4 {
+            color: #667eea;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .contact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .contact-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .contact-item strong {
+            display: block;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        footer {
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 30px;
+        }
+
+        footer p {
+            margin: 5px 0;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2em;
+            }
+
+            .content {
+                padding: 30px 20px;
+            }
+
+            .gallery-item img {
+                height: 250px;
+            }
+
+            .cta-section {
+                padding: 30px 20px;
+            }
+        }
+
+        .no-partners {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .no-partners h3 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤝 Parceiros Quanton3D</h1>
+            <p>Cursos, serviços e profissionais recomendados para levar suas impressões 3D ao próximo nível</p>
+        </header>
+
+        <div class="content">
+            <div class="intro-box">
+                <h2>Aprenda com os Melhores!</h2>
+                <p>A Quanton3D se orgulha de recomendar parceiros de excelência que compartilham nossa paixão por qualidade e profissionalismo. Confira nossos parceiros selecionados!</p>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading" class="loading">
+                <div class="loading-spinner"></div>
+                <p>Carregando parceiros...</p>
+            </div>
+
+            <!-- Partners Container -->
+            <div id="partners-container"></div>
+
+            <!-- No Partners State -->
+            <div id="no-partners" class="no-partners" style="display: none;">
+                <h3>Em Breve!</h3>
+                <p>Estamos preparando parcerias incríveis para você. Volte em breve!</p>
+            </div>
+        </div>
+
+        <footer>
+            <p>&copy; 2024 Quanton3D - Resinas UV SLA de Alta Performance</p>
+            <p>Todos os direitos reservados</p>
+        </footer>
+    </div>
+
+    <script>
+        // Fetch partners from API
+        async function loadPartners() {
+            try {
+                const response = await fetch('https://quanton3d-bot-v2.onrender.com/api/partners?auth=quanton3d_admin_secret&active=true');
+                
+                if (!response.ok) {
+                    throw new Error('Erro ao carregar parceiros');
+                }
+
+                const data = await response.json();
+                const partners = data.partners || [];
+                
+                // Hide loading
+                document.getElementById('loading').style.display = 'none';
+
+                if (partners.length === 0) {
+                    document.getElementById('no-partners').style.display = 'block';
+                    return;
+                }
+
+                // Render partners
+                const container = document.getElementById('partners-container');
+                container.innerHTML = partners.map(partner => renderPartner(partner)).join('');
+
+            } catch (error) {
+                console.error('Erro:', error);
+                document.getElementById('loading').innerHTML = `
+                    <p style="color: #e74c3c;">Erro ao carregar parceiros. Tente novamente mais tarde.</p>
+                `;
+            }
+        }
+
+        function renderPartner(partner) {
+            const instructorsHtml = (partner.instructor_1_name || partner.instructor_2_name) ? `
+                <div class="instructors">
+                    <h3>👨‍🎨 Sobre os Instrutores</h3>
+                    <div class="instructor-info">
+                        ${partner.instructor_1_name ? `
+                            <div class="instructor-card">
+                                <h4>${partner.instructor_1_name}</h4>
+                                <p>${partner.instructor_1_description || ''}</p>
+                                ${partner.instructor_1_phone ? `<p class="phone">📱 ${partner.instructor_1_phone}</p>` : ''}
+                            </div>
+                        ` : ''}
+                        ${partner.instructor_2_name ? `
+                            <div class="instructor-card">
+                                <h4>${partner.instructor_2_name}</h4>
+                                <p>${partner.instructor_2_description || ''}</p>
+                                ${partner.instructor_2_phone ? `<p class="phone">📱 ${partner.instructor_2_phone}</p>` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                    ${partner.instructor_1_name && partner.instructor_2_name ? `
+                        <p style="text-align: center; margin-top: 20px; font-size: 1.1em; color: #667eea; font-weight: bold;">
+                            Juntos, formam a dupla mais respeitada no cenário brasileiro!
+                        </p>
+                    ` : ''}
+                </div>
+            ` : '';
+
+            const galleryHtml = partner.images && partner.images.length > 0 ? `
+                <div class="gallery">
+                    <h3>🖼️ Galeria de Trabalhos</h3>
+                    <p style="text-align: center; margin-bottom: 25px; color: #666; font-size: 1.1em;">
+                        Veja a qualidade excepcional dos trabalhos:
+                    </p>
+                    <div class="gallery-grid">
+                        ${partner.images.map((img, index) => `
+                            <div class="gallery-item">
+                                <img src="${img}" alt="Trabalho ${index + 1}">
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : '';
+
+            const highlightsHtml = partner.highlights && partner.highlights.length > 0 ? `
+                <div class="course-highlights">
+                    <h3>✨ Destaques do Curso</h3>
+                    <div class="highlights-list">
+                        ${partner.highlights.map(highlight => `
+                            <div class="highlight-item">
+                                <span class="highlight-icon">✓</span>
+                                <span>${highlight}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : '';
+
+            const contactHtml = (partner.phone || partner.email || partner.website_url) ? `
+                <div class="contact-info">
+                    <h4>📞 Informações de Contato</h4>
+                    <div class="contact-grid">
+                        ${partner.phone ? `
+                            <div class="contact-item">
+                                <strong>Telefone</strong>
+                                <span>${partner.phone}</span>
+                            </div>
+                        ` : ''}
+                        ${partner.email ? `
+                            <div class="contact-item">
+                                <strong>Email</strong>
+                                <span>${partner.email}</span>
+                            </div>
+                        ` : ''}
+                        ${partner.website_url ? `
+                            <div class="contact-item">
+                                <strong>Website</strong>
+                                <a href="${partner.website_url}" target="_blank" style="color: #667eea;">Visitar</a>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            ` : '';
+
+            const ctaHtml = partner.course_url ? `
+                <div class="cta-section">
+                    <h3>🚀 Pronto para Começar?</h3>
+                    <p>Não perca a oportunidade de aprender com os melhores!</p>
+                    <a href="${partner.course_url}" target="_blank" class="cta-button">
+                        Acessar Curso Agora
+                    </a>
+                </div>
+            ` : '';
+
+            return `
+                <div class="partner-card">
+                    <div class="partner-header">
+                        <h2>${partner.name}</h2>
+                        ${partner.instructor_1_name && partner.instructor_2_name ? `
+                            <p class="subtitle">${partner.instructor_1_name} & ${partner.instructor_2_name}</p>
+                        ` : ''}
+                    </div>
+
+                    <div class="partner-content">
+                        <p class="partner-description">${partner.description}</p>
+                        ${instructorsHtml}
+                        ${galleryHtml}
+                        ${highlightsHtml}
+                        ${contactHtml}
+                        ${ctaHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load partners on page load
+        document.addEventListener('DOMContentLoaded', loadPartners);
+    </script>
+</body>
+</html>

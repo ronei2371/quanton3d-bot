@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia de Otimização e Pós-Processamento - Quanton3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .intro {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .intro h2 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+        }
+
+        .section-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-left: 5px solid #667eea;
+        }
+
+        .section-card h2 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .section-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+
+        .section-image {
+            width: 100%;
+            max-width: 700px;
+            height: auto;
+            border-radius: 15px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .step-by-step {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .step-by-step h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .step {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+        }
+
+        .step strong {
+            color: #667eea;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .tip-box {
+            background: #d1ecf1;
+            border-left: 5px solid #17a2b8;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .tip-box strong {
+            color: #0c5460;
+            display: block;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .warning-box strong {
+            color: #856404;
+            display: block;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border: 2px solid #667eea;
+        }
+
+        .highlight-box h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background: #f5f5f5;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .tool-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            border-top: 4px solid #667eea;
+        }
+
+        .tool-card h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        ul {
+            margin: 15px 0;
+            padding-left: 25px;
+        }
+
+        li {
+            margin: 8px 0;
+        }
+
+        footer {
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2em;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .tools-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 Guia de Otimização e Pós-Processamento Avançado</h1>
+            <p>Transforme suas impressões em peças profissionais de alta qualidade</p>
+        </header>
+
+        <div class="content">
+            <div class="intro">
+                <h2>Do Bruto ao Perfeito</h2>
+                <p>Este guia completo ensina técnicas profissionais de pós-processamento para transformar suas impressões 3D em peças com acabamento de nível industrial. Aprenda cura UV otimizada, lixamento profissional, polimento, pintura e acabamentos especiais!</p>
+            </div>
+
+            <!-- SEÇÃO 1: CURA UV OTIMIZADA -->
+            <div class="section-card">
+                <h2>
+                    <div class="section-icon">☀️</div>
+                    1. Cura UV Otimizada
+                </h2>
+                <p><strong>Objetivo:</strong> Completar a polimerização da resina para máxima resistência e estabilidade dimensional.</p>
+
+                <img src="images/cura-uv-processo.jpg" alt="Processo de cura UV" class="section-image">
+
+                <div class="step-by-step">
+                    <h3>📋 Passo a Passo da Cura UV</h3>
+                    
+                    <div class="step">
+                        <strong>Passo 1: Limpeza Completa</strong>
+                        Lave a peça em IPA 99% por 3-5 minutos, agitando suavemente. Remova toda resina não curada.
+                    </div>
+
+                    <div class="step">
+                        <strong>Passo 2: Secagem</strong>
+                        Deixe secar completamente ao ar livre por 10-15 minutos. Não cure peças molhadas!
+                    </div>
+
+                    <div class="step">
+                        <strong>Passo 3: Pré-Cura em Água (Opcional)</strong>
+                        Submerja a peça em água limpa dentro da câmara UV. Isso reduz amarelamento e melhora transparência.
+                    </div>
+
+                    <div class="step">
+                        <strong>Passo 4: Cura UV Principal</strong>
+                        Cure por 5-10 minutos, virando a peça a cada 2 minutos para exposição uniforme.
+                    </div>
+
+                    <div class="step">
+                        <strong>Passo 5: Resfriamento</strong>
+                        Deixe esfriar naturalmente. Não exponha a mudanças bruscas de temperatura.
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <h3>⏱️ Tempos de Cura Recomendados</h3>
+                    <table>
+                        <tr>
+                            <th>Tipo de Resina</th>
+                            <th>Tempo de Cura</th>
+                            <th>Temperatura</th>
+                        </tr>
+                        <tr>
+                            <td>Resina Standard (Spin+)</td>
+                            <td>5-8 minutos</td>
+                            <td>40-60°C</td>
+                        </tr>
+                        <tr>
+                            <td>Resina Tough/ABS-Like</td>
+                            <td>8-12 minutos</td>
+                            <td>50-70°C</td>
+                        </tr>
+                        <tr>
+                            <td>Resina Flexível</td>
+                            <td>3-5 minutos</td>
+                            <td>30-40°C</td>
+                        </tr>
+                        <tr>
+                            <td>Resina Dental</td>
+                            <td>10-15 minutos</td>
+                            <td>60-80°C</td>
+                        </tr>
+                        <tr>
+                            <td>Resina Transparente</td>
+                            <td>5-8 minutos (em água)</td>
+                            <td>40-50°C</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="tip-box">
+                    <strong>💡 Dica Profissional - Cura em Água:</strong>
+                    Para peças transparentes ou translúcidas, cure sempre submerso em água! Isso reduz drasticamente o amarelamento causado pelo oxigênio e melhora a claridade óptica em até 80%.
+                </div>
+
+                <div class="warning-box">
+                    <strong>⚠️ Cuidado com Super-Cura:</strong>
+                    Excesso de cura UV causa amarelamento, fragilidade e perda de detalhes. Siga os tempos recomendados e não deixe a peça "esquecida" na câmara UV!
+                </div>
+            </div>
+
+            <!-- SEÇÃO 2: LIXAMENTO PROFISSIONAL -->
+            <div class="section-card">
+                <h2>
+                    <div class="section-icon">📐</div>
+                    2. Lixamento Profissional
+                </h2>
+                <p><strong>Objetivo:</strong> Remover marcas de camadas, suportes e imperfeições para criar superfície lisa e uniforme.</p>
+
+                <img src="images/lixamento-profissional.jpg" alt="Técnicas de lixamento" class="section-image">
+
+                <div class="highlight-box">
+                    <h3>🔢 Progressão de Grãos de Lixa</h3>
+                    <p>O segredo do lixamento profissional está na progressão gradual dos grãos:</p>
+                    <table>
+                        <tr>
+                            <th>Grão</th>
+                            <th>Uso</th>
+                            <th>Quando Usar</th>
+                        </tr>
+                        <tr>
+                            <td>180-220</td>
+                            <td>Desbaste inicial</td>
+                            <td>Remover marcas de suportes, layer lines grossas</td>
+                        </tr>
+                        <tr>
+                            <td>320-400</td>
+                            <td>Lixamento médio</td>
+                            <td>Suavizar superfície após desbaste</td>
+                        </tr>
+                        <tr>
+                            <td>600-800</td>
+                            <td>Lixamento fino</td>
+                            <td>Preparar para polimento ou pintura</td>
+                        </tr>
+                        <tr>
+                            <td>1000-1500</td>
+                            <td>Lixamento extra-fino</td>
+                            <td>Pré-polimento, acabamento fosco</td>
+                        </tr>
+                        <tr>
+                            <td>2000-3000</td>
+                            <td>Polimento inicial</td>
+                            <td>Preparar para polimento espelhado</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="step-by-step">
+                    <h3>📋 Técnica de Lixamento Correto</h3>
+                    
+                    <div class="step">
+                        <strong>1. Wet Sanding (Lixamento Úmido)</strong>
+                        Sempre lixe com água! Isso evita poeira tóxica, reduz atrito e melhora o acabamento. Use água corrente ou bacia com água limpa.
+                    </div>
+
+                    <div class="step">
+                        <strong>2. Movimentos Circulares</strong>
+                        Faça movimentos circulares suaves e constantes. Não pressione demais! Deixe a lixa fazer o trabalho.
+                    </div>
+
+                    <div class="step">
+                        <strong>3. Troque de Direção</strong>
+                        Alterne entre movimentos horizontais, verticais e circulares para evitar marcas direcionais.
+                    </div>
+
+                    <div class="step">
+                        <strong>4. Limpe Entre Grãos</strong>
+                        Lave e seque a peça completamente antes de mudar para o próximo grão de lixa.
+                    </div>
+
+                    <div class="step">
+                        <strong>5. Verifique Constantemente</strong>
+                        Seque a peça e inspecione contra a luz para identificar imperfeições restantes.
+                    </div>
+                </div>
+
+                <div class="tip-box">
+                    <strong>💡 Dica Profissional - Lixadeira Rotativa:</strong>
+                    Para peças grandes, use lixadeira orbital com velocidade baixa (3000-5000 RPM). Para detalhes finos, sempre use lixamento manual para controle total.
+                </div>
+
+                <div class="warning-box">
+                    <strong>⚠️ Nunca Pule Grãos:</strong>
+                    Pular grãos de lixa deixa arranhões profundos que não saem nos grãos seguintes. Sempre siga a progressão: 220 → 400 → 600 → 800 → 1000 → 1500 → 2000.
+                </div>
+            </div>
+
+            <!-- SEÇÃO 3: POLIMENTO -->
+            <div class="section-card">
+                <h2>
+                    <div class="section-icon">✨</div>
+                    3. Polimento para Acabamento Espelhado
+                </h2>
+                <p><strong>Objetivo:</strong> Criar superfície brilhante e reflexiva de nível profissional.</p>
+
+                <img src="images/antes-depois-polimento.jpg" alt="Antes e depois do polimento" class="section-image">
+
+                <div class="step-by-step">
+                    <h3>📋 Processo de Polimento</h3>
+                    
+                    <div class="step">
+                        <strong>Etapa 1: Polimento Grosso</strong>
+                        Use pasta de polir grossa (verde) com roda de algodão. Remove arranhões finos do lixamento 2000-3000.
+                    </div>
+
+                    <div class="step">
+                        <strong>Etapa 2: Polimento Médio</strong>
+                        Use pasta de polir média (marrom/vermelha) com roda de flanela. Aumenta o brilho gradualmente.
+                    </div>
+
+                    <div class="step">
+                        <strong>Etapa 3: Polimento Fino</strong>
+                        Use pasta de polir fina (branca/azul) com roda de feltro. Cria brilho intenso.
+                    </div>
+
+                    <div class="step">
+                        <strong>Etapa 4: Polimento Espelhado</strong>
+                        Use pasta de polir espelhado (rosa/diamante) com roda de microfibra. Acabamento final reflexivo.
+                    </div>
+
+                    <div class="step">
+                        <strong>Etapa 5: Limpeza Final</strong>
+                        Lave com água e sabão neutro para remover resíduos de pasta. Seque com pano microfibra.
+                    </div>
+                </div>
+
+                <div class="tools-grid">
+                    <div class="tool-card">
+                        <h4>🔧 Ferramentas Necessárias</h4>
+                        <ul style="list-style: none; padding-left: 0;">
+                            <li>✓ Politriz rotativa (1500-3000 RPM)</li>
+                            <li>✓ Rodas de polimento (algodão, flanela, feltro)</li>
+                            <li>✓ Pastas de polir (4 grãos)</li>
+                            <li>✓ Panos de microfibra</li>
+                        </ul>
+                    </div>
+
+                    <div class="tool-card">
+                        <h4>🧪 Materiais Alternativos</h4>
+                        <ul style="list-style: none; padding-left: 0;">
+                            <li>✓ Creme dental (polimento leve)</li>
+                            <li>✓ Brasso (polimento de metais)</li>
+                            <li>✓ Novus Plastic Polish (específico para plásticos)</li>
+                            <li>✓ Polywatch (polimento de acrílicos)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="tip-box">
+                    <strong>💡 Dica Profissional - Polimento Manual:</strong>
+                    Para peças pequenas ou delicadas, polimento manual com creme dental e pano microfibra funciona muito bem! Faça movimentos circulares por 5-10 minutos.
+                </div>
+
+                <div class="highlight-box">
+                    <h3>🎯 Acabamento Espelhado vs Fosco</h3>
+                    <p><strong>Espelhado:</strong> Lixe até 3000 + polimento completo = superfície reflexiva</p>
+                    <p><strong>Fosco Premium:</strong> Pare no lixamento 1500 = acabamento fosco uniforme e profissional</p>
+                    <p><strong>Semi-Brilho:</strong> Lixe até 2000 + polimento leve = brilho suave sem reflexo</p>
+                </div>
+            </div>
+
+            <!-- SEÇÃO 4: PINTURA -->
+            <div class="section-card">
+                <h2>
+                    <div class="section-icon">🎨</div>
+                    4. Pintura Profissional
+                </h2>
+                <p><strong>Objetivo:</strong> Aplicar cor e acabamento de qualidade profissional com durabilidade.</p>
+
+                <img src="images/pintura-acabamento.jpg" alt="Processo de pintura" class="section-image">
+
+                <div class="step-by-step">
+                    <h3>📋 Processo Completo de Pintura</h3>
+                    
+                    <div class="step">
+                        <strong>Passo 1: Preparação da Superfície</strong>
+                        Lixe com grão 600-800 para criar textura de ancoragem. Lave com água e sabão. Seque completamente.
+                    </div>
+
+                    <div class="step">
+                        <strong>Passo 2: Aplicação de Primer</strong>
+                        Aplique 2-3 camadas finas de primer para plásticos. Espere 30 minutos entre camadas. Lixe levemente com 1000 após secar.
+                    </div>
+
+                    <div class="step">
+                        <strong>Passo 3: Pintura Base</strong>
+                        Aplique 3-4 camadas finas de tinta. Camadas finas evitam escorrimento! Espere 15-20 minutos entre camadas.
+                    </div>
+
+                    <div class="step">
+                        <strong>Passo 4: Detalhes e Weathering (Opcional)</strong>
+                        Use pincéis finos para detalhes. Aplique wash (tinta diluída) para destacar relevos.
+                    </div>
+
+                    <div class="step">
+                        <strong>Passo 5: Verniz de Proteção</strong>
+                        Aplique 2-3 camadas de verniz (brilhante, fosco ou acetinado). Protege a pintura e unifica o acabamento.
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <h3>🎨 Tipos de Tinta e Aplicações</h3>
+                    <table>
+                        <tr>
+                            <th>Tipo de Tinta</th>
+                            <th>Vantagens</th>
+                            <th>Melhor Para</th>
+                        </tr>
+                        <tr>
+                            <td>Acrílica (pincel)</td>
+                            <td>Fácil de usar, à base de água, sem cheiro</td>
+                            <td>Miniaturas, detalhes, iniciantes</td>
+                        </tr>
+                        <tr>
+                            <td>Spray (lata)</td>
+                            <td>Cobertura uniforme, rápida, sem marcas</td>
+                            <td>Peças grandes, acabamento liso</td>
+                        </tr>
+                        <tr>
+                            <td>Aerógrafo</td>
+                            <td>Controle total, gradientes, profissional</td>
+                            <td>Trabalhos profissionais, efeitos especiais</td>
+                        </tr>
+                        <tr>
+                            <td>Esmalte sintético</td>
+                            <td>Muito durável, brilho intenso</td>
+                            <td>Peças funcionais, uso externo</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="tip-box">
+                    <strong>💡 Dica Profissional - Técnica de Spray:</strong>
+                    Mantenha distância de 20-30cm. Faça movimentos contínuos horizontais. Não pare o movimento sobre a peça! Sobreponha 50% entre passadas para cobertura uniforme.
+                </div>
+
+                <div class="warning-box">
+                    <strong>⚠️ Evite Camadas Grossas:</strong>
+                    Camadas grossas de tinta escorrem, criam bolhas e perdem detalhes. Sempre prefira 5 camadas finas do que 2 grossas!
+                </div>
+
+                <div class="tools-grid">
+                    <div class="tool-card">
+                        <h4>🖌️ Kit Básico de Pintura</h4>
+                        <ul style="list-style: none; padding-left: 0;">
+                            <li>✓ Primer cinza para plásticos</li>
+                            <li>✓ Tintas acrílicas (cores básicas)</li>
+                            <li>✓ Pincéis variados (00, 0, 2, 4)</li>
+                            <li>✓ Verniz spray (fosco/brilhante)</li>
+                            <li>✓ Fita crepe para máscaras</li>
+                            <li>✓ Paleta e recipientes para água</li>
+                        </ul>
+                    </div>
+
+                    <div class="tool-card">
+                        <h4>🎨 Kit Avançado</h4>
+                        <ul style="list-style: none; padding-left: 0;">
+                            <li>✓ Aerógrafo + compressor</li>
+                            <li>✓ Cabine de pintura</li>
+                            <li>✓ Tintas para aerógrafo</li>
+                            <li>✓ Máscaras líquidas</li>
+                            <li>✓ Pigmentos e pós metálicos</li>
+                            <li>✓ Thinner e diluentes</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEÇÃO 5: ACABAMENTOS ESPECIAIS -->
+            <div class="section-card">
+                <h2>
+                    <div class="section-icon">⚡</div>
+                    5. Acabamentos Especiais
+                </h2>
+                <p><strong>Objetivo:</strong> Aplicar efeitos avançados para resultados únicos e impressionantes.</p>
+
+                <div class="highlight-box">
+                    <h3>🌟 Técnicas de Acabamento Especial</h3>
+                    
+                    <h4 style="color: #667eea; margin-top: 20px;">1. Metalização</h4>
+                    <p><strong>Efeito:</strong> Acabamento metálico realista (ouro, prata, cobre, bronze)</p>
+                    <p><strong>Técnica:</strong></p>
+                    <ul>
+                        <li>Lixe até 1500 para superfície lisa</li>
+                        <li>Aplique primer preto fosco</li>
+                        <li>Aplique tinta metálica (spray ou aerógrafo)</li>
+                        <li>Polimento leve com palha de aço 0000</li>
+                        <li>Verniz brilhante para proteção</li>
+                    </ul>
+
+                    <h4 style="color: #667eea; margin-top: 20px;">2. Weathering (Envelhecimento)</h4>
+                    <p><strong>Efeito:</strong> Aparência desgastada, usada, realista</p>
+                    <p><strong>Técnica:</strong></p>
+                    <ul>
+                        <li>Pinte a base normalmente</li>
+                        <li>Aplique wash (tinta diluída 1:10) nos relevos</li>
+                        <li>Dry brush (pincel seco) com cor clara nos cantos</li>
+                        <li>Pigmentos de ferrugem/poeira em áreas desgastadas</li>
+                        <li>Verniz fosco para fixar</li>
+                    </ul>
+
+                    <h4 style="color: #667eea; margin-top: 20px;">3. Efeito Cromado</h4>
+                    <p><strong>Efeito:</strong> Acabamento espelhado cromado</p>
+                    <p><strong>Técnica:</strong></p>
+                    <ul>
+                        <li>Polimento espelhado completo (até 3000)</li>
+                        <li>Primer preto brilhante</li>
+                        <li>Tinta cromada especial (Alclad, Molotow)</li>
+                        <li>NÃO aplicar verniz (perde o efeito)</li>
+                    </ul>
+
+                    <h4 style="color: #667eea; margin-top: 20px;">4. Transparência Cristalina</h4>
+                    <p><strong>Efeito:</strong> Acabamento transparente como vidro</p>
+                    <p><strong>Técnica:</strong></p>
+                    <ul>
+                        <li>Use resina transparente de alta qualidade</li>
+                        <li>Cure em água para evitar amarelamento</li>
+                        <li>Lixamento úmido progressivo até 3000</li>
+                        <li>Polimento completo com pasta diamante</li>
+                        <li>Opcional: aplicar resina epóxi líquida para acabamento vítreo</li>
+                    </ul>
+
+                    <h4 style="color: #667eea; margin-top: 20px;">5. Efeito Mármore</h4>
+                    <p><strong>Efeito:</strong> Aparência de pedra mármore</p>
+                    <p><strong>Técnica:</strong></p>
+                    <ul>
+                        <li>Base branca ou cinza clara</li>
+                        <li>Veias com pincel fino (preto/cinza escuro)</li>
+                        <li>Esfumaçar com pincel seco ou esponja</li>
+                        <li>Verniz acetinado para acabamento natural</li>
+                    </ul>
+
+                    <h4 style="color: #667eea; margin-top: 20px;">6. Efeito Madeira</h4>
+                    <p><strong>Efeito:</strong> Textura de madeira realista</p>
+                    <p><strong>Técnica:</strong></p>
+                    <ul>
+                        <li>Base marrom claro/bege</li>
+                        <li>Veios com pincel de cerdas separadas (marrom escuro)</li>
+                        <li>Wash marrom para profundidade</li>
+                        <li>Dry brush com bege claro nos altos</li>
+                        <li>Verniz fosco ou acetinado</li>
+                    </ul>
+                </div>
+
+                <div class="tip-box">
+                    <strong>💡 Dica Profissional - Teste Antes:</strong>
+                    Sempre teste técnicas novas em peças de teste ou áreas não visíveis! Cada resina reage diferente a tintas e produtos químicos.
+                </div>
+            </div>
+
+            <!-- SEÇÃO 6: CHECKLIST E MATERIAIS -->
+            <div class="highlight-box">
+                <h3>🛠️ Checklist de Materiais Completo</h3>
+                
+                <table>
+                    <tr>
+                        <th>Categoria</th>
+                        <th>Itens Essenciais</th>
+                        <th>Itens Avançados</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Cura UV</strong></td>
+                        <td>Câmara UV, IPA 99%, recipiente para água</td>
+                        <td>Câmara UV com rotação, termômetro, timer</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Lixamento</strong></td>
+                        <td>Lixas 220-3000, bacia, água</td>
+                        <td>Lixadeira orbital, esponjas abrasivas, blocos de lixa</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Polimento</strong></td>
+                        <td>Pastas de polir, panos microfibra</td>
+                        <td>Politriz rotativa, rodas variadas, pasta diamante</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Pintura</strong></td>
+                        <td>Primer, tintas acrílicas, pincéis, verniz</td>
+                        <td>Aerógrafo, compressor, cabine, máscaras líquidas</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Acabamentos</strong></td>
+                        <td>Tintas metálicas, pigmentos básicos</td>
+                        <td>Tintas cromadas, folhas metálicas, resina epóxi</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- ERROS COMUNS -->
+            <div class="warning-box">
+                <strong>⚠️ 10 Erros Comuns em Pós-Processamento</strong>
+                <ul style="margin-top: 10px;">
+                    <li>❌ Não lavar bem antes da cura UV (resina não curada gruda)</li>
+                    <li>❌ Curar peça molhada (manchas brancas)</li>
+                    <li>❌ Pular grãos de lixa (arranhões profundos)</li>
+                    <li>❌ Lixar a seco (poeira tóxica + acabamento ruim)</li>
+                    <li>❌ Pressionar demais na lixa (marcas profundas)</li>
+                    <li>❌ Não limpar entre grãos (contamina lixa fina)</li>
+                    <li>❌ Polir sem lixar até 2000+ (não fica espelhado)</li>
+                    <li>❌ Pintar sem primer (tinta descasca)</li>
+                    <li>❌ Camadas grossas de tinta (escorrimento)</li>
+                    <li>❌ Não usar verniz final (pintura desgasta rápido)</li>
+                </ul>
+            </div>
+
+            <!-- DICAS FINAIS -->
+            <div class="highlight-box">
+                <h3>🎯 Dicas Finais para Resultados Profissionais</h3>
+                <ul style="list-style: none; padding-left: 0;">
+                    <li style="margin-bottom: 10px;">🔹 <strong>Paciência é fundamental:</strong> Pós-processamento leva mais tempo que a impressão!</li>
+                    <li style="margin-bottom: 10px;">🔹 <strong>Invista em ferramentas:</strong> Boas ferramentas fazem diferença enorme</li>
+                    <li style="margin-bottom: 10px;">🔹 <strong>Pratique em peças de teste:</strong> Não aprenda em peças importantes</li>
+                    <li style="margin-bottom: 10px;">🔹 <strong>Documente seu processo:</strong> Anote o que funciona para cada tipo de peça</li>
+                    <li style="margin-bottom: 10px;">🔹 <strong>Use EPI:</strong> Luvas, máscara e óculos sempre!</li>
+                    <li style="margin-bottom: 10px;">🔹 <strong>Trabalhe em ambiente ventilado:</strong> IPA e tintas liberam vapores</li>
+                    <li style="margin-bottom: 10px;">🔹 <strong>Organize seu espaço:</strong> Área limpa = melhores resultados</li>
+                    <li style="margin-bottom: 10px;">🔹 <strong>Aprenda com a comunidade:</strong> Compartilhe e aprenda técnicas novas</li>
+                </ul>
+            </div>
+
+            <!-- CONTATO -->
+            <div class="tip-box">
+                <strong>💬 Precisa de Ajuda?</strong>
+                <p style="margin-top: 10px;">A equipe Quanton3D está pronta para ajudar com dúvidas sobre pós-processamento!</p>
+                <p style="margin-top: 10px;"><strong>Contato:</strong></p>
+                <p>📱 WhatsApp: (31) 3271-6935</p>
+                <p>📧 Email: suporte@quanton3d.com.br</p>
+            </div>
+        </div>
+
+        <footer>
+            <p><strong>Quanton3D</strong> - Resinas UV SLA de Alta Performance</p>
+            <p>Do bruto ao perfeito - Transforme suas impressões!</p>
+        </footer>
+    </div>
+</body>
+</html>
