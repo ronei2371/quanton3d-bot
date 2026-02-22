@@ -4,6 +4,7 @@ import multer from 'multer';
 import { searchKnowledge, formatContext } from '../../rag-search.js';
 import { ensureMongoReady } from './common.js';
 import { getConversasCollection } from '../../db.js';
+import { metrics } from '../utils/metrics.js';
 
 const router = express.Router();
 
@@ -366,6 +367,8 @@ Contexto extra: trata-se de uma peça de resina e seus suportes, não há seres 
 }
 
 async function handleChatRequest(req, res) {
+  const requestStart = Date.now();
+  metrics.incrementRequests();
   try {
     const { message, sessionId } = req.body ?? {};
     const hasImage = hasImagePayload(req.body);
@@ -384,6 +387,10 @@ async function handleChatRequest(req, res) {
     const mergedCustomerContext = mergeCustomerContext(mergeCustomerContext(storedContext, inferredContext), customerContext);
 
     const { ragResults, ragContext, trimmedMessage, hasRelevantContext, adhesionIssueHint } = await buildRagContext({ message, hasImage });
+    const ragSearchPerformed = Boolean((trimmedMessage && trimmedMessage.length) || hasImage);
+    if (ragSearchPerformed) {
+      metrics.recordRAGSearch(ragResults.length);
+    }
 
     console.log(`[CHAT] Msg: ${trimmedMessage.substring(0, 50)}...`);
 
@@ -404,8 +411,11 @@ async function handleChatRequest(req, res) {
         });
 
     res.json({ reply: sanitizeChatText(response.reply), sessionId: sessionId || 'session-auto', documentsUsed: ragResults.length || response.documentsUsed });
+    metrics.recordResponseTime(Date.now() - requestStart);
   } catch (error) {
     console.error('Erro Chat:', error);
+    metrics.incrementErrors();
+    metrics.recordResponseTime(Date.now() - requestStart);
     res.status(500).json({ error: 'Erro no processamento da IA.' });
   }
 }
