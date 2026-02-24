@@ -149,6 +149,42 @@ const sanitizeResinName = (raw) => {
   return trimmed;
 };
 
+const parseGallerySettings = (rawSettings) => {
+  if (!rawSettings) return {};
+  if (typeof rawSettings === 'object') {
+    return rawSettings;
+  }
+  if (typeof rawSettings === 'string') {
+    try {
+      const parsed = JSON.parse(rawSettings);
+      if (parsed && typeof parsed === 'object') {
+        return parsed;
+      }
+      return rawSettings ? { summary: rawSettings } : {};
+    } catch (err) {
+      return { summary: rawSettings };
+    }
+  }
+  return {};
+};
+
+const extractSettingsFromBody = (body = {}) => {
+  const fields = {
+    layerHeightMm: body.layerHeightMm ?? body.layerHeight,
+    exposureTimeS: body.exposureTimeS ?? body.normalExposure ?? body.normalExposureS,
+    baseExposureTimeS: body.baseExposureTimeS ?? body.baseExposure ?? body.baseExposureS,
+    baseLayers: body.baseLayers ?? body.bottomLayers,
+    liftSpeedMmMin: body.liftSpeedMmMin ?? body.liftSpeed,
+    uvOffDelayS: body.uvOffDelayS ?? body.uvDelay ?? body.uvOffDelay
+  };
+
+  return Object.fromEntries(
+    Object.entries(fields)
+      .filter(([, value]) => !isNil(value) && String(value).toString().trim() !== '')
+      .map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
+  );
+};
+
 router.post("/register-user", async (req, res) => {
   try {
     const { name, phone, email, resin, problemType, sessionId } = req.body;
@@ -390,7 +426,8 @@ router.post("/gallery", upload.any(), async (req, res) => {
       image,
       images,
       imageUrl,
-      note
+      note,
+      contact
     } = req.body;
     const sanitizedResin = sanitizeResinName(resin);
 
@@ -441,13 +478,19 @@ router.post("/gallery", upload.any(), async (req, res) => {
     }
 
     const galleryCollection = getCollection("gallery");
+    const parsedSettings = parseGallerySettings(settings);
+    const fallbackSettings = extractSettingsFromBody(req.body);
+    const mergedSettings = { ...fallbackSettings, ...parsedSettings };
+    const hasSettings = Object.keys(mergedSettings).length > 0;
+
     const newEntry = {
-      name: name || null,
+      name: name?.trim() || null,
       resin: sanitizedResin,
-      printer,
-      settings: settings || {},
+      printer: printer.trim(),
+      settings: hasSettings ? mergedSettings : {},
+      contact: contact?.trim() || null,
       images: finalImages,
-      note: note || null,
+      note: note?.trim() || null,
       status: "pending",
       createdAt: new Date(),
       updatedAt: new Date()
