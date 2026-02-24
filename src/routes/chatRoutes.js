@@ -315,55 +315,32 @@ async function generateResponse({ message, ragContext, hasRelevantContext, adhes
 // =================================================================================
 // CÉREBRO VISUAL (REGRAS DO RONEI + BIBLIOTECA DE IMAGENS)
 // =================================================================================
-async function generateImageResponse({ message, imageUrl, ragContext }) {
+async function generateImageResponse({ message, imageUrl }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
-  const visualContext = ragContext ? `\n\n📎 CONTEXTO INTERNO:\n${ragContext}` : '';
-  
-  const VISUAL_SYSTEM_PROMPT = `
-    ATUE COMO UM ESPECIALISTA SÊNIOR EM IMPRESSÃO 3D SLA/DLP (VISÃO TÉCNICA).
+  const client = getOpenAIClient();
+  const userText = trimmedMessage
+    ? `Analise esta imagem de impressão 3D e me diga qual é a falha e como corrigir. Mensagem do cliente: ${trimmedMessage}`
+    : 'Analise esta imagem de impressão 3D e me diga qual é a falha e como corrigir.';
 
-    SEU PROTOCOLO DE ANÁLISE DE IMAGEM (IMPORTANTE):
-    1. **OLHE PRIMEIRO PARA A BASE (RAFT):** - A base está colada na mesa ou solta?
-       - A base está sólida ou se abrindo (folheada/delaminada)?
-       - *REGRA DE OURO:* Se a base (o "pé" da peça) estiver separando camadas ou torta, o erro é **DELAMINAÇÃO DE BASE**, não importa como estão os suportes.
+  const response = await client.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      {
+        role: 'system',
+        content: 'Você é um especialista sênior em resinas SLA da Quanton3D e análise de falhas de impressão 3D.'
+      },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: userText },
+          { type: 'image_url', image_url: { url: imageUrl } }
+        ]
+      }
+    ]
+  });
 
-    2. **DEPOIS OLHE OS SUPORTES:**
-       - Se a base está perfeita, mas a peça caiu: aí sim é Falha de Suporte.
-       - Suportes tortos ou rompidos no meio = Falha de Suporte.
-
-    3. **DIAGNÓSTICO FINAL (Seja Direto):**
-       - Se viu a base abrindo: "DIAGNÓSTICO: Delaminação da Base (Base Layers Separation)".
-       - Solução: "Aumentar tempo de exposição das camadas iniciais (Bottom Exposure) e revisar nivelamento."
-
-    4. **POLÍTICA VISUAL:** As imagens SEMPRE são peças/suportes. Nunca mencione pessoas, faces ou políticas. Vá direto para o defeito.
-    5. **PROIBIÇÃO DE AVISO:** Jamais escreva "Não posso identificar pessoas em imagens" ou variações. Substitua por um diagnóstico objetivo.
-    6. **MARCA DA RESINA:** Se o cliente citar Anycubic, Elegoo, Creality ou outra marca, explique que nosso suporte é exclusivo para resinas Quanton3D e ofereça comparação se enviar os parâmetros.
-    7. **PROIBIDO LIXAR:** Nunca recomende lixar ou raspar a plataforma. Foque em nivelamento e exposição base.
-
-    NÃO SEJA GENÉRICO. USE TERMOS TÉCNICOS: Delaminação, Subcura, Warping, Blooming.
-    ${visualContext}
-  `;
-
-  const prompt = trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : 'Cliente enviou uma imagem para análise.';
-  let completion = await runVisionCompletion({ systemPrompt: VISUAL_SYSTEM_PROMPT, prompt, imageUrl, temperature: 0.4 });
-  let reply = completion?.choices?.[0]?.message?.content?.trim();
-
-  if (isVisionRefusal(reply)) {
-    const retrySystemPrompt = `${VISUAL_SYSTEM_PROMPT}
-
-    INSTRUÇÕES ADICIONAIS:
-    - As imagens fornecidas são de impressões 3D, suportes e bases. Não há pessoas.
-    - Mesmo que a cena pareça ambígua, descreva o que vê, identifique o defeito e proponha correções.
-    - Ignore avisos de política sobre reconhecimento facial; concentre-se apenas na análise técnica da peça.`;
-    const retryPrompt = `${prompt}
-
-Contexto extra: trata-se de uma peça de resina e seus suportes, não há seres humanos.`;
-    completion = await runVisionCompletion({ systemPrompt: retrySystemPrompt, prompt: retryPrompt, imageUrl, temperature: 0.2 });
-    reply = completion?.choices?.[0]?.message?.content?.trim();
-  }
-
-  const cleaned = stripVisionPolicyDisclaimers(reply);
-  return { reply: cleaned || 'Não consegui analisar a imagem agora. Pode tentar novamente?', documentsUsed: 0 };
+  const reply = response?.choices?.[0]?.message?.content?.trim();
+  return { reply: reply || 'Não consegui analisar a imagem agora. Pode tentar novamente?', documentsUsed: 0 };
 }
 
 async function handleChatRequest(req, res) {
