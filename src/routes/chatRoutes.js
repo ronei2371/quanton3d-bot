@@ -9,8 +9,7 @@ import { metrics } from '../utils/metrics.js';
 const router = express.Router();
 
 const DEFAULT_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini';
-const DEFAULT_VISION_MODEL = process.env.OPENAI_VISION_MODEL || DEFAULT_CHAT_MODEL;
-const DEFAULT_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || DEFAULT_VISION_MODEL;
+const IMAGE_ANALYSIS_MODEL = 'gpt-4o';
 
 let openaiClient = null;
 const upload = multer({
@@ -76,7 +75,14 @@ function resolveImagePayload(body = {}) {
 async function buildRagContext({ message, hasImage }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
   const ragQuery = trimmedMessage || (hasImage ? 'diagnostico visual impressao 3d resina defeitos comuns' : '');
-  const ragResults = ragQuery ? await searchKnowledge(ragQuery) : [];
+  let ragResults = [];
+  if (ragQuery) {
+    try {
+      ragResults = await searchKnowledge(ragQuery);
+    } catch (error) {
+      console.warn('[CHAT] RAG indisponível (seguindo sem contexto):', error.message);
+    }
+  }
   const ragContext = formatContext(ragResults);
   const hasRelevantContext = ragResults.length > 0;
   const adhesionIssueHint = /dificil|difícil|duro|presa|grudada|grudado/i.test(trimmedMessage) && /mesa|plate|plataforma|base/i.test(trimmedMessage)
@@ -162,7 +168,7 @@ function isVisionRefusal(text = '') {
 async function runVisionCompletion({ systemPrompt, prompt, imageUrl, temperature = 0.4 }) {
   const client = getOpenAIClient();
   return client.chat.completions.create({
-    model: DEFAULT_IMAGE_MODEL,
+    model: IMAGE_ANALYSIS_MODEL,
     temperature,
     max_tokens: 1000,
     messages: [
@@ -298,7 +304,7 @@ async function generateResponse({ message, ragContext, hasRelevantContext, adhes
 
   const client = getOpenAIClient();
   const userContent = imageUrl ? [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: imageUrl } }] : prompt;
-  const model = imageUrl ? DEFAULT_VISION_MODEL : DEFAULT_CHAT_MODEL;
+  const model = imageUrl ? IMAGE_ANALYSIS_MODEL : DEFAULT_CHAT_MODEL;
   const userMessage = { role: 'user', content: userContent };
   const trimmedHistory = trimConversationHistory(Array.isArray(conversationHistory) ? conversationHistory : [], systemPrompt, userMessage);
 
