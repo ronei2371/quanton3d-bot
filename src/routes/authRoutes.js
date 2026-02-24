@@ -8,26 +8,9 @@ const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton-admin-fallback-secret';
 
-const missingAuthEnv = [];
-if (!process.env.ADMIN_USER) missingAuthEnv.push('ADMIN_USER');
-if (!process.env.ADMIN_PASSWORD) missingAuthEnv.push('ADMIN_PASSWORD');
-if (!process.env.ADMIN_JWT_SECRET) missingAuthEnv.push('ADMIN_JWT_SECRET');
-
-if (missingAuthEnv.length > 0) {
-  console.warn(
-    `[AUTH] ⚠️ Fallback emergencial habilitado (variáveis ausentes: ${missingAuthEnv.join(', ')})`
-  );
+if (!ADMIN_PASSWORD) {
+  console.warn('[AUTH] ⚠️ ADMIN_PASSWORD não configurada. O login retornará erro até que a variável seja definida.');
 }
-
-// SENHAS DE FALLBACK PARA PAINEL ANTIGO
-const FALLBACK_PASSWORDS = [
-  'quanton2026',
-  'Rmartins1201',
-  'rmartins1201',
-  'suporte_quanton_2025'
-];
-
-console.log('[AUTH] ✅ Senhas de fallback ativas:', FALLBACK_PASSWORDS);
 
 /**
  * POST /auth/login
@@ -36,34 +19,32 @@ console.log('[AUTH] ✅ Senhas de fallback ativas:', FALLBACK_PASSWORDS);
  */
 router.post("/login", (req, res) => {
   try {
-    const { password, username } = req.body ?? {};
-    
-    const candidatePassword = typeof password === 'string' ? password : '';
+    const { password } = req.body ?? {};
+    const candidatePassword = typeof password === 'string' ? password.trim() : '';
 
-    console.log(`[AUTH] 🔐 Tentativa de login com senha: ${candidatePassword.substring(0, 3)}...`);
-
-    // Validar senha
     if (!candidatePassword) {
-      console.log('⚠️ [AUTH] Tentativa de login sem senha');
+      console.warn('⚠️ [AUTH] Tentativa de login sem senha');
       return res.status(400).json({
         success: false,
         error: "Senha é obrigatória"
       });
     }
 
-    // Valida contra senha de ambiente OU fallbacks
-    const validEnvPassword = ADMIN_PASSWORD && candidatePassword === ADMIN_PASSWORD;
-    const validFallbackPassword = FALLBACK_PASSWORDS.includes(candidatePassword);
+    if (!ADMIN_PASSWORD) {
+      return res.status(503).json({
+        success: false,
+        error: 'ADMIN_PASSWORD não configurada no servidor'
+      });
+    }
 
-    if (!validEnvPassword && !validFallbackPassword) {
-      console.log(`❌ [AUTH] Senha incorreta: ${candidatePassword}`);
+    if (candidatePassword !== ADMIN_PASSWORD) {
+      console.warn('[AUTH] ❌ Senha administrativa incorreta');
       return res.status(401).json({
         success: false,
         error: "Senha incorreta"
       });
     }
 
-    // Gerar JWT token
     const token = jwt.sign(
       {
         role: 'admin',
@@ -73,7 +54,7 @@ router.post("/login", (req, res) => {
       { expiresIn: JWT_EXPIRATION }
     );
 
-    console.log(`✅ [AUTH] Login bem-sucedido! Senha: ${candidatePassword.substring(0, 3)}...`);
+    console.log('[AUTH] ✅ Login administrativo autorizado');
 
     res.json({
       success: true,

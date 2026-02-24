@@ -97,16 +97,13 @@ app.use('/api/admin', adminRoutes)
 // ROTAS DA API
 // ==========================================================
 app.use('/api', apiRoutes)
-app.use('/', apiRoutes)
 app.use('/api', suggestionsRoutes)
-app.use('/', suggestionsRoutes)
 
 // ==========================================================
 // ROTAS DO CHAT
 // ==========================================================
 app.use('/api', chatRoutes)
 app.use('/chat', chatRoutes)
-app.use('/', chatRoutes)
 
 // ==========================================================
 // FRONTEND

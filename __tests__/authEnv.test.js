@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
 describe('authRoutes env validation', () => {
-  it('warns and falls back when required auth env vars are missing', () => {
+  it('warns and blocks login when ADMIN_PASSWORD is missing', () => {
     const result = spawnSync(
       'node',
       ['-e', "import('./src/routes/authRoutes.js').catch((err) => { console.error(err.message); process.exit(1); })"],
@@ -17,10 +17,10 @@ describe('authRoutes env validation', () => {
     );
 
     expect(result.status).toBe(0);
-    expect(result.stderr.toString()).toContain('Fallback emergencial habilitado');
+    expect(result.stderr.toString()).toContain('ADMIN_PASSWORD não configurada');
   });
 
-  it('warns and falls back when ADMIN_USER is missing', () => {
+  it('loads using default ADMIN_USER when env var is missing', () => {
     const result = spawnSync(
       'node',
       ['-e', "import('./src/routes/authRoutes.js')"],
@@ -36,7 +36,7 @@ describe('authRoutes env validation', () => {
     );
 
     expect(result.status).toBe(0);
-    expect(result.stderr.toString()).toContain('Fallback emergencial habilitado');
+    expect(result.stderr.toString()).not.toContain('ADMIN_PASSWORD não configurada');
   });
 
   it('loads when all required auth env vars exist', () => {
