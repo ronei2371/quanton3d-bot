@@ -33,17 +33,22 @@ const router = express.Router();
 // ====================================================================
 router.post('/suggestion', async (req, res) => {
   try {
-    const { suggestion, history, userName } = req.body;
+    const { suggestion, history, userName, attachment, attachments } = req.body;
     
     // Garante que o banco está conectado
     await ensureMongoReady();
     const db = getDb();
+
+    const normalizedAttachments = [];
+    if (Array.isArray(attachments)) normalizedAttachments.push(...attachments.filter(Boolean));
+    if (attachment) normalizedAttachments.push(attachment);
     
     // Salva na coleção 'suggestions'
     await db.collection('suggestions').insertOne({
       suggestion: suggestion || "Sem texto",
       userName: userName || "Anônimo do Chat",
       history: history || [],
+      attachments: normalizedAttachments,
       status: 'pending', 
       createdAt: new Date()
     });
@@ -92,6 +97,7 @@ router.get("/suggestions", requireAuth, async (req, res) => {
       userEmail: s.userEmail || null,
       lastUserMessage: s.lastUserMessage || null,
       lastBotReply: s.lastBotReply || null,
+      attachments: Array.isArray(s.attachments) ? s.attachments.filter(Boolean) : [],
       status: s.status || 'pending',
       timestamp: s.createdAt || new Date(),
       approvedAt: s.approvedAt || null,

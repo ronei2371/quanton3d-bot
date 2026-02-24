@@ -1,5 +1,6 @@
 import express from "express";
 import multer from "multer";
+import jwt from "jsonwebtoken";
 import { ObjectId } from "mongodb";
 import {
   getSugestoesCollection,
@@ -7,7 +8,8 @@ import {
   getConversasCollection,
   getCollection,
   getDb,
-  isConnected
+  isConnected,
+  getOrdersCollection
 } from "../../db.js";
 import { ensureMongoReady } from "./common.js";
 import { legacyProfiles } from "../data/seedData.js";
@@ -25,6 +27,36 @@ const FISPQ_DOCUMENTS = [
   { resin: "Pyroblast+", slug: "pyroblast-plus" },
   { resin: "Spark", slug: "spark" }
 ];
+
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || "quanton-admin-fallback-secret";
+const ADMIN_SECRET = process.env.ADMIN_SECRET || process.env.VITE_ADMIN_API_TOKEN || "quanton3d_admin_secret";
+
+const isAdminRequest = (req) => {
+  const authHeader = req.headers.authorization || "";
+  if (authHeader.startsWith("Bearer ")) {
+    const token = authHeader.slice(7);
+    try {
+      jwt.verify(token, ADMIN_JWT_SECRET);
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  const legacySecret = req.headers["x-admin-secret"] || req.query?.auth || req.body?.auth;
+  if (legacySecret && legacySecret === ADMIN_SECRET) {
+    return true;
+  }
+
+  return false;
+};
+
+const adminGuard = (handler) => async (req, res) => {
+  if (!isAdminRequest(req)) {
+    return res.status(401).json({ success: false, error: "unauthorized" });
+  }
+  return handler(req, res);
+};
 
 // --- AJUDANTES GLOBAIS (CORRIGIDOS PARA ACEITAR ZERO) ---
 const isNil = (value) => value === undefined || value === null;
@@ -85,6 +117,7 @@ const buildPrinterFilter = (printerId) => {
 
 const getPartnersCollection = () => getCollection('partners');
 const getCustomRequestsCollection = () => getCollection('custom_requests');
+const getOrdersCollectionSafe = () => getOrdersCollection() || getCustomRequestsCollection();
 
 const RESIN_ALIASES = {
   spin: 'Spin+',
@@ -244,8 +277,13 @@ router.post("/custom-request", async (req, res) => {
       });
     }
 
-    const customRequestsCollection = getCustomRequestsCollection();
+    const ordersCollection = getOrdersCollectionSafe();
+    if (!ordersCollection) {
+      return res.status(503).json({ success: false, error: "Coleção de pedidos indisponível" });
+    }
+
     const newRequest = {
+      type: "custom_request",
       name,
       phone,
       email,
@@ -257,7 +295,7 @@ router.post("/custom-request", async (req, res) => {
       updatedAt: new Date()
     };
 
-    const result = await customRequestsCollection.insertOne(newRequest);
+    const result = await ordersCollection.insertOne(newRequest);
     console.log(`[API] Pedido de formulacao customizada: ${name} (${email})`);
 
     res.json({
@@ -273,6 +311,74 @@ router.post("/custom-request", async (req, res) => {
     });
   }
 });
+
+const buildOrderResponse = (doc = {}) => ({
+  id: doc._id?.toString?.(),
+  customerName: doc.name || doc.customerName || doc.userName || 'Cliente',
+  phone: doc.phone || doc.userPhone || null,
+  email: doc.email || doc.userEmail || null,
+  desiredFeature: doc.desiredFeature || null,
+  color: doc.color || null,
+  details: doc.details || doc.complementos || doc.notes || null,
+  status: doc.status || 'pending',
+  createdAt: doc.createdAt || null,
+  updatedAt: doc.updatedAt || null,
+  items: Array.isArray(doc.items) ? doc.items : [],
+  notes: doc.notes || doc.details || null
+});
+
+router.get('/orders', adminGuard(async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const collection = getOrdersCollectionSafe();
+    if (!collection) {
+      return res.status(503).json({ success: false, error: 'Coleção de pedidos indisponível' });
+    }
+
+    const docs = await collection.find({}).sort({ createdAt: -1 }).toArray();
+    res.json({ success: true, orders: docs.map(buildOrderResponse) });
+  } catch (err) {
+    console.error('[API] Erro ao listar pedidos:', err);
+    res.status(500).json({ success: false, error: 'Erro ao listar pedidos' });
+  }
+}));
+
+router.put('/orders/:id', adminGuard(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body || {};
+
+    if (!status) {
+      return res.status(400).json({ success: false, error: 'Status é obrigatório' });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const collection = getOrdersCollectionSafe();
+    if (!collection) {
+      return res.status(503).json({ success: false, error: 'Coleção de pedidos indisponível' });
+    }
+
+    const filter = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { legacyId: id };
+    const updateResult = await collection.updateOne(filter, { $set: { status, updatedAt: new Date() } });
+
+    if (!updateResult.matchedCount) {
+      return res.status(404).json({ success: false, error: 'Pedido não encontrado' });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[API] Erro ao atualizar pedido:', err);
+    res.status(500).json({ success: false, error: 'Erro ao atualizar pedido' });
+  }
+}));
 
 router.post("/gallery", upload.any(), async (req, res) => {
   try {
@@ -382,8 +488,18 @@ router.post("/suggest-knowledge", async (req, res) => {
       userPhone,
       sessionId,
       lastUserMessage,
-      lastBotReply
+      lastBotReply,
+      attachment,
+      attachments: attachmentList,
+      imageUrl
     } = req.body || {};
+
+    const attachments = [];
+    if (Array.isArray(attachmentList)) {
+      attachments.push(...attachmentList.filter(Boolean));
+    }
+    if (attachment) attachments.push(attachment);
+    if (imageUrl) attachments.push(imageUrl);
 
     if (!suggestion || typeof suggestion !== "string" || !suggestion.trim()) {
       return res.status(400).json({ success: false, error: "Sugestao é obrigatória" });
@@ -396,6 +512,7 @@ router.post("/suggest-knowledge", async (req, res) => {
       sessionId: sessionId || null,
       lastUserMessage: lastUserMessage || null,
       lastBotReply: lastBotReply || null,
+      attachments,
       status: 'pending',
       createdAt: new Date()
     };
