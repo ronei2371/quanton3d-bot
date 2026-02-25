@@ -9,8 +9,7 @@ import { metrics } from '../utils/metrics.js';
 const router = express.Router();
 
 const DEFAULT_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini';
-const IMAGE_BASE_MODEL = process.env.OPENAI_IMAGE_BASE_MODEL || 'gpt-4o-mini';
-const IMAGE_ANALYSIS_MODEL = 'gpt-4o';
+const IMAGE_MODEL = 'gpt-4o';
 
 let openaiClient = null;
 const upload = multer({
@@ -101,7 +100,7 @@ function stripVisionPolicyDisclaimers(text = '') {
   if (!text) return '';
   let cleaned = text;
   cleaned = cleaned.replace(/n[ãa]o posso identificar pessoas[^.]*\.\s*/i, '');
-  cleaned = cleaned.replace(/can(?:not|\'t) identify people[^.]*\.\s*/i, '');
+  cleaned = cleaned.replace(/can(?:not|'t) identify people[^.]*\.\s*/i, '');
   const trimmed = cleaned.trim();
   return trimmed.length ? trimmed : text.trim();
 }
@@ -166,14 +165,14 @@ function isVisionRefusal(text = '') {
   return /can\'t help|cannot help|unable to assist|images of people|policy/i.test(text);
 }
 
-async function runVisionCompletion({ prompt, imageUrl, ragContext = '', temperature = 0.4, model = IMAGE_BASE_MODEL }) {
+async function runVisionCompletion({ prompt, imageUrl, ragContext = '', temperature = 0.4 }) {
   const client = getOpenAIClient();
   const safeContext = typeof ragContext === 'string' && ragContext.trim().length
     ? ragContext.trim()
     : 'Sem contexto técnico disponível.';
   const systemContent = `Você é o Especialista Técnico Sênior da Quanton3D. Sua regra de ouro: NUNCA dê respostas genéricas, longas ou listas de possibilidades da internet. Seja cirúrgico, curto e direto. Aponte APENAS o erro exato que você vê na imagem e a solução baseada OBRIGATORIAMENTE no contexto técnico fornecido abaixo. Se o contexto fornecer parâmetros de resina (AgiSyn, etc), use-os. CONTEXTO TÉCNICO QUANTON3D: ${safeContext}`;
   return client.chat.completions.create({
-    model,
+    model: IMAGE_MODEL,
     temperature,
     max_tokens: 1000,
     messages: [
@@ -183,14 +182,7 @@ async function runVisionCompletion({ prompt, imageUrl, ragContext = '', temperat
   });
 }
 
-const ADVANCED_VISION_KEYWORDS = ['delaminação', 'delaminacao', 'não sei o problema', 'nao sei o problema', 'analise detalhada'];
-function shouldUseAdvancedVision(message = '') {
-  const normalized = typeof message === 'string' ? message.toLowerCase() : '';
-  if (!normalized) return false;
-  return ADVANCED_VISION_KEYWORDS.some((keyword) => normalized.includes(keyword));
-}
-
-function trimConversationHistory(history, systemPrompt, userMessage) {
+function trimConversationHistory(history, _systemPrompt, _userMessage) {
   const maxMessages = 8;
   const safeHistory = Array.isArray(history) ? history : [];
   return safeHistory.slice(-maxMessages).filter((entry) => entry && entry.role && entry.content);
@@ -316,12 +308,14 @@ async function generateResponse({ message, ragContext, hasRelevantContext, adhes
 
   const client = getOpenAIClient();
   const userContent = imageUrl ? [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: imageUrl } }] : prompt;
-  const model = imageUrl ? IMAGE_ANALYSIS_MODEL : DEFAULT_CHAT_MODEL;
+  const model = imageUrl ? 'gpt-4o' : 'gpt-4o-mini';
   const userMessage = { role: 'user', content: userContent };
   const trimmedHistory = trimConversationHistory(Array.isArray(conversationHistory) ? conversationHistory : [], systemPrompt, userMessage);
 
   const completion = await client.chat.completions.create({
-    model, temperature: 0.3, max_tokens: 500,
+    model,
+    temperature: 0.3,
+    max_tokens: 500,
     messages: [{ role: 'system', content: systemPrompt }, ...trimmedHistory, userMessage]
   });
 
@@ -336,17 +330,15 @@ async function generateResponse({ message, ragContext, hasRelevantContext, adhes
 async function generateImageResponse({ message, imageUrl, ragContext }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
   const prompt = trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : 'Cliente enviou uma imagem para análise.';
-  const needsAdvancedModel = shouldUseAdvancedVision(trimmedMessage);
-  const primaryModel = needsAdvancedModel ? IMAGE_ANALYSIS_MODEL : IMAGE_BASE_MODEL;
 
-  let completion = await runVisionCompletion({ prompt, imageUrl, ragContext, temperature: 0.4, model: primaryModel });
+  let completion = await runVisionCompletion({ prompt, imageUrl, ragContext, temperature: 0.4 });
   let reply = completion?.choices?.[0]?.message?.content?.trim();
 
   if (isVisionRefusal(reply)) {
     const retryPrompt = `${prompt}
 
 Contexto extra: trata-se de uma peça de resina e seus suportes, não há seres humanos.`;
-    completion = await runVisionCompletion({ prompt: retryPrompt, imageUrl, ragContext, temperature: 0.2, model: IMAGE_ANALYSIS_MODEL });
+    completion = await runVisionCompletion({ prompt: retryPrompt, imageUrl, ragContext, temperature: 0.2 });
     reply = completion?.choices?.[0]?.message?.content?.trim();
   }
 
