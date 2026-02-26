@@ -10,7 +10,7 @@ import { authRoutes } from './src/routes/authRoutes.js'
 import { buildAdminRoutes } from './src/routes/adminRoutes.js'
 import { metrics } from './src/utils/metrics.js'
 import { connectToMongo, getPrintParametersCollection, isConnected } from './db.js'
-import { initializeRAG } from './rag-search.js'
+import { initializeRAG, checkRAGIntegrity, bootstrapKnowledgeFromFile } from './rag-search.js'
 import { legacyProfiles } from './src/data/seedData.js'
 
 dotenv.config()
@@ -166,9 +166,20 @@ const startServer = async () => {
       if (isConnected()) {
         await initializeRAG();
         console.log('[INIT] ✅ RAG inicializado');
+
+        const ragStatus = await checkRAGIntegrity();
+        if (!ragStatus?.isValid || ragStatus.totalDocuments === 0) {
+          console.log('[INIT] ⚠️ Base de conhecimento vazia ou com embeddings faltando. Importando kb_index.json...');
+          try {
+            const bootstrapResult = await bootstrapKnowledgeFromFile();
+            console.log(`[INIT] 🔄 Bootstrap RAG: inseridos ${bootstrapResult.inserted || 0}, erros ${bootstrapResult.errors || 0}`);
+          } catch (bootstrapError) {
+            console.error('[INIT] ⚠️ Falha ao importar conhecimento local:', bootstrapError.message);
+          }
+        }
       }
     } catch (error) {
-      console.error('[INIT] ⚠️ RAG não disponível (continuando sem RAG)');
+      console.error('[INIT] ⚠️ RAG não disponível (continuando sem RAG)', error);
     }
 
     console.log('\n✨ Serviços prontos!\n')
