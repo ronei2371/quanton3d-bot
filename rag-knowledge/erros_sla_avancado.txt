@@ -1,0 +1,197 @@
+GUIA EXPANSIVO DE ERROS E SOLUÇÕES PARA IMPRESSÃO 3D SLA
+Autor: Ronei Fonseca / Quanton3D
+Categoria geral: Diagnóstico técnico para bot de suporte
+
+Resumo: Base estruturada em formato ERRO → DIAGNÓSTICO → SOLUÇÕES → CONFIGURAÇÕES AVANÇADAS, cobrindo adesão, delaminação, detalhe fino, suportes, pós-processo, software/óptica e mecânica.
+
+=== CATEGORIA 3 · DETALHE, RUPTURA E GEOMETRIA ===
+
+ERRO 3.1 · Ruptura em camada específica (Layer Splitting)
+Diagnóstico: Peel force elevada, subexposição ou resina fria.
+Soluções:
+- Aumentar exposição normal em 10–20%.
+- Manter resina/ambiente entre 25–30 ºC.
+- Reposicionar peça para reduzir seção transversal.
+- Lubrificar FEP/NFEP com PTFE spray.
+Config avançadas:
+- Lift Speed ≤ 40 mm/min.
+- Retract Speed maior que lift, porém sem trancos.
+- Lift Distance maior para permitir fluxo da resina.
+
+ERRO 3.2 · Detalhes finos arredondados
+Diagnóstico: Superexposição, vazamento de luz ou layer height alto.
+Soluções:
+- Diminuir exposição normal em passos de 0,1s.
+- Anti-aliasing baixo (2–4) e desativar se precisar de borda dura.
+- Limpar LCD/FEP, checar foco.
+Config de precisão:
+- Layer Height 0,025–0,03 mm.
+- Ajustar grayscale/blur no slicer.
+
+=== CATEGORIA 4 · SUPORTES E PÓS-PROCESSO ===
+
+ERRO 4.1 · Suportes falham
+Diagnóstico: Pontos de contato pequenos ou penetração baixa.
+Soluções:
+- Penetração 0,4 mm.
+- Tip diameter 0,4–0,5 mm para peças grandes.
+- Suportes pesados na base + leve nos detalhes.
+Config críticas:
+- Raft com exposição maior que a primeira camada da peça.
+- Inclinar peça 15º–45º.
+
+ERRO 4.2 · Peça quebradiça/melada pós-cura
+Diagnóstico: Lavagem insuficiente ou supercura.
+Soluções:
+- Lavagem dupla em IPA (sujo + limpo).
+- Secar totalmente antes da cura.
+- Cura mínima necessária (5–15 min) ou submersa em água.
+Config pós-processo:
+- IPA ≥ 90% (ideal 99%).
+- Remover suportes antes da cura final.
+
+=== CATEGORIA 1 · ADESÃO À BUILD PLATE ===
+
+ERRO 1.1 · Peça não gruda
+Diagnóstico: Subexposição base, nivelamento ruim, resina fria.
+Soluções:
+- Re-nivelar com folha.
+- Lixar levemente a build plate.
+- Filtrar resina.
+Config emergência:
+- Bottom expo +10–20%.
+- Bottom layers 6–10.
+- Aquecer resina para 25–30 ºC.
+
+ERRO 1.2 · Base desloca
+Diagnóstico: Motor Z perdendo passos, fixação frouxa.
+Soluções:
+- Apertar parafusos.
+- Lubrificar fuso Z.
+Config emergência:
+- Lift speed bottom ≤ 40 mm/min.
+- Retract speed reduzida.
+
+ERRO 1.3 · Elephant Foot
+Diagnóstico: Z-offset baixo e base superexposta.
+Soluções:
+- Ajustar Z-offset.
+- Limpar LCD.
+Config: Diminuir bottom expo e usar babystepping.
+
+=== CATEGORIA 2 · CORPO DA PEÇA ===
+
+ERRO 2.1 · Delaminação
+Diagnóstico: Subexposição, peel force alta, temperatura irregular.
+Soluções:
+- +0,2–0,5 s na exposição normal.
+- Agitar resina.
+- Limpar FEP/NFEP.
+Config: adicionar Light-Off Delay 0,5–1 s.
+
+ERRO 2.2 · Peça parcial / succionada
+Diagnóstico: Modelo oco sem respiro, suportes fracos.
+Soluções:
+- Furos 2 mm para respiro.
+- Inclinar peça 10–45º.
+Config: Espessura de parede 2–3 mm e reforçar suportes.
+
+ERRO 2.3 · Linhas de camada fortes
+Diagnóstico: Superexposição ou lift rápido.
+Soluções:
+- Diminuir exposição normal.
+- Revisar folga do eixo Z.
+Config: Lift speed ≤ 60 mm/min; layer 0,03 mm.
+
+=== CATEGORIA 3 EXTRA · TANQUE/RESINA ===
+
+ERRO 3.1 · Resina cura no FEP
+Diagnóstico: Vazamento de UV ou pixels “grudados”.
+Soluções:
+- Rodar teste sem cuba.
+- Vedação da impressora.
+Config: Evitar luz ambiente e usar exposição mínima.
+
+ERRO 3.2 · Superfície áspera/grudenta
+Diagnóstico: Lavagem insuficiente ou supercura.
+Soluções:
+- Lavagem dupla em IPA.
+- Reduzir pós-cura.
+Config: IPA 95–99%, pós-cura 5–10 min.
+
+ERRO 3.3 · Ringing
+Diagnóstico: Vibração mecânica.
+Soluções:
+- Apertar correias.
+- Reduzir lift/retract.
+Config: Impressora em superfície rígida.
+
+=== CATEGORIA 4 · SOFTWARE/ÓPTICA ===
+
+ERRO 4.1 · Voxelização
+Diagnóstico: STL baixa resolução ou AA mal configurado.
+Soluções:
+- STL 0,01–0,02 mm.
+- Reparar malha com Meshmixer/Netfabb.
+Config: AA 4–8, layer 0,03 mm, grayscale calibrado.
+
+ERRO 4.2 · Vazamento pelo LCD
+Diagnóstico: Vedação quebrada.
+Soluções:
+- Limpar LCD e remover cuba.
+- Revisar fita de vedação.
+
+ERRO 4.3 · Exposição desigual
+Diagnóstico: LED degradado ou lente suja.
+Soluções:
+- Limpar ótica com microfibra.
+- Mapear intensidade com luxímetro.
+Config: Usar compensação de potência quando disponível.
+
+=== CATEGORIA 5 · MECÂNICA ===
+
+ERRO 5.1 · Suction Blowout
+Diagnóstico: Pressão negativa em peça oca.
+Soluções:
+- Furos de respiro.
+- Reposicionar peça.
+Config: Retract speed 150–200 mm/min, lift distance +1–2 mm.
+
+ERRO 5.2 · Estalos no FEP
+Diagnóstico: Tensão superficial alta.
+Soluções:
+- Retensionar FEP.
+- Aplicar PTFE no filme.
+Config: Wait before lift 2–5 s.
+
+ERRO 5.3 · Z-Wobble
+Diagnóstico: Acoplador ou rolamentos frouxos.
+Soluções:
+- Limpar fuso e aplicar graxa de lítio.
+- Apertar acopladores.
+Config: Recalibrar steps/mm.
+
+=== CATEGORIA 6 · RESINAS ESPECIAIS ===
+
+ERRO 6.1 · Resina flexível quebra
+Diagnóstico: Subcura ou baixa temperatura.
+Soluções:
+- Exposição 2–3x maior.
+- Manter resina a 30–35 ºC.
+- Pós-cura em água morna.
+
+ERRO 6.2 · Resina transparente turva
+Diagnóstico: Lavagem ruim ou supercura.
+Soluções:
+- IPA 99% e troca frequente.
+- Pós-cura curta.
+- Verniz transparente e polimento.
+
+ERRO 6.3 · Resina bio/odontológica falha
+Diagnóstico: Sensível a Z-offset e UV.
+Soluções:
+- Calibração rigorosa.
+- Homogeneizar 1–2 min antes de usar.
+- Seguir instruções do fabricante para temperatura e sistema fechado.
+
+Observação: Conteúdo preparado para alimentar bots de suporte avançado Quanton3D.
