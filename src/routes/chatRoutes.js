@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 import multer from 'multer';
 import { searchKnowledge, formatContext } from '../../rag-search.js';
 import { ensureMongoReady } from './common.js';
-import { getConversasCollection } from '../../db.js';
+import { getConversasCollection, getVisualKnowledgeCollection } from '../../db.js';
 import { metrics } from '../utils/metrics.js';
 
 const router = express.Router();
@@ -107,6 +107,105 @@ function stripVisionPolicyDisclaimers(text = '') {
 
 function normalizeForMatch(text = '') {
   return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+async function fetchVisualKnowledgeHints({ message = '', customerContext = {}, hasImage = false, limit = 3 }) {
+  try {
+    if (!hasImage && (!message || message.length < 10)) {
+      return [];
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return [];
+    }
+
+    const collection = getVisualKnowledgeCollection();
+    if (!collection) {
+      return [];
+    }
+
+    const docs = await collection
+      .find({ approved: true })
+      .sort({ approvedAt: -1, createdAt: -1 })
+      .limit(80)
+      .toArray();
+
+    if (!docs.length) {
+      return [];
+    }
+
+    const querySource = [message, customerContext?.problemType, customerContext?.resin, customerContext?.printer]
+      .filter(Boolean)
+      .join(' ');
+    const normalizedQuery = normalizeForMatch(querySource);
+    const keywords = normalizedQuery.split(' ').filter((token) => token.length >= 4);
+
+    if (!keywords.length) {
+      return docs.slice(0, limit);
+    }
+
+    const scored = docs
+      .map((doc) => {
+        const docText = normalizeForMatch([
+          doc.defectType,
+          doc.diagnosis,
+          doc.solution,
+          doc.description,
+          doc.notes
+        ].filter(Boolean).join(' '));
+        const hits = keywords.reduce((sum, kw) => (docText.includes(kw) ? sum + 1 : sum), 0);
+        return { doc, score: hits };
+      })
+      .filter((item) => item.score > 0);
+
+    if (!scored.length) {
+      return docs.slice(0, limit);
+    }
+
+    return scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map((item) => item.doc);
+  } catch (error) {
+    console.warn('[CHAT] Falha ao obter conhecimento visual:', error.message);
+    return [];
+  }
+}
+
+function sanitizeSnippet(value, limit = 420) {
+  if (!value || typeof value !== 'string') return null;
+  const cleaned = value.replace(/\s+/g, ' ').trim();
+  if (!cleaned) return null;
+  return cleaned.length > limit ? `${cleaned.slice(0, limit).trim()}…` : cleaned;
+}
+
+function buildVisualContextSection(entries = []) {
+  if (!Array.isArray(entries) || !entries.length) {
+    return '';
+  }
+
+  const lines = ['GALERIA QUANTON3D (casos visuais reais aprovados):'];
+  entries.forEach((entry, index) => {
+    const defect = sanitizeSnippet(entry?.defectType || entry?.title);
+    const diagnosis = sanitizeSnippet(entry?.diagnosis || entry?.description);
+    const solution = sanitizeSnippet(entry?.solution || entry?.solucao);
+    const block = [
+      `Caso ${index + 1}:`,
+      defect ? `Defeito: ${defect}` : null,
+      diagnosis ? `Diagnóstico: ${diagnosis}` : null,
+      solution ? `Solução aplicada: ${solution}` : null
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    if (block) {
+      lines.push(block);
+    }
+  });
+
+  lines.push('Use esses casos aprovados como referência prática quando fizer diagnósticos.');
+  return lines.join('\n\n');
 }
 
 function extractResinFromMessage(message = '') {
@@ -372,15 +471,23 @@ async function handleChatRequest(req, res) {
       metrics.recordRAGSearch(ragResults.length);
     }
 
+    const visualHints = await fetchVisualKnowledgeHints({
+      message: trimmedMessage,
+      customerContext: mergedCustomerContext,
+      hasImage
+    });
+    const visualContext = buildVisualContextSection(visualHints);
+    const promptContext = [visualContext, ragContext].filter(Boolean).join('\n\n').trim();
+
     console.log(`[CHAT] Msg: ${trimmedMessage.substring(0, 50)}...`);
 
     if (!trimmedMessage && !hasImage) return res.json({ reply: 'Olá! Sou a IA da Quanton3D. Como posso ajudar com suas impressões hoje?', sessionId: sessionId || 'new' });
 
     const response = imageUrl
-      ? await generateImageResponse({ message: trimmedMessage, imageUrl, ragContext })
+      ? await generateImageResponse({ message: trimmedMessage, imageUrl, ragContext: promptContext })
       : await generateResponse({
           message: trimmedMessage,
-          ragContext,
+          ragContext: promptContext,
           hasRelevantContext,
           adhesionIssueHint,
           hasImage,
@@ -390,7 +497,10 @@ async function handleChatRequest(req, res) {
           ragResultsCount: ragResults.length
         });
 
-    res.json({ reply: sanitizeChatText(response.reply), sessionId: sessionId || 'session-auto', documentsUsed: ragResults.length || response.documentsUsed });
+    const docCountBase = typeof response.documentsUsed === 'number' ? response.documentsUsed : ragResults.length;
+    const documentsUsed = docCountBase + (visualHints?.length || 0);
+
+    res.json({ reply: sanitizeChatText(response.reply), sessionId: sessionId || 'session-auto', documentsUsed });
     metrics.recordResponseTime(Date.now() - requestStart);
   } catch (error) {
     console.error('Erro Chat:', error);
