@@ -89,9 +89,9 @@ app.use('/auth', authRoutes)
 // ==========================================================
 const adminRoutes = buildAdminRoutes()
 
-// Compatibilidade: painel antigo (/admin/*) e frontend novo (/api/admin/*)
+// Compatibilidade: painel antigo (/admin/*) e frontend novo (/api/*)
 app.use('/admin', adminRoutes)
-app.use('/api/admin', adminRoutes)
+app.use('/api', adminRoutes)
 
 // ==========================================================
 // ROTAS DA API
