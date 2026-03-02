@@ -184,10 +184,12 @@
         const resolveApiBase = () => {
             const viteApi = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env.VITE_API_URL : undefined;
             const windowApi = window.VITE_API_URL || window.env?.VITE_API_URL;
-            return viteApi || windowApi || 'https://quanton3d-bot-v2.onrender.com';
+            return (viteApi || windowApi || 'https://quanton3d-bot-v2.onrender.com').replace(/\/+$/, '');
         };
 
         const API_BASE = resolveApiBase();
+        const ADMIN_API = `${API_BASE}/admin`;
+        const API_PREFIX = `${API_BASE}/api`;
         const AUTH_TOKEN_KEY = 'quanton3d_admin_token';
         let authToken = localStorage.getItem(AUTH_TOKEN_KEY) || '';
         const loginStatus = document.getElementById('login-status');
@@ -213,7 +215,7 @@
                     showMessage('Informe usuário e senha de admin.', 'error');
                     return;
                 }
-                const response = await fetch(`${API_BASE}/admin/login`, {
+                const response = await fetch(`${ADMIN_API}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
@@ -245,7 +247,7 @@
         // Função para verificar status do RAG
         async function checkRAGStatus() {
             try {
-                const response = await fetch(`${API_BASE}/rag-status`, {
+                const response = await fetch(`${API_PREFIX}/rag-status`, {
                     headers: { Authorization: `Bearer ${authToken}` }
                 });
                 const data = await response.json();
@@ -299,7 +301,7 @@
         // Função para verificar estatísticas de inteligência
         async function checkIntelligenceStats() {
             try {
-                const response = await fetch(`${API_BASE}/intelligence-stats`, {
+                const response = await fetch(`${API_PREFIX}/intelligence-stats`, {
                     headers: { Authorization: `Bearer ${authToken}` }
                 });
                 const data = await response.json();
@@ -347,7 +349,7 @@
             container.innerHTML = '';
 
             try {
-                const response = await fetch(`${API_BASE}/suggestions`, {
+                const response = await fetch(`${API_PREFIX}/suggestions`, {
                     headers: { Authorization: `Bearer ${authToken}` }
                 });
                 const data = await response.json();
@@ -434,7 +436,7 @@
             try {
                 showMessage('Processando aprovação...', 'success');
 
-                const response = await fetch(`${API_BASE}/approve-suggestion/${suggestionId}`, {
+                const response = await fetch(`${API_PREFIX}/approve-suggestion/${suggestionId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -472,7 +474,7 @@
             try {
                 showMessage('Processando rejeição...', 'success');
 
-                const response = await fetch(`${API_BASE}/reject-suggestion/${suggestionId}`, {
+                const response = await fetch(`${API_PREFIX}/reject-suggestion/${suggestionId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
