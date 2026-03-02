@@ -135,18 +135,24 @@ function buildAdminRoutes(adminConfig = {}) {
   const adminGuard = requireAdmin(ADMIN_SECRET, ADMIN_JWT_SECRET);
 
   router.post("/login", (req, res) => {
-    const { user, password, secret } = req.body ?? {};
+    const { user, username, password, secret } = req.body ?? {};
     const adminUser = process.env.ADMIN_USER || "admin";
     const adminPass = process.env.ADMIN_PASSWORD || "";
     const jwtSecret = process.env.ADMIN_JWT_SECRET || "quanton-admin-fallback-secret";
+    const providedUser = typeof user === 'string' && user.trim().length ? user.trim() : (typeof username === 'string' ? username.trim() : "");
+
+    if (!process.env.ADMIN_PASSWORD) {
+      console.warn('[ADMIN] ⚠️ ADMIN_PASSWORD não configurada. Login retornará erro.');
+      return res.status(401).json({ success: false, error: "ADMIN_PASSWORD ausente" });
+    }
 
     if (!process.env.ADMIN_JWT_SECRET) {
       console.warn('[ADMIN] ⚠️ ADMIN_JWT_SECRET ausente. Usando fallback emergencial para manter compatibilidade.');
     }
 
-    const validUser = user === adminUser && password === adminPass;
-    const validSecret = (secret && secret === process.env.ADMIN_SECRET) ||
-      (password && password === process.env.ADMIN_SECRET);
+    const validUser = providedUser === adminUser && password === adminPass;
+    const legacySecret = process.env.ADMIN_SECRET;
+    const validSecret = secret && legacySecret && secret === legacySecret;
 
     if (validUser || validSecret) {
       const token = jwt.sign({ user: adminUser }, jwtSecret, { expiresIn: "24h" });
