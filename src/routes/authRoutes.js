@@ -129,29 +129,24 @@ router.post("/verify", (req, res) => {
 });
 
 /**
- * Middleware OPCIONAL para proteger rotas com JWT
- * MAS não bloqueia se não tiver token (compatibilidade com painel antigo)
+ * Middleware para rotas administrativas protegidas por JWT.
+ * Sem token válido → 401.
  */
 const verifyJWT = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-
-  // SE NÃO TEM TOKEN, DEIXA PASSAR (compatibilidade)
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.warn('⚠️ [AUTH] Requisição sem token JWT - permitindo (modo compatibilidade)');
-    return next();
+  const authHeader = req.headers.authorization || '';
+  if (!authHeader.startsWith('Bearer ')) {
+    console.warn('⚠️ [AUTH] Requisição sem token JWT - bloqueando');
+    return res.status(401).json({ success: false, error: 'token_required' });
   }
 
   const token = authHeader.slice(7);
-
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
-    console.log('✅ [AUTH] Requisição autenticada com sucesso');
     return next();
   } catch (err) {
-    // MESMO COM TOKEN INVÁLIDO, DEIXA PASSAR (compatibilidade)
-    console.warn('⚠️ [AUTH] Token inválido mas permitindo (modo compatibilidade)');
-    return next();
+    console.warn('⚠️ [AUTH] Token inválido ou expirado');
+    return res.status(401).json({ success: false, error: 'invalid_token' });
   }
 };
 

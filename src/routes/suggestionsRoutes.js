@@ -64,16 +64,23 @@ router.post('/suggestion', async (req, res) => {
 // ====================================================================
 // 2. MIDDLEWARE DE AUTENTICAÇÃO
 // ====================================================================
+const ADMIN_LEGACY_TOKEN = process.env.ADMIN_SECRET_OVERRIDE || process.env.ADMIN_SECRET;
+
 const requireAuth = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     return requireJWT(req, res, next);
   }
+
   const legacyToken = req.query.auth || req.body?.auth;
-  const ADMIN_SECRET = process.env.ADMIN_SECRET || 'quanton3d_admin_secret';
-  if (legacyToken === ADMIN_SECRET) {
+  if (legacyToken && ADMIN_LEGACY_TOKEN && legacyToken === ADMIN_LEGACY_TOKEN) {
     return next();
   }
+
+  if (!ADMIN_LEGACY_TOKEN && legacyToken) {
+    console.warn('[ADMIN] Token legado recebido, mas ADMIN_SECRET não está configurado.');
+  }
+
   return res.status(401).json({ success: false, message: 'Nao autorizado' });
 };
 
