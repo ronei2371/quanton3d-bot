@@ -7,9 +7,14 @@ const JWT_EXPIRATION = '24h';
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton-admin-fallback-secret';
+const ADMIN_SECRET_OVERRIDE = process.env.ADMIN_SECRET_OVERRIDE;
 
 if (!ADMIN_PASSWORD) {
   console.warn('[AUTH] ⚠️ ADMIN_PASSWORD não configurada. O login retornará erro até que a variável seja definida.');
+}
+
+if (!ADMIN_SECRET_OVERRIDE) {
+  console.warn('[AUTH] ⚠️ ADMIN_SECRET_OVERRIDE não configurada. O fluxo de compatibilidade ficará desativado.');
 }
 
 /**
@@ -19,11 +24,8 @@ if (!ADMIN_PASSWORD) {
  */
 router.post("/login", (req, res) => {
   try {
-    const { password, username, secret } = req.body ?? {};
-    const adminUser = process.env.ADMIN_USER || 'admin';
-    const adminPassword = process.env.ADMIN_PASSWORD;
+    const { password, username, secret: legacyBodySecret } = req.body ?? {};
     const jwtSecret = process.env.ADMIN_JWT_SECRET;
-    const adminSecret = process.env.ADMIN_SECRET;
 
     if (!jwtSecret) {
       return res.status(500).json({
@@ -32,36 +34,50 @@ router.post("/login", (req, res) => {
       });
     }
 
-    const FALLBACK_PASSWORDS = [
-      'Rmartins1201$#@!'
-    ];
-
-    const validPassword = password && (
-      password === adminPassword || FALLBACK_PASSWORDS.includes(password)
-    );
-
-    const validSecret = secret && secret === adminSecret;
-    const validUser = username === adminUser && validPassword;
-
-    if (!validPassword && !validSecret && !validUser) {
-      console.log('❌ [AUTH] Login falhou - credenciais inválidas');
-      return res.status(401).json({
+    if (!ADMIN_PASSWORD) {
+      return res.status(503).json({
         success: false,
-        error: "Senha ou credenciais incorretas"
+        error: "ADMIN_PASSWORD ausente"
       });
     }
 
+    const requestSecret = req.headers['x-admin-secret'] || legacyBodySecret;
+
+    const hasPrimaryCreds = Boolean(
+      username && password &&
+      username === ADMIN_USER &&
+      password === ADMIN_PASSWORD
+    );
+
+    const hasLegacyFallback = Boolean(
+      ADMIN_SECRET_OVERRIDE &&
+      requestSecret &&
+      requestSecret === ADMIN_SECRET_OVERRIDE &&
+      password === ADMIN_PASSWORD
+    );
+
+    if (!hasPrimaryCreds && !hasLegacyFallback) {
+      console.log('❌ [AUTH] Login falhou - credenciais inválidas');
+      return res.status(401).json({
+        success: false,
+        error: "Credenciais inválidas"
+      });
+    }
+
+    const authMethod = hasPrimaryCreds ? 'user+password' : 'secret+password';
+
     const token = jwt.sign(
       {
-        user: adminUser,
+        user: ADMIN_USER,
         role: 'admin',
+        method: authMethod,
         timestamp: Date.now()
       },
       jwtSecret,
       { expiresIn: "24h" }
     );
 
-    console.log('✅ [AUTH] Login bem-sucedido para usuário: ' + adminUser);
+    console.log(`✅ [AUTH] Login bem-sucedido (${authMethod})`);
 
     res.json({
       success: true,

@@ -238,7 +238,14 @@ function mentionsRigidSupports(message = '') {
 }
 function mentionsDelayedCracking(message = '') {
   if (!message) return false;
-  return /(racha|fissura|trinca|quebra)/i.test(message) && /(depois|ap[oó]s|dias|passados)/i.test(message);
+  return /(racha|fissura|trinca|quebra)/i.test(message) && /(depois|ap[oó]s|dias|passados|alguns dias)/i.test(message);
+}
+
+function mentionsBaseAdhesion(message = '') {
+  if (!message) return false;
+  const stuckTerms = /(presa|grudada|colada|dif[íi]cil de tirar|n[ãa]o solta|dura de tirar|muito preso)/i;
+  const baseTerms = /(base|plataforma|mesa|plate)/i;
+  return stuckTerms.test(message) && baseTerms.test(message);
 }
 
 function buildParameterBlockReply({ resinName, printerName }) {
@@ -256,6 +263,19 @@ function buildSupportBrittleReply({ resinName, printerName }) {
     '2. **Estrutura de suportes**: use suportes light/medium e distribua os topos. Ajuste o diâmetro para 0,25‑0,30 mm e inclua drenagem para aliviar tensões.',
     '3. **Pós-cura**: lave, seque e faça ciclos curtos de 3 s de UV + 30 s de descanso, repetindo 3‑4 vezes. Pós-curas contínuas longas deixam a peça vítrea e quebradiça.',
     '4. **Estocagem**: deixe as peças descansarem 12‑24 h em local ventilado antes de exposição ao sol/calor para liberar solventes e evitar fissuras tardias.'
+  ].join('\n\n');
+}
+
+function buildAdhesionReply({ resinName, printerName }) {
+  const resinInfo = resinName ? ` com a resina ${resinName}` : '';
+  const printerInfo = printerName ? ` na ${printerName}` : '';
+  return [
+    `Sua peça ficou soldada à plataforma${resinInfo}${printerInfo}. Ajuste o processo para aliviar a aderência sem perder fixação:`,
+    '1. **Nivelamento e superfície**: refaça o nivelamento com uma folha nova e deixe a base levemente fosca (lixa 400) para quebrar o brilho. Sempre limpe com IPA antes de imprimir.',
+    '2. **Exposição das camadas base**: reduza 10‑15% do tempo atual e mantenha 4‑6 camadas base. Valores acima de 50‑60 s deixam a peça “soldada”.',
+    '3. **Lift e peel**: aumente *lift height* para 8‑10 mm e use *rest before lift* de 0,5 s. Isso diminui o vácuo e a força de separação.',
+    '4. **Filme de liberação**: aplique uma camada fina de spray PTFE ou cola bastão distribuída de forma uniforme. Isso cria um filme entre a peça e a mesa.',
+    '5. **Remoção**: antes de usar a espátula, aqueça levemente a plataforma (água morna ou ar quente a ~45 °C) para dilatar a resina e facilitar a retirada.'
   ].join('\n\n');
 }
 
@@ -359,6 +379,10 @@ async function generateResponse({ message, ragContext, hasRelevantContext, adhes
 
   if (mentionsRigidSupports(trimmedMessage) || mentionsDelayedCracking(trimmedMessage)) {
     return { reply: buildSupportBrittleReply({ resinName: knownResin, printerName: knownPrinter }), documentsUsed: ragResultsCount };
+  }
+
+  if (mentionsBaseAdhesion(trimmedMessage)) {
+    return { reply: buildAdhesionReply({ resinName: knownResin, printerName: knownPrinter }), documentsUsed: ragResultsCount };
   }
 
   const visionPriority = hasImage ? '\n    11. Se IMAGEM=SIM, priorize a evidência visual. Não deixe histórico anterior de texto sobrepor o que está claramente visível na nova imagem.\n  ' : '';
