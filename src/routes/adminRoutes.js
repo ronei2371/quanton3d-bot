@@ -878,7 +878,7 @@ function buildAdminRoutes(adminConfig = {}) {
           email: req.email,
           description: req.description || req.caracteristica || req.message,
           status: req.status || "Pendente",
-          date: req.createdAt
+          date: req.createdAt || req.created_at || req.date || req.timestamp || null
         }))
       });
     } catch (err) {
@@ -908,16 +908,19 @@ function buildAdminRoutes(adminConfig = {}) {
       
       console.log(`✅ [ADMIN] Listando ${docs.length} documentos visuais aprovados`);
       
-      res.json({
-        success: true,
-        documents: docs.map(doc => ({
+      const mapped = docs.map(doc => ({
           _id: doc._id?.toString(),
           imageUrl: doc.imageUrl || doc.image,
           defectType: doc.defectType || doc.tipo,
           diagnosis: doc.diagnosis || doc.diagnostico,
           solution: doc.solution || doc.solucao,
           createdAt: doc.createdAt
-        }))
+        }));
+
+      res.json({
+        success: true,
+        documents: mapped,
+        items: mapped
       });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao buscar conhecimento visual:", err);

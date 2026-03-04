@@ -530,7 +530,14 @@ async function handleChatRequest(req, res) {
     console.error('Erro Chat:', error);
     metrics.incrementErrors();
     metrics.recordResponseTime(Date.now() - requestStart);
-    res.status(500).json({ error: 'Erro no processamento da IA.' });
+
+    return res.status(200).json({
+      reply: 'Tive uma instabilidade ao processar sua solicitação agora. Pode reenviar a pergunta? Se for foto, envie novamente junto com uma breve descrição do problema.',
+      sessionId: sessionId || 'session-auto',
+      documentsUsed: 0,
+      degraded: true,
+      error: 'Erro no processamento da IA.'
+    });
   }
 }
 
