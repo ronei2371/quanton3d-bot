@@ -82,6 +82,19 @@ const pickWithFallback = (base, root, key) => {
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+const sanitizeNumericValue = (value) => {
+  if (value === undefined || value === null) return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string") {
+    const normalized = value.replace(/,/g, ".").trim();
+    const match = normalized.match(/-?\d+(?:\.\d+)?/);
+    if (!match) return null;
+    const parsed = Number(match[0]);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
 const getQueryVariants = (value) => {
   const normalized = value.trim();
   if (!normalized) return [];
@@ -684,19 +697,19 @@ function normalizeParams(params = {}) {
   };
 
   return {
-    layerHeightMm: getParam("layerHeightMm") ?? getParam("layerHeight"),
-    exposureTimeS: getParam("exposureTimeS") ?? getParam("exposureTime") ?? getParam("normalExposureS"),
-    bottomExposureS: getBottomExposure(),
-    bottomLayers: getParam("bottomLayers") ?? getParam("baseLayers"),
-    baseExposureTimeS: getBottomExposure(),
-    baseLayers: getParam("bottomLayers") ?? getParam("baseLayers"),
-    liftSpeedMmMin: getParam("liftSpeedMmMin") ?? getParam("liftSpeed") ?? getParam("liftSpeedMmM"),
-    uvOffDelayS: getParam("uvOffDelayS"),
-    uvOffDelayBaseS: getParam("uvOffDelayBaseS"),
-    restBeforeLiftS: getParam("restBeforeLiftS"),
-    restAfterLiftS: getParam("restAfterLiftS"),
-    restAfterRetractS: getParam("restAfterRetractS"),
-    uvPower: getParam("uvPower"),
+    layerHeightMm: sanitizeNumericValue(getParam("layerHeightMm") ?? getParam("layerHeight")),
+    exposureTimeS: sanitizeNumericValue(getParam("exposureTimeS") ?? getParam("exposureTime") ?? getParam("normalExposureS")),
+    bottomExposureS: sanitizeNumericValue(getBottomExposure()),
+    bottomLayers: sanitizeNumericValue(getParam("bottomLayers") ?? getParam("baseLayers")),
+    baseExposureTimeS: sanitizeNumericValue(getBottomExposure()),
+    baseLayers: sanitizeNumericValue(getParam("bottomLayers") ?? getParam("baseLayers")),
+    liftSpeedMmMin: sanitizeNumericValue(getParam("liftSpeedMmMin") ?? getParam("liftSpeed") ?? getParam("liftSpeedMmM")),
+    uvOffDelayS: sanitizeNumericValue(getParam("uvOffDelayS")),
+    uvOffDelayBaseS: sanitizeNumericValue(getParam("uvOffDelayBaseS")),
+    restBeforeLiftS: sanitizeNumericValue(getParam("restBeforeLiftS")),
+    restAfterLiftS: sanitizeNumericValue(getParam("restAfterLiftS")),
+    restAfterRetractS: sanitizeNumericValue(getParam("restAfterRetractS")),
+    uvPower: sanitizeNumericValue(getParam("uvPower")),
   };
 }
 
@@ -816,7 +829,7 @@ router.get("/docs/fispqs", (_req, res) => {
   });
 });
 
-router.get("/params/printers", async (req, res) => {
+const listPrinters = async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
@@ -847,30 +860,31 @@ router.get("/params/printers", async (req, res) => {
       ])
       .toArray();
 
-    res.json({
+    const mapped = printers.map((item) => ({
+      id: item._id,
+      brand: item.brand,
+      model: item.model,
+      resinIds: item.resinIds
+    }));
+
+    return res.json({
       success: true,
-      printers: printers.map((item) => ({
-        id: item._id,
-        brand: item.brand,
-        model: item.model,
-        resinIds: item.resinIds
-      })),
-      matchingPrinters: resinId
-        ? printers.map((item) => ({
-            id: item._id,
-            brand: item.brand,
-            model: item.model,
-            resinIds: item.resinIds
-          }))
-        : undefined
+      printers: mapped,
+      matchingPrinters: resinId ? mapped : undefined
     });
   } catch (err) {
     console.error("[API] Erro ao listar impressoras:", err);
-    res.status(500).json({ success: false, error: "Erro ao listar impressoras" });
+    return res.status(500).json({ success: false, error: "Erro ao listar impressoras" });
   }
+};
+
+router.get("/params/printers", listPrinters);
+router.post("/params/printers", async (req, res) => {
+  req.query = { ...(req.query || {}), ...(req.body || {}) };
+  return listPrinters(req, res);
 });
 
-router.get("/params/profiles", async (req, res) => {
+const listProfiles = async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
@@ -905,7 +919,7 @@ router.get("/params/profiles", async (req, res) => {
     if (limit) cursor.skip(skip).limit(limit);
     const docs = await cursor.toArray();
 
-    res.json({
+    return res.json({
       success: true,
       total,
       page: limit ? page : 1,
@@ -914,8 +928,14 @@ router.get("/params/profiles", async (req, res) => {
     });
   } catch (err) {
     console.error("[API] Erro ao listar perfis de impressão:", err);
-    res.status(500).json({ success: false, error: "Erro ao listar perfis" });
+    return res.status(500).json({ success: false, error: "Erro ao listar perfis" });
   }
+};
+
+router.get("/params/profiles", listProfiles);
+router.post("/params/profiles", async (req, res) => {
+  req.query = { ...(req.query || {}), ...(req.body || {}) };
+  return listProfiles(req, res);
 });
 
 router.get("/params/stats", async (_req, res) => {
