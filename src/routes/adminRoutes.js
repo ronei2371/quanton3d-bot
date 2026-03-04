@@ -564,20 +564,62 @@ function buildAdminRoutes(adminConfig = {}) {
 
   router.post("/params/resins", adminGuard, async (req, res) => {
     try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+
       const { name } = req.body;
       
       if (!name) {
         return res.status(400).json({ success: false, message: 'Nome da resina é obrigatório' });
       }
+
+      const trimmedName = name.trim();
+      const resinId = trimmedName.toLowerCase().replace(/\s+/g, '-');
+      const collection = getPrintParametersCollection();
+
+      if (!collection) {
+        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      }
+
+      const existing = await collection.findOne({
+        $or: [
+          { resinId: new RegExp(`^${escapeRegex(resinId)}$`, 'i') },
+          { resinName: new RegExp(`^${escapeRegex(trimmedName)}$`, 'i') },
+          { resin: new RegExp(`^${escapeRegex(trimmedName)}$`, 'i') }
+        ]
+      });
+
+      if (!existing) {
+        await collection.insertOne({
+          resinId,
+          resinName: trimmedName,
+          resin: trimmedName,
+          brand: '',
+          model: '',
+          printerId: '',
+          params: {},
+          parametros: {},
+          status: 'draft',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          createdBy: 'admin_panel'
+        });
+      }
       
-      console.log(`✅ Nova resina adicionada: ${name}`);
+      console.log(`✅ Nova resina adicionada em parametros: ${trimmedName}`);
       
       res.json({
         success: true,
         message: 'Resina adicionada com sucesso',
         resin: {
-          _id: name.toLowerCase().replace(/\s+/g, '-'),
-          name: name,
+          _id: resinId,
+          name: trimmedName,
           active: true
         }
       });
@@ -589,7 +631,37 @@ function buildAdminRoutes(adminConfig = {}) {
 
   router.delete("/params/resins/:id", adminGuard, async (req, res) => {
     try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+
       const { id } = req.params;
+      const collection = getPrintParametersCollection();
+      if (!collection) {
+        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      }
+
+      await collection.updateMany(
+        {
+          $or: [
+            { resinId: new RegExp(`^${escapeRegex(id)}$`, 'i') },
+            { resinName: new RegExp(`^${escapeRegex(id)}$`, 'i') },
+            { resin: new RegExp(`^${escapeRegex(id)}$`, 'i') }
+          ]
+        },
+        {
+          $set: {
+            status: 'deleted',
+            deletedAt: new Date(),
+            updatedAt: new Date()
+          }
+        }
+      );
       
       console.log(`✅ Resina deletada: ${id}`);
       
@@ -904,7 +976,12 @@ function buildAdminRoutes(adminConfig = {}) {
         return res.json({ success: true, documents: [] });
       }
       
-      const docs = await collection.find({ approved: true }).sort({ createdAt: -1 }).limit(100).toArray();
+      const docs = await collection.find({
+        $or: [
+          { approved: true },
+          { status: 'approved' }
+        ]
+      }).sort({ createdAt: -1 }).limit(100).toArray();
       
       console.log(`✅ [ADMIN] Listando ${docs.length} documentos visuais aprovados`);
       
@@ -944,7 +1021,13 @@ function buildAdminRoutes(adminConfig = {}) {
         return res.json({ success: true, pending: [] });
       }
       
-      const pending = await collection.find({ approved: false }).sort({ createdAt: -1 }).toArray();
+      const pending = await collection.find({
+        $or: [
+          { approved: false },
+          { approved: { $exists: false } },
+          { status: 'pending' }
+        ]
+      }).sort({ createdAt: -1 }).toArray();
       
       console.log(`✅ [ADMIN] Listando ${pending.length} fotos pendentes`);
       

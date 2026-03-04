@@ -131,7 +131,11 @@ const buildPrinterFilter = (printerId) => {
 
 const getPartnersCollection = () => getCollection('partners');
 const getCustomRequestsCollection = () => getCollection('custom_requests');
-const getOrdersCollectionSafe = () => getOrdersCollection() || getCustomRequestsCollection();
+const getOrdersCollectionSafe = () => (
+  getOrdersCollection()
+  || getCollection('pedidos')
+  || getCustomRequestsCollection()
+);
 
 const RESIN_ALIASES = {
   spin: 'Spin+',
@@ -1281,7 +1285,44 @@ router.get('/knowledge', async (_req, res) => {
 });
 
 router.get('/visual-knowledge/pending', async (_req, res) => {
-  return res.json({ success: true, pending: [] });
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const pendingCollection = getCollection('visual_knowledge_pending') || getCollection('gallery');
+    if (!pendingCollection) {
+      return res.json({ success: true, pending: [] });
+    }
+
+    const pendingDocs = await pendingCollection
+      .find({
+        $or: [
+          { approved: false },
+          { approved: { $exists: false } },
+          { status: 'pending' }
+        ]
+      })
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .toArray();
+
+    return res.json({
+      success: true,
+      pending: pendingDocs.map((item) => ({
+        _id: item._id?.toString?.() || item.id || null,
+        imageUrl: item.imageUrl || item.image || (Array.isArray(item.images) ? item.images[0] : null),
+        userName: item.userName || item.user || item.name || null,
+        defectType: item.defectType || item.title || null,
+        createdAt: item.createdAt || null,
+        status: item.status || (item.approved ? 'approved' : 'pending')
+      }))
+    });
+  } catch (err) {
+    console.error('[API] Erro ao listar conhecimento visual pendente:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao listar pendências visuais' });
+  }
 });
 
 router.get("/nuke-and-seed", async (_req, res) => {
