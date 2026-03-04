@@ -460,6 +460,7 @@
 
     <script>
       const API_BASE = "https://quanton3d-bot-v2.onrender.com";
+      const API_ADMIN_BASE = `${API_BASE}/api`;
       const AUTH_TOKEN_KEY = "quanton3d_admin_token";
       let authToken = localStorage.getItem(AUTH_TOKEN_KEY) || "";
 
@@ -627,13 +628,15 @@
 
       const loadStats = async () => {
         try {
-          const response = await fetch(`${API_BASE}/params/stats`);
+          if (!ensureAuthenticated()) return;
+          const response = await fetchWithAuth(`${API_ADMIN_BASE}/params/stats`);
           const data = await response.json();
           if (!data.success) return;
+          const apiStats = data.stats || {};
           const stats = [
-            { label: "Resinas", value: data.resins || 0 },
-            { label: "Impressoras", value: data.printers || 0 },
-            { label: "Perfis", value: data.profiles || 0 }
+            { label: "Resinas", value: apiStats.totalResins ?? data.resins ?? 0 },
+            { label: "Impressoras", value: apiStats.totalPrinters ?? data.printers ?? 0 },
+            { label: "Perfis", value: apiStats.totalProfiles ?? data.profiles ?? 0 }
           ];
           document.getElementById("stats").innerHTML = stats
             .map(
@@ -651,17 +654,22 @@
       };
 
       const loadResins = async () => {
-        const response = await fetch(`${API_BASE}/params/resins`);
+        if (!ensureAuthenticated()) return;
+        const response = await fetchWithAuth(`${API_ADMIN_BASE}/params/resins`);
         const data = await response.json();
         if (!data.success) return;
         state.resins = data.resins;
         resinSelect.innerHTML = `<option value="">Todas as resinas</option>` +
-          data.resins.map((resin) => `<option value="${resin.id}">${resin.name}</option>`).join("");
+          data.resins.map((resin) => {
+            const resinId = resin.id || resin._id || resin.resinId || resin.name;
+            return `<option value="${resinId}">${resin.name}</option>`;
+          }).join("");
       };
 
       const loadPrinters = async (resinId = "") => {
-        const response = await fetch(
-          resinId ? `${API_BASE}/params/printers?resinId=${resinId}` : `${API_BASE}/params/printers`
+        if (!ensureAuthenticated()) return;
+        const response = await fetchWithAuth(
+          resinId ? `${API_ADMIN_BASE}/params/printers?resinId=${resinId}` : `${API_ADMIN_BASE}/params/printers`
         );
         const data = await response.json();
         if (!data.success) return;
@@ -681,7 +689,8 @@
           params.append("limit", state.limit);
         }
 
-        const response = await fetch(`${API_BASE}/params/profiles?${params.toString()}`);
+        if (!ensureAuthenticated()) return;
+        const response = await fetchWithAuth(`${API_ADMIN_BASE}/params/profiles?${params.toString()}`);
         const data = await response.json();
         if (!data.success) return;
         state.profiles = data.profiles;
@@ -740,7 +749,7 @@
       const loadMessages = async () => {
         if (!ensureAuthenticated()) return;
         try {
-          const response = await fetchWithAuth(`${API_BASE}/api/admin/messages`);
+          const response = await fetchWithAuth(`${API_ADMIN_BASE}/messages`);
           const data = await response.json();
           if (!data.success) throw new Error(data.message || data.error || "Erro ao carregar mensagens.");
           state.messages = data.messages || [];
@@ -755,7 +764,7 @@
       const loadFormulations = async () => {
         if (!ensureAuthenticated()) return;
         try {
-          const response = await fetchWithAuth(`${API_BASE}/api/admin/formulations`);
+          const response = await fetchWithAuth(`${API_ADMIN_BASE}/formulations`);
           const data = await response.json();
           if (!data.success) throw new Error(data.message || data.error || "Erro ao carregar formulações.");
           state.formulations = data.formulations || [];

@@ -28,6 +28,51 @@ const rootDir = path.resolve(__dirname, "../../");
 
 const router = express.Router();
 
+const getSuggestionCollections = () => {
+  const db = getDb();
+  if (!db) return [];
+
+  const collections = [
+    getSuggestionsCollection(),
+    db.collection('suggestions')
+  ].filter(Boolean);
+
+  const uniqueByName = new Map();
+  for (const collection of collections) {
+    const key = collection.collectionName || collection.namespace || Math.random().toString(36);
+    if (!uniqueByName.has(key)) uniqueByName.set(key, collection);
+  }
+
+  return Array.from(uniqueByName.values());
+};
+
+const findSuggestionById = async (collections, suggestionId) => {
+  for (const collection of collections) {
+    if (!collection) continue;
+
+    let suggestion = null;
+    if (ObjectId.isValid(suggestionId)) {
+      suggestion = await collection.findOne({ _id: new ObjectId(suggestionId) });
+    }
+
+    if (!suggestion) {
+      suggestion = await collection.findOne({
+        $or: [
+          { odIdLegacy: suggestionId },
+          { id: suggestionId },
+          { _id: suggestionId }
+        ]
+      });
+    }
+
+    if (suggestion) {
+      return { suggestion, collection };
+    }
+  }
+
+  return null;
+};
+
 // ====================================================================
 // 1. ROTA PÚBLICA (Para o Chat enviar sugestões sem senha)
 // ====================================================================
@@ -43,15 +88,21 @@ router.post('/suggestion', async (req, res) => {
     if (Array.isArray(attachments)) normalizedAttachments.push(...attachments.filter(Boolean));
     if (attachment) normalizedAttachments.push(attachment);
     
-    // Salva na coleção 'suggestions'
-    await db.collection('suggestions').insertOne({
+    const payload = {
       suggestion: suggestion || "Sem texto",
       userName: userName || "Anônimo do Chat",
       history: history || [],
       attachments: normalizedAttachments,
-      status: 'pending', 
+      status: 'pending',
       createdAt: new Date()
-    });
+    };
+
+    const targets = getSuggestionCollections();
+    if (!targets.length) {
+      await db.collection('suggestions').insertOne(payload);
+    } else {
+      await Promise.all(targets.map((collection) => collection.insertOne({ ...payload })));
+    }
     
     res.json({ success: true, message: "Sugestão recebida!" });
 
@@ -91,12 +142,20 @@ const requireAuth = (req, res, next) => {
 router.get("/suggestions", requireAuth, async (req, res) => {
   try {
     if (!isConnected()) return res.status(503).json({ success: false, error: "MongoDB nao conectado" });
-    const collection = getSuggestionsCollection();
-    const suggestions = await collection.find({}).sort({ createdAt: -1 }).toArray();
-    
+    const collections = getSuggestionCollections();
+    const fromCollections = await Promise.all(
+      collections.map((collection) => collection.find({}).sort({ createdAt: -1 }).toArray())
+    );
+    const dedup = new Map();
+    fromCollections.flat().forEach((entry) => {
+      const key = entry._id?.toString?.() || entry.odIdLegacy || entry.id || `${entry.userName}-${entry.createdAt}`;
+      if (!dedup.has(key)) dedup.set(key, entry);
+    });
+    const suggestions = Array.from(dedup.values()).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
     const formattedSuggestions = suggestions.map(s => ({
-      id: s._id.toString(),
-      odId: s._id.toString(),
+      id: s._id?.toString?.() || s.id || s.odIdLegacy || null,
+      odId: s._id?.toString?.() || s.id || s.odIdLegacy || null,
       odIdLegacy: s.odIdLegacy || null,
       suggestion: s.suggestion,
       userName: s.userName || 'Anonimo',
@@ -124,12 +183,10 @@ router.put("/approve-suggestion/:id", requireAuth, async (req, res) => {
   try {
     if (!isConnected()) return res.status(503).json({ success: false, error: "MongoDB nao conectado" });
     const suggestionId = req.params.id;
-    const collection = getSuggestionsCollection();
-    let suggestion;
-    try { suggestion = await collection.findOne({ _id: new ObjectId(suggestionId) }); } 
-    catch (e) { suggestion = await collection.findOne({ odIdLegacy: suggestionId }); }
-    
-    if (!suggestion) return res.status(404).json({ success: false, message: 'Sugestao nao encontrada' });
+    const match = await findSuggestionById(getSuggestionCollections(), suggestionId);
+    if (!match) return res.status(404).json({ success: false, message: 'Sugestao nao encontrada' });
+
+    const { suggestion, collection } = match;
     
     const timestamp = Date.now();
     const fileName = `sugestao_aprovada_${suggestionId}_${timestamp}.txt`;
@@ -157,12 +214,10 @@ router.put("/reject-suggestion/:id", requireAuth, async (req, res) => {
     if (!isConnected()) return res.status(503).json({ success: false, error: "MongoDB nao conectado" });
     const suggestionId = req.params.id;
     const { reason } = req.body;
-    const collection = getSuggestionsCollection();
-    let suggestion;
-    try { suggestion = await collection.findOne({ _id: new ObjectId(suggestionId) }); } 
-    catch (e) { suggestion = await collection.findOne({ odIdLegacy: suggestionId }); }
-    
-    if (!suggestion) return res.status(404).json({ success: false, message: 'Sugestao nao encontrada' });
+    const match = await findSuggestionById(getSuggestionCollections(), suggestionId);
+    if (!match) return res.status(404).json({ success: false, message: 'Sugestao nao encontrada' });
+
+    const { suggestion, collection } = match;
     
     await collection.updateOne({ _id: suggestion._id }, { $set: { status: 'rejected', rejectedAt: new Date(), rejectionReason: reason || 'Nao especificado' } });
     res.json({ success: true, message: 'Rejeitada!' });

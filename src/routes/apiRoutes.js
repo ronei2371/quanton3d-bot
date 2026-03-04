@@ -13,6 +13,7 @@ import {
 } from "../../db.js";
 import { ensureMongoReady } from "./common.js";
 import { legacyProfiles } from "../data/seedData.js";
+import { addDocument } from "../../rag-search.js";
 
 const router = express.Router();
 const MAX_PARAMS_PAGE_SIZE = 200;
@@ -986,12 +987,14 @@ router.get('/visual-knowledge', async (req, res) => {
       .limit(limit)
       .toArray();
 
+    const mapped = docs.map(buildVisualKnowledgeResponse);
     return res.json({
       success: true,
       total,
       page,
       limit,
-      items: docs.map(buildVisualKnowledgeResponse)
+      items: mapped,
+      documents: mapped
     });
   } catch (err) {
     console.error('[API] Erro ao listar conhecimento visual:', err);
@@ -999,7 +1002,7 @@ router.get('/visual-knowledge', async (req, res) => {
   }
 });
 
-router.post('/visual-knowledge', async (req, res) => {
+router.post('/visual-knowledge', upload.any(), async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
@@ -1007,20 +1010,35 @@ router.post('/visual-knowledge', async (req, res) => {
     }
 
     const payload = req.body || {};
-    const title = typeof payload.title === 'string' ? payload.title.trim() : '';
-    const imageUrl = typeof payload.imageUrl === 'string' ? payload.imageUrl.trim() : '';
+    const title = typeof payload.title === 'string' && payload.title.trim()
+      ? payload.title.trim()
+      : (typeof payload.defectType === 'string' && payload.defectType.trim() ? payload.defectType.trim() : 'Treinamento visual');
+    let imageUrl = typeof payload.imageUrl === 'string' && payload.imageUrl.trim()
+      ? payload.imageUrl.trim()
+      : (typeof payload.image === 'string' ? payload.image.trim() : '');
 
-    if (!title || !imageUrl) {
-      return res.status(400).json({ success: false, error: 'title e imageUrl são obrigatórios' });
+    if (!imageUrl && Array.isArray(req.files) && req.files.length > 0) {
+      const file = req.files[0];
+      if (file?.buffer?.length) {
+        imageUrl = `data:${file.mimetype || 'image/jpeg'};base64,${file.buffer.toString('base64')}`;
+      }
+    }
+
+    if (!imageUrl) {
+      return res.status(400).json({ success: false, error: 'imageUrl é obrigatório' });
     }
 
     const collection = getVisualKnowledgeCollection();
     const now = new Date();
     const doc = {
       title,
-      description: typeof payload.description === 'string' ? payload.description.trim() : null,
+      description: typeof payload.description === 'string'
+        ? payload.description.trim()
+        : (typeof payload.solution === 'string' ? payload.solution.trim() : null),
       imageUrl,
-      tags: Array.isArray(payload.tags) ? payload.tags.filter(Boolean) : [],
+      tags: Array.isArray(payload.tags)
+        ? payload.tags.filter(Boolean)
+        : [payload.defectType, payload.category].filter(Boolean),
       source: typeof payload.source === 'string' && payload.source.trim() ? payload.source.trim() : 'manual',
       createdAt: now,
       updatedAt: now
@@ -1109,6 +1127,111 @@ router.post('/partners', async (req, res) => {
   } catch (err) {
     console.error('[API] Erro ao criar parceiro:', err);
     return res.status(500).json({ success: false, error: 'Erro ao criar parceiro' });
+  }
+});
+
+
+router.put('/partners/:id', async (req, res) => {
+  try {
+    if (!isValidAdminToken(req)) {
+      return res.status(401).json({ success: false, error: 'unauthorized' });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'ID inválido' });
+    }
+
+    const collection = getPartnersCollection();
+    const payload = req.body || {};
+    const updates = {
+      ...(typeof payload.name === 'string' ? { name: payload.name.trim() } : {}),
+      ...(typeof payload.description === 'string' ? { description: payload.description.trim() } : {}),
+      ...(typeof payload.imageUrl === 'string' || typeof payload.image === 'string' ? { imageUrl: payload.imageUrl || payload.image || '' } : {}),
+      ...(typeof payload.link === 'string' || typeof payload.url === 'string' ? { link: payload.link || payload.url || '' } : {}),
+      ...(typeof payload.specialty === 'string' || typeof payload.category === 'string' ? { specialty: payload.specialty || payload.category || '' } : {}),
+      ...(payload.active !== undefined ? { active: Boolean(payload.active) } : {}),
+      ...(Number.isFinite(Number(payload.order)) ? { order: Number(payload.order) } : {}),
+      updatedAt: new Date()
+    };
+
+    const result = await collection.findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: updates },
+      { returnDocument: 'after' }
+    );
+
+    if (!result.value) {
+      return res.status(404).json({ success: false, error: 'Parceiro não encontrado' });
+    }
+
+    return res.json({ success: true, partner: result.value });
+  } catch (err) {
+    console.error('[API] Erro ao atualizar parceiro:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao atualizar parceiro' });
+  }
+});
+
+router.delete('/partners/:id', async (req, res) => {
+  try {
+    if (!isValidAdminToken(req)) {
+      return res.status(401).json({ success: false, error: 'unauthorized' });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'ID inválido' });
+    }
+
+    const collection = getPartnersCollection();
+    const result = await collection.deleteOne({ _id: new ObjectId(id) });
+    if (!result.deletedCount) {
+      return res.status(404).json({ success: false, error: 'Parceiro não encontrado' });
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[API] Erro ao remover parceiro:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao remover parceiro' });
+  }
+});
+
+router.post('/add-knowledge', async (req, res) => {
+  try {
+    if (!isValidAdminToken(req)) {
+      return res.status(401).json({ success: false, error: 'unauthorized' });
+    }
+
+    const payload = req.body || {};
+    const title = typeof payload.title === 'string' ? payload.title.trim() : '';
+    const content = typeof payload.content === 'string' ? payload.content.trim() : '';
+    const source = typeof payload.source === 'string' && payload.source.trim() ? payload.source.trim() : 'admin_panel';
+    const tags = Array.isArray(payload.tags) ? payload.tags.filter(Boolean) : ['admin'];
+
+    if (!title || !content) {
+      return res.status(400).json({ success: false, error: 'title e content são obrigatórios' });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const result = await addDocument(title, content, source, tags);
+    return res.status(201).json({ success: true, result });
+  } catch (err) {
+    console.error('[API] Erro ao adicionar knowledge:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao adicionar knowledge' });
   }
 });
 
