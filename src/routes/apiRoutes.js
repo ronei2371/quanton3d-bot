@@ -131,7 +131,31 @@ const buildPrinterFilter = (printerId) => {
 
 const getPartnersCollection = () => getCollection('partners');
 const getCustomRequestsCollection = () => getCollection('custom_requests');
-const getOrdersCollectionSafe = () => getOrdersCollection() || getCustomRequestsCollection();
+const ORDER_COLLECTION_NAMES = ['orders', 'pedidos', 'custom_requests'];
+
+const getOrdersCollectionSafe = () => (
+  getOrdersCollection()
+  || getCollection('pedidos')
+  || getCustomRequestsCollection()
+);
+
+const getAvailableOrderCollections = async () => {
+  const db = getDb();
+  if (!db) return [];
+
+  let names = [];
+  try {
+    const existing = await db
+      .listCollections({ name: { $in: ORDER_COLLECTION_NAMES } }, { nameOnly: true })
+      .toArray();
+    names = existing.map((item) => item?.name).filter(Boolean);
+  } catch {
+    names = [];
+  }
+
+  const selected = names.length ? names : ORDER_COLLECTION_NAMES;
+  return selected.map((name) => getCollection(name)).filter(Boolean);
+};
 
 const RESIN_ALIASES = {
   spin: 'Spin+',
@@ -182,8 +206,42 @@ const parseGallerySettings = (rawSettings) => {
   return {};
 };
 
+const GALLERY_NON_SETTINGS_FIELDS = new Set([
+  'name',
+  'contact',
+  'resin',
+  'printer',
+  'settings',
+  'image',
+  'images',
+  'imageUrl',
+  'note'
+]);
+
 const extractSettingsFromBody = (body = {}) => {
-  const fields = {
+  const normalized = {};
+
+  for (const [key, rawValue] of Object.entries(body || {})) {
+    if (GALLERY_NON_SETTINGS_FIELDS.has(key)) continue;
+    if (isNil(rawValue)) continue;
+
+    if (Array.isArray(rawValue)) {
+      const filtered = rawValue.filter((entry) => !isNil(entry) && String(entry).trim() !== '');
+      if (filtered.length > 0) normalized[key] = filtered;
+      continue;
+    }
+
+    if (typeof rawValue === 'string') {
+      const trimmed = rawValue.trim();
+      if (!trimmed) continue;
+      normalized[key] = trimmed;
+      continue;
+    }
+
+    normalized[key] = rawValue;
+  }
+
+  const aliases = {
     layerHeightMm: body.layerHeightMm ?? body.layerHeight,
     exposureTimeS: body.exposureTimeS ?? body.normalExposure ?? body.normalExposureS,
     baseExposureTimeS: body.baseExposureTimeS ?? body.baseExposure ?? body.baseExposureS,
@@ -192,11 +250,13 @@ const extractSettingsFromBody = (body = {}) => {
     uvOffDelayS: body.uvOffDelayS ?? body.uvDelay ?? body.uvOffDelay
   };
 
-  return Object.fromEntries(
-    Object.entries(fields)
-      .filter(([, value]) => !isNil(value) && String(value).toString().trim() !== '')
-      .map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
-  );
+  for (const [key, value] of Object.entries(aliases)) {
+    if (!isNil(value) && String(value).trim() !== '') {
+      normalized[key] = typeof value === 'string' ? value.trim() : value;
+    }
+  }
+
+  return normalized;
 };
 
 router.post("/register-user", async (req, res) => {
@@ -362,20 +422,26 @@ router.post("/custom-request", async (req, res) => {
   }
 });
 
-const buildOrderResponse = (doc = {}) => ({
-  id: doc._id?.toString?.(),
-  customerName: doc.name || doc.customerName || doc.userName || 'Cliente',
-  phone: doc.phone || doc.userPhone || null,
-  email: doc.email || doc.userEmail || null,
-  desiredFeature: doc.desiredFeature || null,
-  color: doc.color || null,
-  details: doc.details || doc.complementos || doc.notes || null,
-  status: doc.status || 'pending',
-  createdAt: doc.createdAt || null,
-  updatedAt: doc.updatedAt || null,
-  items: Array.isArray(doc.items) ? doc.items : [],
-  notes: doc.notes || doc.details || null
-});
+const buildOrderResponse = (doc = {}) => {
+  const details = doc.details || doc.complementos || doc.notes || doc.description || doc.message || null;
+  const desiredFeature = doc.desiredFeature || doc.feature || doc.request || doc.requestedFeature || null;
+  return {
+    id: doc._id?.toString?.(),
+    customerName: doc.name || doc.customerName || doc.userName || 'Cliente',
+    phone: doc.phone || doc.userPhone || null,
+    email: doc.email || doc.userEmail || null,
+    desiredFeature,
+    requestText: details,
+    description: details,
+    color: doc.color || null,
+    details,
+    status: doc.status || 'pending',
+    createdAt: doc.createdAt || null,
+    updatedAt: doc.updatedAt || null,
+    items: Array.isArray(doc.items) ? doc.items : [],
+    notes: doc.notes || details || null
+  };
+};
 
 router.get('/orders', adminGuard(async (req, res) => {
   try {
@@ -384,12 +450,19 @@ router.get('/orders', adminGuard(async (req, res) => {
       return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
     }
 
-    const collection = getOrdersCollectionSafe();
-    if (!collection) {
+    const collections = await getAvailableOrderCollections();
+    if (!collections.length) {
       return res.status(503).json({ success: false, error: 'Coleção de pedidos indisponível' });
     }
 
-    const docs = await collection.find({}).sort({ createdAt: -1 }).toArray();
+    const docsPerCollection = await Promise.all(
+      collections.map((collection) => collection.find({}).toArray())
+    );
+
+    const docs = docsPerCollection
+      .flat()
+      .sort((a, b) => new Date(b?.createdAt || 0).getTime() - new Date(a?.createdAt || 0).getTime());
+
     res.json({ success: true, orders: docs.map(buildOrderResponse) });
   } catch (err) {
     console.error('[API] Erro ao listar pedidos:', err);
@@ -411,15 +484,23 @@ router.put('/orders/:id', adminGuard(async (req, res) => {
       return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
     }
 
-    const collection = getOrdersCollectionSafe();
-    if (!collection) {
+    const collections = await getAvailableOrderCollections();
+    if (!collections.length) {
       return res.status(503).json({ success: false, error: 'Coleção de pedidos indisponível' });
     }
 
     const filter = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { legacyId: id };
-    const updateResult = await collection.updateOne(filter, { $set: { status, updatedAt: new Date() } });
+    let matchedCount = 0;
 
-    if (!updateResult.matchedCount) {
+    for (const collection of collections) {
+      const updateResult = await collection.updateOne(filter, { $set: { status, updatedAt: new Date() } });
+      if (updateResult?.matchedCount) {
+        matchedCount = updateResult.matchedCount;
+        break;
+      }
+    }
+
+    if (!matchedCount) {
       return res.status(404).json({ success: false, error: 'Pedido não encontrado' });
     }
 
@@ -1281,7 +1362,44 @@ router.get('/knowledge', async (_req, res) => {
 });
 
 router.get('/visual-knowledge/pending', async (_req, res) => {
-  return res.json({ success: true, pending: [] });
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const pendingCollection = getCollection('visual_knowledge_pending') || getCollection('gallery');
+    if (!pendingCollection) {
+      return res.json({ success: true, pending: [] });
+    }
+
+    const pendingDocs = await pendingCollection
+      .find({
+        $or: [
+          { approved: false },
+          { approved: { $exists: false } },
+          { status: 'pending' }
+        ]
+      })
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .toArray();
+
+    return res.json({
+      success: true,
+      pending: pendingDocs.map((item) => ({
+        _id: item._id?.toString?.() || item.id || null,
+        imageUrl: item.imageUrl || item.image || (Array.isArray(item.images) ? item.images[0] : null),
+        userName: item.userName || item.user || item.name || null,
+        defectType: item.defectType || item.title || null,
+        createdAt: item.createdAt || null,
+        status: item.status || (item.approved ? 'approved' : 'pending')
+      }))
+    });
+  } catch (err) {
+    console.error('[API] Erro ao listar conhecimento visual pendente:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao listar pendências visuais' });
+  }
 });
 
 router.get("/nuke-and-seed", async (_req, res) => {

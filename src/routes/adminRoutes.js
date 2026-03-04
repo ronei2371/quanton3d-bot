@@ -564,20 +564,62 @@ function buildAdminRoutes(adminConfig = {}) {
 
   router.post("/params/resins", adminGuard, async (req, res) => {
     try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+
       const { name } = req.body;
       
       if (!name) {
         return res.status(400).json({ success: false, message: 'Nome da resina é obrigatório' });
       }
+
+      const trimmedName = name.trim();
+      const resinId = trimmedName.toLowerCase().replace(/\s+/g, '-');
+      const collection = getPrintParametersCollection();
+
+      if (!collection) {
+        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      }
+
+      const existing = await collection.findOne({
+        $or: [
+          { resinId: new RegExp(`^${escapeRegex(resinId)}$`, 'i') },
+          { resinName: new RegExp(`^${escapeRegex(trimmedName)}$`, 'i') },
+          { resin: new RegExp(`^${escapeRegex(trimmedName)}$`, 'i') }
+        ]
+      });
+
+      if (!existing) {
+        await collection.insertOne({
+          resinId,
+          resinName: trimmedName,
+          resin: trimmedName,
+          brand: '',
+          model: '',
+          printerId: '',
+          params: {},
+          parametros: {},
+          status: 'draft',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          createdBy: 'admin_panel'
+        });
+      }
       
-      console.log(`✅ Nova resina adicionada: ${name}`);
+      console.log(`✅ Nova resina adicionada em parametros: ${trimmedName}`);
       
       res.json({
         success: true,
         message: 'Resina adicionada com sucesso',
         resin: {
-          _id: name.toLowerCase().replace(/\s+/g, '-'),
-          name: name,
+          _id: resinId,
+          name: trimmedName,
           active: true
         }
       });
@@ -589,7 +631,37 @@ function buildAdminRoutes(adminConfig = {}) {
 
   router.delete("/params/resins/:id", adminGuard, async (req, res) => {
     try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+
       const { id } = req.params;
+      const collection = getPrintParametersCollection();
+      if (!collection) {
+        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      }
+
+      await collection.updateMany(
+        {
+          $or: [
+            { resinId: new RegExp(`^${escapeRegex(id)}$`, 'i') },
+            { resinName: new RegExp(`^${escapeRegex(id)}$`, 'i') },
+            { resin: new RegExp(`^${escapeRegex(id)}$`, 'i') }
+          ]
+        },
+        {
+          $set: {
+            status: 'deleted',
+            deletedAt: new Date(),
+            updatedAt: new Date()
+          }
+        }
+      );
       
       console.log(`✅ Resina deletada: ${id}`);
       
@@ -899,23 +971,36 @@ function buildAdminRoutes(adminConfig = {}) {
         return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       }
       
-      const collection = getCollection("visual_knowledge") || getCollection("gallery");
+      const collection = getCollection("gallery") || getCollection("visual_knowledge");
       if (!collection) {
         return res.json({ success: true, documents: [] });
       }
-      
-      const docs = await collection.find({ approved: true }).sort({ createdAt: -1 }).limit(100).toArray();
-      
+
+      const docs = await collection.find({
+        $or: [
+          { approved: true },
+          { status: 'approved' }
+        ]
+      }).sort({ createdAt: -1 }).limit(100).toArray();
+
       console.log(`✅ [ADMIN] Listando ${docs.length} documentos visuais aprovados`);
-      
-      const mapped = docs.map(doc => ({
-          _id: doc._id?.toString(),
-          imageUrl: doc.imageUrl || doc.image,
-          defectType: doc.defectType || doc.tipo,
-          diagnosis: doc.diagnosis || doc.diagnostico,
-          solution: doc.solution || doc.solucao,
-          createdAt: doc.createdAt
-        }));
+
+      const mapped = docs.map((doc) => ({
+        _id: doc._id?.toString(),
+        imageUrl: doc.imageUrl || doc.image || (Array.isArray(doc.images) ? doc.images[0] : null),
+        images: Array.isArray(doc.images) ? doc.images : [],
+        userName: doc.userName || doc.name || doc.user || null,
+        contact: doc.contact || null,
+        resin: doc.resin || null,
+        printer: doc.printer || null,
+        settings: doc.settings || {},
+        note: doc.note || null,
+        defectType: doc.defectType || doc.tipo,
+        diagnosis: doc.diagnosis || doc.diagnostico,
+        solution: doc.solution || doc.solucao,
+        status: doc.status || (doc.approved ? 'approved' : 'pending'),
+        createdAt: doc.createdAt
+      }));
 
       res.json({
         success: true,
@@ -939,21 +1024,33 @@ function buildAdminRoutes(adminConfig = {}) {
         return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       }
       
-      const collection = getCollection("visual_knowledge_pending") || getCollection("gallery_pending");
+      const collection = getCollection("gallery") || getCollection("visual_knowledge_pending") || getCollection("gallery_pending");
       if (!collection) {
         return res.json({ success: true, pending: [] });
       }
-      
-      const pending = await collection.find({ approved: false }).sort({ createdAt: -1 }).toArray();
-      
+
+      const pending = await collection.find({
+        $or: [
+          { approved: false },
+          { approved: { $exists: false } },
+          { status: 'pending' }
+        ]
+      }).sort({ createdAt: -1 }).toArray();
+
       console.log(`✅ [ADMIN] Listando ${pending.length} fotos pendentes`);
-      
+
       res.json({
         success: true,
-        pending: pending.map(item => ({
+        pending: pending.map((item) => ({
           _id: item._id?.toString(),
-          imageUrl: item.imageUrl || item.image,
-          userName: item.userName || item.user,
+          imageUrl: item.imageUrl || item.image || (Array.isArray(item.images) ? item.images[0] : null),
+          images: Array.isArray(item.images) ? item.images : [],
+          userName: item.userName || item.name || item.user,
+          contact: item.contact || null,
+          resin: item.resin || null,
+          printer: item.printer || null,
+          settings: item.settings || {},
+          note: item.note || null,
           createdAt: item.createdAt
         }))
       });
@@ -977,34 +1074,65 @@ function buildAdminRoutes(adminConfig = {}) {
       const { id } = req.params;
       const { defectType, diagnosis, solution } = req.body;
       
-      const pendingCollection = getCollection("visual_knowledge_pending");
+      const filterId = mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id;
+      const galleryCollection = getCollection("gallery");
+      const pendingCollection = getCollection("visual_knowledge_pending") || getCollection("gallery_pending");
       const approvedCollection = getCollection("visual_knowledge");
-      
+
+      if (galleryCollection) {
+        const updateResult = await galleryCollection.updateOne(
+          { _id: filterId },
+          {
+            $set: {
+              status: 'approved',
+              approved: true,
+              approvedAt: new Date(),
+              defectType: defectType || null,
+              diagnosis: diagnosis || null,
+              solution: solution || null,
+              updatedAt: new Date()
+            }
+          }
+        );
+
+        if (updateResult.matchedCount) {
+          console.log(`✅ [ADMIN] Foto ${id} aprovada na coleção gallery`);
+          return res.json({ success: true, message: "Foto aprovada com sucesso" });
+        }
+      }
+
       if (!pendingCollection || !approvedCollection) {
         return res.status(503).json({ success: false, error: "Coleções não disponíveis" });
       }
-      
-      const pendingDoc = await pendingCollection.findOne({ 
-        _id: mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id 
-      });
-      
+
+      const pendingDoc = await pendingCollection.findOne({ _id: filterId });
+
       if (!pendingDoc) {
         return res.status(404).json({ success: false, error: "Foto não encontrada" });
       }
-      
+
       await approvedCollection.insertOne({
-        imageUrl: pendingDoc.imageUrl,
+        imageUrl: pendingDoc.imageUrl || pendingDoc.image,
+        images: pendingDoc.images || [],
+        userName: pendingDoc.userName || pendingDoc.name || pendingDoc.user || null,
+        contact: pendingDoc.contact || null,
+        resin: pendingDoc.resin || null,
+        printer: pendingDoc.printer || null,
+        settings: pendingDoc.settings || {},
+        note: pendingDoc.note || null,
         defectType,
         diagnosis,
         solution,
         approved: true,
+        status: 'approved',
         approvedAt: new Date(),
-        createdAt: pendingDoc.createdAt
+        createdAt: pendingDoc.createdAt,
+        updatedAt: new Date()
       });
-      
+
       await pendingCollection.deleteOne({ _id: pendingDoc._id });
-      
-      console.log(`✅ [ADMIN] Foto ${id} aprovada e movida para galeria`);
+
+      console.log(`✅ [ADMIN] Foto ${id} aprovada e movida para coleção legada`);
       
       res.json({ success: true, message: "Foto aprovada com sucesso" });
     } catch (err) {
@@ -1067,15 +1195,27 @@ function buildAdminRoutes(adminConfig = {}) {
       
       res.json({
         success: true,
-        suggestions: suggestions.map(sug => ({
-          _id: sug._id?.toString(),
-          title: sug.title || sug.titulo,
-          content: sug.content || sug.conteudo,
-          tags: sug.tags || [],
-          source: sug.source || 'user',
-          status: sug.status || 'pending',
-          createdAt: sug.createdAt
-        }))
+        suggestions: suggestions.map((sug) => {
+          const question = sug.lastUserMessage || sug.question || sug.pergunta || sug.title || sug.titulo || null;
+          const answer = sug.lastBotReply || sug.answer || sug.resposta || sug.content || sug.conteudo || null;
+          return {
+            _id: sug._id?.toString(),
+            title: sug.title || sug.titulo || sug.suggestion || 'Sugestão do cliente',
+            content: sug.content || sug.conteudo || sug.suggestion || null,
+            suggestion: sug.suggestion || sug.content || sug.conteudo || '',
+            question,
+            answer,
+            lastUserMessage: question,
+            lastBotReply: answer,
+            userName: sug.userName || sug.name || 'Usuário',
+            userPhone: sug.userPhone || sug.phone || null,
+            tags: sug.tags || [],
+            source: sug.source || 'user',
+            status: sug.status || 'pending',
+            createdAt: sug.createdAt,
+            timestamp: sug.createdAt
+          };
+        })
       });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao buscar sugestões:", err);
