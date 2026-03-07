@@ -975,14 +975,21 @@ function buildAdminRoutes(adminConfig = {}) {
       if (!collection) {
         return res.json({ success: true, documents: [] });
       }
+ codex/fix-multiple-issues-in-admin-panel-jieq41
 
+      
+ main
       const docs = await collection.find({
         $or: [
           { approved: true },
           { status: 'approved' }
         ]
       }).sort({ createdAt: -1 }).limit(100).toArray();
+ codex/fix-multiple-issues-in-admin-panel-jieq41
 
+
+      
+ main
       console.log(`✅ [ADMIN] Listando ${docs.length} documentos visuais aprovados`);
 
       const mapped = docs.map((doc) => ({
@@ -1028,7 +1035,11 @@ function buildAdminRoutes(adminConfig = {}) {
       if (!collection) {
         return res.json({ success: true, pending: [] });
       }
+ codex/fix-multiple-issues-in-admin-panel-jieq41
 
+
+      
+ main
       const pending = await collection.find({
         $or: [
           { approved: false },
@@ -1036,7 +1047,11 @@ function buildAdminRoutes(adminConfig = {}) {
           { status: 'pending' }
         ]
       }).sort({ createdAt: -1 }).toArray();
+ codex/fix-multiple-issues-in-admin-panel-jieq41
 
+
+      
+ main
       console.log(`✅ [ADMIN] Listando ${pending.length} fotos pendentes`);
 
       res.json({

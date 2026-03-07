@@ -131,13 +131,16 @@ const buildPrinterFilter = (printerId) => {
 
 const getPartnersCollection = () => getCollection('partners');
 const getCustomRequestsCollection = () => getCollection('custom_requests');
+codex/fix-multiple-issues-in-admin-panel-jieq41
 const ORDER_COLLECTION_NAMES = ['orders', 'pedidos', 'custom_requests'];
 
+ main
 const getOrdersCollectionSafe = () => (
   getOrdersCollection()
   || getCollection('pedidos')
   || getCustomRequestsCollection()
 );
+ codex/fix-multiple-issues-in-admin-panel-jieq41
 
 const getAvailableOrderCollections = async () => {
   const db = getDb();
@@ -156,6 +159,8 @@ const getAvailableOrderCollections = async () => {
   const selected = names.length ? names : ORDER_COLLECTION_NAMES;
   return selected.map((name) => getCollection(name)).filter(Boolean);
 };
+
+ main
 
 const RESIN_ALIASES = {
   spin: 'Spin+',
