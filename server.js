@@ -99,11 +99,15 @@ app.use('/api', adminRoutes)
 app.use('/api', apiRoutes)
 app.use('/api', suggestionsRoutes)
 
+// Compatibilidade de rotas públicas sem /api (site legado)
+app.use('/', apiRoutes)
+
 // ==========================================================
 // ROTAS DO CHAT
 // ==========================================================
 app.use('/api', chatRoutes)
 app.use('/chat', chatRoutes)
+app.use('/', chatRoutes)
 
 // ==========================================================
 // FRONTEND
