@@ -932,26 +932,68 @@ function buildAdminRoutes(adminConfig = {}) {
       if (!mongoReady) {
         return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       }
-      
-      const collection = getCollection("custom_requests") || getCollection("formulacoes");
-      if (!collection) {
-        return res.json({ success: true, formulations: [] });
+
+      const sources = [
+        { name: "custom_requests", filter: {} },
+        { name: "formulacoes", filter: {} },
+        { name: "orders", filter: { type: "custom_request" } }
+      ];
+
+      const seenIds = new Set();
+      const aggregated = [];
+
+      for (const { name, filter } of sources) {
+        const collection = getCollection(name);
+        if (!collection) continue;
+
+        const docs = await collection
+          .find(filter)
+          .sort({ createdAt: -1, _id: -1 })
+          .limit(100)
+          .toArray();
+
+        for (const doc of docs) {
+          const docId = doc._id?.toString?.() ?? `${name}-${aggregated.length}`;
+          if (seenIds.has(docId)) continue;
+          seenIds.add(docId);
+          aggregated.push({ ...doc, __source: name });
+          if (aggregated.length >= 100) break;
+        }
+
+        if (aggregated.length >= 100) break;
       }
       
-      const requests = await collection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
-      
-      console.log(`✅ [ADMIN] Listando ${requests.length} solicitações de formulações`);
+      if (aggregated.length === 0) {
+        return res.json({ success: true, formulations: [] });
+      }
+
+      console.log(`✅ [ADMIN] Listando ${aggregated.length} solicitações de formulações`);
+
+      const normalizeRequest = (req) => {
+        const createdAt = req.createdAt || req.date || req.updatedAt || req.timestamp || req._id?.getTimestamp?.();
+        const phone = req.phone || req.telefone || req.whatsapp || req.customerPhone || null;
+        const color = req.color || req.cor || null;
+        const details = req.details || req.description || req.desiredFeature || req.caracteristica || req.message || req.notes || null;
+
+        return {
+          id: req._id?.toString?.(),
+          source: req.__source,
+          name: req.name || req.nome || req.customerName || req.userName || "Cliente",
+          email: req.email || req.customerEmail || req.userEmail || null,
+          phone,
+          color,
+          desiredFeature: req.desiredFeature || req.caracteristica || null,
+          details,
+          description: details,
+          status: req.status || "Pendente",
+          createdAt,
+          date: createdAt
+        };
+      };
       
       res.json({
         success: true,
-        formulations: requests.map(req => ({
-          id: req._id?.toString(),
-          name: req.name || req.nome,
-          email: req.email,
-          description: req.description || req.caracteristica || req.message,
-          status: req.status || "Pendente",
-          date: req.createdAt || req.created_at || req.date || req.timestamp || null
-        }))
+        formulations: aggregated.map(normalizeRequest)
       });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao buscar formulações:", err);
