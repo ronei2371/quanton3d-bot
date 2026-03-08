@@ -491,22 +491,96 @@ function buildAdminRoutes(adminConfig = {}) {
             _id: { $ifNull: ["$printerId", "$printer"] },
             brand: { $first: "$brand" },
             model: { $first: { $ifNull: ["$model", "$printer"] } },
-            resinIds: { $addToSet: { $ifNull: ["$resinId", "$resin"] } }
+            resinIds: { $addToSet: { $ifNull: ["$resinId", "$resin"] } },
+            printerId: { $first: { $ifNull: ["$printerId", "$printer"] } }
           }
         },
         { $sort: { brand: 1, model: 1 } }
       ]).toArray();
 
       const mapped = printers.map((item) => ({
-        id: item._id,
-        brand: item.brand,
-        model: item.model,
-        resinIds: item.resinIds
+        id: item.printerId || item._id,
+        printerId: item.printerId || item._id,
+        brand: item.brand || "",
+        model: item.model || item.printerId || item._id,
+        resinIds: item.resinIds?.filter(Boolean) || []
       }));
 
       res.json({ success: true, printers: mapped, matchingPrinters: resinId ? mapped : undefined });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao listar impressoras:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  router.post("/params/printers", adminGuard, async (req, res) => {
+    try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+
+      const { brand, model, printerName } = req.body || {};
+      const trimmedBrand = (brand || "").trim();
+      const trimmedModel = (model || printerName || "").trim();
+
+      if (!trimmedBrand || !trimmedModel) {
+        return res.status(400).json({ success: false, error: "Marca e modelo são obrigatórios" });
+      }
+
+      const printerId = `${trimmedBrand}-${trimmedModel}`.toLowerCase().replace(/[^a-z0-9-]+/g, '-');
+      const collection = getPrintParametersCollection();
+      if (!collection) {
+        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      }
+
+      const existing = await collection.findOne({
+        $or: [
+          { printerId: new RegExp(`^${escapeRegex(printerId)}$`, 'i') },
+          { printer: new RegExp(`^${escapeRegex(trimmedModel)}$`, 'i') },
+          { model: new RegExp(`^${escapeRegex(trimmedModel)}$`, 'i') }
+        ]
+      });
+
+      if (existing) {
+        return res.status(409).json({ success: false, error: "Esta impressora já está cadastrada" });
+      }
+
+      const doc = {
+        printerId,
+        printer: trimmedModel,
+        brand: trimmedBrand,
+        model: trimmedModel,
+        resinId: null,
+        resinName: null,
+        resin: null,
+        status: 'draft',
+        params: {},
+        parametros: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: 'admin_panel'
+      };
+
+      await collection.insertOne(doc);
+
+      res.json({
+        success: true,
+        message: 'Impressora adicionada com sucesso',
+        printer: {
+          id: printerId,
+          printerId,
+          brand: trimmedBrand,
+          model: trimmedModel,
+          resinIds: []
+        }
+      });
+    } catch (err) {
+      console.error("❌ [ADMIN] Erro ao criar impressora:", err);
       res.status(500).json({ success: false, error: err.message });
     }
   });
@@ -557,6 +631,79 @@ function buildAdminRoutes(adminConfig = {}) {
       });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao listar perfis:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  router.post("/params/profiles", adminGuard, async (req, res) => {
+    try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+
+      const {
+        resinId,
+        resinName,
+        printerId,
+        printerName,
+        brand,
+        model,
+        status,
+        params
+      } = req.body || {};
+
+      const normalizedResinId = (resinId || resinName || '').trim();
+      const normalizedPrinterId = (printerId || printerName || '').trim();
+
+      if (!normalizedResinId || !normalizedPrinterId) {
+        return res.status(400).json({ success: false, error: 'Resina e impressora são obrigatórias' });
+      }
+
+      const collection = getPrintParametersCollection();
+      if (!collection) {
+        return res.status(503).json({ success: false, error: 'MongoDB indisponível' });
+      }
+
+      const duplicate = await collection.findOne({
+        resinId: new RegExp(`^${escapeRegex(normalizedResinId)}$`, 'i'),
+        printerId: new RegExp(`^${escapeRegex(normalizedPrinterId)}$`, 'i'),
+        status: { $ne: 'deleted' }
+      });
+
+      if (duplicate) {
+        return res.status(409).json({ success: false, error: 'Já existe um perfil para esta resina e impressora' });
+      }
+
+      const doc = {
+        resinId: normalizedResinId,
+        resinName: (resinName || resinId || '').trim() || normalizedResinId,
+        resin: (resinName || resinId || '').trim() || normalizedResinId,
+        printerId: normalizedPrinterId,
+        printer: (printerName || model || printerId || '').trim() || normalizedPrinterId,
+        brand: (brand || '').trim(),
+        model: (model || printerName || '').trim() || normalizedPrinterId,
+        status: (status || 'active').trim(),
+        params: params && typeof params === 'object' ? params : {},
+        parametros: params && typeof params === 'object' ? params : {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: 'admin_panel'
+      };
+
+      const result = await collection.insertOne(doc);
+
+      res.json({
+        success: true,
+        message: 'Perfil criado com sucesso',
+        profile: buildProfileResponse({ ...doc, _id: result.insertedId })
+      });
+    } catch (err) {
+      console.error('❌ [ADMIN] Erro ao criar perfil:', err);
       res.status(500).json({ success: false, error: err.message });
     }
   });
