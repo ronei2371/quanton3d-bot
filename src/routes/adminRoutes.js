@@ -1181,26 +1181,62 @@ function buildAdminRoutes(adminConfig = {}) {
         return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       }
       
-      const collection = getCollection("sugestoes") || getCollection("suggestions");
-      if (!collection) {
+      const sources = [
+        getCollection("sugestoes"),
+        getCollection("suggestions")
+      ].filter(Boolean);
+
+      if (!sources.length) {
         return res.json({ success: true, suggestions: [] });
       }
+
+      const rawLists = await Promise.all(
+        sources.map((collection) => collection.find({}).sort({ createdAt: -1 }).limit(100).toArray())
+      );
+
+      const deduped = new Map();
+      rawLists.flat().forEach((entry) => {
+        const key = entry._id?.toString?.() || entry.id || entry.odIdLegacy || `${entry.userName}-${entry.createdAt}`;
+        if (!deduped.has(key)) {
+          deduped.set(key, entry);
+        }
+      });
+
+      const normalizeSuggestion = (sug) => {
+        const attachments = Array.isArray(sug.attachments) ? sug.attachments.filter(Boolean) : [];
+        const timestamp = sug.createdAt || sug.date || sug.timestamp || sug.updatedAt || new Date();
+
+        return {
+          _id: sug._id?.toString?.(),
+          id: sug._id?.toString?.() || sug.id || sug.odIdLegacy || null,
+          suggestion: sug.suggestion || sug.content || sug.descricao || '',
+          userName: sug.userName || sug.name || 'Usuário do site',
+          userPhone: sug.userPhone || sug.phone || null,
+          userEmail: sug.userEmail || sug.email || null,
+          lastUserMessage: sug.lastUserMessage || sug.question || null,
+          lastBotReply: sug.lastBotReply || sug.answer || null,
+          attachments,
+          history: sug.history || null,
+          source: sug.source || 'user',
+          status: sug.status || 'pending',
+          timestamp,
+          createdAt: timestamp,
+          approvedAt: sug.approvedAt || null,
+          rejectedAt: sug.rejectedAt || null,
+          rejectionReason: sug.rejectionReason || null
+        };
+      };
+
+      const normalized = Array.from(deduped.values())
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+        .slice(0, 100)
+        .map(normalizeSuggestion);
       
-      const suggestions = await collection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
-      
-      console.log(`✅ [ADMIN] Listando ${suggestions.length} sugestões`);
+      console.log(`✅ [ADMIN] Listando ${normalized.length} sugestões`);
       
       res.json({
         success: true,
-        suggestions: suggestions.map(sug => ({
-          _id: sug._id?.toString(),
-          title: sug.title || sug.titulo,
-          content: sug.content || sug.conteudo,
-          tags: sug.tags || [],
-          source: sug.source || 'user',
-          status: sug.status || 'pending',
-          createdAt: sug.createdAt
-        }))
+        suggestions: normalized
       });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao buscar sugestões:", err);
