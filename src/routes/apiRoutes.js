@@ -59,7 +59,7 @@ const adminGuard = (handler) => async (req, res) => {
   return handler(req, res);
 };
 
-// --- AJUDANTES GLOBAIS (CORRIGIDOS PARA ACEITAR ZERO) ---
+// --- AJUDANTES GLOBAIS ---
 const isNil = (value) => value === undefined || value === null;
 
 const pickValue = (value, fallback = null) => (isNil(value) ? fallback : value);
@@ -67,14 +67,12 @@ const pickValue = (value, fallback = null) => (isNil(value) ? fallback : value);
 const pickNested = (field) => {
   if (isNil(field)) return null;
   if (typeof field === "object") {
-    // Tenta pegar value1 ou value2, se não der, retorna null
     return pickValue(field.value1 ?? field.value2 ?? null, null);
   }
   return pickValue(field, null);
 };
 
 const pickWithFallback = (base, root, key) => {
-  // Procura primeiro no 'base' (parametros), depois no 'root' (legado)
   const primary = pickNested(base[key]);
   return pickValue(primary, pickNested(root[key]));
 };
@@ -610,6 +608,9 @@ const normalizeGalleryPagination = (req) => {
   return { page, limit, skip: (page - 1) * limit };
 };
 
+// ==========================================
+// ROTA OTIMIZADA PELO GPT-5 (GALERIA APROVADA)
+// ==========================================
 router.get("/gallery", async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -623,13 +624,18 @@ router.get("/gallery", async (req, res) => {
     const { page, limit, skip } = normalizeGalleryPagination(req);
     const galleryCollection = getCollection("gallery");
     const filter = { status: "approved" };
-    const total = await galleryCollection.countDocuments(filter);
-    const docs = await galleryCollection
-      .find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .toArray();
+
+    const cursor = galleryCollection.find(filter, {
+      sort: { createdAt: -1 },
+      skip,
+      limit
+    });
+
+    // Busca dupla simultânea (muito mais rápido)
+    const [docs, total] = await Promise.all([
+      cursor.toArray(),
+      galleryCollection.countDocuments(filter)
+    ]);
 
     res.json({
       success: true,
@@ -647,6 +653,9 @@ router.get("/gallery", async (req, res) => {
   }
 });
 
+// ==========================================
+// ROTA OTIMIZADA PELO GPT-5 (GALERIA COMPLETA)
+// ==========================================
 router.get("/gallery/all", async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -659,13 +668,18 @@ router.get("/gallery/all", async (req, res) => {
 
     const { page, limit, skip } = normalizeGalleryPagination(req);
     const galleryCollection = getCollection("gallery");
-    const total = await galleryCollection.countDocuments({});
-    const docs = await galleryCollection
-      .find({})
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .toArray();
+    const filter = {};
+
+    const cursor = galleryCollection.find(filter, {
+      sort: { createdAt: -1 },
+      skip,
+      limit
+    });
+
+    const [docs, total] = await Promise.all([
+      cursor.toArray(),
+      galleryCollection.countDocuments(filter)
+    ]);
 
     res.json({
       success: true,
@@ -687,10 +701,6 @@ function normalizeParams(params = {}) {
   const root = params ?? {};
   const base = root.parametros ?? {};
   
-  // AQUI ESTAVA O ERRO: REMOVEMOS AS DECLARAÇÕES DUPLICADAS.
-  // AGORA USAMOS AS FUNÇÕES GLOBAIS DEFINIDAS NO TOPO DO ARQUIVO.
-
-  // Helper local para simplificar a chamada usando as globais
   const getParam = (key) => pickWithFallback(base, root, key);
   const getBottomExposure = () => {
     const direct = getParam("bottomExposureS");
@@ -981,8 +991,6 @@ router.get("/params/stats", async (_req, res) => {
   }
 });
 
-
-
 const buildVisualKnowledgeResponse = (doc) => ({
   id: doc._id?.toString?.() || doc.id || null,
   title: doc.title || doc.name || 'Sem título',
@@ -994,6 +1002,9 @@ const buildVisualKnowledgeResponse = (doc) => ({
   updatedAt: doc.updatedAt || null
 });
 
+// ==========================================
+// ROTA DE LISTA APROVADA - BUG 2 CORRIGIDO
+// ==========================================
 router.get('/visual-knowledge', async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -1002,7 +1013,9 @@ router.get('/visual-knowledge', async (req, res) => {
     }
 
     const { page, limit, skip } = normalizeGalleryPagination(req);
-    const collection = getVisualKnowledgeCollection();
+    // Garantindo que ele não ignore os dados caso uma coleção falhe
+    const collection = getVisualKnowledgeCollection() || getCollection('gallery');
+    
     const total = await collection.countDocuments({});
     const docs = await collection
       .find({})
@@ -1075,6 +1088,7 @@ router.post('/visual-knowledge', upload.any(), async (req, res) => {
     return res.status(500).json({ success: false, error: 'Erro ao criar conhecimento visual' });
   }
 });
+
 const readAdminToken = (req) => (
   req.headers["x-admin-secret"] ||
   req.headers["admin-secret"] ||
@@ -1153,7 +1167,6 @@ router.post('/partners', async (req, res) => {
     return res.status(500).json({ success: false, error: 'Erro ao criar parceiro' });
   }
 });
-
 
 router.put('/partners/:id', async (req, res) => {
   try {
@@ -1284,6 +1297,9 @@ router.get('/knowledge', async (_req, res) => {
   }
 });
 
+// ==========================================
+// ROTA PENDENTE - BUGS 1 E 3 CORRIGIDOS 
+// ==========================================
 router.get('/visual-knowledge/pending', async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -1291,16 +1307,17 @@ router.get('/visual-knowledge/pending', async (_req, res) => {
       return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
     }
 
-    const pendingCollection = getCollection('visual_knowledge_pending') || getCollection('gallery');
+    // Bug 1: Usar gallery direto
+    const pendingCollection = getCollection('gallery');
     if (!pendingCollection) {
       return res.json({ success: true, pending: [] });
     }
 
+    // Bug 3: Filtro corrigido, removendo o $exists para não trazer itens aprovados
     const pendingDocs = await pendingCollection
       .find({
         $or: [
           { approved: false },
-          { approved: { $exists: false } },
           { status: 'pending' }
         ]
       })
@@ -1342,4 +1359,5 @@ router.get("/nuke-and-seed", async (_req, res) => {
     return res.status(500).json({ success: false, error: "Erro ao resetar banco de dados" });
   }
 });
+
 export { router as apiRoutes };
