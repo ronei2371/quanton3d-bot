@@ -40,7 +40,7 @@ app.use(
         callback(null, true);
       } else {
         console.log(`⚠️ Origem bloqueada: ${origin}`);
-        callback(new Error('Origem não permitida pelo CORS'));
+        callback(null, false);
       }
     },
     credentials: true,
