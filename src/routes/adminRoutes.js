@@ -19,27 +19,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "../../");
-const resinsCachePath = path.join(rootDir, "resins_extracted.json");
-
 const escapeRegex = (value = "") => String(value).replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
-
-const loadFallbackResins = () => {
-  try {
-    if (!fs.existsSync(resinsCachePath)) return [];
-    const data = JSON.parse(fs.readFileSync(resinsCachePath, "utf-8"));
-    if (!Array.isArray(data)) return [];
-    return data.map((item, index) => ({
-      _id: item._id || item.id || item.name || `fallback-${index}`,
-      name: item.name || item.resinName || item.label || `Resina ${index + 1}`,
-      description: item.description || item.details || "Dados offline",
-      profiles: item.profiles ?? item.profileCount ?? item.total ?? 0,
-      active: true
-    }));
-  } catch (error) {
-    console.warn("[ADMIN][params/resins] Falha ao ler cache local:", error.message);
-    return [];
-  }
-};
 
 // ===== HELPER FUNCTIONS (inline para evitar dependências externas) =====
 const shouldInitMongo = () => {
@@ -108,13 +88,11 @@ function requireAdmin(adminSecret, adminJwtSecret) {
     process.env.ADMIN_SECRET,
     process.env.VITE_ADMIN_API_TOKEN,
     process.env.ADMIN_API_TOKEN,
-    'quanton3d_admin_secret'
   ].filter(Boolean);
 
   const acceptedJwtSecrets = [
     adminJwtSecret,
     process.env.ADMIN_JWT_SECRET,
-    'quanton-admin-fallback-secret'
   ].filter(Boolean);
 
   return (req, res, next) => {
@@ -150,14 +128,14 @@ function requireAdmin(adminSecret, adminJwtSecret) {
 function buildAdminRoutes(adminConfig = {}) {
   const router = express.Router();
   const ADMIN_SECRET = adminConfig.adminSecret ?? process.env.ADMIN_SECRET ?? process.env.VITE_ADMIN_API_TOKEN;
-  const ADMIN_JWT_SECRET = adminConfig.adminJwtSecret ?? process.env.ADMIN_JWT_SECRET ?? "quanton-admin-fallback-secret";
+  const ADMIN_JWT_SECRET = adminConfig.adminJwtSecret ?? process.env.ADMIN_JWT_SECRET;
   const adminGuard = requireAdmin(ADMIN_SECRET, ADMIN_JWT_SECRET);
 
   router.post("/login", (req, res) => {
     const { user, username, password, secret } = req.body ?? {};
     const adminUser = process.env.ADMIN_USER || "admin";
     const adminPass = process.env.ADMIN_PASSWORD || "";
-    const jwtSecret = process.env.ADMIN_JWT_SECRET || "quanton-admin-fallback-secret";
+    const jwtSecret = process.env.ADMIN_JWT_SECRET;
     const providedUser = typeof user === 'string' && user.trim().length ? user.trim() : (typeof username === 'string' ? username.trim() : "");
 
     if (!process.env.ADMIN_PASSWORD) {
@@ -165,8 +143,8 @@ function buildAdminRoutes(adminConfig = {}) {
       return res.status(401).json({ success: false, error: "ADMIN_PASSWORD ausente" });
     }
 
-    if (!process.env.ADMIN_JWT_SECRET) {
-      console.warn('[ADMIN] ⚠️ ADMIN_JWT_SECRET ausente. Usando fallback emergencial para manter compatibilidade.');
+    if (!jwtSecret) {
+      return res.status(500).json({ success: false, error: "ADMIN_JWT_SECRET ausente" });
     }
 
     const validUser = providedUser === adminUser && password === adminPass;
@@ -391,31 +369,19 @@ function buildAdminRoutes(adminConfig = {}) {
   // ===== ROTAS DE PARÂMETROS DE IMPRESSÃO =====
 
   router.get("/params/resins", adminGuard, async (req, res) => {
-    const respondFallback = (reason) => {
-      const fallbackResins = loadFallbackResins();
-      console.warn(`[ADMIN][params/resins] Fallback ativado: ${reason}`);
-      return res.json({
-        success: true,
-        resins: fallbackResins,
-        total: fallbackResins.length,
-        source: fallbackResins.length ? "cache" : "empty",
-        warning: reason
-      });
-    };
-
     try {
       if (!shouldInitMongo()) {
-        return respondFallback("MongoDB URI não configurada");
+        return res.status(503).json({ success: false, error: "MongoDB URI não configurada" });
       }
 
       const mongoReady = await ensureMongoReady();
       if (!mongoReady) {
-        return respondFallback("MongoDB não conectado");
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       }
 
       const collection = getPrintParametersCollection();
       if (!collection) {
-        return respondFallback("Coleção parâmetros indisponível");
+        return res.status(503).json({ success: false, error: "Coleção parâmetros indisponível" });
       }
       const resins = await collection
         .aggregate([
@@ -450,15 +416,8 @@ function buildAdminRoutes(adminConfig = {}) {
         source: "mongo"
       });
     } catch (err) {
-      console.error('❌ [ADMIN] Erro ao listar resinas (fallback):', err);
-      const fallbackResins = loadFallbackResins();
-      return res.json({
-        success: true,
-        resins: fallbackResins,
-        total: fallbackResins.length,
-        source: fallbackResins.length ? "cache" : "empty",
-        warning: err.message
-      });
+      console.error('❌ [ADMIN] Erro ao listar resinas:', err);
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
