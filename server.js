@@ -1,8 +1,8 @@
+import 'dotenv/config'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import express from 'express'
 import cors from 'cors'
-import dotenv from 'dotenv'
 import chatRoutes from './src/routes/chatRoutes.js'
 import { apiRoutes } from './src/routes/apiRoutes.js'
 import { suggestionsRoutes } from './src/routes/suggestionsRoutes.js'
@@ -13,7 +13,6 @@ import { connectToMongo, getPrintParametersCollection, isConnected } from './db.
 import { initializeRAG, checkRAGIntegrity, bootstrapKnowledgeFromFile } from './rag-search.js'
 import { legacyProfiles } from './src/data/seedData.js'
 
-dotenv.config()
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -41,7 +40,7 @@ app.use(
         callback(null, true);
       } else {
         console.log(`⚠️ Origem bloqueada: ${origin}`);
-        callback(null, true); // Permite mesmo assim (modo permissivo)
+        callback(new Error('Origem não permitida pelo CORS'));
       }
     },
     credentials: true,
@@ -98,6 +97,17 @@ app.use('/api', adminRoutes)
 // ==========================================================
 app.use('/api', apiRoutes)
 app.use('/api', suggestionsRoutes)
+
+// Compatibilidade legado: alguns clientes públicos chamam sem prefixo /api
+app.get('/resins', (req, res, next) => {
+  req.url = '/resins'
+  apiRoutes(req, res, next)
+})
+
+app.get('/params/resins', (req, res, next) => {
+  req.url = '/params/resins'
+  apiRoutes(req, res, next)
+})
 
 // ==========================================================
 // ROTAS DO CHAT

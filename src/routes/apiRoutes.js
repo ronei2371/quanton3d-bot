@@ -29,12 +29,13 @@ const FISPQ_DOCUMENTS = [
   { resin: "Spark", slug: "spark" }
 ];
 
-const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || "quanton-admin-fallback-secret";
-const ADMIN_SECRET = process.env.ADMIN_SECRET || process.env.VITE_ADMIN_API_TOKEN || "quanton3d_admin_secret";
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
+const ADMIN_SECRET = process.env.ADMIN_SECRET || process.env.VITE_ADMIN_API_TOKEN;
 
 const isAdminRequest = (req) => {
   const authHeader = req.headers.authorization || "";
   if (authHeader.startsWith("Bearer ")) {
+    if (!ADMIN_JWT_SECRET) return false;
     const token = authHeader.slice(7);
     try {
       jwt.verify(token, ADMIN_JWT_SECRET);
@@ -1165,6 +1166,36 @@ router.post('/partners', async (req, res) => {
   } catch (err) {
     console.error('[API] Erro ao criar parceiro:', err);
     return res.status(500).json({ success: false, error: 'Erro ao criar parceiro' });
+  }
+});
+
+
+router.post('/partners/upload-image', upload.any(), async (req, res) => {
+  try {
+    if (!isValidAdminToken(req)) {
+      return res.status(401).json({ success: false, error: 'unauthorized' });
+    }
+
+    const payload = req.body || {};
+    let imageUrl = typeof payload.imageUrl === 'string' && payload.imageUrl.trim()
+      ? payload.imageUrl.trim()
+      : (typeof payload.image === 'string' ? payload.image.trim() : '');
+
+    if (!imageUrl && Array.isArray(req.files) && req.files.length > 0) {
+      const file = req.files[0];
+      if (file?.buffer?.length) {
+        imageUrl = `data:${file.mimetype || 'image/jpeg'};base64,${file.buffer.toString('base64')}`;
+      }
+    }
+
+    if (!imageUrl) {
+      return res.status(400).json({ success: false, error: 'image obrigatório' });
+    }
+
+    return res.json({ success: true, imageUrl, url: imageUrl });
+  } catch (err) {
+    console.error('[API] Erro no upload de imagem de parceiro:', err);
+    return res.status(500).json({ success: false, error: 'Erro no upload da imagem' });
   }
 });
 
