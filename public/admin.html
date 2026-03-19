@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel Admin - Quanton3D</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen">
+  <div id="app"></div>
+
+  <script>
+    const ADMIN_PASSWORD = 'quanton3d2024';
+    const API_URL = 'https://quanton3d-bot-v2.onrender.com';
+    
+    let isAuthenticated = false;
+    let suggestions = [];
+
+    function renderLogin() {
+      document.getElementById('app').innerHTML = `
+        <div class="min-h-screen flex items-center justify-center p-4">
+          <div class="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
+            <h2 class="text-2xl font-bold mb-6 text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Painel Administrativo
+            </h2>
+            <p class="text-center text-gray-600 mb-6">
+              Gerenciamento de Sugestões de Conhecimento
+            </p>
+            <div class="space-y-4">
+              <input
+                type="password"
+                id="password"
+                placeholder="Senha de administrador"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onclick="handleLogin()"
+                class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 rounded-lg font-semibold hover:opacity-90 transition"
+              >
+                Entrar
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('password').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleLogin();
+      });
+    }
+
+    function handleLogin() {
+      const password = document.getElementById('password').value;
+      if (password === ADMIN_PASSWORD) {
+        isAuthenticated = true;
+        loadSuggestions();
+      } else {
+        alert('Senha incorreta!');
+      }
+    }
+
+    async function loadSuggestions() {
+      document.getElementById('app').innerHTML = `
+        <div class="min-h-screen p-4">
+          <div class="container mx-auto max-w-6xl py-8">
+            <div class="flex items-center justify-center">
+              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+            <p class="text-center mt-4 text-gray-600">Carregando sugestões...</p>
+          </div>
+        </div>
+      `;
+
+      try {
+        const response = await fetch(`${API_URL}/suggestions?auth=quanton3d_admin_secret`);
+        const data = await response.json();
+        suggestions = data.suggestions || [];
+        renderDashboard();
+      } catch (error) {
+        console.error('Erro ao carregar sugestões:', error);
+        document.getElementById('app').innerHTML = `
+          <div class="min-h-screen p-4">
+            <div class="container mx-auto max-w-6xl py-8">
+              <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                <p class="text-red-600 font-semibold">Erro ao carregar sugestões</p>
+                <p class="text-red-500 text-sm mt-2">${error.message}</p>
+                <button onclick="loadSuggestions()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  Tentar Novamente
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function renderDashboard() {
+      const suggestionsHTML = suggestions.length === 0 ? `
+        <div class="bg-white rounded-lg shadow-lg p-12 text-center">
+          <svg class="h-16 w-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <p class="text-gray-600">Nenhuma sugestão pendente no momento</p>
+        </div>
+      ` : suggestions.map((suggestion, index) => `
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-4">
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                ${suggestion.userName?.charAt(0) || 'U'}
+              </div>
+              <div>
+                <p class="font-semibold">${suggestion.userName || 'Usuário'}</p>
+                <div class="flex items-center gap-4 text-sm text-gray-600">
+                  <span>📱 ${suggestion.userPhone || 'N/A'}</span>
+                  <span>📅 ${new Date(suggestion.timestamp).toLocaleString('pt-BR')}</span>
+                </div>
+              </div>
+            </div>
+            <span class="px-3 py-1 rounded-full text-xs font-semibold ${
+              suggestion.status === 'pending' 
+                ? 'bg-yellow-100 text-yellow-800'
+                : suggestion.status === 'approved'
+                ? 'bg-green-100 text-green-800'
+                : 'bg-red-100 text-red-800'
+            }">
+              ${suggestion.status === 'pending' ? 'Pendente' : suggestion.status === 'approved' ? 'Aprovado' : 'Rejeitado'}
+            </span>
+          </div>
+
+          <div class="bg-gray-50 rounded-lg p-4 mb-4">
+            <p class="text-sm whitespace-pre-wrap">${suggestion.suggestion}</p>
+          </div>
+
+          ${suggestion.status === 'pending' ? `
+            <div class="flex gap-2">
+              <button 
+                onclick="alert('Sugestão aprovada! Para adicionar ao conhecimento, edite o arquivo knowledge-base.js no backend.')"
+                class="flex-1 bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition"
+              >
+                ✓ Aprovar e Adicionar ao Conhecimento
+              </button>
+              <button 
+                onclick="alert('Sugestão rejeitada!')"
+                class="flex-1 border border-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-50 transition"
+              >
+                ✗ Rejeitar
+              </button>
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
+
+      document.getElementById('app').innerHTML = `
+        <div class="min-h-screen p-4">
+          <div class="container mx-auto max-w-6xl py-8">
+            <div class="flex items-center justify-between mb-8">
+              <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Sugestões de Conhecimento
+              </h1>
+              <button 
+                onclick="loadSuggestions()"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
+              >
+                🔄 Atualizar
+              </button>
+            </div>
+
+            ${suggestionsHTML}
+
+            <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <h3 class="font-bold mb-2">📝 Como usar este painel:</h3>
+              <ul class="text-sm space-y-1 text-gray-700">
+                <li>• Revise cada sugestão enviada pelos usuários</li>
+                <li>• Aprove sugestões úteis para adicionar à base de conhecimento do bot</li>
+                <li>• Rejeite sugestões irrelevantes ou duplicadas</li>
+                <li>• As sugestões aprovadas devem ser manualmente adicionadas ao arquivo knowledge-base.js do backend</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Inicializar
+    renderLogin();
+  </script>
+</body>
+</html>

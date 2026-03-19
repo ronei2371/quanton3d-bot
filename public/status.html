@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Status • Quanton3D • Elios & Astra</title>
+    <link rel="icon" type="image/png" href="/robot-icon.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        background: radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.2), transparent 25%),
+          radial-gradient(circle at 80% 0%, rgba(139, 92, 246, 0.25), transparent 28%),
+          radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.08), transparent 55%),
+          #0f172a;
+        color: #e2e8f0;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        min-height: 100vh;
+      }
+      .glass {
+        background: rgba(15, 23, 42, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(10px);
+      }
+      .pulse {
+        animation: pulse 2s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.8;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+  <body class="py-10 px-6 md:px-10">
+    <div class="max-w-6xl mx-auto space-y-6">
+      <header class="glass rounded-2xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div class="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <span class="text-2xl">🤖</span>
+          </div>
+          <div>
+            <p class="text-sm uppercase tracking-[0.3em] text-blue-200/80">Painel Interno</p>
+            <h1 class="text-2xl md:text-3xl font-bold text-white">Quanton3D • Elios & Astra</h1>
+            <p class="text-blue-100/80 text-sm md:text-base">
+              Diagnóstico e status em tempo real do Front, Bot IA e serviços internos.
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="inline-flex items-center gap-2 text-sm font-semibold text-emerald-200">
+            <span class="h-3 w-3 rounded-full bg-emerald-400 pulse shadow shadow-emerald-500/50"></span>
+            Monitorando
+          </span>
+          <a
+            href="/"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-semibold text-white transition"
+            >Voltar para a vitrine</a
+          >
+        </div>
+      </header>
+
+      <main class="grid gap-6 md:grid-cols-3">
+        <section class="glass rounded-2xl p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <p class="text-sm uppercase tracking-wide text-blue-200/70">Frontend</p>
+            <span class="text-xs px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-200 font-semibold">Online</span>
+          </div>
+          <h2 class="text-xl font-semibold text-white">Landing Vitrine</h2>
+          <p class="text-sm text-slate-200/80">
+            Página pública com robô futurista e fluxos de contato. Disponível em <strong>axtonronei.online</strong>.
+          </p>
+          <div class="h-1.5 rounded-full bg-slate-800">
+            <div class="h-full w-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400"></div>
+          </div>
+          <p class="text-xs text-slate-300/70">Build Vite + React • Última publicação: agora</p>
+        </section>
+
+        <section class="glass rounded-2xl p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <p class="text-sm uppercase tracking-wide text-blue-200/70">Bot IA</p>
+            <span class="text-xs px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-200 font-semibold">Pronto</span>
+          </div>
+          <h2 class="text-xl font-semibold text-white">QuantonBot3D (Elios)</h2>
+          <p class="text-sm text-slate-200/80">
+            Endpoint <code>/ask</code> ativo na mesma origem do site. Mantém o chat disponível no domínio principal.
+          </p>
+          <div class="h-1.5 rounded-full bg-slate-800">
+            <div class="h-full w-[92%] rounded-full bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400"></div>
+          </div>
+          <p class="text-xs text-slate-300/70">Persistência local e failover para mensagens críticas.</p>
+        </section>
+
+        <section class="glass rounded-2xl p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <p class="text-sm uppercase tracking-wide text-blue-200/70">Operações</p>
+            <span class="text-xs px-3 py-1 rounded-full bg-amber-500/20 text-amber-200 font-semibold">Observando</span>
+          </div>
+          <h2 class="text-xl font-semibold text-white">Serviços Internos (Astra)</h2>
+          <p class="text-sm text-slate-200/80">
+            Monitoramento de integrações, contatos e parceiros. Rota dedicada para acompanhar saúde dos serviços.
+          </p>
+          <div class="h-1.5 rounded-full bg-slate-800">
+            <div class="h-full w-[80%] rounded-full bg-gradient-to-r from-amber-300 to-orange-400"></div>
+          </div>
+          <p class="text-xs text-slate-300/70">Use esta visão apenas internamente.</p>
+        </section>
+      </main>
+
+      <section class="glass rounded-2xl p-5 space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <p class="text-sm uppercase tracking-[0.2em] text-blue-200/70">Checklist rápido</p>
+            <h3 class="text-xl font-semibold text-white">Conectividade e roteamento</h3>
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            <span class="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-100 text-xs font-semibold">Root → Landing</span>
+            <span class="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-100 text-xs font-semibold">/status → Dashboard</span>
+            <span class="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-100 text-xs font-semibold">/ask → Bot</span>
+          </div>
+        </div>
+        <div class="grid md:grid-cols-3 gap-3 text-sm text-slate-200/80">
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10">
+            <p class="font-semibold text-white mb-1">Render Web Service</p>
+            <p>Build estático servido pelo mesmo Node. Reescrita automática para <code>/index.html</code>.</p>
+          </div>
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10">
+            <p class="font-semibold text-white mb-1">Bot & API</p>
+            <p>Rota <code>POST /ask</code> validada com Zod, compartilhando domínio principal.</p>
+          </div>
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10">
+            <p class="font-semibold text-white mb-1">Uso interno</p>
+            <p>Dashboard de diagnóstico reservado à equipe. Não expor em campanhas externas.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

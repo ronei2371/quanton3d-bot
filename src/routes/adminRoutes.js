@@ -19,7 +19,6 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "../../");
-
 const escapeRegex = (value = "") => String(value).replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
 
 // ===== HELPER FUNCTIONS (inline para evitar dependências externas) =====
@@ -91,14 +90,16 @@ function requireAdmin(adminSecret, adminJwtSecret) {
  codex/review-site-and-bot-changes-a9edeu
     process.env.ADMIN_API_TOKEN
     process.env.ADMIN_API_TOKEN,
+codex/review-site-and-bot-changes-a9edeu
     'quanton3d_admin_secret'
 main
+
+ main
   ].filter(Boolean);
 
   const acceptedJwtSecrets = [
     adminJwtSecret,
     process.env.ADMIN_JWT_SECRET,
-    'quanton-admin-fallback-secret'
   ].filter(Boolean);
 
   return (req, res, next) => {
@@ -134,7 +135,7 @@ main
 function buildAdminRoutes(adminConfig = {}) {
   const router = express.Router();
   const ADMIN_SECRET = adminConfig.adminSecret ?? process.env.ADMIN_SECRET ?? process.env.VITE_ADMIN_API_TOKEN;
-  const ADMIN_JWT_SECRET = adminConfig.adminJwtSecret ?? process.env.ADMIN_JWT_SECRET ?? "quanton-admin-fallback-secret";
+  const ADMIN_JWT_SECRET = adminConfig.adminJwtSecret ?? process.env.ADMIN_JWT_SECRET;
   const adminGuard = requireAdmin(ADMIN_SECRET, ADMIN_JWT_SECRET);
 
   if (!ADMIN_SECRET && !process.env.ADMIN_API_TOKEN && !process.env.VITE_ADMIN_API_TOKEN) {
@@ -142,18 +143,24 @@ function buildAdminRoutes(adminConfig = {}) {
   }
 
   router.post("/login", (req, res) => {
-    const { user, password, secret } = req.body ?? {};
+    const { user, username, password, secret } = req.body ?? {};
     const adminUser = process.env.ADMIN_USER || "admin";
     const adminPass = process.env.ADMIN_PASSWORD || "";
-    const jwtSecret = process.env.ADMIN_JWT_SECRET || "quanton-admin-fallback-secret";
+    const jwtSecret = process.env.ADMIN_JWT_SECRET;
+    const providedUser = typeof user === 'string' && user.trim().length ? user.trim() : (typeof username === 'string' ? username.trim() : "");
 
-    if (!process.env.ADMIN_JWT_SECRET) {
-      console.warn('[ADMIN] ⚠️ ADMIN_JWT_SECRET ausente. Usando fallback emergencial para manter compatibilidade.');
+    if (!process.env.ADMIN_PASSWORD) {
+      console.warn('[ADMIN] ⚠️ ADMIN_PASSWORD não configurada. Login retornará erro.');
+      return res.status(401).json({ success: false, error: "ADMIN_PASSWORD ausente" });
     }
 
-    const validUser = user === adminUser && password === adminPass;
-    const validSecret = (secret && secret === process.env.ADMIN_SECRET) ||
-      (password && password === process.env.ADMIN_SECRET);
+    if (!jwtSecret) {
+      return res.status(500).json({ success: false, error: "ADMIN_JWT_SECRET ausente" });
+    }
+
+    const validUser = providedUser === adminUser && password === adminPass;
+    const legacySecret = process.env.ADMIN_SECRET;
+    const validSecret = secret && legacySecret && secret === legacySecret;
 
     if (validUser || validSecret) {
       const token = jwt.sign({ user: adminUser }, jwtSecret, { expiresIn: "24h" });
@@ -375,7 +382,7 @@ function buildAdminRoutes(adminConfig = {}) {
   router.get("/params/resins", adminGuard, async (req, res) => {
     try {
       if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+        return res.status(503).json({ success: false, error: "MongoDB URI não configurada" });
       }
 
       const mongoReady = await ensureMongoReady();
@@ -385,7 +392,7 @@ function buildAdminRoutes(adminConfig = {}) {
 
       const collection = getPrintParametersCollection();
       if (!collection) {
-        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+        return res.status(503).json({ success: false, error: "Coleção parâmetros indisponível" });
       }
       const resins = await collection
         .aggregate([
@@ -421,7 +428,7 @@ function buildAdminRoutes(adminConfig = {}) {
       });
     } catch (err) {
       console.error('❌ [ADMIN] Erro ao listar resinas:', err);
-      res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
@@ -454,22 +461,96 @@ function buildAdminRoutes(adminConfig = {}) {
             _id: { $ifNull: ["$printerId", "$printer"] },
             brand: { $first: "$brand" },
             model: { $first: { $ifNull: ["$model", "$printer"] } },
-            resinIds: { $addToSet: { $ifNull: ["$resinId", "$resin"] } }
+            resinIds: { $addToSet: { $ifNull: ["$resinId", "$resin"] } },
+            printerId: { $first: { $ifNull: ["$printerId", "$printer"] } }
           }
         },
         { $sort: { brand: 1, model: 1 } }
       ]).toArray();
 
       const mapped = printers.map((item) => ({
-        id: item._id,
-        brand: item.brand,
-        model: item.model,
-        resinIds: item.resinIds
+        id: item.printerId || item._id,
+        printerId: item.printerId || item._id,
+        brand: item.brand || "",
+        model: item.model || item.printerId || item._id,
+        resinIds: item.resinIds?.filter(Boolean) || []
       }));
 
       res.json({ success: true, printers: mapped, matchingPrinters: resinId ? mapped : undefined });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao listar impressoras:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  router.post("/params/printers", adminGuard, async (req, res) => {
+    try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+
+      const { brand, model, printerName } = req.body || {};
+      const trimmedBrand = (brand || "").trim();
+      const trimmedModel = (model || printerName || "").trim();
+
+      if (!trimmedBrand || !trimmedModel) {
+        return res.status(400).json({ success: false, error: "Marca e modelo são obrigatórios" });
+      }
+
+      const printerId = `${trimmedBrand}-${trimmedModel}`.toLowerCase().replace(/[^a-z0-9-]+/g, '-');
+      const collection = getPrintParametersCollection();
+      if (!collection) {
+        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      }
+
+      const existing = await collection.findOne({
+        $or: [
+          { printerId: new RegExp(`^${escapeRegex(printerId)}$`, 'i') },
+          { printer: new RegExp(`^${escapeRegex(trimmedModel)}$`, 'i') },
+          { model: new RegExp(`^${escapeRegex(trimmedModel)}$`, 'i') }
+        ]
+      });
+
+      if (existing) {
+        return res.status(409).json({ success: false, error: "Esta impressora já está cadastrada" });
+      }
+
+      const doc = {
+        printerId,
+        printer: trimmedModel,
+        brand: trimmedBrand,
+        model: trimmedModel,
+        resinId: null,
+        resinName: null,
+        resin: null,
+        status: 'draft',
+        params: {},
+        parametros: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: 'admin_panel'
+      };
+
+      await collection.insertOne(doc);
+
+      res.json({
+        success: true,
+        message: 'Impressora adicionada com sucesso',
+        printer: {
+          id: printerId,
+          printerId,
+          brand: trimmedBrand,
+          model: trimmedModel,
+          resinIds: []
+        }
+      });
+    } catch (err) {
+      console.error("❌ [ADMIN] Erro ao criar impressora:", err);
       res.status(500).json({ success: false, error: err.message });
     }
   });
@@ -524,6 +605,79 @@ function buildAdminRoutes(adminConfig = {}) {
     }
   });
 
+  router.post("/params/profiles", adminGuard, async (req, res) => {
+    try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+
+      const {
+        resinId,
+        resinName,
+        printerId,
+        printerName,
+        brand,
+        model,
+        status,
+        params
+      } = req.body || {};
+
+      const normalizedResinId = (resinId || resinName || '').trim();
+      const normalizedPrinterId = (printerId || printerName || '').trim();
+
+      if (!normalizedResinId || !normalizedPrinterId) {
+        return res.status(400).json({ success: false, error: 'Resina e impressora são obrigatórias' });
+      }
+
+      const collection = getPrintParametersCollection();
+      if (!collection) {
+        return res.status(503).json({ success: false, error: 'MongoDB indisponível' });
+      }
+
+      const duplicate = await collection.findOne({
+        resinId: new RegExp(`^${escapeRegex(normalizedResinId)}$`, 'i'),
+        printerId: new RegExp(`^${escapeRegex(normalizedPrinterId)}$`, 'i'),
+        status: { $ne: 'deleted' }
+      });
+
+      if (duplicate) {
+        return res.status(409).json({ success: false, error: 'Já existe um perfil para esta resina e impressora' });
+      }
+
+      const doc = {
+        resinId: normalizedResinId,
+        resinName: (resinName || resinId || '').trim() || normalizedResinId,
+        resin: (resinName || resinId || '').trim() || normalizedResinId,
+        printerId: normalizedPrinterId,
+        printer: (printerName || model || printerId || '').trim() || normalizedPrinterId,
+        brand: (brand || '').trim(),
+        model: (model || printerName || '').trim() || normalizedPrinterId,
+        status: (status || 'active').trim(),
+        params: params && typeof params === 'object' ? params : {},
+        parametros: params && typeof params === 'object' ? params : {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: 'admin_panel'
+      };
+
+      const result = await collection.insertOne(doc);
+
+      res.json({
+        success: true,
+        message: 'Perfil criado com sucesso',
+        profile: buildProfileResponse({ ...doc, _id: result.insertedId })
+      });
+    } catch (err) {
+      console.error('❌ [ADMIN] Erro ao criar perfil:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   router.get("/params/stats", adminGuard, async (_req, res) => {
     try {
       if (!shouldInitMongo()) {
@@ -565,20 +719,62 @@ function buildAdminRoutes(adminConfig = {}) {
 
   router.post("/params/resins", adminGuard, async (req, res) => {
     try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+
       const { name } = req.body;
       
       if (!name) {
         return res.status(400).json({ success: false, message: 'Nome da resina é obrigatório' });
       }
+
+      const trimmedName = name.trim();
+      const resinId = trimmedName.toLowerCase().replace(/\s+/g, '-');
+      const collection = getPrintParametersCollection();
+
+      if (!collection) {
+        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      }
+
+      const existing = await collection.findOne({
+        $or: [
+          { resinId: new RegExp(`^${escapeRegex(resinId)}$`, 'i') },
+          { resinName: new RegExp(`^${escapeRegex(trimmedName)}$`, 'i') },
+          { resin: new RegExp(`^${escapeRegex(trimmedName)}$`, 'i') }
+        ]
+      });
+
+      if (!existing) {
+        await collection.insertOne({
+          resinId,
+          resinName: trimmedName,
+          resin: trimmedName,
+          brand: '',
+          model: '',
+          printerId: '',
+          params: {},
+          parametros: {},
+          status: 'draft',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          createdBy: 'admin_panel'
+        });
+      }
       
-      console.log(`✅ Nova resina adicionada: ${name}`);
+      console.log(`✅ Nova resina adicionada em parametros: ${trimmedName}`);
       
       res.json({
         success: true,
         message: 'Resina adicionada com sucesso',
         resin: {
-          _id: name.toLowerCase().replace(/\s+/g, '-'),
-          name: name,
+          _id: resinId,
+          name: trimmedName,
           active: true
         }
       });
@@ -590,7 +786,37 @@ function buildAdminRoutes(adminConfig = {}) {
 
   router.delete("/params/resins/:id", adminGuard, async (req, res) => {
     try {
+      if (!shouldInitMongo()) {
+        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      }
+
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) {
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      }
+
       const { id } = req.params;
+      const collection = getPrintParametersCollection();
+      if (!collection) {
+        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      }
+
+      await collection.updateMany(
+        {
+          $or: [
+            { resinId: new RegExp(`^${escapeRegex(id)}$`, 'i') },
+            { resinName: new RegExp(`^${escapeRegex(id)}$`, 'i') },
+            { resin: new RegExp(`^${escapeRegex(id)}$`, 'i') }
+          ]
+        },
+        {
+          $set: {
+            status: 'deleted',
+            deletedAt: new Date(),
+            updatedAt: new Date()
+          }
+        }
+      );
       
       console.log(`✅ Resina deletada: ${id}`);
       
@@ -816,13 +1042,21 @@ function buildAdminRoutes(adminConfig = {}) {
         return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       }
       
-      // Tenta pegar a coleção 'contacts' ou 'messages'
-      const collection = getCollection("contacts") || getCollection("messages"); 
-      if (!collection) {
+      const contactsCollection = getCollection("contacts");
+      const fallbackCollection = getCollection("messages");
+
+      if (!contactsCollection && !fallbackCollection) {
         return res.json({ success: true, messages: [] });
       }
-      
-      const messages = await collection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
+
+      let messages = [];
+      if (contactsCollection) {
+        messages = await contactsCollection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
+      }
+
+      if ((!messages || messages.length === 0) && fallbackCollection && fallbackCollection !== contactsCollection) {
+        messages = await fallbackCollection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
+      }
       
       console.log(`✅ [ADMIN] Listando ${messages.length} mensagens de contato`);
       
@@ -853,26 +1087,68 @@ function buildAdminRoutes(adminConfig = {}) {
       if (!mongoReady) {
         return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       }
-      
-      const collection = getCollection("custom_requests") || getCollection("formulacoes");
-      if (!collection) {
-        return res.json({ success: true, formulations: [] });
+
+      const sources = [
+        { name: "custom_requests", filter: {} },
+        { name: "formulacoes", filter: {} },
+        { name: "orders", filter: { type: "custom_request" } }
+      ];
+
+      const seenIds = new Set();
+      const aggregated = [];
+
+      for (const { name, filter } of sources) {
+        const collection = getCollection(name);
+        if (!collection) continue;
+
+        const docs = await collection
+          .find(filter)
+          .sort({ createdAt: -1, _id: -1 })
+          .limit(100)
+          .toArray();
+
+        for (const doc of docs) {
+          const docId = doc._id?.toString?.() ?? `${name}-${aggregated.length}`;
+          if (seenIds.has(docId)) continue;
+          seenIds.add(docId);
+          aggregated.push({ ...doc, __source: name });
+          if (aggregated.length >= 100) break;
+        }
+
+        if (aggregated.length >= 100) break;
       }
       
-      const requests = await collection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
-      
-      console.log(`✅ [ADMIN] Listando ${requests.length} solicitações de formulações`);
+      if (aggregated.length === 0) {
+        return res.json({ success: true, formulations: [] });
+      }
+
+      console.log(`✅ [ADMIN] Listando ${aggregated.length} solicitações de formulações`);
+
+      const normalizeRequest = (req) => {
+        const createdAt = req.createdAt || req.date || req.updatedAt || req.timestamp || req._id?.getTimestamp?.();
+        const phone = req.phone || req.telefone || req.whatsapp || req.customerPhone || null;
+        const color = req.color || req.cor || null;
+        const details = req.details || req.description || req.desiredFeature || req.caracteristica || req.message || req.notes || null;
+
+        return {
+          id: req._id?.toString?.(),
+          source: req.__source,
+          name: req.name || req.nome || req.customerName || req.userName || "Cliente",
+          email: req.email || req.customerEmail || req.userEmail || null,
+          phone,
+          color,
+          desiredFeature: req.desiredFeature || req.caracteristica || null,
+          details,
+          description: details,
+          status: req.status || "Pendente",
+          createdAt,
+          date: createdAt
+        };
+      };
       
       res.json({
         success: true,
-        formulations: requests.map(req => ({
-          id: req._id?.toString(),
-          name: req.name || req.nome,
-          email: req.email,
-          description: req.description || req.caracteristica || req.message,
-          status: req.status || "Pendente",
-          date: req.createdAt
-        }))
+        formulations: aggregated.map(normalizeRequest)
       });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao buscar formulações:", err);
@@ -897,20 +1173,28 @@ function buildAdminRoutes(adminConfig = {}) {
         return res.json({ success: true, documents: [] });
       }
       
-      const docs = await collection.find({ approved: true }).sort({ createdAt: -1 }).limit(100).toArray();
+      const docs = await collection.find({
+        $or: [
+          { approved: true },
+          { status: 'approved' }
+        ]
+      }).sort({ createdAt: -1 }).limit(100).toArray();
       
       console.log(`✅ [ADMIN] Listando ${docs.length} documentos visuais aprovados`);
       
-      res.json({
-        success: true,
-        documents: docs.map(doc => ({
+      const mapped = docs.map(doc => ({
           _id: doc._id?.toString(),
           imageUrl: doc.imageUrl || doc.image,
           defectType: doc.defectType || doc.tipo,
           diagnosis: doc.diagnosis || doc.diagnostico,
           solution: doc.solution || doc.solucao,
           createdAt: doc.createdAt
-        }))
+        }));
+
+      res.json({
+        success: true,
+        documents: mapped,
+        items: mapped
       });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao buscar conhecimento visual:", err);
@@ -934,7 +1218,13 @@ function buildAdminRoutes(adminConfig = {}) {
         return res.json({ success: true, pending: [] });
       }
       
-      const pending = await collection.find({ approved: false }).sort({ createdAt: -1 }).toArray();
+      const pending = await collection.find({
+        $or: [
+          { approved: false },
+          { approved: { $exists: false } },
+          { status: 'pending' }
+        ]
+      }).sort({ createdAt: -1 }).toArray();
       
       console.log(`✅ [ADMIN] Listando ${pending.length} fotos pendentes`);
       
@@ -1046,26 +1336,62 @@ function buildAdminRoutes(adminConfig = {}) {
         return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       }
       
-      const collection = getCollection("sugestoes") || getCollection("suggestions");
-      if (!collection) {
+      const sources = [
+        getCollection("sugestoes"),
+        getCollection("suggestions")
+      ].filter(Boolean);
+
+      if (!sources.length) {
         return res.json({ success: true, suggestions: [] });
       }
+
+      const rawLists = await Promise.all(
+        sources.map((collection) => collection.find({}).sort({ createdAt: -1 }).limit(100).toArray())
+      );
+
+      const deduped = new Map();
+      rawLists.flat().forEach((entry) => {
+        const key = entry._id?.toString?.() || entry.id || entry.odIdLegacy || `${entry.userName}-${entry.createdAt}`;
+        if (!deduped.has(key)) {
+          deduped.set(key, entry);
+        }
+      });
+
+      const normalizeSuggestion = (sug) => {
+        const attachments = Array.isArray(sug.attachments) ? sug.attachments.filter(Boolean) : [];
+        const timestamp = sug.createdAt || sug.date || sug.timestamp || sug.updatedAt || new Date();
+
+        return {
+          _id: sug._id?.toString?.(),
+          id: sug._id?.toString?.() || sug.id || sug.odIdLegacy || null,
+          suggestion: sug.suggestion || sug.content || sug.descricao || '',
+          userName: sug.userName || sug.name || 'Usuário do site',
+          userPhone: sug.userPhone || sug.phone || null,
+          userEmail: sug.userEmail || sug.email || null,
+          lastUserMessage: sug.lastUserMessage || sug.question || null,
+          lastBotReply: sug.lastBotReply || sug.answer || null,
+          attachments,
+          history: sug.history || null,
+          source: sug.source || 'user',
+          status: sug.status || 'pending',
+          timestamp,
+          createdAt: timestamp,
+          approvedAt: sug.approvedAt || null,
+          rejectedAt: sug.rejectedAt || null,
+          rejectionReason: sug.rejectionReason || null
+        };
+      };
+
+      const normalized = Array.from(deduped.values())
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+        .slice(0, 100)
+        .map(normalizeSuggestion);
       
-      const suggestions = await collection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
-      
-      console.log(`✅ [ADMIN] Listando ${suggestions.length} sugestões`);
+      console.log(`✅ [ADMIN] Listando ${normalized.length} sugestões`);
       
       res.json({
         success: true,
-        suggestions: suggestions.map(sug => ({
-          _id: sug._id?.toString(),
-          title: sug.title || sug.titulo,
-          content: sug.content || sug.conteudo,
-          tags: sug.tags || [],
-          source: sug.source || 'user',
-          status: sug.status || 'pending',
-          createdAt: sug.createdAt
-        }))
+        suggestions: normalized
       });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao buscar sugestões:", err);

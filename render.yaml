@@ -3,7 +3,7 @@ services:
   - type: web
     name: quanton3d-bot-v2
     env: node
-    plan: free
+    plan: starter
     buildCommand: corepack enable && pnpm install --no-frozen-lockfile && pnpm run build
     startCommand: node server.js
     envVars:

@@ -4,6 +4,15 @@ const DEFAULT_OPTIONS = {
   serverSelectionTimeoutMS: 5000,
 }
 
+const ensureRetryWritesEnabled = (uri = '') => {
+  if (typeof uri !== 'string' || !uri.trim()) return uri
+  if (!uri.startsWith('mongodb')) return uri
+  if (/[?&]retryWrites=/i.test(uri)) return uri
+
+  const joiner = uri.includes('?') ? '&' : '?'
+  return `${uri}${joiner}retryWrites=true`
+}
+
 let connectPromise = null
 
 const ensureIndexes = async () => {
@@ -24,13 +33,15 @@ const ensureIndexes = async () => {
 export const connectToMongo = async (uri = process.env.MONGODB_URI) => {
   if (!uri) return false
 
+  const normalizedUri = ensureRetryWritesEnabled(uri)
+
   if (mongoose.connection.readyState === 1) {
     return true
   }
 
   if (!connectPromise) {
     connectPromise = mongoose
-      .connect(uri, DEFAULT_OPTIONS)
+      .connect(normalizedUri, DEFAULT_OPTIONS)
       .then(async () => {
         await ensureIndexes()
         return true
@@ -70,3 +81,4 @@ export const getLearningCollection = () => getCollection('learning')
 const conversasSchema = new mongoose.Schema({}, { strict: false, collection: 'conversas' })
 
 export const Conversas = mongoose.models.Conversas || mongoose.model('Conversas', conversasSchema)
+export const getOrdersCollection = () => getCollection('orders')

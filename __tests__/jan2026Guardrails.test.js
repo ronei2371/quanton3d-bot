@@ -12,6 +12,15 @@ describe('Diretrizes Técnicas Jan/2026 guardrails', () => {
     expect(apiRoutes).not.toContain('print_parameters');
   });
 
+  it('does not auto-seed parametros from local legacy files anymore', () => {
+    const server = read('server.js');
+    const apiRoutes = read('src/routes/apiRoutes.js');
+
+    expect(server).not.toContain('legacyProfiles');
+    expect(apiRoutes).not.toContain('legacyProfiles');
+    expect(apiRoutes).toContain("Rota descontinuada. A coleção 'parametros' no MongoDB é a fonte de verdade");
+  });
+
   it('keeps chat compatibility routes available', () => {
     const server = read('server.js');
 

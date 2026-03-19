@@ -1,5 +1,6 @@
 import express from "express";
 import multer from "multer";
+import jwt from "jsonwebtoken";
 import { ObjectId } from "mongodb";
 import {
   getSugestoesCollection,
@@ -7,10 +8,11 @@ import {
   getConversasCollection,
   getCollection,
   getDb,
-  isConnected
+  isConnected,
+  getOrdersCollection
 } from "../../db.js";
 import { ensureMongoReady } from "./common.js";
-import { legacyProfiles } from "../data/seedData.js";
+import { addDocument } from "../../rag-search.js";
 
 const router = express.Router();
 const MAX_PARAMS_PAGE_SIZE = 200;
@@ -26,7 +28,38 @@ const FISPQ_DOCUMENTS = [
   { resin: "Spark", slug: "spark" }
 ];
 
-// --- AJUDANTES GLOBAIS (CORRIGIDOS PARA ACEITAR ZERO) ---
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
+const ADMIN_SECRET = process.env.ADMIN_SECRET || process.env.VITE_ADMIN_API_TOKEN;
+
+const isAdminRequest = (req) => {
+  const authHeader = req.headers.authorization || "";
+  if (authHeader.startsWith("Bearer ")) {
+    if (!ADMIN_JWT_SECRET) return false;
+    const token = authHeader.slice(7);
+    try {
+      jwt.verify(token, ADMIN_JWT_SECRET);
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  const legacySecret = req.headers["x-admin-secret"] || req.query?.auth || req.body?.auth;
+  if (legacySecret && legacySecret === ADMIN_SECRET) {
+    return true;
+  }
+
+  return false;
+};
+
+const adminGuard = (handler) => async (req, res) => {
+  if (!isAdminRequest(req)) {
+    return res.status(401).json({ success: false, error: "unauthorized" });
+  }
+  return handler(req, res);
+};
+
+// --- AJUDANTES GLOBAIS ---
 const isNil = (value) => value === undefined || value === null;
 
 const pickValue = (value, fallback = null) => (isNil(value) ? fallback : value);
@@ -34,20 +67,31 @@ const pickValue = (value, fallback = null) => (isNil(value) ? fallback : value);
 const pickNested = (field) => {
   if (isNil(field)) return null;
   if (typeof field === "object") {
-    // Tenta pegar value1 ou value2, se não der, retorna null
     return pickValue(field.value1 ?? field.value2 ?? null, null);
   }
   return pickValue(field, null);
 };
 
 const pickWithFallback = (base, root, key) => {
-  // Procura primeiro no 'base' (parametros), depois no 'root' (legado)
   const primary = pickNested(base[key]);
   return pickValue(primary, pickNested(root[key]));
 };
 // -------------------------------------------------------
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const sanitizeNumericValue = (value) => {
+  if (value === undefined || value === null) return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string") {
+    const normalized = value.replace(/,/g, ".").trim();
+    const match = normalized.match(/-?\d+(?:\.\d+)?/);
+    if (!match) return null;
+    const parsed = Number(match[0]);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
 
 const getQueryVariants = (value) => {
   const normalized = value.trim();
@@ -85,6 +129,178 @@ const buildPrinterFilter = (printerId) => {
 
 const getPartnersCollection = () => getCollection('partners');
 const getCustomRequestsCollection = () => getCollection('custom_requests');
+const getOrdersCollectionSafe = () => (
+  getOrdersCollection()
+  || getCollection('pedidos')
+  || getCustomRequestsCollection()
+);
+
+const RESIN_ALIASES = {
+  spin: 'Spin+',
+  'spin+': 'Spin+',
+  spim: 'Spin+',
+  'iron7030': 'Iron 7030',
+  'iron 7030': 'Iron 7030',
+  iron: 'Iron 7030',
+  spark: 'Spark',
+  pyroblast: 'Pyroblast+',
+  'pyroblast+': 'Pyroblast+',
+  poseidon: 'Poseidon',
+  lowsmell: 'LowSmell',
+  'low smell': 'LowSmell'
+};
+
+const sanitizeResinName = (raw) => {
+  if (!raw) return '';
+  const trimmed = String(raw).trim();
+  if (!trimmed) return '';
+  const normalized = trimmed.toLowerCase();
+  if (RESIN_ALIASES[normalized]) {
+    return RESIN_ALIASES[normalized];
+  }
+  const normalizedNoSpaces = normalized.replace(/\s+/g, '');
+  if (RESIN_ALIASES[normalizedNoSpaces]) {
+    return RESIN_ALIASES[normalizedNoSpaces];
+  }
+  return trimmed;
+};
+
+const normalizeString = (value, fallback = '') => (
+  typeof value === 'string' ? value.trim() : fallback
+);
+
+const normalizeStringArray = (...candidates) => {
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate
+        .map((item) => (typeof item === 'string' ? item.trim() : ''))
+        .filter(Boolean);
+    }
+
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate
+        .split(/[,\n]/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+};
+
+const normalizePartnerResponse = (doc = {}) => {
+  const imageCandidates = normalizeStringArray(doc.images, doc.gallery, doc.photos);
+  const imageUrl = normalizeString(doc.imageUrl || doc.image || imageCandidates[0] || '', '');
+  const website = normalizeString(doc.websiteUrl || doc.website_url || doc.link || doc.url || '', '');
+  const phone = normalizeString(doc.phone || doc.contactPhone || doc.contact?.phone || '', '');
+  const email = normalizeString(doc.email || doc.contactEmail || doc.contact?.email || '', '');
+  const whatsapp = normalizeString(doc.whatsapp || doc.contactWhatsapp || doc.contact?.whatsapp || phone, '');
+  const highlights = normalizeStringArray(doc.highlights, doc.specialties, doc.specialty);
+
+  return {
+    ...doc,
+    id: doc._id?.toString?.() || doc.id || null,
+    _id: doc._id?.toString?.() || doc.id || doc._id || null,
+    name: normalizeString(doc.name || doc.title || ''),
+    description: normalizeString(doc.description || doc.summary || ''),
+    imageUrl,
+    image: imageUrl,
+    images: imageUrl ? Array.from(new Set([imageUrl, ...imageCandidates])) : imageCandidates,
+    link: website,
+    url: website,
+    websiteUrl: website,
+    website_url: website,
+    specialty: normalizeString(doc.specialty || doc.category || highlights[0] || ''),
+    category: normalizeString(doc.category || doc.specialty || ''),
+    highlights,
+    phone,
+    email,
+    whatsapp,
+    contact: {
+      phone: phone || null,
+      email: email || null,
+      whatsapp: whatsapp || null
+    },
+    active: doc.active !== false,
+    order: Number.isFinite(Number(doc.order)) ? Number(doc.order) : 0,
+    createdAt: doc.createdAt || null,
+    updatedAt: doc.updatedAt || null
+  };
+};
+
+const buildPartnerPayload = (payload = {}, { partial = false } = {}) => {
+  const name = normalizeString(payload.name || payload.title || '');
+  const description = normalizeString(payload.description || payload.summary || '');
+  const imageUrl = normalizeString(payload.imageUrl || payload.image || '', '');
+  const website = normalizeString(payload.websiteUrl || payload.website_url || payload.link || payload.url || '', '');
+  const specialty = normalizeString(payload.specialty || payload.category || '', '');
+  const phone = normalizeString(payload.phone || payload.contactPhone || payload.contact?.phone || '', '');
+  const email = normalizeString(payload.email || payload.contactEmail || payload.contact?.email || '', '');
+  const whatsapp = normalizeString(payload.whatsapp || payload.contactWhatsapp || payload.contact?.whatsapp || phone, '');
+  const images = normalizeStringArray(payload.images, payload.gallery, payload.photos, imageUrl);
+  const highlights = normalizeStringArray(payload.highlights, payload.specialties, payload.specialty);
+
+  const fields = {
+    ...(partial || name ? { name } : {}),
+    ...(partial || description ? { description } : {}),
+    ...(partial || imageUrl ? { imageUrl } : {}),
+    ...(partial || website ? { link: website } : {}),
+    ...(partial || specialty ? { specialty } : {}),
+    ...(partial || phone ? { phone } : {}),
+    ...(partial || email ? { email } : {}),
+    ...(partial || whatsapp ? { whatsapp } : {}),
+    ...(partial || images.length ? { images } : {}),
+    ...(partial || highlights.length ? { highlights } : {}),
+    ...(payload.active !== undefined ? { active: Boolean(payload.active) } : {}),
+    ...(Number.isFinite(Number(payload.order)) ? { order: Number(payload.order) } : {})
+  };
+
+  if (partial) {
+    return fields;
+  }
+
+  return {
+    ...fields,
+    active: fields.active ?? true,
+    order: fields.order ?? 0
+  };
+};
+
+const parseGallerySettings = (rawSettings) => {
+  if (!rawSettings) return {};
+  if (typeof rawSettings === 'object') {
+    return rawSettings;
+  }
+  if (typeof rawSettings === 'string') {
+    try {
+      const parsed = JSON.parse(rawSettings);
+      if (parsed && typeof parsed === 'object') {
+        return parsed;
+      }
+      return rawSettings ? { summary: rawSettings } : {};
+    } catch (err) {
+      return { summary: rawSettings };
+    }
+  }
+  return {};
+};
+
+const extractSettingsFromBody = (body = {}) => {
+  const fields = {
+    layerHeightMm: body.layerHeightMm ?? body.layerHeight,
+    exposureTimeS: body.exposureTimeS ?? body.normalExposure ?? body.normalExposureS,
+    baseExposureTimeS: body.baseExposureTimeS ?? body.baseExposure ?? body.baseExposureS,
+    baseLayers: body.baseLayers ?? body.bottomLayers,
+    liftSpeedMmMin: body.liftSpeedMmMin ?? body.liftSpeed,
+    uvOffDelayS: body.uvOffDelayS ?? body.uvDelay ?? body.uvOffDelay
+  };
+
+  return Object.fromEntries(
+    Object.entries(fields)
+      .filter(([, value]) => !isNil(value) && String(value).toString().trim() !== '')
+      .map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
+  );
+};
 
 router.post("/register-user", async (req, res) => {
   try {
@@ -187,6 +403,62 @@ router.post("/contact", async (req, res) => {
   }
 });
 
+router.put("/contact/:id", adminGuard(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const body = req.body || {};
+    const status = normalizeString(body.status || body.situation || '');
+
+    if (!status) {
+      return res.status(400).json({ success: false, error: 'Status é obrigatório' });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const collections = [
+      getCollection('contacts'),
+      getCollection('messages'),
+      getOrdersCollectionSafe()
+    ].filter(Boolean);
+
+    if (collections.length === 0) {
+      return res.status(503).json({ success: false, error: 'Coleções de contato indisponíveis' });
+    }
+
+    const filter = ObjectId.isValid(id)
+      ? { _id: new ObjectId(id) }
+      : { $or: [{ id }, { legacyId: id }] };
+
+    for (const collection of collections) {
+      const result = await collection.findOneAndUpdate(
+        filter,
+        { $set: { status, updatedAt: new Date() } },
+        { returnDocument: 'after' }
+      );
+
+      const updated = result?.value || result;
+      if (updated && (updated._id || updated.id || updated.legacyId)) {
+        return res.json({
+          success: true,
+          contact: {
+            id: updated._id?.toString?.() || updated.id || updated.legacyId || id,
+            status: updated.status || status,
+            updatedAt: updated.updatedAt || null
+          }
+        });
+      }
+    }
+
+    return res.status(404).json({ success: false, error: 'Contato não encontrado' });
+  } catch (err) {
+    console.error('[API] Erro ao atualizar contato:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao atualizar contato' });
+  }
+}));
+
 router.post("/custom-request", async (req, res) => {
   try {
     const body = req.body ?? {};
@@ -214,8 +486,13 @@ router.post("/custom-request", async (req, res) => {
       });
     }
 
-    const customRequestsCollection = getCustomRequestsCollection();
+    const ordersCollection = getOrdersCollectionSafe();
+    if (!ordersCollection) {
+      return res.status(503).json({ success: false, error: "Coleção de pedidos indisponível" });
+    }
+
     const newRequest = {
+      type: "custom_request",
       name,
       phone,
       email,
@@ -227,7 +504,7 @@ router.post("/custom-request", async (req, res) => {
       updatedAt: new Date()
     };
 
-    const result = await customRequestsCollection.insertOne(newRequest);
+    const result = await ordersCollection.insertOne(newRequest);
     console.log(`[API] Pedido de formulacao customizada: ${name} (${email})`);
 
     res.json({
@@ -244,6 +521,74 @@ router.post("/custom-request", async (req, res) => {
   }
 });
 
+const buildOrderResponse = (doc = {}) => ({
+  id: doc._id?.toString?.(),
+  customerName: doc.name || doc.customerName || doc.userName || 'Cliente',
+  phone: doc.phone || doc.userPhone || null,
+  email: doc.email || doc.userEmail || null,
+  desiredFeature: doc.desiredFeature || null,
+  color: doc.color || null,
+  details: doc.details || doc.complementos || doc.notes || null,
+  status: doc.status || 'pending',
+  createdAt: doc.createdAt || null,
+  updatedAt: doc.updatedAt || null,
+  items: Array.isArray(doc.items) ? doc.items : [],
+  notes: doc.notes || doc.details || null
+});
+
+router.get('/orders', adminGuard(async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const collection = getOrdersCollectionSafe();
+    if (!collection) {
+      return res.status(503).json({ success: false, error: 'Coleção de pedidos indisponível' });
+    }
+
+    const docs = await collection.find({}).sort({ createdAt: -1 }).toArray();
+    res.json({ success: true, orders: docs.map(buildOrderResponse) });
+  } catch (err) {
+    console.error('[API] Erro ao listar pedidos:', err);
+    res.status(500).json({ success: false, error: 'Erro ao listar pedidos' });
+  }
+}));
+
+router.put('/orders/:id', adminGuard(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body || {};
+
+    if (!status) {
+      return res.status(400).json({ success: false, error: 'Status é obrigatório' });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const collection = getOrdersCollectionSafe();
+    if (!collection) {
+      return res.status(503).json({ success: false, error: 'Coleção de pedidos indisponível' });
+    }
+
+    const filter = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { legacyId: id };
+    const updateResult = await collection.updateOne(filter, { $set: { status, updatedAt: new Date() } });
+
+    if (!updateResult.matchedCount) {
+      return res.status(404).json({ success: false, error: 'Pedido não encontrado' });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[API] Erro ao atualizar pedido:', err);
+    res.status(500).json({ success: false, error: 'Erro ao atualizar pedido' });
+  }
+}));
+
 router.post("/gallery", upload.any(), async (req, res) => {
   try {
     const {
@@ -254,7 +599,8 @@ router.post("/gallery", upload.any(), async (req, res) => {
       image,
       images,
       imageUrl,
-      note
+      note,
+      contact
     } = req.body;
     const sanitizedResin = sanitizeResinName(resin);
 
@@ -305,13 +651,19 @@ router.post("/gallery", upload.any(), async (req, res) => {
     }
 
     const galleryCollection = getCollection("gallery");
+    const parsedSettings = parseGallerySettings(settings);
+    const fallbackSettings = extractSettingsFromBody(req.body);
+    const mergedSettings = { ...fallbackSettings, ...parsedSettings };
+    const hasSettings = Object.keys(mergedSettings).length > 0;
+
     const newEntry = {
-      name: name || null,
+      name: name?.trim() || null,
       resin: sanitizedResin,
-      printer,
-      settings: settings || {},
+      printer: printer.trim(),
+      settings: hasSettings ? mergedSettings : {},
+      contact: contact?.trim() || null,
       images: finalImages,
-      note: note || null,
+      note: note?.trim() || null,
       status: "pending",
       createdAt: new Date(),
       updatedAt: new Date()
@@ -331,6 +683,63 @@ router.post("/gallery", upload.any(), async (req, res) => {
       success: false,
       error: "Erro ao enviar fotos"
     });
+  }
+});
+
+router.post("/suggest-knowledge", async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    }
+
+    const collection = getCollection("sugestoes") || getCollection("suggestions");
+    if (!collection) {
+      return res.status(503).json({ success: false, error: "Coleção de sugestões indisponível" });
+    }
+
+    const {
+      suggestion,
+      userName,
+      userPhone,
+      sessionId,
+      lastUserMessage,
+      lastBotReply,
+      attachment,
+      attachments: attachmentList,
+      imageUrl
+    } = req.body || {};
+
+    const attachments = [];
+    if (Array.isArray(attachmentList)) {
+      attachments.push(...attachmentList.filter(Boolean));
+    }
+    if (attachment) attachments.push(attachment);
+    if (imageUrl) attachments.push(imageUrl);
+
+    if (!suggestion || typeof suggestion !== "string" || !suggestion.trim()) {
+      return res.status(400).json({ success: false, error: "Sugestao é obrigatória" });
+    }
+
+    const doc = {
+      suggestion: suggestion.trim(),
+      userName: (userName || '').trim() || 'Usuário do site',
+      userPhone: userPhone || null,
+      sessionId: sessionId || null,
+      lastUserMessage: lastUserMessage || null,
+      lastBotReply: lastBotReply || null,
+      attachments,
+      status: 'pending',
+      createdAt: new Date()
+    };
+
+    const result = await collection.insertOne(doc);
+    console.log(`[API] Sugestão registrada: ${doc.userName}`);
+
+    res.json({ success: true, message: 'Sugestão enviada com sucesso!', suggestionId: result.insertedId.toString() });
+  } catch (err) {
+    console.error('[API] Erro ao registrar sugestão:', err);
+    res.status(500).json({ success: false, error: 'Erro ao registrar sugestão' });
   }
 });
 
@@ -356,6 +765,9 @@ const normalizeGalleryPagination = (req) => {
   return { page, limit, skip: (page - 1) * limit };
 };
 
+// ==========================================
+// ROTA OTIMIZADA PELO GPT-5 (GALERIA APROVADA)
+// ==========================================
 router.get("/gallery", async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -369,13 +781,18 @@ router.get("/gallery", async (req, res) => {
     const { page, limit, skip } = normalizeGalleryPagination(req);
     const galleryCollection = getCollection("gallery");
     const filter = { status: "approved" };
-    const total = await galleryCollection.countDocuments(filter);
-    const docs = await galleryCollection
-      .find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .toArray();
+
+    const cursor = galleryCollection.find(filter, {
+      sort: { createdAt: -1 },
+      skip,
+      limit
+    });
+
+    // Busca dupla simultânea (muito mais rápido)
+    const [docs, total] = await Promise.all([
+      cursor.toArray(),
+      galleryCollection.countDocuments(filter)
+    ]);
 
     res.json({
       success: true,
@@ -393,6 +810,9 @@ router.get("/gallery", async (req, res) => {
   }
 });
 
+// ==========================================
+// ROTA OTIMIZADA PELO GPT-5 (GALERIA COMPLETA)
+// ==========================================
 router.get("/gallery/all", async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -405,13 +825,18 @@ router.get("/gallery/all", async (req, res) => {
 
     const { page, limit, skip } = normalizeGalleryPagination(req);
     const galleryCollection = getCollection("gallery");
-    const total = await galleryCollection.countDocuments({});
-    const docs = await galleryCollection
-      .find({})
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .toArray();
+    const filter = {};
+
+    const cursor = galleryCollection.find(filter, {
+      sort: { createdAt: -1 },
+      skip,
+      limit
+    });
+
+    const [docs, total] = await Promise.all([
+      cursor.toArray(),
+      galleryCollection.countDocuments(filter)
+    ]);
 
     res.json({
       success: true,
@@ -433,10 +858,6 @@ function normalizeParams(params = {}) {
   const root = params ?? {};
   const base = root.parametros ?? {};
   
-  // AQUI ESTAVA O ERRO: REMOVEMOS AS DECLARAÇÕES DUPLICADAS.
-  // AGORA USAMOS AS FUNÇÕES GLOBAIS DEFINIDAS NO TOPO DO ARQUIVO.
-
-  // Helper local para simplificar a chamada usando as globais
   const getParam = (key) => pickWithFallback(base, root, key);
   const getBottomExposure = () => {
     const direct = getParam("bottomExposureS");
@@ -447,19 +868,19 @@ function normalizeParams(params = {}) {
   };
 
   return {
-    layerHeightMm: getParam("layerHeightMm") ?? getParam("layerHeight"),
-    exposureTimeS: getParam("exposureTimeS") ?? getParam("exposureTime") ?? getParam("normalExposureS"),
-    bottomExposureS: getBottomExposure(),
-    bottomLayers: getParam("bottomLayers") ?? getParam("baseLayers"),
-    baseExposureTimeS: getBottomExposure(),
-    baseLayers: getParam("bottomLayers") ?? getParam("baseLayers"),
-    liftSpeedMmMin: getParam("liftSpeedMmMin") ?? getParam("liftSpeed") ?? getParam("liftSpeedMmM"),
-    uvOffDelayS: getParam("uvOffDelayS"),
-    uvOffDelayBaseS: getParam("uvOffDelayBaseS"),
-    restBeforeLiftS: getParam("restBeforeLiftS"),
-    restAfterLiftS: getParam("restAfterLiftS"),
-    restAfterRetractS: getParam("restAfterRetractS"),
-    uvPower: getParam("uvPower"),
+    layerHeightMm: sanitizeNumericValue(getParam("layerHeightMm") ?? getParam("layerHeight")),
+    exposureTimeS: sanitizeNumericValue(getParam("exposureTimeS") ?? getParam("exposureTime") ?? getParam("normalExposureS")),
+    bottomExposureS: sanitizeNumericValue(getBottomExposure()),
+    bottomLayers: sanitizeNumericValue(getParam("bottomLayers") ?? getParam("baseLayers")),
+    baseExposureTimeS: sanitizeNumericValue(getBottomExposure()),
+    baseLayers: sanitizeNumericValue(getParam("bottomLayers") ?? getParam("baseLayers")),
+    liftSpeedMmMin: sanitizeNumericValue(getParam("liftSpeedMmMin") ?? getParam("liftSpeed") ?? getParam("liftSpeedMmM")),
+    uvOffDelayS: sanitizeNumericValue(getParam("uvOffDelayS")),
+    uvOffDelayBaseS: sanitizeNumericValue(getParam("uvOffDelayBaseS")),
+    restBeforeLiftS: sanitizeNumericValue(getParam("restBeforeLiftS")),
+    restAfterLiftS: sanitizeNumericValue(getParam("restAfterLiftS")),
+    restAfterRetractS: sanitizeNumericValue(getParam("restAfterRetractS")),
+    uvPower: sanitizeNumericValue(getParam("uvPower")),
   };
 }
 
@@ -579,7 +1000,7 @@ router.get("/docs/fispqs", (_req, res) => {
   });
 });
 
-router.get("/params/printers", async (req, res) => {
+const listPrinters = async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
@@ -610,30 +1031,36 @@ router.get("/params/printers", async (req, res) => {
       ])
       .toArray();
 
-    res.json({
+    const mapped = printers.map((item) => ({
+      id: item._id,
+      brand: item.brand,
+      model: item.model,
+      resinIds: item.resinIds
+    }));
+
+    return res.json({
       success: true,
-      printers: printers.map((item) => ({
-        id: item._id,
-        brand: item.brand,
-        model: item.model,
-        resinIds: item.resinIds
-      })),
-      matchingPrinters: resinId
-        ? printers.map((item) => ({
-            id: item._id,
-            brand: item.brand,
-            model: item.model,
-            resinIds: item.resinIds
-          }))
-        : undefined
+      printers: mapped,
+      matchingPrinters: resinId ? mapped : undefined
     });
   } catch (err) {
     console.error("[API] Erro ao listar impressoras:", err);
-    res.status(500).json({ success: false, error: "Erro ao listar impressoras" });
+    return res.status(500).json({ success: false, error: "Erro ao listar impressoras" });
   }
+};
+
+router.get("/params/printers", listPrinters);
+router.get("/printers", listPrinters);
+router.post("/params/printers", async (req, res) => {
+  req.query = { ...(req.query || {}), ...(req.body || {}) };
+  return listPrinters(req, res);
+});
+router.post("/printers", async (req, res) => {
+  req.query = { ...(req.query || {}), ...(req.body || {}) };
+  return listPrinters(req, res);
 });
 
-router.get("/params/profiles", async (req, res) => {
+const listProfiles = async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
@@ -668,7 +1095,7 @@ router.get("/params/profiles", async (req, res) => {
     if (limit) cursor.skip(skip).limit(limit);
     const docs = await cursor.toArray();
 
-    res.json({
+    return res.json({
       success: true,
       total,
       page: limit ? page : 1,
@@ -677,8 +1104,14 @@ router.get("/params/profiles", async (req, res) => {
     });
   } catch (err) {
     console.error("[API] Erro ao listar perfis de impressão:", err);
-    res.status(500).json({ success: false, error: "Erro ao listar perfis" });
+    return res.status(500).json({ success: false, error: "Erro ao listar perfis" });
   }
+};
+
+router.get("/params/profiles", listProfiles);
+router.post("/params/profiles", async (req, res) => {
+  req.query = { ...(req.query || {}), ...(req.body || {}) };
+  return listProfiles(req, res);
 });
 
 router.get("/params/stats", async (_req, res) => {
@@ -720,8 +1153,6 @@ router.get("/params/stats", async (_req, res) => {
   }
 });
 
-
-
 const buildVisualKnowledgeResponse = (doc) => ({
   id: doc._id?.toString?.() || doc.id || null,
   title: doc.title || doc.name || 'Sem título',
@@ -733,6 +1164,9 @@ const buildVisualKnowledgeResponse = (doc) => ({
   updatedAt: doc.updatedAt || null
 });
 
+// ==========================================
+// ROTA DE LISTA APROVADA - BUG 2 CORRIGIDO
+// ==========================================
 router.get('/visual-knowledge', async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -741,7 +1175,9 @@ router.get('/visual-knowledge', async (req, res) => {
     }
 
     const { page, limit, skip } = normalizeGalleryPagination(req);
-    const collection = getVisualKnowledgeCollection();
+    // Garantindo que ele não ignore os dados caso uma coleção falhe
+    const collection = getVisualKnowledgeCollection() || getCollection('gallery');
+    
     const total = await collection.countDocuments({});
     const docs = await collection
       .find({})
@@ -750,12 +1186,14 @@ router.get('/visual-knowledge', async (req, res) => {
       .limit(limit)
       .toArray();
 
+    const mapped = docs.map(buildVisualKnowledgeResponse);
     return res.json({
       success: true,
       total,
       page,
       limit,
-      items: docs.map(buildVisualKnowledgeResponse)
+      items: mapped,
+      documents: mapped
     });
   } catch (err) {
     console.error('[API] Erro ao listar conhecimento visual:', err);
@@ -763,7 +1201,7 @@ router.get('/visual-knowledge', async (req, res) => {
   }
 });
 
-router.post('/visual-knowledge', async (req, res) => {
+router.post('/visual-knowledge', upload.any(), async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
@@ -771,20 +1209,35 @@ router.post('/visual-knowledge', async (req, res) => {
     }
 
     const payload = req.body || {};
-    const title = typeof payload.title === 'string' ? payload.title.trim() : '';
-    const imageUrl = typeof payload.imageUrl === 'string' ? payload.imageUrl.trim() : '';
+    const title = typeof payload.title === 'string' && payload.title.trim()
+      ? payload.title.trim()
+      : (typeof payload.defectType === 'string' && payload.defectType.trim() ? payload.defectType.trim() : 'Treinamento visual');
+    let imageUrl = typeof payload.imageUrl === 'string' && payload.imageUrl.trim()
+      ? payload.imageUrl.trim()
+      : (typeof payload.image === 'string' ? payload.image.trim() : '');
 
-    if (!title || !imageUrl) {
-      return res.status(400).json({ success: false, error: 'title e imageUrl são obrigatórios' });
+    if (!imageUrl && Array.isArray(req.files) && req.files.length > 0) {
+      const file = req.files[0];
+      if (file?.buffer?.length) {
+        imageUrl = `data:${file.mimetype || 'image/jpeg'};base64,${file.buffer.toString('base64')}`;
+      }
+    }
+
+    if (!imageUrl) {
+      return res.status(400).json({ success: false, error: 'imageUrl é obrigatório' });
     }
 
     const collection = getVisualKnowledgeCollection();
     const now = new Date();
     const doc = {
       title,
-      description: typeof payload.description === 'string' ? payload.description.trim() : null,
+      description: typeof payload.description === 'string'
+        ? payload.description.trim()
+        : (typeof payload.solution === 'string' ? payload.solution.trim() : null),
       imageUrl,
-      tags: Array.isArray(payload.tags) ? payload.tags.filter(Boolean) : [],
+      tags: Array.isArray(payload.tags)
+        ? payload.tags.filter(Boolean)
+        : [payload.defectType, payload.category].filter(Boolean),
       source: typeof payload.source === 'string' && payload.source.trim() ? payload.source.trim() : 'manual',
       createdAt: now,
       updatedAt: now
@@ -797,6 +1250,7 @@ router.post('/visual-knowledge', async (req, res) => {
     return res.status(500).json({ success: false, error: 'Erro ao criar conhecimento visual' });
   }
 });
+
 const readAdminToken = (req) => (
   req.headers["x-admin-secret"] ||
   req.headers["admin-secret"] ||
@@ -833,7 +1287,7 @@ router.get('/partners', async (_req, res) => {
     }
 
     const partners = await collection.find({}).sort({ order: 1, createdAt: -1 }).toArray();
-    return res.json({ success: true, partners });
+    return res.json({ success: true, partners: partners.map(normalizePartnerResponse) });
   } catch (err) {
     console.error('[API] Erro ao listar parceiros:', err);
     return res.status(500).json({ success: false, error: 'Erro ao listar parceiros' });
@@ -860,22 +1314,145 @@ router.post('/partners', async (req, res) => {
     const collection = getPartnersCollection();
     const now = new Date();
     const doc = {
-      name,
-      description: typeof payload.description === 'string' ? payload.description.trim() : '',
-      imageUrl: payload.imageUrl || payload.image || '',
-      link: payload.link || payload.url || '',
-      specialty: payload.specialty || payload.category || '',
-      active: payload.active !== false,
-      order: Number.isFinite(Number(payload.order)) ? Number(payload.order) : 0,
+      ...buildPartnerPayload(payload),
       createdAt: now,
       updatedAt: now
     };
 
     const result = await collection.insertOne(doc);
-    return res.status(201).json({ success: true, partner: { ...doc, _id: result.insertedId } });
+    return res.status(201).json({ success: true, partner: normalizePartnerResponse({ ...doc, _id: result.insertedId }) });
   } catch (err) {
     console.error('[API] Erro ao criar parceiro:', err);
     return res.status(500).json({ success: false, error: 'Erro ao criar parceiro' });
+  }
+});
+
+
+router.post('/partners/upload-image', upload.any(), async (req, res) => {
+  try {
+    if (!isValidAdminToken(req)) {
+      return res.status(401).json({ success: false, error: 'unauthorized' });
+    }
+
+    const payload = req.body || {};
+    let imageUrl = typeof payload.imageUrl === 'string' && payload.imageUrl.trim()
+      ? payload.imageUrl.trim()
+      : (typeof payload.image === 'string' ? payload.image.trim() : '');
+
+    if (!imageUrl && Array.isArray(req.files) && req.files.length > 0) {
+      const file = req.files[0];
+      if (file?.buffer?.length) {
+        imageUrl = `data:${file.mimetype || 'image/jpeg'};base64,${file.buffer.toString('base64')}`;
+      }
+    }
+
+    if (!imageUrl) {
+      return res.status(400).json({ success: false, error: 'image obrigatório' });
+    }
+
+    return res.json({ success: true, imageUrl, url: imageUrl });
+  } catch (err) {
+    console.error('[API] Erro no upload de imagem de parceiro:', err);
+    return res.status(500).json({ success: false, error: 'Erro no upload da imagem' });
+  }
+});
+
+router.put('/partners/:id', async (req, res) => {
+  try {
+    if (!isValidAdminToken(req)) {
+      return res.status(401).json({ success: false, error: 'unauthorized' });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'ID inválido' });
+    }
+
+    const collection = getPartnersCollection();
+    const payload = req.body || {};
+    const updates = {
+      ...buildPartnerPayload(payload, { partial: true }),
+      updatedAt: new Date()
+    };
+
+    const result = await collection.findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: updates },
+      { returnDocument: 'after' }
+    );
+
+    const updatedPartner = result?.value || result;
+    if (!updatedPartner || !updatedPartner._id) {
+      return res.status(404).json({ success: false, error: 'Parceiro não encontrado' });
+    }
+
+    return res.json({ success: true, partner: normalizePartnerResponse(updatedPartner) });
+  } catch (err) {
+    console.error('[API] Erro ao atualizar parceiro:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao atualizar parceiro' });
+  }
+});
+
+router.delete('/partners/:id', async (req, res) => {
+  try {
+    if (!isValidAdminToken(req)) {
+      return res.status(401).json({ success: false, error: 'unauthorized' });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'ID inválido' });
+    }
+
+    const collection = getPartnersCollection();
+    const result = await collection.deleteOne({ _id: new ObjectId(id) });
+    if (!result.deletedCount) {
+      return res.status(404).json({ success: false, error: 'Parceiro não encontrado' });
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[API] Erro ao remover parceiro:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao remover parceiro' });
+  }
+});
+
+router.post('/add-knowledge', async (req, res) => {
+  try {
+    if (!isValidAdminToken(req)) {
+      return res.status(401).json({ success: false, error: 'unauthorized' });
+    }
+
+    const payload = req.body || {};
+    const title = typeof payload.title === 'string' ? payload.title.trim() : '';
+    const content = typeof payload.content === 'string' ? payload.content.trim() : '';
+    const source = typeof payload.source === 'string' && payload.source.trim() ? payload.source.trim() : 'admin_panel';
+    const tags = Array.isArray(payload.tags) ? payload.tags.filter(Boolean) : ['admin'];
+
+    if (!title || !content) {
+      return res.status(400).json({ success: false, error: 'title e content são obrigatórios' });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const result = await addDocument(title, content, source, tags);
+    return res.status(201).json({ success: true, result });
+  } catch (err) {
+    console.error('[API] Erro ao adicionar knowledge:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao adicionar knowledge' });
   }
 });
 
@@ -904,25 +1481,56 @@ router.get('/knowledge', async (_req, res) => {
   }
 });
 
+// ==========================================
+// ROTA PENDENTE - BUGS 1 E 3 CORRIGIDOS 
+// ==========================================
 router.get('/visual-knowledge/pending', async (_req, res) => {
-  return res.json({ success: true, pending: [] });
-});
-
-router.get("/nuke-and-seed", async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
-      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
     }
 
-    const collection = getCollection("parametros");
-    await collection.deleteMany({});
-    await collection.insertMany(legacyProfiles);
+    // Bug 1: Usar gallery direto
+    const pendingCollection = getCollection('gallery');
+    if (!pendingCollection) {
+      return res.json({ success: true, pending: [] });
+    }
 
-    return res.send("Database reset and seeded with CORRECT IDs");
+    // Bug 3: Filtro corrigido, removendo o $exists para não trazer itens aprovados
+    const pendingDocs = await pendingCollection
+      .find({
+        $or: [
+          { approved: false },
+          { status: 'pending' }
+        ]
+      })
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .toArray();
+
+    return res.json({
+      success: true,
+      pending: pendingDocs.map((item) => ({
+        _id: item._id?.toString?.() || item.id || null,
+        imageUrl: item.imageUrl || item.image || (Array.isArray(item.images) ? item.images[0] : null),
+        userName: item.userName || item.user || item.name || null,
+        defectType: item.defectType || item.title || null,
+        createdAt: item.createdAt || null,
+        status: item.status || (item.approved ? 'approved' : 'pending')
+      }))
+    });
   } catch (err) {
-    console.error("[API] Erro ao resetar e semear parametros:", err);
-    return res.status(500).json({ success: false, error: "Erro ao resetar banco de dados" });
+    console.error('[API] Erro ao listar conhecimento visual pendente:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao listar pendências visuais' });
   }
 });
+
+router.get("/nuke-and-seed", async (_req, res) => {
+  return res.status(410).json({
+    success: false,
+    error: "Rota descontinuada. A coleção 'parametros' no MongoDB é a fonte de verdade e não deve mais ser repovoada por seed local."
+  });
+});
+
 export { router as apiRoutes };

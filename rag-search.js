@@ -3,6 +3,7 @@
 // Busca conhecimento relevante para melhorar respostas do bot
 
 import fs from 'fs';
+import path from 'path';
 import OpenAI from 'openai';
 import winston from 'winston';
 import { getDocumentsCollection, getVisualKnowledgeCollection, isConnected } from './db.js';
@@ -25,6 +26,11 @@ const LOG_DIR = 'logs';
 if (!fs.existsSync(LOG_DIR)) {
   fs.mkdirSync(LOG_DIR, { recursive: true });
 }
+
+const KB_INDEX_PATH = process.env.KB_INDEX_PATH || path.join(process.cwd(), 'kb_index.json');
+const KB_AUTO_IMPORT_LIMIT = Number.isFinite(Number(process.env.KB_AUTO_IMPORT_LIMIT))
+  ? Number(process.env.KB_AUTO_IMPORT_LIMIT)
+  : null;
 
 const ragLogger = winston.createLogger({
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
@@ -338,8 +344,7 @@ export function formatContext(results) {
 
   context += '---\n\n';
   context += 'Use EXCLUSIVAMENTE o conhecimento acima para responder. ';
-  context += 'NAO invente informacoes que nao estejam no contexto.\n';
-  context += 'Sempre cite qual documento usou (ex.: "Fonte: Documento 1").\n\n';
+  context += 'NAO invente informacoes que nao estejam no contexto.\n\n';
 
   return context;
 }
@@ -577,6 +582,101 @@ export async function checkRAGIntegrity() {
   }
 }
 
+async function loadLocalKnowledgeDocuments(limit = KB_AUTO_IMPORT_LIMIT) {
+  if (!KB_INDEX_PATH || !fs.existsSync(KB_INDEX_PATH)) {
+    logRAG(`Arquivo kb_index.json não encontrado em ${KB_INDEX_PATH}`, 'WARN');
+    return [];
+  }
+
+  try {
+    const raw = await fs.promises.readFile(KB_INDEX_PATH, 'utf-8');
+    const parsed = JSON.parse(raw);
+    const docs = Array.isArray(parsed?.documents)
+      ? parsed.documents
+      : Array.isArray(parsed)
+        ? parsed
+        : [];
+
+    if (!docs.length) {
+      logRAG('kb_index.json não contém documentos utilizáveis', 'WARN');
+      return [];
+    }
+
+    return typeof limit === 'number' && limit > 0 ? docs.slice(0, limit) : docs;
+  } catch (err) {
+    logRAG(`Falha ao ler kb_index.json: ${err.message}`, 'ERROR');
+    return [];
+  }
+}
+
+export async function bootstrapKnowledgeFromFile(options = {}) {
+  if (!isConnected()) {
+    logRAG('MongoDB não conectado; bootstrap do RAG ignorado.', 'WARN');
+    return { success: false, reason: 'mongodb_not_connected' };
+  }
+
+  if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'dummy-key') {
+    logRAG('OPENAI_API_KEY ausente; não é possível gerar embeddings automaticamente.', 'WARN');
+    return { success: false, reason: 'missing_openai_key' };
+  }
+
+  const integrity = await checkRAGIntegrity();
+  if (!options.force && integrity.isValid && integrity.totalDocuments > 0) {
+    logRAG('Base de conhecimento já está íntegra. Bootstrap ignorado.', 'INFO');
+    return { success: true, skipped: true, inserted: 0 };
+  }
+
+  const documents = await loadLocalKnowledgeDocuments();
+  if (!documents.length) {
+    return { success: false, reason: 'kb_file_missing_or_empty' };
+  }
+
+  logRAG(`Iniciando bootstrap automático do RAG com ${documents.length} documentos.`, 'INFO');
+
+  let inserted = 0;
+  let errors = 0;
+
+  for (const doc of documents) {
+    const title = doc.title || doc.id || 'Documento sem título';
+    const content = doc.content || '';
+    if (!content.trim()) {
+      logRAG(`Documento "${title}" ignorado por não ter conteúdo.`, 'WARN');
+      continue;
+    }
+
+    const tags = Array.isArray(doc.tags)
+      ? doc.tags
+      : doc.source
+        ? [doc.source]
+        : [];
+
+    const optionsPayload = {
+      upsert: true,
+      legacyId: doc.id,
+      embedding: Array.isArray(doc.embedding) && doc.embedding.length === EMBEDDING_DIMENSIONS
+        ? doc.embedding
+        : undefined
+    };
+
+    try {
+      await addDocument(title, content, doc.source || 'kb-index', tags, optionsPayload);
+      inserted += 1;
+      await new Promise(resolve => setTimeout(resolve, 150));
+    } catch (err) {
+      errors += 1;
+      logRAG(`Falha ao importar "${title}": ${err.message}`, 'ERROR');
+    }
+  }
+
+  if (errors > 0) {
+    logRAG(`Bootstrap concluído com ${errors} erros.`, 'WARN');
+  } else {
+    logRAG('Bootstrap do RAG concluído com sucesso.', 'INFO');
+  }
+
+  return { success: errors === 0, inserted, errors };
+}
+
 // Obter informacoes do RAG
 export function getRAGInfo() {
   return {
@@ -795,6 +895,7 @@ export default {
   deleteDocument,
   updateDocument,
   checkRAGIntegrity,
+  bootstrapKnowledgeFromFile,
   getRAGInfo,
   generateEmbedding,
   // Visual RAG

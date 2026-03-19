@@ -3,13 +3,13 @@ import OpenAI from 'openai';
 import multer from 'multer';
 import { searchKnowledge, formatContext } from '../../rag-search.js';
 import { ensureMongoReady } from './common.js';
-import { getConversasCollection } from '../../db.js';
+import { getConversasCollection, getVisualKnowledgeCollection } from '../../db.js';
+import { metrics } from '../utils/metrics.js';
 
 const router = express.Router();
 
 const DEFAULT_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini';
-const DEFAULT_VISION_MODEL = process.env.OPENAI_VISION_MODEL || DEFAULT_CHAT_MODEL;
-const DEFAULT_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || DEFAULT_VISION_MODEL;
+const IMAGE_MODEL = 'gpt-4o';
 
 let openaiClient = null;
 const upload = multer({
@@ -75,7 +75,14 @@ function resolveImagePayload(body = {}) {
 async function buildRagContext({ message, hasImage }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
   const ragQuery = trimmedMessage || (hasImage ? 'diagnostico visual impressao 3d resina defeitos comuns' : '');
-  const ragResults = ragQuery ? await searchKnowledge(ragQuery) : [];
+  let ragResults = [];
+  if (ragQuery) {
+    try {
+      ragResults = await searchKnowledge(ragQuery);
+    } catch (error) {
+      console.warn('[CHAT] RAG indisponível (seguindo sem contexto):', error.message);
+    }
+  }
   const ragContext = formatContext(ragResults);
   const hasRelevantContext = ragResults.length > 0;
   const adhesionIssueHint = /dificil|difícil|duro|presa|grudada|grudado/i.test(trimmedMessage) && /mesa|plate|plataforma|base/i.test(trimmedMessage)
@@ -89,8 +96,116 @@ function sanitizeChatText(text) {
   return text.replace(/\u0000/g, '').trim();
 }
 
+function stripVisionPolicyDisclaimers(text = '') {
+  if (!text) return '';
+  let cleaned = text;
+  cleaned = cleaned.replace(/n[ãa]o posso identificar pessoas[^.]*\.\s*/i, '');
+  cleaned = cleaned.replace(/can(?:not|'t) identify people[^.]*\.\s*/i, '');
+  const trimmed = cleaned.trim();
+  return trimmed.length ? trimmed : text.trim();
+}
+
 function normalizeForMatch(text = '') {
   return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+async function fetchVisualKnowledgeHints({ message = '', customerContext = {}, hasImage = false, limit = 3 }) {
+  try {
+    if (!hasImage && (!message || message.length < 10)) {
+      return [];
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return [];
+    }
+
+    const collection = getVisualKnowledgeCollection();
+    if (!collection) {
+      return [];
+    }
+
+    const docs = await collection
+      .find({ approved: true })
+      .sort({ approvedAt: -1, createdAt: -1 })
+      .limit(80)
+      .toArray();
+
+    if (!docs.length) {
+      return [];
+    }
+
+    const querySource = [message, customerContext?.problemType, customerContext?.resin, customerContext?.printer]
+      .filter(Boolean)
+      .join(' ');
+    const normalizedQuery = normalizeForMatch(querySource);
+    const keywords = normalizedQuery.split(' ').filter((token) => token.length >= 4);
+
+    if (!keywords.length) {
+      return docs.slice(0, limit);
+    }
+
+    const scored = docs
+      .map((doc) => {
+        const docText = normalizeForMatch([
+          doc.defectType,
+          doc.diagnosis,
+          doc.solution,
+          doc.description,
+          doc.notes
+        ].filter(Boolean).join(' '));
+        const hits = keywords.reduce((sum, kw) => (docText.includes(kw) ? sum + 1 : sum), 0);
+        return { doc, score: hits };
+      })
+      .filter((item) => item.score > 0);
+
+    if (!scored.length) {
+      return docs.slice(0, limit);
+    }
+
+    return scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map((item) => item.doc);
+  } catch (error) {
+    console.warn('[CHAT] Falha ao obter conhecimento visual:', error.message);
+    return [];
+  }
+}
+
+function sanitizeSnippet(value, limit = 420) {
+  if (!value || typeof value !== 'string') return null;
+  const cleaned = value.replace(/\s+/g, ' ').trim();
+  if (!cleaned) return null;
+  return cleaned.length > limit ? `${cleaned.slice(0, limit).trim()}…` : cleaned;
+}
+
+function buildVisualContextSection(entries = []) {
+  if (!Array.isArray(entries) || !entries.length) {
+    return '';
+  }
+
+  const lines = ['GALERIA QUANTON3D (casos visuais reais aprovados):'];
+  entries.forEach((entry, index) => {
+    const defect = sanitizeSnippet(entry?.defectType || entry?.title);
+    const diagnosis = sanitizeSnippet(entry?.diagnosis || entry?.description);
+    const solution = sanitizeSnippet(entry?.solution || entry?.solucao);
+    const block = [
+      `Caso ${index + 1}:`,
+      defect ? `Defeito: ${defect}` : null,
+      diagnosis ? `Diagnóstico: ${diagnosis}` : null,
+      solution ? `Solução aplicada: ${solution}` : null
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    if (block) {
+      lines.push(block);
+    }
+  });
+
+  lines.push('Use esses casos aprovados como referência prática quando fizer diagnósticos.');
+  return lines.join('\n\n');
 }
 
 function extractResinFromMessage(message = '') {
@@ -117,6 +232,21 @@ function isDiagnosticQuestion(message = '') {
 function hasExposureInfo(message = '') {
   return /exposi[cç][aã]o|\b\d+([.,]\d+)?\s*s\b|\bsegundos?\b/i.test(message);
 }
+function mentionsRigidSupports(message = '') {
+  if (!message) return false;
+  return /suporte[s]?/i.test(message) && /(duro|rigid|quebradi[cç]o|muito firme|dif[ií]cil de remover)/i.test(message);
+}
+function mentionsDelayedCracking(message = '') {
+  if (!message) return false;
+  return /(racha|fissura|trinca|quebra)/i.test(message) && /(depois|ap[oó]s|dias|passados|alguns dias)/i.test(message);
+}
+
+function mentionsBaseAdhesion(message = '') {
+  if (!message) return false;
+  const stuckTerms = /(presa|grudada|colada|dif[íi]cil de tirar|n[ãa]o solta|dura de tirar|muito preso)/i;
+  const baseTerms = /(base|plataforma|mesa|plate)/i;
+  return stuckTerms.test(message) && baseTerms.test(message);
+}
 
 function buildParameterBlockReply({ resinName, printerName }) {
   const resinLabel = resinName ? `resina ${resinName}` : 'resina';
@@ -124,7 +254,54 @@ function buildParameterBlockReply({ resinName, printerName }) {
   return `Não encontrei parâmetros confirmados para ${resinLabel} na ${printerLabel}. Por favor, confirme o modelo exato da impressora e a resina para eu verificar a tabela oficial ou acione o suporte técnico.`;
 }
 
-function trimConversationHistory(history, systemPrompt, userMessage) {
+function buildSupportBrittleReply({ resinName, printerName }) {
+  const resinInfo = resinName ? `na ${resinName}` : 'na sua resina atual';
+  const printerInfo = printerName ? `na ${printerName}` : 'na sua impressora';
+  return [
+    `Suportes extremamente rígidos e peças rachando após alguns dias indicam excesso de energia e pós-cura agressiva ${resinInfo} ${printerInfo}.`,
+    '1. **Parâmetros de impressão**: reduza a exposição normal em 5‑10% e ative “rest before lift” de 0,5‑1 s. Nas camadas base mantenha 6‑8 camadas com 18‑22 s em vez de exposições longas que cristalizam a resina.',
+    '2. **Estrutura de suportes**: use suportes light/medium e distribua os topos. Ajuste o diâmetro para 0,25‑0,30 mm e inclua drenagem para aliviar tensões.',
+    '3. **Pós-cura**: lave, seque e faça ciclos curtos de 3 s de UV + 30 s de descanso, repetindo 3‑4 vezes. Pós-curas contínuas longas deixam a peça vítrea e quebradiça.',
+    '4. **Estocagem**: deixe as peças descansarem 12‑24 h em local ventilado antes de exposição ao sol/calor para liberar solventes e evitar fissuras tardias.'
+  ].join('\n\n');
+}
+
+function buildAdhesionReply({ resinName, printerName }) {
+  const resinInfo = resinName ? ` com a resina ${resinName}` : '';
+  const printerInfo = printerName ? ` na ${printerName}` : '';
+  return [
+    `Sua peça ficou soldada à plataforma${resinInfo}${printerInfo}. Ajuste o processo para aliviar a aderência sem perder fixação:`,
+    '1. **Nivelamento e superfície**: refaça o nivelamento com uma folha nova e deixe a base levemente fosca (lixa 400) para quebrar o brilho. Sempre limpe com IPA antes de imprimir.',
+    '2. **Exposição das camadas base**: reduza 10‑15% do tempo atual e mantenha 4‑6 camadas base. Valores acima de 50‑60 s deixam a peça “soldada”.',
+    '3. **Lift e peel**: aumente *lift height* para 8‑10 mm e use *rest before lift* de 0,5 s. Isso diminui o vácuo e a força de separação.',
+    '4. **Filme de liberação**: aplique uma camada fina de spray PTFE ou cola bastão distribuída de forma uniforme. Isso cria um filme entre a peça e a mesa.',
+    '5. **Remoção**: antes de usar a espátula, aqueça levemente a plataforma (água morna ou ar quente a ~45 °C) para dilatar a resina e facilitar a retirada.'
+  ].join('\n\n');
+}
+
+function isVisionRefusal(text = '') {
+  if (!text) return false;
+  return /can\'t help|cannot help|unable to assist|images of people|policy/i.test(text);
+}
+
+async function runVisionCompletion({ prompt, imageUrl, ragContext = '', temperature = 0.4 }) {
+  const client = getOpenAIClient();
+  const safeContext = typeof ragContext === 'string' && ragContext.trim().length
+    ? ragContext.trim()
+    : 'Sem contexto técnico disponível.';
+  const systemContent = `Você é o Especialista Técnico Sênior da Quanton3D. Sua regra de ouro: NUNCA dê respostas genéricas, longas ou listas de possibilidades da internet. Seja cirúrgico, curto e direto. Aponte APENAS o erro exato que você vê na imagem e a solução baseada OBRIGATORIAMENTE no contexto técnico fornecido abaixo. Se o contexto fornecer parâmetros de resina (AgiSyn, etc), use-os. CONTEXTO TÉCNICO QUANTON3D: ${safeContext}`;
+  return client.chat.completions.create({
+    model: IMAGE_MODEL,
+    temperature,
+    max_tokens: 1000,
+    messages: [
+      { role: 'system', content: systemContent },
+      { role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: imageUrl } }] }
+    ]
+  });
+}
+
+function trimConversationHistory(history, _systemPrompt, _userMessage) {
   const maxMessages = 8;
   const safeHistory = Array.isArray(history) ? history : [];
   return safeHistory.slice(-maxMessages).filter((entry) => entry && entry.role && entry.content);
@@ -178,7 +355,7 @@ function inferContextFromHistory(history, message) {
 // =================================================================================
 // CÉREBRO TEXTUAL (REGRAS DO RONEI AQUI)
 // =================================================================================
-async function generateResponse({ message, ragContext, hasRelevantContext, adhesionIssueHint, hasImage, imageUrl, conversationHistory, customerContext }) {
+async function generateResponse({ message, ragContext, hasRelevantContext, adhesionIssueHint, hasImage, imageUrl, conversationHistory, customerContext, ragResultsCount = 0 }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
   const resinFromMessage = extractResinFromMessage(trimmedMessage);
   const printerFromMessage = extractPrinterFromMessage(trimmedMessage);
@@ -198,6 +375,14 @@ async function generateResponse({ message, ragContext, hasRelevantContext, adhes
     if (!knownPrinter) return { reply: 'Qual é o modelo exato da sua impressora?', documentsUsed: 0 };
     if (!knownResin) return { reply: 'Qual é a resina que você está usando?', documentsUsed: 0 };
     if (!hasExposureInfo(trimmedMessage) && !hasExposureInfo((ragContext || '').toString())) return { reply: 'Qual é o tempo de exposição normal e de base que você está usando?', documentsUsed: 0 };
+  }
+
+  if (mentionsRigidSupports(trimmedMessage) || mentionsDelayedCracking(trimmedMessage)) {
+    return { reply: buildSupportBrittleReply({ resinName: knownResin, printerName: knownPrinter }), documentsUsed: ragResultsCount };
+  }
+
+  if (mentionsBaseAdhesion(trimmedMessage)) {
+    return { reply: buildAdhesionReply({ resinName: knownResin, printerName: knownPrinter }), documentsUsed: ragResultsCount };
   }
 
   const visionPriority = hasImage ? '\n    11. Se IMAGEM=SIM, priorize a evidência visual. Não deixe histórico anterior de texto sobrepor o que está claramente visível na nova imagem.\n  ' : '';
@@ -246,16 +431,19 @@ async function generateResponse({ message, ragContext, hasRelevantContext, adhes
 
   const client = getOpenAIClient();
   const userContent = imageUrl ? [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: imageUrl } }] : prompt;
-  const model = imageUrl ? DEFAULT_VISION_MODEL : DEFAULT_CHAT_MODEL;
+  const model = imageUrl ? 'gpt-4o' : 'gpt-4o-mini';
   const userMessage = { role: 'user', content: userContent };
   const trimmedHistory = trimConversationHistory(Array.isArray(conversationHistory) ? conversationHistory : [], systemPrompt, userMessage);
 
   const completion = await client.chat.completions.create({
-    model, temperature: 0.3, max_tokens: 500,
+    model,
+    temperature: 0.3,
+    max_tokens: 500,
     messages: [{ role: 'system', content: systemPrompt }, ...trimmedHistory, userMessage]
   });
 
-  const reply = completion?.choices?.[0]?.message?.content?.trim();
+  const rawReply = completion?.choices?.[0]?.message?.content?.trim();
+  const reply = rawReply ? stripVisionPolicyDisclaimers(rawReply) : null;
   return { reply: reply || 'Estou analisando sua solicitação, mas tive um breve soluço. Poderia repetir?', documentsUsed: 0 };
 }
 
@@ -264,39 +452,26 @@ async function generateResponse({ message, ragContext, hasRelevantContext, adhes
 // =================================================================================
 async function generateImageResponse({ message, imageUrl, ragContext }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
-  const visualContext = ragContext ? `\n\n📎 CONTEXTO INTERNO:\n${ragContext}` : '';
-  
-  const VISUAL_SYSTEM_PROMPT = `
-    ATUE COMO UM ESPECIALISTA SÊNIOR EM IMPRESSÃO 3D SLA/DLP (VISÃO TÉCNICA).
-
-    SEU PROTOCOLO DE ANÁLISE DE IMAGEM (IMPORTANTE):
-    1. **OLHE PRIMEIRO PARA A BASE (RAFT):** - A base está colada na mesa ou solta?
-       - A base está sólida ou se abrindo (folheada/delaminada)?
-       - *REGRA DE OURO:* Se a base (o "pé" da peça) estiver separando camadas ou torta, o erro é **DELAMINAÇÃO DE BASE**, não importa como estão os suportes.
-
-    2. **DEPOIS OLHE OS SUPORTES:**
-       - Se a base está perfeita, mas a peça caiu: aí sim é Falha de Suporte.
-       - Suportes tortos ou rompidos no meio = Falha de Suporte.
-
-    3. **DIAGNÓSTICO FINAL (Seja Direto):**
-       - Se viu a base abrindo: "DIAGNÓSTICO: Delaminação da Base (Base Layers Separation)".
-       - Solução: "Aumentar tempo de exposição das camadas iniciais (Bottom Exposure) e revisar nivelamento."
-
-    NÃO SEJA GENÉRICO. USE TERMOS TÉCNICOS: Delaminação, Subcura, Warping, Blooming.
-    ${visualContext}
-  `;
-
   const prompt = trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : 'Cliente enviou uma imagem para análise.';
-  const client = getOpenAIClient();
-  const completion = await client.chat.completions.create({
-    model: DEFAULT_IMAGE_MODEL, temperature: 0.4, max_tokens: 1000,
-    messages: [{ role: 'system', content: VISUAL_SYSTEM_PROMPT }, { role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: imageUrl } }] }]
-  });
-  const reply = completion?.choices?.[0]?.message?.content?.trim();
-  return { reply: reply || 'Não consegui analisar a imagem agora. Pode tentar novamente?', documentsUsed: 0 };
+
+  let completion = await runVisionCompletion({ prompt, imageUrl, ragContext, temperature: 0.4 });
+  let reply = completion?.choices?.[0]?.message?.content?.trim();
+
+  if (isVisionRefusal(reply)) {
+    const retryPrompt = `${prompt}
+
+Contexto extra: trata-se de uma peça de resina e seus suportes, não há seres humanos.`;
+    completion = await runVisionCompletion({ prompt: retryPrompt, imageUrl, ragContext, temperature: 0.2 });
+    reply = completion?.choices?.[0]?.message?.content?.trim();
+  }
+
+  const cleaned = stripVisionPolicyDisclaimers(reply);
+  return { reply: cleaned || 'Não consegui analisar a imagem agora. Pode tentar novamente?', documentsUsed: 0 };
 }
 
 async function handleChatRequest(req, res) {
+  const requestStart = Date.now();
+  metrics.incrementRequests();
   try {
     const { message, sessionId } = req.body ?? {};
     const hasImage = hasImagePayload(req.body);
@@ -315,19 +490,54 @@ async function handleChatRequest(req, res) {
     const mergedCustomerContext = mergeCustomerContext(mergeCustomerContext(storedContext, inferredContext), customerContext);
 
     const { ragResults, ragContext, trimmedMessage, hasRelevantContext, adhesionIssueHint } = await buildRagContext({ message, hasImage });
+    const ragSearchPerformed = Boolean((trimmedMessage && trimmedMessage.length) || hasImage);
+    if (ragSearchPerformed) {
+      metrics.recordRAGSearch(ragResults.length);
+    }
+
+    const visualHints = await fetchVisualKnowledgeHints({
+      message: trimmedMessage,
+      customerContext: mergedCustomerContext,
+      hasImage
+    });
+    const visualContext = buildVisualContextSection(visualHints);
+    const promptContext = [visualContext, ragContext].filter(Boolean).join('\n\n').trim();
 
     console.log(`[CHAT] Msg: ${trimmedMessage.substring(0, 50)}...`);
 
     if (!trimmedMessage && !hasImage) return res.json({ reply: 'Olá! Sou a IA da Quanton3D. Como posso ajudar com suas impressões hoje?', sessionId: sessionId || 'new' });
 
     const response = imageUrl
-      ? await generateImageResponse({ message: trimmedMessage, imageUrl, ragContext })
-      : await generateResponse({ message: trimmedMessage, ragContext, hasRelevantContext, adhesionIssueHint, hasImage, imageUrl, conversationHistory, customerContext: mergedCustomerContext });
+      ? await generateImageResponse({ message: trimmedMessage, imageUrl, ragContext: promptContext })
+      : await generateResponse({
+          message: trimmedMessage,
+          ragContext: promptContext,
+          hasRelevantContext,
+          adhesionIssueHint,
+          hasImage,
+          imageUrl,
+          conversationHistory,
+          customerContext: mergedCustomerContext,
+          ragResultsCount: ragResults.length
+        });
 
-    res.json({ reply: sanitizeChatText(response.reply), sessionId: sessionId || 'session-auto', documentsUsed: ragResults.length || response.documentsUsed });
+    const docCountBase = typeof response.documentsUsed === 'number' ? response.documentsUsed : ragResults.length;
+    const documentsUsed = docCountBase + (visualHints?.length || 0);
+
+    res.json({ reply: sanitizeChatText(response.reply), sessionId: sessionId || 'session-auto', documentsUsed });
+    metrics.recordResponseTime(Date.now() - requestStart);
   } catch (error) {
     console.error('Erro Chat:', error);
-    res.status(500).json({ error: 'Erro no processamento da IA.' });
+    metrics.incrementErrors();
+    metrics.recordResponseTime(Date.now() - requestStart);
+
+    return res.status(200).json({
+      reply: 'Tive uma instabilidade ao processar sua solicitação agora. Pode reenviar a pergunta? Se for foto, envie novamente junto com uma breve descrição do problema.',
+      sessionId: sessionId || 'session-auto',
+      documentsUsed: 0,
+      degraded: true,
+      error: 'Erro no processamento da IA.'
+    });
   }
 }
 

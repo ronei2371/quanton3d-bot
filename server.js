@@ -1,19 +1,17 @@
+import 'dotenv/config'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import express from 'express'
 import cors from 'cors'
-import dotenv from 'dotenv'
 import chatRoutes from './src/routes/chatRoutes.js'
 import { apiRoutes } from './src/routes/apiRoutes.js'
 import { suggestionsRoutes } from './src/routes/suggestionsRoutes.js'
 import { authRoutes } from './src/routes/authRoutes.js'
 import { buildAdminRoutes } from './src/routes/adminRoutes.js'
 import { metrics } from './src/utils/metrics.js'
-import { connectToMongo, getPrintParametersCollection, isConnected } from './db.js'
-import { initializeRAG } from './rag-search.js'
-import { legacyProfiles } from './src/data/seedData.js'
+import { connectToMongo, isConnected } from './db.js'
+import { initializeRAG, checkRAGIntegrity, bootstrapKnowledgeFromFile } from './rag-search.js'
 
-dotenv.config()
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -41,7 +39,12 @@ app.use(
         callback(null, true);
       } else {
         console.log(`⚠️ Origem bloqueada: ${origin}`);
-        callback(null, true); // Permite mesmo assim (modo permissivo)
+ codex/conduct-security-and-stability-audit-0l8xva
+        callback(new Error('Origem não permitida pelo CORS'));
+ codex/conduct-security-and-stability-audit-dgg33m
+        callback(new Error('Origem não permitida pelo CORS'));
+        callback(null, false);
+ main
       }
     },
     credentials: true,
@@ -89,24 +92,32 @@ app.use('/auth', authRoutes)
 // ==========================================================
 const adminRoutes = buildAdminRoutes()
 
-// Compatibilidade: painel antigo (/admin/*) e frontend novo (/api/admin/*)
+// Compatibilidade: painel antigo (/admin/*) e frontend novo (/api/*)
 app.use('/admin', adminRoutes)
-app.use('/api/admin', adminRoutes)
+app.use('/api', adminRoutes)
 
 // ==========================================================
 // ROTAS DA API
 // ==========================================================
 app.use('/api', apiRoutes)
-app.use('/', apiRoutes)
 app.use('/api', suggestionsRoutes)
-app.use('/', suggestionsRoutes)
+
+// Compatibilidade legado: alguns clientes públicos chamam sem prefixo /api
+app.get('/resins', (req, res, next) => {
+  req.url = '/resins'
+  apiRoutes(req, res, next)
+})
+
+app.get('/params/resins', (req, res, next) => {
+  req.url = '/params/resins'
+  apiRoutes(req, res, next)
+})
 
 // ==========================================================
 // ROTAS DO CHAT
 // ==========================================================
 app.use('/api', chatRoutes)
 app.use('/chat', chatRoutes)
-app.use('/', chatRoutes)
 
 // ==========================================================
 // FRONTEND
@@ -148,16 +159,6 @@ const startServer = async () => {
       await connectToMongo(MONGODB_URI)
       console.log('[MongoDB] ✅ Conectado')
       await new Promise(resolve => setTimeout(resolve, 2000))
-
-      const paramsCollection = getPrintParametersCollection()
-      if (paramsCollection) {
-        const count = await paramsCollection.countDocuments()
-        if (count === 0) {
-          console.log('[INIT] ⚠️ Banco vazio! Injetando dados legacy...')
-          await paramsCollection.insertMany(legacyProfiles)
-          console.log('[INIT] ✅ Perfis inseridos com sucesso.')
-        }
-      }
     } else {
       console.warn('[MongoDB] ⚠️ MONGODB_URI não configurada')
     }
@@ -172,9 +173,20 @@ const startServer = async () => {
       if (isConnected()) {
         await initializeRAG();
         console.log('[INIT] ✅ RAG inicializado');
+
+        const ragStatus = await checkRAGIntegrity();
+        if (!ragStatus?.isValid || ragStatus.totalDocuments === 0) {
+          console.log('[INIT] ⚠️ Base de conhecimento vazia ou com embeddings faltando. Importando kb_index.json...');
+          try {
+            const bootstrapResult = await bootstrapKnowledgeFromFile();
+            console.log(`[INIT] 🔄 Bootstrap RAG: inseridos ${bootstrapResult.inserted || 0}, erros ${bootstrapResult.errors || 0}`);
+          } catch (bootstrapError) {
+            console.error('[INIT] ⚠️ Falha ao importar conhecimento local:', bootstrapError.message);
+          }
+        }
       }
     } catch (error) {
-      console.error('[INIT] ⚠️ RAG não disponível (continuando sem RAG)');
+      console.error('[INIT] ⚠️ RAG não disponível (continuando sem RAG)', error);
     }
 
     console.log('\n✨ Serviços prontos!\n')

@@ -7,27 +7,15 @@ const JWT_EXPIRATION = '24h';
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'quanton-admin-fallback-secret';
+const ADMIN_SECRET_OVERRIDE = process.env.ADMIN_SECRET_OVERRIDE;
 
-const missingAuthEnv = [];
-if (!process.env.ADMIN_USER) missingAuthEnv.push('ADMIN_USER');
-if (!process.env.ADMIN_PASSWORD) missingAuthEnv.push('ADMIN_PASSWORD');
-if (!process.env.ADMIN_JWT_SECRET) missingAuthEnv.push('ADMIN_JWT_SECRET');
-
-if (missingAuthEnv.length > 0) {
-  console.warn(
-    `[AUTH] ⚠️ Fallback emergencial habilitado (variáveis ausentes: ${missingAuthEnv.join(', ')})`
-  );
+if (!ADMIN_PASSWORD) {
+  console.warn('[AUTH] ⚠️ ADMIN_PASSWORD não configurada. O login retornará erro até que a variável seja definida.');
 }
 
-// SENHAS DE FALLBACK PARA PAINEL ANTIGO
-const FALLBACK_PASSWORDS = [
-  'quanton2026',
-  'Rmartins1201',
-  'rmartins1201',
-  'suporte_quanton_2025'
-];
-
-console.log('[AUTH] ✅ Senhas de fallback ativas:', FALLBACK_PASSWORDS);
+if (!ADMIN_SECRET_OVERRIDE) {
+  console.warn('[AUTH] ⚠️ ADMIN_SECRET_OVERRIDE não configurada. O fluxo de compatibilidade ficará desativado.');
+}
 
 /**
  * POST /auth/login
@@ -36,49 +24,65 @@ console.log('[AUTH] ✅ Senhas de fallback ativas:', FALLBACK_PASSWORDS);
  */
 router.post("/login", (req, res) => {
   try {
-    const { password, username } = req.body ?? {};
-    
-    const candidatePassword = typeof password === 'string' ? password : '';
+    const { password, username, secret: legacyBodySecret } = req.body ?? {};
+    const jwtSecret = process.env.ADMIN_JWT_SECRET;
 
-    console.log(`[AUTH] 🔐 Tentativa de login com senha: ${candidatePassword.substring(0, 3)}...`);
-
-    // Validar senha
-    if (!candidatePassword) {
-      console.log('⚠️ [AUTH] Tentativa de login sem senha');
-      return res.status(400).json({
+    if (!jwtSecret) {
+      return res.status(500).json({
         success: false,
-        error: "Senha é obrigatória"
+        error: "JWT secret não configurado no servidor"
       });
     }
 
-    // Valida contra senha de ambiente OU fallbacks
-    const validEnvPassword = ADMIN_PASSWORD && candidatePassword === ADMIN_PASSWORD;
-    const validFallbackPassword = FALLBACK_PASSWORDS.includes(candidatePassword);
-
-    if (!validEnvPassword && !validFallbackPassword) {
-      console.log(`❌ [AUTH] Senha incorreta: ${candidatePassword}`);
-      return res.status(401).json({
+    if (!ADMIN_PASSWORD) {
+      return res.status(503).json({
         success: false,
-        error: "Senha incorreta"
+        error: "ADMIN_PASSWORD ausente"
       });
     }
 
-    // Gerar JWT token
-    const token = jwt.sign(
-      {
-        role: 'admin',
-        timestamp: Date.now()
-      },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRATION }
+    const requestSecret = req.headers['x-admin-secret'] || legacyBodySecret;
+
+    const hasPrimaryCreds = Boolean(
+      username && password &&
+      username === ADMIN_USER &&
+      password === ADMIN_PASSWORD
     );
 
-    console.log(`✅ [AUTH] Login bem-sucedido! Senha: ${candidatePassword.substring(0, 3)}...`);
+    const hasLegacyFallback = Boolean(
+      ADMIN_SECRET_OVERRIDE &&
+      requestSecret &&
+      requestSecret === ADMIN_SECRET_OVERRIDE &&
+      password === ADMIN_PASSWORD
+    );
+
+    if (!hasPrimaryCreds && !hasLegacyFallback) {
+      console.log('❌ [AUTH] Login falhou - credenciais inválidas');
+      return res.status(401).json({
+        success: false,
+        error: "Credenciais inválidas"
+      });
+    }
+
+    const authMethod = hasPrimaryCreds ? 'user+password' : 'secret+password';
+
+    const token = jwt.sign(
+      {
+        user: ADMIN_USER,
+        role: 'admin',
+        method: authMethod,
+        timestamp: Date.now()
+      },
+      jwtSecret,
+      { expiresIn: "24h" }
+    );
+
+    console.log(`✅ [AUTH] Login bem-sucedido (${authMethod})`);
 
     res.json({
       success: true,
       token,
-      expiresIn: JWT_EXPIRATION
+      expiresIn: "24h"
     });
 
   } catch (err) {
@@ -89,7 +93,6 @@ router.post("/login", (req, res) => {
     });
   }
 });
-
 /**
  * POST /auth/verify
  * Verifica se um JWT token é válido
@@ -126,29 +129,24 @@ router.post("/verify", (req, res) => {
 });
 
 /**
- * Middleware OPCIONAL para proteger rotas com JWT
- * MAS não bloqueia se não tiver token (compatibilidade com painel antigo)
+ * Middleware para rotas administrativas protegidas por JWT.
+ * Sem token válido → 401.
  */
 const verifyJWT = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-
-  // SE NÃO TEM TOKEN, DEIXA PASSAR (compatibilidade)
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.warn('⚠️ [AUTH] Requisição sem token JWT - permitindo (modo compatibilidade)');
-    return next();
+  const authHeader = req.headers.authorization || '';
+  if (!authHeader.startsWith('Bearer ')) {
+    console.warn('⚠️ [AUTH] Requisição sem token JWT - bloqueando');
+    return res.status(401).json({ success: false, error: 'token_required' });
   }
 
   const token = authHeader.slice(7);
-
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
-    console.log('✅ [AUTH] Requisição autenticada com sucesso');
     return next();
   } catch (err) {
-    // MESMO COM TOKEN INVÁLIDO, DEIXA PASSAR (compatibilidade)
-    console.warn('⚠️ [AUTH] Token inválido mas permitindo (modo compatibilidade)');
-    return next();
+    console.warn('⚠️ [AUTH] Token inválido ou expirado');
+    return res.status(401).json({ success: false, error: 'invalid_token' });
   }
 };
 
