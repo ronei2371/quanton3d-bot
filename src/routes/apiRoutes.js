@@ -12,7 +12,6 @@ import {
   getOrdersCollection
 } from "../../db.js";
 import { ensureMongoReady } from "./common.js";
-import { legacyProfiles } from "../data/seedData.js";
 import { addDocument } from "../../rag-search.js";
 
 const router = express.Router();
@@ -166,6 +165,107 @@ const sanitizeResinName = (raw) => {
   return trimmed;
 };
 
+const normalizeString = (value, fallback = '') => (
+  typeof value === 'string' ? value.trim() : fallback
+);
+
+const normalizeStringArray = (...candidates) => {
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate
+        .map((item) => (typeof item === 'string' ? item.trim() : ''))
+        .filter(Boolean);
+    }
+
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate
+        .split(/[,\n]/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+};
+
+const normalizePartnerResponse = (doc = {}) => {
+  const imageCandidates = normalizeStringArray(doc.images, doc.gallery, doc.photos);
+  const imageUrl = normalizeString(doc.imageUrl || doc.image || imageCandidates[0] || '', '');
+  const website = normalizeString(doc.websiteUrl || doc.website_url || doc.link || doc.url || '', '');
+  const phone = normalizeString(doc.phone || doc.contactPhone || doc.contact?.phone || '', '');
+  const email = normalizeString(doc.email || doc.contactEmail || doc.contact?.email || '', '');
+  const whatsapp = normalizeString(doc.whatsapp || doc.contactWhatsapp || doc.contact?.whatsapp || phone, '');
+  const highlights = normalizeStringArray(doc.highlights, doc.specialties, doc.specialty);
+
+  return {
+    ...doc,
+    id: doc._id?.toString?.() || doc.id || null,
+    _id: doc._id?.toString?.() || doc.id || doc._id || null,
+    name: normalizeString(doc.name || doc.title || ''),
+    description: normalizeString(doc.description || doc.summary || ''),
+    imageUrl,
+    image: imageUrl,
+    images: imageUrl ? Array.from(new Set([imageUrl, ...imageCandidates])) : imageCandidates,
+    link: website,
+    url: website,
+    websiteUrl: website,
+    website_url: website,
+    specialty: normalizeString(doc.specialty || doc.category || highlights[0] || ''),
+    category: normalizeString(doc.category || doc.specialty || ''),
+    highlights,
+    phone,
+    email,
+    whatsapp,
+    contact: {
+      phone: phone || null,
+      email: email || null,
+      whatsapp: whatsapp || null
+    },
+    active: doc.active !== false,
+    order: Number.isFinite(Number(doc.order)) ? Number(doc.order) : 0,
+    createdAt: doc.createdAt || null,
+    updatedAt: doc.updatedAt || null
+  };
+};
+
+const buildPartnerPayload = (payload = {}, { partial = false } = {}) => {
+  const name = normalizeString(payload.name || payload.title || '');
+  const description = normalizeString(payload.description || payload.summary || '');
+  const imageUrl = normalizeString(payload.imageUrl || payload.image || '', '');
+  const website = normalizeString(payload.websiteUrl || payload.website_url || payload.link || payload.url || '', '');
+  const specialty = normalizeString(payload.specialty || payload.category || '', '');
+  const phone = normalizeString(payload.phone || payload.contactPhone || payload.contact?.phone || '', '');
+  const email = normalizeString(payload.email || payload.contactEmail || payload.contact?.email || '', '');
+  const whatsapp = normalizeString(payload.whatsapp || payload.contactWhatsapp || payload.contact?.whatsapp || phone, '');
+  const images = normalizeStringArray(payload.images, payload.gallery, payload.photos, imageUrl);
+  const highlights = normalizeStringArray(payload.highlights, payload.specialties, payload.specialty);
+
+  const fields = {
+    ...(partial || name ? { name } : {}),
+    ...(partial || description ? { description } : {}),
+    ...(partial || imageUrl ? { imageUrl } : {}),
+    ...(partial || website ? { link: website } : {}),
+    ...(partial || specialty ? { specialty } : {}),
+    ...(partial || phone ? { phone } : {}),
+    ...(partial || email ? { email } : {}),
+    ...(partial || whatsapp ? { whatsapp } : {}),
+    ...(partial || images.length ? { images } : {}),
+    ...(partial || highlights.length ? { highlights } : {}),
+    ...(payload.active !== undefined ? { active: Boolean(payload.active) } : {}),
+    ...(Number.isFinite(Number(payload.order)) ? { order: Number(payload.order) } : {})
+  };
+
+  if (partial) {
+    return fields;
+  }
+
+  return {
+    ...fields,
+    active: fields.active ?? true,
+    order: fields.order ?? 0
+  };
+};
+
 const parseGallerySettings = (rawSettings) => {
   if (!rawSettings) return {};
   if (typeof rawSettings === 'object') {
@@ -302,6 +402,62 @@ router.post("/contact", async (req, res) => {
     });
   }
 });
+
+router.put("/contact/:id", adminGuard(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const body = req.body || {};
+    const status = normalizeString(body.status || body.situation || '');
+
+    if (!status) {
+      return res.status(400).json({ success: false, error: 'Status é obrigatório' });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const collections = [
+      getCollection('contacts'),
+      getCollection('messages'),
+      getOrdersCollectionSafe()
+    ].filter(Boolean);
+
+    if (collections.length === 0) {
+      return res.status(503).json({ success: false, error: 'Coleções de contato indisponíveis' });
+    }
+
+    const filter = ObjectId.isValid(id)
+      ? { _id: new ObjectId(id) }
+      : { $or: [{ id }, { legacyId: id }] };
+
+    for (const collection of collections) {
+      const result = await collection.findOneAndUpdate(
+        filter,
+        { $set: { status, updatedAt: new Date() } },
+        { returnDocument: 'after' }
+      );
+
+      const updated = result?.value || result;
+      if (updated && (updated._id || updated.id || updated.legacyId)) {
+        return res.json({
+          success: true,
+          contact: {
+            id: updated._id?.toString?.() || updated.id || updated.legacyId || id,
+            status: updated.status || status,
+            updatedAt: updated.updatedAt || null
+          }
+        });
+      }
+    }
+
+    return res.status(404).json({ success: false, error: 'Contato não encontrado' });
+  } catch (err) {
+    console.error('[API] Erro ao atualizar contato:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao atualizar contato' });
+  }
+}));
 
 router.post("/custom-request", async (req, res) => {
   try {
@@ -894,7 +1050,12 @@ const listPrinters = async (req, res) => {
 };
 
 router.get("/params/printers", listPrinters);
+router.get("/printers", listPrinters);
 router.post("/params/printers", async (req, res) => {
+  req.query = { ...(req.query || {}), ...(req.body || {}) };
+  return listPrinters(req, res);
+});
+router.post("/printers", async (req, res) => {
   req.query = { ...(req.query || {}), ...(req.body || {}) };
   return listPrinters(req, res);
 });
@@ -1123,7 +1284,7 @@ router.get('/partners', async (_req, res) => {
     }
 
     const partners = await collection.find({}).sort({ order: 1, createdAt: -1 }).toArray();
-    return res.json({ success: true, partners });
+    return res.json({ success: true, partners: partners.map(normalizePartnerResponse) });
   } catch (err) {
     console.error('[API] Erro ao listar parceiros:', err);
     return res.status(500).json({ success: false, error: 'Erro ao listar parceiros' });
@@ -1150,19 +1311,13 @@ router.post('/partners', async (req, res) => {
     const collection = getPartnersCollection();
     const now = new Date();
     const doc = {
-      name,
-      description: typeof payload.description === 'string' ? payload.description.trim() : '',
-      imageUrl: payload.imageUrl || payload.image || '',
-      link: payload.link || payload.url || '',
-      specialty: payload.specialty || payload.category || '',
-      active: payload.active !== false,
-      order: Number.isFinite(Number(payload.order)) ? Number(payload.order) : 0,
+      ...buildPartnerPayload(payload),
       createdAt: now,
       updatedAt: now
     };
 
     const result = await collection.insertOne(doc);
-    return res.status(201).json({ success: true, partner: { ...doc, _id: result.insertedId } });
+    return res.status(201).json({ success: true, partner: normalizePartnerResponse({ ...doc, _id: result.insertedId }) });
   } catch (err) {
     console.error('[API] Erro ao criar parceiro:', err);
     return res.status(500).json({ success: false, error: 'Erro ao criar parceiro' });
@@ -1218,13 +1373,7 @@ router.put('/partners/:id', async (req, res) => {
     const collection = getPartnersCollection();
     const payload = req.body || {};
     const updates = {
-      ...(typeof payload.name === 'string' ? { name: payload.name.trim() } : {}),
-      ...(typeof payload.description === 'string' ? { description: payload.description.trim() } : {}),
-      ...(typeof payload.imageUrl === 'string' || typeof payload.image === 'string' ? { imageUrl: payload.imageUrl || payload.image || '' } : {}),
-      ...(typeof payload.link === 'string' || typeof payload.url === 'string' ? { link: payload.link || payload.url || '' } : {}),
-      ...(typeof payload.specialty === 'string' || typeof payload.category === 'string' ? { specialty: payload.specialty || payload.category || '' } : {}),
-      ...(payload.active !== undefined ? { active: Boolean(payload.active) } : {}),
-      ...(Number.isFinite(Number(payload.order)) ? { order: Number(payload.order) } : {}),
+      ...buildPartnerPayload(payload, { partial: true }),
       updatedAt: new Date()
     };
 
@@ -1234,11 +1383,12 @@ router.put('/partners/:id', async (req, res) => {
       { returnDocument: 'after' }
     );
 
-    if (!result.value) {
+    const updatedPartner = result?.value || result;
+    if (!updatedPartner || !updatedPartner._id) {
       return res.status(404).json({ success: false, error: 'Parceiro não encontrado' });
     }
 
-    return res.json({ success: true, partner: result.value });
+    return res.json({ success: true, partner: normalizePartnerResponse(updatedPartner) });
   } catch (err) {
     console.error('[API] Erro ao atualizar parceiro:', err);
     return res.status(500).json({ success: false, error: 'Erro ao atualizar parceiro' });
@@ -1374,21 +1524,10 @@ router.get('/visual-knowledge/pending', async (_req, res) => {
 });
 
 router.get("/nuke-and-seed", async (_req, res) => {
-  try {
-    const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
-    }
-
-    const collection = getCollection("parametros");
-    await collection.deleteMany({});
-    await collection.insertMany(legacyProfiles);
-
-    return res.send("Database reset and seeded with CORRECT IDs");
-  } catch (err) {
-    console.error("[API] Erro ao resetar e semear parametros:", err);
-    return res.status(500).json({ success: false, error: "Erro ao resetar banco de dados" });
-  }
+  return res.status(410).json({
+    success: false,
+    error: "Rota descontinuada. A coleção 'parametros' no MongoDB é a fonte de verdade e não deve mais ser repovoada por seed local."
+  });
 });
 
 export { router as apiRoutes };
