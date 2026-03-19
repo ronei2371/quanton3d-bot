@@ -12,7 +12,6 @@ import {
   getOrdersCollection
 } from "../../db.js";
 import { ensureMongoReady } from "./common.js";
-import { legacyProfiles } from "../data/seedData.js";
 import { addDocument } from "../../rag-search.js";
 
 const router = express.Router();
@@ -1525,21 +1524,10 @@ router.get('/visual-knowledge/pending', async (_req, res) => {
 });
 
 router.get("/nuke-and-seed", async (_req, res) => {
-  try {
-    const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
-    }
-
-    const collection = getCollection("parametros");
-    await collection.deleteMany({});
-    await collection.insertMany(legacyProfiles);
-
-    return res.send("Database reset and seeded with CORRECT IDs");
-  } catch (err) {
-    console.error("[API] Erro ao resetar e semear parametros:", err);
-    return res.status(500).json({ success: false, error: "Erro ao resetar banco de dados" });
-  }
+  return res.status(410).json({
+    success: false,
+    error: "Rota descontinuada. A coleção 'parametros' no MongoDB é a fonte de verdade e não deve mais ser repovoada por seed local."
+  });
 });
 
 export { router as apiRoutes };

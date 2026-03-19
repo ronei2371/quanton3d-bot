@@ -9,9 +9,8 @@ import { suggestionsRoutes } from './src/routes/suggestionsRoutes.js'
 import { authRoutes } from './src/routes/authRoutes.js'
 import { buildAdminRoutes } from './src/routes/adminRoutes.js'
 import { metrics } from './src/utils/metrics.js'
-import { connectToMongo, getPrintParametersCollection, isConnected } from './db.js'
+import { connectToMongo, isConnected } from './db.js'
 import { initializeRAG, checkRAGIntegrity, bootstrapKnowledgeFromFile } from './rag-search.js'
-import { legacyProfiles } from './src/data/seedData.js'
 
 
 const __filename = fileURLToPath(import.meta.url)
@@ -109,16 +108,6 @@ app.get('/params/resins', (req, res, next) => {
   apiRoutes(req, res, next)
 })
 
-app.get('/printers', (req, res, next) => {
-  req.url = '/printers'
-  apiRoutes(req, res, next)
-})
-
-app.post('/printers', (req, res, next) => {
-  req.url = '/printers'
-  apiRoutes(req, res, next)
-})
-
 // ==========================================================
 // ROTAS DO CHAT
 // ==========================================================
@@ -162,16 +151,6 @@ const startServer = async () => {
       await connectToMongo(MONGODB_URI)
       console.log('[MongoDB] ✅ Conectado')
       await new Promise(resolve => setTimeout(resolve, 2000))
-
-      const paramsCollection = getPrintParametersCollection()
-      if (paramsCollection) {
-        const count = await paramsCollection.countDocuments()
-        if (count === 0) {
-          console.log('[INIT] ⚠️ Banco vazio! Injetando dados legacy...')
-          await paramsCollection.insertMany(legacyProfiles)
-          console.log('[INIT] ✅ Perfis inseridos com sucesso.')
-        }
-      }
     } else {
       console.warn('[MongoDB] ⚠️ MONGODB_URI não configurada')
     }
