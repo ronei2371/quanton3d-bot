@@ -40,7 +40,10 @@ app.use(
         callback(null, true);
       } else {
         console.log(`⚠️ Origem bloqueada: ${origin}`);
+ codex/conduct-security-and-stability-audit-dgg33m
+        callback(new Error('Origem não permitida pelo CORS'));
         callback(null, false);
+ main
       }
     },
     credentials: true,
@@ -97,6 +100,17 @@ app.use('/api', adminRoutes)
 // ==========================================================
 app.use('/api', apiRoutes)
 app.use('/api', suggestionsRoutes)
+
+// Compatibilidade legado: alguns clientes públicos chamam sem prefixo /api
+app.get('/resins', (req, res, next) => {
+  req.url = '/resins'
+  apiRoutes(req, res, next)
+})
+
+app.get('/params/resins', (req, res, next) => {
+  req.url = '/params/resins'
+  apiRoutes(req, res, next)
+})
 
 // ==========================================================
 // ROTAS DO CHAT

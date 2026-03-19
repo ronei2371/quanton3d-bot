@@ -1169,6 +1169,36 @@ router.post('/partners', async (req, res) => {
   }
 });
 
+
+router.post('/partners/upload-image', upload.any(), async (req, res) => {
+  try {
+    if (!isValidAdminToken(req)) {
+      return res.status(401).json({ success: false, error: 'unauthorized' });
+    }
+
+    const payload = req.body || {};
+    let imageUrl = typeof payload.imageUrl === 'string' && payload.imageUrl.trim()
+      ? payload.imageUrl.trim()
+      : (typeof payload.image === 'string' ? payload.image.trim() : '');
+
+    if (!imageUrl && Array.isArray(req.files) && req.files.length > 0) {
+      const file = req.files[0];
+      if (file?.buffer?.length) {
+        imageUrl = `data:${file.mimetype || 'image/jpeg'};base64,${file.buffer.toString('base64')}`;
+      }
+    }
+
+    if (!imageUrl) {
+      return res.status(400).json({ success: false, error: 'image obrigatório' });
+    }
+
+    return res.json({ success: true, imageUrl, url: imageUrl });
+  } catch (err) {
+    console.error('[API] Erro no upload de imagem de parceiro:', err);
+    return res.status(500).json({ success: false, error: 'Erro no upload da imagem' });
+  }
+});
+
 router.put('/partners/:id', async (req, res) => {
   try {
     if (!isValidAdminToken(req)) {
