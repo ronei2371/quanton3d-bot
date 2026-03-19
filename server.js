@@ -40,7 +40,10 @@ app.use(
         callback(null, true);
       } else {
         console.log(`⚠️ Origem bloqueada: ${origin}`);
+ codex/conduct-security-and-stability-audit-dgg33m
         callback(new Error('Origem não permitida pelo CORS'));
+        callback(null, false);
+ main
       }
     },
     credentials: true,
