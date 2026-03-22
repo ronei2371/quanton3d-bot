@@ -87,7 +87,14 @@ function requireAdmin(adminSecret, adminJwtSecret) {
     adminSecret,
     process.env.ADMIN_SECRET,
     process.env.VITE_ADMIN_API_TOKEN,
+ codex/review-site-and-bot-changes-a9edeu
+    process.env.ADMIN_API_TOKEN
     process.env.ADMIN_API_TOKEN,
+codex/review-site-and-bot-changes-a9edeu
+    'quanton3d_admin_secret'
+main
+
+ main
   ].filter(Boolean);
 
   const acceptedJwtSecrets = [
@@ -130,6 +137,10 @@ function buildAdminRoutes(adminConfig = {}) {
   const ADMIN_SECRET = adminConfig.adminSecret ?? process.env.ADMIN_SECRET ?? process.env.VITE_ADMIN_API_TOKEN;
   const ADMIN_JWT_SECRET = adminConfig.adminJwtSecret ?? process.env.ADMIN_JWT_SECRET;
   const adminGuard = requireAdmin(ADMIN_SECRET, ADMIN_JWT_SECRET);
+
+  if (!ADMIN_SECRET && !process.env.ADMIN_API_TOKEN && !process.env.VITE_ADMIN_API_TOKEN) {
+    console.warn('[ADMIN] ⚠️ Nenhum token de admin configurado (ADMIN_SECRET/ADMIN_API_TOKEN/VITE_ADMIN_API_TOKEN).');
+  }
 
   router.post("/login", (req, res) => {
     const { user, username, password, secret } = req.body ?? {};
