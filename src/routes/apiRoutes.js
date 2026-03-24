@@ -1109,7 +1109,12 @@ const listProfiles = async (req, res) => {
 };
 
 router.get("/params/profiles", listProfiles);
+router.get("/profiles", listProfiles);
 router.post("/params/profiles", async (req, res) => {
+  req.query = { ...(req.query || {}), ...(req.body || {}) };
+  return listProfiles(req, res);
+});
+router.post("/profiles", async (req, res) => {
   req.query = { ...(req.query || {}), ...(req.body || {}) };
   return listProfiles(req, res);
 });
