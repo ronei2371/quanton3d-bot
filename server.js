@@ -11,7 +11,10 @@ import { buildAdminRoutes } from './src/routes/adminRoutes.js'
 import { metrics } from './src/utils/metrics.js'
 import { connectToMongo, isConnected } from './db.js'
 import { initializeRAG, checkRAGIntegrity, bootstrapKnowledgeFromFile } from './rag-search.js'
+ codex/conduct-security-and-stability-audit-jkt2qe
 
+=======
+main
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -97,6 +100,7 @@ app.use('/api', adminRoutes)
 app.use('/api', apiRoutes)
 app.use('/api', suggestionsRoutes)
 
+ codex/conduct-security-and-stability-audit-jkt2qe
 // Compatibilidade legado: alguns clientes públicos chamam sem prefixo /api
 app.get('/resins', (req, res, next) => {
   req.url = '/resins'
@@ -107,6 +111,18 @@ app.get('/params/resins', (req, res, next) => {
   req.url = '/params/resins'
   apiRoutes(req, res, next)
 })
+
+// 🔄 PONTE DEFINITIVA (Consertando o erro <!doctype html> de vez)
+// O Codex mudou as rotas, então pegamos as chamadas antigas pela mão e levamos ao destino certo:
+app.get('/resins', (req, res, next) => { req.url = '/resins'; apiRoutes(req, res, next) })
+app.get('/params/resins', (req, res, next) => { req.url = '/params/resins'; apiRoutes(req, res, next) })
+
+app.get('/params/printers', (req, res, next) => { req.url = '/printers'; apiRoutes(req, res, next) })
+app.get('/api/params/printers', (req, res, next) => { req.url = '/printers'; apiRoutes(req, res, next) })
+
+app.get('/params/profiles', (req, res, next) => { req.url = '/profiles'; apiRoutes(req, res, next) })
+app.get('/api/params/profiles', (req, res, next) => { req.url = '/profiles'; apiRoutes(req, res, next) })
+ main
 
 // ==========================================================
 // ROTAS DO CHAT
