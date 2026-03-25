@@ -19,27 +19,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "../../");
-const resinsCachePath = path.join(rootDir, "resins_extracted.json");
-
 const escapeRegex = (value = "") => String(value).replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
-
-const loadFallbackResins = () => {
-  try {
-    if (!fs.existsSync(resinsCachePath)) return [];
-    const data = JSON.parse(fs.readFileSync(resinsCachePath, "utf-8"));
-    if (!Array.isArray(data)) return [];
-    return data.map((item, index) => ({
-      _id: item._id || item.id || item.name || `fallback-${index}`,
-      name: item.name || item.resinName || item.label || `Resina ${index + 1}`,
-      description: item.description || item.details || "Dados offline",
-      profiles: item.profiles ?? item.profileCount ?? item.total ?? 0,
-      active: true
-    }));
-  } catch (error) {
-    console.warn("[ADMIN][params/resins] Falha ao ler cache local:", error.message);
-    return [];
-  }
-};
 
 // ===== HELPER FUNCTIONS (inline para evitar dependências externas) =====
 const shouldInitMongo = () => {
@@ -391,31 +371,19 @@ function buildAdminRoutes(adminConfig = {}) {
   // ===== ROTAS DE PARÂMETROS DE IMPRESSÃO =====
 
   router.get("/params/resins", adminGuard, async (req, res) => {
-    const respondFallback = (reason) => {
-      const fallbackResins = loadFallbackResins();
-      console.warn(`[ADMIN][params/resins] Fallback ativado: ${reason}`);
-      return res.json({
-        success: true,
-        resins: fallbackResins,
-        total: fallbackResins.length,
-        source: fallbackResins.length ? "cache" : "empty",
-        warning: reason
-      });
-    };
-
     try {
       if (!shouldInitMongo()) {
-        return respondFallback("MongoDB URI não configurada");
+        return res.status(503).json({ success: false, error: "MongoDB URI não configurada" });
       }
 
       const mongoReady = await ensureMongoReady();
       if (!mongoReady) {
-        return respondFallback("MongoDB não conectado");
+        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       }
 
       const collection = getPrintParametersCollection();
       if (!collection) {
-        return respondFallback("Coleção parâmetros indisponível");
+        return res.status(503).json({ success: false, error: "Coleção parâmetros indisponível" });
       }
       const resins = await collection
         .aggregate([
@@ -450,15 +418,8 @@ function buildAdminRoutes(adminConfig = {}) {
         source: "mongo"
       });
     } catch (err) {
-      console.error('❌ [ADMIN] Erro ao listar resinas (fallback):', err);
-      const fallbackResins = loadFallbackResins();
-      return res.json({
-        success: true,
-        resins: fallbackResins,
-        total: fallbackResins.length,
-        source: fallbackResins.length ? "cache" : "empty",
-        warning: err.message
-      });
+      console.error('❌ [ADMIN] Erro ao listar resinas:', err);
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
@@ -1243,7 +1204,10 @@ function buildAdminRoutes(adminConfig = {}) {
         return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       }
       
-      const collection = getCollection("visual_knowledge_pending") || getCollection("gallery_pending");
+      const collection =
+        getCollection("visual_knowledge_pending")
+        || getCollection("gallery_pending")
+        || getCollection("gallery");
       if (!collection) {
         return res.json({ success: true, pending: [] });
       }
@@ -1262,9 +1226,14 @@ function buildAdminRoutes(adminConfig = {}) {
         success: true,
         pending: pending.map(item => ({
           _id: item._id?.toString(),
-          imageUrl: item.imageUrl || item.image,
-          userName: item.userName || item.user,
-          createdAt: item.createdAt
+          imageUrl: item.imageUrl || item.image || (Array.isArray(item.images) ? item.images[0] : null),
+          images: Array.isArray(item.images) ? item.images : [],
+          userName: item.userName || item.user || item.name,
+          resin: item.resin || null,
+          printer: item.printer || null,
+          settings: item.settings || {},
+          note: item.note || null,
+          createdAt: item.createdAt || null
         }))
       });
     } catch (err) {
@@ -1287,8 +1256,11 @@ function buildAdminRoutes(adminConfig = {}) {
       const { id } = req.params;
       const { defectType, diagnosis, solution } = req.body;
       
-      const pendingCollection = getCollection("visual_knowledge_pending");
-      const approvedCollection = getCollection("visual_knowledge");
+      const pendingCollection =
+        getCollection("visual_knowledge_pending")
+        || getCollection("gallery_pending")
+        || getCollection("gallery");
+      const approvedCollection = getCollection("visual_knowledge") || getCollection("gallery");
       
       if (!pendingCollection || !approvedCollection) {
         return res.status(503).json({ success: false, error: "Coleções não disponíveis" });
@@ -1302,17 +1274,41 @@ function buildAdminRoutes(adminConfig = {}) {
         return res.status(404).json({ success: false, error: "Foto não encontrada" });
       }
       
-      await approvedCollection.insertOne({
-        imageUrl: pendingDoc.imageUrl,
-        defectType,
-        diagnosis,
-        solution,
-        approved: true,
-        approvedAt: new Date(),
-        createdAt: pendingDoc.createdAt
-      });
-      
-      await pendingCollection.deleteOne({ _id: pendingDoc._id });
+      if (pendingCollection === approvedCollection) {
+        await approvedCollection.updateOne(
+          { _id: pendingDoc._id },
+          {
+            $set: {
+              approved: true,
+              status: "approved",
+              approvedAt: new Date(),
+              defectType: defectType || pendingDoc.defectType || pendingDoc.title || null,
+              diagnosis: diagnosis || pendingDoc.diagnosis || null,
+              solution: solution || pendingDoc.solution || null,
+              updatedAt: new Date()
+            }
+          }
+        );
+      } else {
+        await approvedCollection.insertOne({
+          imageUrl: pendingDoc.imageUrl || pendingDoc.image || (Array.isArray(pendingDoc.images) ? pendingDoc.images[0] : null),
+          images: Array.isArray(pendingDoc.images) ? pendingDoc.images : [],
+          defectType: defectType || pendingDoc.defectType || pendingDoc.title || null,
+          diagnosis: diagnosis || pendingDoc.diagnosis || null,
+          solution: solution || pendingDoc.solution || null,
+          approved: true,
+          status: "approved",
+          approvedAt: new Date(),
+          resin: pendingDoc.resin || null,
+          printer: pendingDoc.printer || null,
+          settings: pendingDoc.settings || {},
+          note: pendingDoc.note || null,
+          createdAt: pendingDoc.createdAt || new Date(),
+          updatedAt: new Date()
+        });
+        
+        await pendingCollection.deleteOne({ _id: pendingDoc._id });
+      }
       
       console.log(`✅ [ADMIN] Foto ${id} aprovada e movida para galeria`);
       

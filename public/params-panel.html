@@ -462,24 +462,58 @@
       const API_BASE = "https://quanton3d-bot-v2.onrender.com";
       const API_ADMIN_BASE = `${API_BASE}/api`;
       const AUTH_TOKEN_KEY = "quanton3d_admin_token";
-      let authToken = localStorage.getItem(AUTH_TOKEN_KEY) || "";
+      const AUTH_TOKEN_FALLBACK_KEY = "quanton3d_jwt_token";
+      const AUTH_SECRET_KEY = "quanton3d_admin_secret";
+      let authToken = localStorage.getItem(AUTH_TOKEN_KEY) || localStorage.getItem(AUTH_TOKEN_FALLBACK_KEY) || "";
+      let authSecret = localStorage.getItem(AUTH_SECRET_KEY) || "";
 
-      const ensureAuthenticated = () => {
-        if (!authToken) {
+      const authenticate = async (password) => {
+        const response = await fetch(`${API_BASE}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password })
+        });
+        const data = await response.json();
+        if (!data.success || !data.token) {
+          throw new Error(data.error || "Falha no login do painel");
+        }
+        authToken = data.token;
+        localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+        localStorage.setItem(AUTH_TOKEN_FALLBACK_KEY, data.token);
+      };
+
+      const ensureAuthenticatedAsync = async () => {
+        authToken = localStorage.getItem(AUTH_TOKEN_KEY) || localStorage.getItem(AUTH_TOKEN_FALLBACK_KEY) || "";
+        authSecret = localStorage.getItem(AUTH_SECRET_KEY) || "";
+        if (authToken || authSecret) return true;
+
+        const password = window.prompt("Informe a senha do painel para continuar:");
+        if (!password) {
           alert("Faça login para continuar.");
           return false;
         }
-        return true;
+
+        try {
+          await authenticate(password);
+          return true;
+        } catch (error) {
+          alert(`Erro de autenticação: ${error.message}`);
+          return false;
+        }
       };
 
       const fetchWithAuth = (url, options = {}) => {
-        authToken = localStorage.getItem(AUTH_TOKEN_KEY) || "";
+        authToken = localStorage.getItem(AUTH_TOKEN_KEY) || localStorage.getItem(AUTH_TOKEN_FALLBACK_KEY) || "";
+        authSecret = localStorage.getItem(AUTH_SECRET_KEY) || "";
+        const headers = {
+          ...(options.headers || {}),
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          ...(authSecret ? { "x-admin-secret": authSecret } : {})
+        };
+
         return fetch(url, {
           ...options,
-          headers: {
-            ...(options.headers || {}),
-            Authorization: `Bearer ${authToken}`
-          }
+          headers
         });
       };
       const state = {
@@ -628,7 +662,7 @@
 
       const loadStats = async () => {
         try {
-          if (!ensureAuthenticated()) return;
+          if (!(await ensureAuthenticatedAsync())) return;
           const response = await fetchWithAuth(`${API_ADMIN_BASE}/params/stats`);
           const data = await response.json();
           if (!data.success) return;
@@ -654,7 +688,7 @@
       };
 
       const loadResins = async () => {
-        if (!ensureAuthenticated()) return;
+        if (!(await ensureAuthenticatedAsync())) return;
         const response = await fetchWithAuth(`${API_ADMIN_BASE}/params/resins`);
         const data = await response.json();
         if (!data.success) return;
@@ -667,7 +701,7 @@
       };
 
       const loadPrinters = async (resinId = "") => {
-        if (!ensureAuthenticated()) return;
+        if (!(await ensureAuthenticatedAsync())) return;
         const response = await fetchWithAuth(
           resinId ? `${API_ADMIN_BASE}/params/printers?resinId=${resinId}` : `${API_ADMIN_BASE}/params/printers`
         );
@@ -689,7 +723,7 @@
           params.append("limit", state.limit);
         }
 
-        if (!ensureAuthenticated()) return;
+        if (!(await ensureAuthenticatedAsync())) return;
         const response = await fetchWithAuth(`${API_ADMIN_BASE}/params/profiles?${params.toString()}`);
         const data = await response.json();
         if (!data.success) return;
@@ -747,7 +781,7 @@
       };
 
       const loadMessages = async () => {
-        if (!ensureAuthenticated()) return;
+        if (!(await ensureAuthenticatedAsync())) return;
         try {
           const response = await fetchWithAuth(`${API_ADMIN_BASE}/messages`);
           const data = await response.json();
@@ -762,7 +796,7 @@
       };
 
       const loadFormulations = async () => {
-        if (!ensureAuthenticated()) return;
+        if (!(await ensureAuthenticatedAsync())) return;
         try {
           const response = await fetchWithAuth(`${API_ADMIN_BASE}/formulations`);
           const data = await response.json();
@@ -864,12 +898,14 @@
       // Lógica de Logout
       document.getElementById("logout-btn")?.addEventListener("click", () => {
         localStorage.removeItem(AUTH_TOKEN_KEY);
+        localStorage.removeItem(AUTH_TOKEN_FALLBACK_KEY);
+        localStorage.removeItem(AUTH_SECRET_KEY);
         window.location.reload();
       });
 
       // Correção do Envio de Conhecimento
       const submitKnowledge = async () => {
-        if (!ensureAuthenticated()) return;
+        if (!(await ensureAuthenticatedAsync())) return;
         if (!knowledgeTitle || !knowledgeContent || !knowledgeStatus) return;
         const title = knowledgeTitle.value.trim();
         const content = knowledgeContent.value.trim();
