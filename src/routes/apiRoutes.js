@@ -333,7 +333,7 @@ router.post("/register-user", async (req, res) => {
             userEmail: email,
             resin: resin || null,
             problemType: problemType || null,
-            origin: origin || source || null, // GRAVANDO O "COMO NOS CONHECEU" AQUI
+            origin: origin || source || 'Direto', // GRAVANDO O "COMO NOS CONHECEU" AQUI
             updatedAt: new Date()
           }
         },
@@ -653,16 +653,11 @@ router.post("/gallery", upload.any(), async (req, res) => {
     }
 
     const galleryCollection = getCollection("gallery");
-    const parsedSettings = parseGallerySettings(settings);
-    const fallbackSettings = extractSettingsFromBody(req.body);
-    const mergedSettings = { ...fallbackSettings, ...parsedSettings };
-    const hasSettings = Object.keys(mergedSettings).length > 0;
-
     const newEntry = {
       name: name?.trim() || null,
       resin: sanitizedResin,
       printer: printer.trim(),
-      settings: hasSettings ? mergedSettings : {},
+      settings: parseGallerySettings(settings),
       contact: contact?.trim() || null,
       images: finalImages,
       note: note?.trim() || null,
@@ -863,9 +858,9 @@ router.put('/gallery/:id/approve', adminGuard(async (req, res) => {
     if (!mongoReady) return res.status(503).json({ success: false });
     
     const collection = getCollection("gallery");
-    const filter = ObjectId.isValid(req.params.id) ? { _id: new ObjectId(req.params.id) } : { _id: req.params.id };
+    const id = ObjectId.isValid(req.params.id) ? new ObjectId(req.params.id) : req.params.id;
     
-    await collection.updateOne(filter, { $set: { status: 'approved', approved: true, updatedAt: new Date() } });
+    await collection.updateOne({ _id: id }, { $set: { status: 'approved', approved: true, updatedAt: new Date() } });
     res.json({ success: true });
   } catch (err) {
     console.error('[API] Erro ao aprovar galeria:', err);
@@ -879,9 +874,9 @@ router.delete('/gallery/:id', adminGuard(async (req, res) => {
     if (!mongoReady) return res.status(503).json({ success: false });
     
     const collection = getCollection("gallery");
-    const filter = ObjectId.isValid(req.params.id) ? { _id: new ObjectId(req.params.id) } : { _id: req.params.id };
+    const id = ObjectId.isValid(req.params.id) ? new ObjectId(req.params.id) : req.params.id;
     
-    await collection.deleteOne(filter);
+    await collection.deleteOne({ _id: id });
     res.json({ success: true });
   } catch (err) {
     console.error('[API] Erro ao deletar galeria:', err);
@@ -975,22 +970,25 @@ async function listParamResins() {
 
 router.get("/params/resins", async (_req, res) => {
   try {
-    const result = await listParamResins();
-    if (result.error) {
-      return res.status(result.error.status).json(result.error.body);
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     }
 
-    const resins = result.resins || [];
+    const collection = getCollection("parametros");
+    const distinctResins = await collection.distinct("resinName");
+    const resins = distinctResins
+      .filter((item) => typeof item === "string" && item.trim())
+      .map((item) => item.trim())
+      .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
+      .map((name) => ({
+        _id: name,
+        name
+      }));
 
     res.json({
       success: true,
-      resins: resins.map((item) => ({
-        _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
-        name: item.name || "Sem nome",
-        description: `Perfis: ${item.profiles ?? 0}`,
-        profiles: item.profiles ?? 0,
-        active: true
-      }))
+      resins
     });
   } catch (err) {
     console.error("[API] Erro ao listar resinas de parâmetros:", err);
@@ -1084,7 +1082,42 @@ const listPrinters = async (req, res) => {
   }
 };
 
-router.get("/params/printers", listPrinters);
+router.get("/params/printers", async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    }
+
+    const { resinId } = req.query;
+    const filter = {};
+    if (resinId) {
+      const resinFilter = buildResinFilter(resinId);
+      if (resinFilter) {
+        Object.assign(filter, resinFilter);
+      }
+    }
+
+    const collection = getCollection("parametros");
+    const distinctPrinters = await collection.distinct("model", filter);
+    const printers = distinctPrinters
+      .filter((item) => typeof item === "string" && item.trim())
+      .map((item) => item.trim())
+      .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
+      .map((name) => ({
+        _id: name,
+        name
+      }));
+
+    return res.json({
+      success: true,
+      printers
+    });
+  } catch (err) {
+    console.error("[API] Erro ao listar impressoras:", err);
+    return res.status(500).json({ success: false, error: "Erro ao listar impressoras" });
+  }
+});
 router.get("/printers", listPrinters);
 router.post("/params/printers", async (req, res) => {
   req.query = { ...(req.query || {}), ...(req.body || {}) };
