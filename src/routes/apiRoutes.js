@@ -306,14 +306,14 @@ const extractSettingsFromBody = (body = {}) => {
 router.post("/register-user", async (req, res) => {
   try {
     const { name, phone, email, resin, problemType, sessionId, origin, source } = req.body;
-    
+
     if (!name || !phone || !email) {
       return res.status(400).json({
         success: false,
         error: "Nome, telefone e email sao obrigatorios"
       });
     }
-    
+
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
       return res.status(503).json({
@@ -321,32 +321,50 @@ router.post("/register-user", async (req, res) => {
         error: "Banco de dados indisponivel"
       });
     }
-    
+
+    const conversasCollection = getConversasCollection();
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : email;
+    const normalizedPhone = typeof phone === "string" ? phone.trim() : phone;
+    const normalizedName = typeof name === "string" ? name.trim() : name;
+    const normalizedOrigin = origin || source || 'Direto';
+
+    let contactFilter = null;
     if (sessionId) {
-      const conversasCollection = getConversasCollection(); 
+      contactFilter = { sessionId };
+    } else if (normalizedEmail) {
+      contactFilter = { userEmail: normalizedEmail };
+    } else if (normalizedPhone) {
+      contactFilter = { userPhone: normalizedPhone };
+    }
+
+    if (contactFilter) {
       await conversasCollection.updateOne(
-        { sessionId },
+        contactFilter,
         {
           $set: {
-            userName: name,
-            userPhone: phone,
-            userEmail: email,
+            sessionId: sessionId || null,
+            userName: normalizedName,
+            userPhone: normalizedPhone,
+            userEmail: normalizedEmail,
             resin: resin || null,
             problemType: problemType || null,
-            origin: origin || source || 'Direto', // GRAVANDO O "COMO NOS CONHECEU" AQUI
+            origin: normalizedOrigin,
             updatedAt: new Date()
+          },
+          $setOnInsert: {
+            createdAt: new Date()
           }
         },
         { upsert: true }
       );
     }
-    
-    console.log(`[API] Usuario registrado: ${name} (${email})`);
-    
+
+    console.log(`[API] Usuario registrado: ${normalizedName} (${normalizedEmail})`);
+
     res.json({
       success: true,
       message: "Usuario registrado com sucesso",
-      user: { name, phone, email, resin, problemType }
+      user: { name: normalizedName, phone: normalizedPhone, email: normalizedEmail, resin, problemType, origin: normalizedOrigin }
     });
   } catch (err) {
     console.error("[API] Erro ao registrar usuario:", err);
@@ -861,11 +879,27 @@ router.put('/gallery/:id/approve', adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) return res.status(503).json({ success: false });
-    
+
     const collection = getCollection("gallery");
-    const id = ObjectId.isValid(req.params.id) ? new ObjectId(req.params.id) : req.params.id;
-    
-    await collection.updateOne({ _id: id }, { $set: { status: 'approved', approved: true, updatedAt: new Date() } });
+    const rawId = req.params.id;
+    const id = ObjectId.isValid(rawId) ? new ObjectId(rawId) : rawId;
+
+    let result = await collection.updateOne(
+      { _id: id },
+      { $set: { status: 'approved', approved: true, updatedAt: new Date() } }
+    );
+
+    if (!result.matchedCount && id !== rawId) {
+      result = await collection.updateOne(
+        { _id: rawId },
+        { $set: { status: 'approved', approved: true, updatedAt: new Date() } }
+      );
+    }
+
+    if (!result.matchedCount) {
+      return res.status(404).json({ success: false, error: 'Item não encontrado' });
+    }
+
     res.json({ success: true });
   } catch (err) {
     console.error('[API] Erro ao aprovar galeria:', err);
@@ -877,11 +911,20 @@ router.delete('/gallery/:id', adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) return res.status(503).json({ success: false });
-    
+
     const collection = getCollection("gallery");
-    const id = ObjectId.isValid(req.params.id) ? new ObjectId(req.params.id) : req.params.id;
-    
-    await collection.deleteOne({ _id: id });
+    const rawId = req.params.id;
+    const id = ObjectId.isValid(rawId) ? new ObjectId(rawId) : rawId;
+
+    let result = await collection.deleteOne({ _id: id });
+    if (!result.deletedCount && id !== rawId) {
+      result = await collection.deleteOne({ _id: rawId });
+    }
+
+    if (!result.deletedCount) {
+      return res.status(404).json({ success: false, error: 'Item não encontrado' });
+    }
+
     res.json({ success: true });
   } catch (err) {
     console.error('[API] Erro ao deletar galeria:', err);
@@ -1032,10 +1075,19 @@ const listDistinctResins = async (_req, res) => {
     }
 
     const collection = getCollection("parametros");
-    const distinctResins = await collection.distinct("resinName");
-    const resins = distinctResins
-      .filter((item) => typeof item === "string" && item.trim())
-      .map((item) => item.trim())
+    const distinctResins = [
+      ...(await collection.distinct("resinName")),
+      ...(await collection.distinct("resin")),
+      ...(await collection.distinct("name"))
+    ];
+
+    const resins = Array.from(
+      new Set(
+        distinctResins
+          .filter((item) => typeof item === "string" && item.trim())
+          .map((item) => item.trim())
+      )
+    )
       .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
       .map((name) => ({
         _id: name,
@@ -1133,10 +1185,18 @@ const listDistinctPrinters = async (req, res) => {
     }
 
     const collection = getCollection("parametros");
-    const distinctPrinters = await collection.distinct("model", filter);
-    const printers = distinctPrinters
-      .filter((item) => typeof item === "string" && item.trim())
-      .map((item) => item.trim())
+    const distinctPrinters = [
+      ...(await collection.distinct("model", filter)),
+      ...(await collection.distinct("printer", filter))
+    ];
+
+    const printers = Array.from(
+      new Set(
+        distinctPrinters
+          .filter((item) => typeof item === "string" && item.trim())
+          .map((item) => item.trim())
+      )
+    )
       .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
       .map((name) => ({
         _id: name,
