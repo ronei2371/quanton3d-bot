@@ -302,9 +302,10 @@ const extractSettingsFromBody = (body = {}) => {
   );
 };
 
+// 🟢 CIRURGIA 3: SALVANDO A ORIGEM PARA AS MÉTRICAS
 router.post("/register-user", async (req, res) => {
   try {
-    const { name, phone, email, resin, problemType, sessionId } = req.body;
+    const { name, phone, email, resin, problemType, sessionId, origin, source } = req.body;
     
     if (!name || !phone || !email) {
       return res.status(400).json({
@@ -332,6 +333,7 @@ router.post("/register-user", async (req, res) => {
             userEmail: email,
             resin: resin || null,
             problemType: problemType || null,
+            origin: origin || source || null, // GRAVANDO O "COMO NOS CONHECEU" AQUI
             updatedAt: new Date()
           }
         },
@@ -854,33 +856,36 @@ router.get("/gallery/all", async (req, res) => {
   }
 });
 
-// ==========================================
-// ROTAS PARA APROVAR E EXCLUIR DA GALERIA
-// ==========================================
+// 🟢 CIRURGIA 1: ENSINANDO O SERVIDOR A EXCLUIR SEM ERRO 500
 router.put('/gallery/:id/approve', adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: 'DB indisponível' });
+    if (!mongoReady) return res.status(503).json({ success: false });
+    
     const collection = getCollection("gallery");
-    const result = await collection.updateOne(
-      { _id: new ObjectId(req.params.id) },
-      { $set: { status: 'approved', approved: true, updatedAt: new Date() } }
-    );
+    const filter = ObjectId.isValid(req.params.id) ? { _id: new ObjectId(req.params.id) } : { _id: req.params.id };
+    
+    await collection.updateOne(filter, { $set: { status: 'approved', approved: true, updatedAt: new Date() } });
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ success: false, error: 'Erro ao aprovar' });
+    console.error('[API] Erro ao aprovar galeria:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 }));
 
 router.delete('/gallery/:id', adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: 'DB indisponível' });
+    if (!mongoReady) return res.status(503).json({ success: false });
+    
     const collection = getCollection("gallery");
-    const result = await collection.deleteOne({ _id: new ObjectId(req.params.id) });
+    const filter = ObjectId.isValid(req.params.id) ? { _id: new ObjectId(req.params.id) } : { _id: req.params.id };
+    
+    await collection.deleteOne(filter);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ success: false, error: 'Erro ao deletar' });
+    console.error('[API] Erro ao deletar galeria:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 }));
 
@@ -1518,9 +1523,6 @@ router.get('/knowledge', async (_req, res) => {
   }
 });
 
-// ==========================================
-// ROTA PENDENTE - BUGS 1 E 3 CORRIGIDOS 
-// ==========================================
 router.get('/visual-knowledge/pending', async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -1528,13 +1530,11 @@ router.get('/visual-knowledge/pending', async (_req, res) => {
       return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
     }
 
-    // Bug 1: Usar gallery direto
     const pendingCollection = getCollection('gallery');
     if (!pendingCollection) {
       return res.json({ success: true, pending: [] });
     }
 
-    // Bug 3: Filtro corrigido, removendo o $exists para não trazer itens aprovados
     const pendingDocs = await pendingCollection
       .find({
         $or: [
