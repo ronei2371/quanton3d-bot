@@ -1,4 +1,7 @@
+ codex/conduct-security-and-stability-audit-g4koqx
+
  codex/conduct-security-and-stability-audit-jkt2qe
+ main
 ## Diretrizes Técnicas Atualizadas: Projeto Quanton3D (Jan 2026)
 
 ### 1. Visão Geral da Arquitetura
@@ -34,6 +37,8 @@
 
 - No backend, manter `MONGODB_URI` (com `retryWrites=true`) e `OPENAI_API_KEY`.
 - No frontend, expor apenas `VITE_API_URL` e `VITE_ADMIN_API_TOKEN`.
+ codex/conduct-security-and-stability-audit-g4koqx
+
 
  (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
 diff --git a/AGENTS.md b/AGENTS.md
@@ -80,4 +85,5 @@ index 0000000000000000000000000000000000000000..af67f889a7fe4750147f7b823b4e1d37
  
 EOF
 )
+ main
  main

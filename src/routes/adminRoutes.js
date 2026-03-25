@@ -1202,7 +1202,10 @@ function buildAdminRoutes(adminConfig = {}) {
         return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       }
       
-      const collection = getCollection("visual_knowledge_pending") || getCollection("gallery_pending");
+      const collection =
+        getCollection("visual_knowledge_pending")
+        || getCollection("gallery_pending")
+        || getCollection("gallery");
       if (!collection) {
         return res.json({ success: true, pending: [] });
       }
@@ -1221,9 +1224,14 @@ function buildAdminRoutes(adminConfig = {}) {
         success: true,
         pending: pending.map(item => ({
           _id: item._id?.toString(),
-          imageUrl: item.imageUrl || item.image,
-          userName: item.userName || item.user,
-          createdAt: item.createdAt
+          imageUrl: item.imageUrl || item.image || (Array.isArray(item.images) ? item.images[0] : null),
+          images: Array.isArray(item.images) ? item.images : [],
+          userName: item.userName || item.user || item.name,
+          resin: item.resin || null,
+          printer: item.printer || null,
+          settings: item.settings || {},
+          note: item.note || null,
+          createdAt: item.createdAt || null
         }))
       });
     } catch (err) {
@@ -1246,8 +1254,11 @@ function buildAdminRoutes(adminConfig = {}) {
       const { id } = req.params;
       const { defectType, diagnosis, solution } = req.body;
       
-      const pendingCollection = getCollection("visual_knowledge_pending");
-      const approvedCollection = getCollection("visual_knowledge");
+      const pendingCollection =
+        getCollection("visual_knowledge_pending")
+        || getCollection("gallery_pending")
+        || getCollection("gallery");
+      const approvedCollection = getCollection("visual_knowledge") || getCollection("gallery");
       
       if (!pendingCollection || !approvedCollection) {
         return res.status(503).json({ success: false, error: "Coleções não disponíveis" });
@@ -1261,17 +1272,41 @@ function buildAdminRoutes(adminConfig = {}) {
         return res.status(404).json({ success: false, error: "Foto não encontrada" });
       }
       
-      await approvedCollection.insertOne({
-        imageUrl: pendingDoc.imageUrl,
-        defectType,
-        diagnosis,
-        solution,
-        approved: true,
-        approvedAt: new Date(),
-        createdAt: pendingDoc.createdAt
-      });
-      
-      await pendingCollection.deleteOne({ _id: pendingDoc._id });
+      if (pendingCollection === approvedCollection) {
+        await approvedCollection.updateOne(
+          { _id: pendingDoc._id },
+          {
+            $set: {
+              approved: true,
+              status: "approved",
+              approvedAt: new Date(),
+              defectType: defectType || pendingDoc.defectType || pendingDoc.title || null,
+              diagnosis: diagnosis || pendingDoc.diagnosis || null,
+              solution: solution || pendingDoc.solution || null,
+              updatedAt: new Date()
+            }
+          }
+        );
+      } else {
+        await approvedCollection.insertOne({
+          imageUrl: pendingDoc.imageUrl || pendingDoc.image || (Array.isArray(pendingDoc.images) ? pendingDoc.images[0] : null),
+          images: Array.isArray(pendingDoc.images) ? pendingDoc.images : [],
+          defectType: defectType || pendingDoc.defectType || pendingDoc.title || null,
+          diagnosis: diagnosis || pendingDoc.diagnosis || null,
+          solution: solution || pendingDoc.solution || null,
+          approved: true,
+          status: "approved",
+          approvedAt: new Date(),
+          resin: pendingDoc.resin || null,
+          printer: pendingDoc.printer || null,
+          settings: pendingDoc.settings || {},
+          note: pendingDoc.note || null,
+          createdAt: pendingDoc.createdAt || new Date(),
+          updatedAt: new Date()
+        });
+        
+        await pendingCollection.deleteOne({ _id: pendingDoc._id });
+      }
       
       console.log(`✅ [ADMIN] Foto ${id} aprovada e movida para galeria`);
       
