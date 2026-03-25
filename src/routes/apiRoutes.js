@@ -968,7 +968,7 @@ async function listParamResins() {
   return { resins };
 }
 
-router.get("/params/resins", async (_req, res) => {
+const listDistinctResins = async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
@@ -986,40 +986,18 @@ router.get("/params/resins", async (_req, res) => {
         name
       }));
 
-    res.json({
+    return res.json({
       success: true,
       resins
     });
   } catch (err) {
-    console.error("[API] Erro ao listar resinas de parâmetros:", err);
-    res.status(500).json({ success: false, error: "Erro ao listar resinas" });
-  }
-});
-
-router.get("/resins", async (_req, res) => {
-  try {
-    const result = await listParamResins();
-    if (result.error) {
-      return res.status(result.error.status).json(result.error.body);
-    }
-
-    const resins = result.resins || [];
-
-    res.json({
-      success: true,
-      resins: resins.map((item) => ({
-        _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
-        name: item.name || "Sem nome",
-        description: `Perfis: ${item.profiles ?? 0}`,
-        profiles: item.profiles ?? 0,
-        active: true
-      }))
-    });
-  } catch (err) {
     console.error("[API] Erro ao listar resinas:", err);
-    res.status(500).json({ success: false, error: "Erro ao listar resinas" });
+    return res.status(500).json({ success: false, error: "Erro ao listar resinas" });
   }
-});
+};
+
+router.get("/params/resins", listDistinctResins);
+router.get("/resins", listDistinctResins);
 
 router.get("/docs/fispqs", (_req, res) => {
   res.json({
@@ -1082,7 +1060,7 @@ const listPrinters = async (req, res) => {
   }
 };
 
-router.get("/params/printers", async (req, res) => {
+const listDistinctPrinters = async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
@@ -1117,8 +1095,10 @@ router.get("/params/printers", async (req, res) => {
     console.error("[API] Erro ao listar impressoras:", err);
     return res.status(500).json({ success: false, error: "Erro ao listar impressoras" });
   }
-});
-router.get("/printers", listPrinters);
+};
+
+router.get("/params/printers", listDistinctPrinters);
+router.get("/printers", listDistinctPrinters);
 router.post("/params/printers", async (req, res) => {
   req.query = { ...(req.query || {}), ...(req.body || {}) };
   return listPrinters(req, res);
