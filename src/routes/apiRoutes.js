@@ -854,6 +854,36 @@ router.get("/gallery/all", async (req, res) => {
   }
 });
 
+// ==========================================
+// ROTAS PARA APROVAR E EXCLUIR DA GALERIA
+// ==========================================
+router.put('/gallery/:id/approve', adminGuard(async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) return res.status(503).json({ success: false, error: 'DB indisponível' });
+    const collection = getCollection("gallery");
+    const result = await collection.updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: { status: 'approved', approved: true, updatedAt: new Date() } }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Erro ao aprovar' });
+  }
+}));
+
+router.delete('/gallery/:id', adminGuard(async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) return res.status(503).json({ success: false, error: 'DB indisponível' });
+    const collection = getCollection("gallery");
+    const result = await collection.deleteOne({ _id: new ObjectId(req.params.id) });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Erro ao deletar' });
+  }
+}));
+
 function normalizeParams(params = {}) {
   const root = params ?? {};
   const base = root.parametros ?? {};
