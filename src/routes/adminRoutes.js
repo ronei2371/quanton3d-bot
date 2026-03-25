@@ -88,13 +88,11 @@ function requireAdmin(adminSecret, adminJwtSecret) {
     process.env.ADMIN_SECRET,
     process.env.VITE_ADMIN_API_TOKEN,
     process.env.ADMIN_API_TOKEN,
-    'quanton3d_admin_secret'
   ].filter(Boolean);
 
   const acceptedJwtSecrets = [
     adminJwtSecret,
     process.env.ADMIN_JWT_SECRET,
-    'quanton-admin-fallback-secret'
   ].filter(Boolean);
 
   return (req, res, next) => {
@@ -130,14 +128,14 @@ function requireAdmin(adminSecret, adminJwtSecret) {
 function buildAdminRoutes(adminConfig = {}) {
   const router = express.Router();
   const ADMIN_SECRET = adminConfig.adminSecret ?? process.env.ADMIN_SECRET ?? process.env.VITE_ADMIN_API_TOKEN;
-  const ADMIN_JWT_SECRET = adminConfig.adminJwtSecret ?? process.env.ADMIN_JWT_SECRET ?? "quanton-admin-fallback-secret";
+  const ADMIN_JWT_SECRET = adminConfig.adminJwtSecret ?? process.env.ADMIN_JWT_SECRET;
   const adminGuard = requireAdmin(ADMIN_SECRET, ADMIN_JWT_SECRET);
 
   router.post("/login", (req, res) => {
     const { user, username, password, secret } = req.body ?? {};
     const adminUser = process.env.ADMIN_USER || "admin";
     const adminPass = process.env.ADMIN_PASSWORD || "";
-    const jwtSecret = process.env.ADMIN_JWT_SECRET || "quanton-admin-fallback-secret";
+    const jwtSecret = process.env.ADMIN_JWT_SECRET;
     const providedUser = typeof user === 'string' && user.trim().length ? user.trim() : (typeof username === 'string' ? username.trim() : "");
 
     if (!process.env.ADMIN_PASSWORD) {
@@ -145,8 +143,8 @@ function buildAdminRoutes(adminConfig = {}) {
       return res.status(401).json({ success: false, error: "ADMIN_PASSWORD ausente" });
     }
 
-    if (!process.env.ADMIN_JWT_SECRET) {
-      console.warn('[ADMIN] ⚠️ ADMIN_JWT_SECRET ausente. Usando fallback emergencial para manter compatibilidade.');
+    if (!jwtSecret) {
+      return res.status(500).json({ success: false, error: "ADMIN_JWT_SECRET ausente" });
     }
 
     const validUser = providedUser === adminUser && password === adminPass;

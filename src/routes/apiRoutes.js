@@ -28,12 +28,13 @@ const FISPQ_DOCUMENTS = [
   { resin: "Spark", slug: "spark" }
 ];
 
-const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || "quanton-admin-fallback-secret";
-const ADMIN_SECRET = process.env.ADMIN_SECRET || process.env.VITE_ADMIN_API_TOKEN || "quanton3d_admin_secret";
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
+const ADMIN_SECRET = process.env.ADMIN_SECRET || process.env.VITE_ADMIN_API_TOKEN;
 
 const isAdminRequest = (req) => {
   const authHeader = req.headers.authorization || "";
   if (authHeader.startsWith("Bearer ")) {
+    if (!ADMIN_JWT_SECRET) return false;
     const token = authHeader.slice(7);
     try {
       jwt.verify(token, ADMIN_JWT_SECRET);
@@ -1108,7 +1109,12 @@ const listProfiles = async (req, res) => {
 };
 
 router.get("/params/profiles", listProfiles);
+router.get("/profiles", listProfiles);
 router.post("/params/profiles", async (req, res) => {
+  req.query = { ...(req.query || {}), ...(req.body || {}) };
+  return listProfiles(req, res);
+});
+router.post("/profiles", async (req, res) => {
   req.query = { ...(req.query || {}), ...(req.body || {}) };
   return listProfiles(req, res);
 });
