@@ -653,7 +653,11 @@ router.post("/gallery", upload.any(), async (req, res) => {
     }
 
     const galleryCollection = getCollection("gallery");
-    const finalSettings = { ...extractSettingsFromBody(req.body), ...parseGallerySettings(settings) };
+    const finalSettings = {
+      ...extractSettingsFromBody(req.body),
+      ...parseGallerySettings(settings)
+    };
+
     const newEntry = {
       name: name?.trim() || null,
       resin: sanitizedResin,
@@ -884,6 +888,57 @@ router.delete('/gallery/:id', adminGuard(async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 }));
+
+const buildContactResponse = (doc = {}) => ({
+  id: doc._id?.toString?.() || doc.id || doc.legacyId || null,
+  name: doc.userName || doc.name || doc.customerName || null,
+  phone: doc.userPhone || doc.phone || null,
+  email: doc.userEmail || doc.email || null,
+  resin: doc.resin || null,
+  problemType: doc.problemType || null,
+  origin: doc.origin || doc.source || 'Direto',
+  status: doc.status || 'pending',
+  sessionId: doc.sessionId || null,
+  createdAt: doc.createdAt || null,
+  updatedAt: doc.updatedAt || null
+});
+
+const listContacts = async (_req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const conversasCollection = getConversasCollection();
+    if (!conversasCollection) {
+      return res.status(503).json({ success: false, error: 'Coleção de contatos indisponível' });
+    }
+
+    const docs = await conversasCollection
+      .find({
+        $or: [
+          { userName: { $exists: true, $ne: null } },
+          { userEmail: { $exists: true, $ne: null } },
+          { userPhone: { $exists: true, $ne: null } },
+          { origin: { $exists: true, $ne: null } }
+        ]
+      })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .limit(500)
+      .toArray();
+
+    return res.json({
+      success: true,
+      contacts: docs.map(buildContactResponse)
+    });
+  } catch (err) {
+    console.error('[API] Erro ao listar contatos:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao listar contatos' });
+  }
+};
+
+router.get('/contacts', adminGuard(listContacts));
 
 function normalizeParams(params = {}) {
   const root = params ?? {};
