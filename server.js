@@ -11,13 +11,15 @@ import { buildAdminRoutes } from './src/routes/adminRoutes.js'
 import { metrics } from './src/utils/metrics.js'
 import { connectToMongo, isConnected } from './db.js'
 import { initializeRAG, checkRAGIntegrity, bootstrapKnowledgeFromFile } from './rag-search.js'
+ codex/conduct-security-and-stability-audit-raejgd
+
+
  codex/conduct-security-and-stability-audit-g4koqx
 
 
  codex/conduct-security-and-stability-audit-jkt2qe
 
 
-main
 main
 
 const __filename = fileURLToPath(import.meta.url)
@@ -104,9 +106,12 @@ app.use('/api', adminRoutes)
 app.use('/api', apiRoutes)
 app.use('/api', suggestionsRoutes)
 
+codex/conduct-security-and-stability-audit-raejgd
+
 codex/conduct-security-and-stability-audit-g4koqx
 
  codex/conduct-security-and-stability-audit-jkt2qe
+ main
  main
 // Compatibilidade legado: alguns clientes públicos chamam sem prefixo /api
 app.get('/resins', (req, res, next) => {
@@ -118,6 +123,8 @@ app.get('/params/resins', (req, res, next) => {
   req.url = '/params/resins'
   apiRoutes(req, res, next)
 })
+
+ codex/conduct-security-and-stability-audit-raejgd
 
  codex/conduct-security-and-stability-audit-g4koqx
 
@@ -133,6 +140,7 @@ app.get('/params/profiles', (req, res, next) => { req.url = '/profiles'; apiRout
 app.get('/api/params/profiles', (req, res, next) => { req.url = '/profiles'; apiRoutes(req, res, next) })
  main
 
+ main
  main
 // ==========================================================
 // ROTAS DO CHAT
