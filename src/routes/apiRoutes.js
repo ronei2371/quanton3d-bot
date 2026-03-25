@@ -653,11 +653,12 @@ router.post("/gallery", upload.any(), async (req, res) => {
     }
 
     const galleryCollection = getCollection("gallery");
+    const finalSettings = { ...extractSettingsFromBody(req.body), ...parseGallerySettings(settings) };
     const newEntry = {
       name: name?.trim() || null,
       resin: sanitizedResin,
       printer: printer.trim(),
-      settings: parseGallerySettings(settings),
+      settings: finalSettings,
       contact: contact?.trim() || null,
       images: finalImages,
       note: note?.trim() || null,
