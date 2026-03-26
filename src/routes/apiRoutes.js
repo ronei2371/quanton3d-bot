@@ -31,36 +31,6 @@ const FISPQ_DOCUMENTS = [
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
 const ADMIN_SECRET = process.env.ADMIN_SECRET || process.env.VITE_ADMIN_API_TOKEN;
 
-
-const PUBLIC_RESIN_FALLBACK = [
-  'Athom Dental',
-  'Athom Washable',
-  'Poseidon',
-  'Pyroblast',
-  'Pyroblast+',
-  'Spin',
-  'Spin+',
-  'Spark',
-  'Iron',
-  'Iron 7030',
-  'Iron Skin',
-  'LowSmell',
-  'FlexForm',
-  'RPG',
-  'Alinhadores',
-  'Vulcan Cast'
-];
-
-const PUBLIC_PRINTER_FALLBACK = [
-  'Phrozen Sonic Mini 8K S',
-  'Elegoo Mars 3 Ultra',
-  'Elegoo Mars 5 Ultra',
-  'Elegoo Saturn 4 Ultra',
-  'Anycubic Photon Mono 2',
-  'Anycubic Photon Mono M5s Pro',
-  'Anycubic M3 Max'
-];
-
 const isAdminRequest = (req) => {
   const authHeader = req.headers.authorization || "";
   if (authHeader.startsWith("Bearer ")) {
@@ -369,22 +339,6 @@ router.post("/register-user", async (req, res) => {
       contactFilter = { userPhone: normalizedPhone };
     }
 
-    if (contactsCollection) {
-      await contactsCollection.insertOne({
-        sessionId: sessionId || null,
-        userName: normalizedName,
-        userPhone: normalizedPhone,
-        userEmail: normalizedEmail,
-        resin: resin || null,
-        problemType: problemType || null,
-        origin: normalizedOrigin,
-        source: normalizedOrigin,
-        status: 'pending',
-        createdAt: now,
-        updatedAt: now
-      });
-    }
-
     if (contactFilter) {
       await conversasCollection.updateOne(
         contactFilter,
@@ -407,12 +361,34 @@ router.post("/register-user", async (req, res) => {
       );
     }
 
+    if (contactsCollection) {
+      await contactsCollection.insertOne({
+        sessionId: sessionId || null,
+        userName: normalizedName,
+        userPhone: normalizedPhone,
+        userEmail: normalizedEmail,
+        resin: resin || null,
+        problemType: problemType || null,
+        origin: normalizedOrigin,
+        status: "pending",
+        createdAt: now,
+        updatedAt: now
+      });
+    }
+
     console.log(`[API] Usuario registrado: ${normalizedName} (${normalizedEmail})`);
 
     res.json({
       success: true,
       message: "Usuario registrado com sucesso",
-      user: { name: normalizedName, phone: normalizedPhone, email: normalizedEmail, resin, problemType, origin: normalizedOrigin }
+      user: {
+        name: normalizedName,
+        phone: normalizedPhone,
+        email: normalizedEmail,
+        resin,
+        problemType,
+        origin: normalizedOrigin
+      }
     });
   } catch (err) {
     console.error("[API] Erro ao registrar usuario:", err);
@@ -922,39 +898,79 @@ router.get("/gallery/all", async (req, res) => {
   }
 });
 
+
+const buildGalleryLookupQueries = (rawId) => {
+  const queries = [];
+  const seen = new Set();
+
+  const addQuery = (query) => {
+    const key = JSON.stringify(query);
+    if (!seen.has(key)) {
+      seen.add(key);
+      queries.push(query);
+    }
+  };
+
+  if (rawId) {
+    addQuery({ _id: rawId });
+    addQuery({ id: rawId });
+    addQuery({ legacyId: rawId });
+  }
+
+  if (rawId && ObjectId.isValid(rawId)) {
+    const objectId = new ObjectId(rawId);
+    addQuery({ _id: objectId });
+  }
+
+  return queries;
+};
+
+const findAndUpdateGalleryItem = async (collection, rawId, update) => {
+  for (const query of buildGalleryLookupQueries(rawId)) {
+    const result = await collection.findOneAndUpdate(
+      query,
+      update,
+      { returnDocument: "after" }
+    );
+    const value = result?.value || result;
+    if (value && (value._id || value.id || value.legacyId)) {
+      return value;
+    }
+  }
+  return null;
+};
+
+const findAndDeleteGalleryItem = async (collection, rawId) => {
+  for (const query of buildGalleryLookupQueries(rawId)) {
+    const result = await collection.findOneAndDelete(query);
+    const value = result?.value || result;
+    if (value && (value._id || value.id || value.legacyId)) {
+      return value;
+    }
+  }
+  return null;
+};
+
 // 🟢 CIRURGIA 1: ENSINANDO O SERVIDOR A EXCLUIR SEM ERRO 500
 router.put('/gallery/:id/approve', adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false });
+    if (!mongoReady) return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
 
     const collection = getCollection("gallery");
-    if (!collection) {
-      return res.status(503).json({ success: false, error: 'Coleção gallery indisponível' });
-    }
-    const rawId = req.params.id;
-    const id = ObjectId.isValid(rawId) ? new ObjectId(rawId) : rawId;
-    const filters = [
-      { _id: id },
-      { _id: rawId },
-      { id: rawId },
-      { legacyId: rawId }
-    ];
+    if (!collection) return res.status(503).json({ success: false, error: 'Coleção de galeria indisponível' });
 
-    let result = { matchedCount: 0 };
-    for (const filter of filters) {
-      result = await collection.updateOne(
-        filter,
-        { $set: { status: 'approved', approved: true, updatedAt: new Date() } }
-      );
-      if (result.matchedCount) break;
-    }
+    const updated = await findAndUpdateGalleryItem(
+      collection,
+      req.params.id,
+      { $set: { status: 'approved', approved: true, updatedAt: new Date() } }
+    );
 
-    if (!result.matchedCount) {
+    if (!updated) {
       return res.status(404).json({ success: false, error: 'Item não encontrado' });
     }
 
-    res.json({ success: true });
+    res.json({ success: true, item: buildGalleryResponse(updated) });
   } catch (err) {
     console.error('[API] Erro ao aprovar galeria:', err);
     res.status(500).json({ success: false, error: err.message });
@@ -964,32 +980,18 @@ router.put('/gallery/:id/approve', adminGuard(async (req, res) => {
 router.delete('/gallery/:id', adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false });
+    if (!mongoReady) return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
 
     const collection = getCollection("gallery");
-    if (!collection) {
-      return res.status(503).json({ success: false, error: 'Coleção gallery indisponível' });
-    }
-    const rawId = req.params.id;
-    const id = ObjectId.isValid(rawId) ? new ObjectId(rawId) : rawId;
-    const filters = [
-      { _id: id },
-      { _id: rawId },
-      { id: rawId },
-      { legacyId: rawId }
-    ];
+    if (!collection) return res.status(503).json({ success: false, error: 'Coleção de galeria indisponível' });
 
-    let result = { deletedCount: 0 };
-    for (const filter of filters) {
-      result = await collection.deleteOne(filter);
-      if (result.deletedCount) break;
-    }
+    const deleted = await findAndDeleteGalleryItem(collection, req.params.id);
 
-    if (!result.deletedCount) {
+    if (!deleted) {
       return res.status(404).json({ success: false, error: 'Item não encontrado' });
     }
 
-    res.json({ success: true });
+    res.json({ success: true, deletedId: deleted._id?.toString?.() || deleted.id || deleted.legacyId || req.params.id });
   } catch (err) {
     console.error('[API] Erro ao deletar galeria:', err);
     res.status(500).json({ success: false, error: err.message });
@@ -1019,24 +1021,30 @@ const listContacts = async (_req, res) => {
 
     const contactsCollection = getCollection('contacts');
     const conversasCollection = getConversasCollection();
-    const collection = contactsCollection || conversasCollection;
-    if (!collection) {
-      return res.status(503).json({ success: false, error: 'Coleção de contatos indisponível' });
+
+    let docs = [];
+    if (contactsCollection) {
+      docs = await contactsCollection
+        .find({})
+        .sort({ createdAt: -1, updatedAt: -1 })
+        .limit(1000)
+        .toArray();
     }
 
-    const docs = await collection
-      .find({
-        $or: [
-          { userName: { $exists: true, $ne: null } },
-          { userEmail: { $exists: true, $ne: null } },
-          { userPhone: { $exists: true, $ne: null } },
-          { origin: { $exists: true, $ne: null } },
-          { source: { $exists: true, $ne: null } }
-        ]
-      })
-      .sort({ createdAt: -1, updatedAt: -1 })
-      .limit(1000)
-      .toArray();
+    if ((!docs || docs.length === 0) && conversasCollection) {
+      docs = await conversasCollection
+        .find({
+          $or: [
+            { userName: { $exists: true, $ne: null } },
+            { userEmail: { $exists: true, $ne: null } },
+            { userPhone: { $exists: true, $ne: null } },
+            { origin: { $exists: true, $ne: null } }
+          ]
+        })
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .limit(500)
+        .toArray();
+    }
 
     return res.json({
       success: true,
@@ -1148,29 +1156,25 @@ const listDistinctResins = async (_req, res) => {
       ...(await collection.distinct("name"))
     ];
 
-    const resinNames = Array.from(
+    const resins = Array.from(
       new Set(
         distinctResins
           .filter((item) => typeof item === "string" && item.trim())
           .map((item) => item.trim())
       )
-    );
-
-    if (resinNames.length === 0) {
-      resinNames.push(...PUBLIC_RESIN_FALLBACK);
-    }
-
-    const resins = Array.from(new Set(resinNames))
+    )
       .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
       .map((name) => ({
         _id: name,
         id: name,
-        name
+        name,
+        label: name
       }));
 
     return res.json({
       success: true,
-      resins
+      resins,
+      total: resins.length
     });
   } catch (err) {
     console.error("[API] Erro ao listar resinas:", err);
@@ -1259,36 +1263,34 @@ const listDistinctPrinters = async (req, res) => {
     }
 
     const collection = getCollection("parametros");
-    const distinctPrinters = [
-      ...(await collection.distinct("model", filter)),
-      ...(await collection.distinct("printer", filter))
-    ];
+    const docs = await collection.find(filter).project({ brand: 1, model: 1, printer: 1, printerId: 1 }).toArray();
+    const seen = new Set();
+    const printers = [];
 
-    const printerNames = Array.from(
-      new Set(
-        distinctPrinters
-          .filter((item) => typeof item === "string" && item.trim())
-          .map((item) => item.trim())
-      )
-    );
-
-    if (printerNames.length === 0) {
-      printerNames.push(...PUBLIC_PRINTER_FALLBACK);
+    for (const item of docs) {
+      const model = (item.model || item.printer || "").trim();
+      if (!model) continue;
+      const brand = (item.brand || "").trim();
+      const label = [brand, model].filter(Boolean).join(" ").trim() || model;
+      if (seen.has(label.toLowerCase())) continue;
+      seen.add(label.toLowerCase());
+      printers.push({
+        _id: label,
+        id: label,
+        name: label,
+        label,
+        brand,
+        model,
+        printerId: item.printerId || label
+      });
     }
 
-    const printers = Array.from(new Set(printerNames))
-      .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
-      .map((name) => ({
-        _id: name,
-        id: name,
-        name,
-        model: name,
-        printerId: name
-      }));
+    printers.sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }));
 
     return res.json({
       success: true,
-      printers
+      printers,
+      total: printers.length
     });
   } catch (err) {
     console.error("[API] Erro ao listar impressoras:", err);
