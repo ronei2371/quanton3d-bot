@@ -1,35 +1,47 @@
 import express from "express";
-import fs from "fs";
-import fsPromises from "fs/promises";
 import jwt from "jsonwebtoken";
-import path from "path";
 import mongoose from "mongoose";
-import { fileURLToPath } from "url";
-import {
-  addDocument,
-  clearKnowledgeCollection
-} from "../../rag-search.js";
 import {
   getCollection,
   getDocumentsCollection,
   getPrintParametersCollection,
   isConnected
 } from "../../db.js";
+import { addDocument, clearKnowledgeCollection } from "../../rag-search.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, "../../");
 const escapeRegex = (value = "") => String(value).replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
 
-// ===== HELPER FUNCTIONS (inline para evitar dependências externas) =====
-const shouldInitMongo = () => {
-  return Boolean(process.env.MONGODB_URI);
-};
+const PUBLIC_RESIN_FALLBACK = [
+  'Athom Dental',
+  'Athom Washable',
+  'Poseidon',
+  'Pyroblast',
+  'Pyroblast+',
+  'Spin',
+  'Spin+',
+  'Spark',
+  'Iron',
+  'Iron 7030',
+  'Iron Skin',
+  'LowSmell',
+  'FlexForm',
+  'RPG',
+  'Alinhadores',
+  'Vulcan Cast'
+];
 
-const shouldInitRAG = () => {
-  return Boolean(process.env.OPENAI_API_KEY && process.env.MONGODB_URI);
-};
+const PUBLIC_PRINTER_FALLBACK = [
+  'Phrozen Sonic Mini 8K S',
+  'Elegoo Mars 3 Ultra',
+  'Elegoo Mars 5 Ultra',
+  'Elegoo Saturn 4 Ultra',
+  'Anycubic Photon Mono 2',
+  'Anycubic Photon Mono M5s Pro',
+  'Anycubic M3 Max'
+];
 
+const shouldInitMongo = () => Boolean(process.env.MONGODB_URI);
+const shouldInitRAG = () => Boolean(process.env.OPENAI_API_KEY && process.env.MONGODB_URI);
 const ensureMongoReady = async () => {
   try {
     return isConnected();
@@ -103,9 +115,7 @@ function requireAdmin(adminSecret, adminJwtSecret) {
         try {
           jwt.verify(token, secret);
           return next();
-        } catch (_err) {
-          // tenta próximo secret
-        }
+        } catch (_err) {}
       }
       return res.status(401).json({ success: false, error: "invalid_token" });
     }
@@ -139,10 +149,8 @@ function buildAdminRoutes(adminConfig = {}) {
     const providedUser = typeof user === 'string' && user.trim().length ? user.trim() : (typeof username === 'string' ? username.trim() : "");
 
     if (!process.env.ADMIN_PASSWORD) {
-      console.warn('[ADMIN] ⚠️ ADMIN_PASSWORD não configurada. Login retornará erro.');
       return res.status(401).json({ success: false, error: "ADMIN_PASSWORD ausente" });
     }
-
     if (!jwtSecret) {
       return res.status(500).json({ success: false, error: "ADMIN_JWT_SECRET ausente" });
     }
@@ -161,277 +169,91 @@ function buildAdminRoutes(adminConfig = {}) {
 
   router.post("/knowledge/import", adminGuard, async (req, res) => {
     try {
-      if (!shouldInitRAG()) {
-        return res.status(503).json({ success: false, error: "OPENAI_API_KEY ou MongoDB indisponível" });
-      }
+      if (!shouldInitRAG()) return res.status(503).json({ success: false, error: "OPENAI_API_KEY ou MongoDB indisponível" });
       const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-
-      const bodyIsEmpty = () => {
-        if (!req.body) return true;
-        if (typeof req.body === "string") return req.body.trim().length === 0;
-        if (Buffer.isBuffer(req.body)) return req.body.length === 0;
-        if (typeof req.body === "object") {
-          return Object.keys(req.body).length === 0;
-        }
-        return false;
-      };
-
-      let docsPayload = Array.isArray(req.body?.documents)
-        ? req.body.documents
-        : Array.isArray(req.body)
-          ? req.body
-          : null;
-
-      const normalizeEmbedding = (candidate) => {
-        if (!Array.isArray(candidate)) return null;
-        const numeric = candidate.map((value) => Number(value)).filter((value) => Number.isFinite(value));
-        return numeric.length > 0 ? numeric : null;
-      };
-
-      let collectionCleared = false;
-      const ensureCollectionCleared = async () => {
-        if (collectionCleared) return null;
-        const cleanupResult = await clearKnowledgeCollection();
-        collectionCleared = true;
-        console.log(`[IMPORT-KNOWLEDGE] Coleção limpa antes do import: ${cleanupResult.deleted} registros removidos.`);
-        return cleanupResult;
-      };
-
-      if (bodyIsEmpty() || !Array.isArray(docsPayload) || docsPayload.length === 0) {
-        const kbPath = path.join(rootDir, "kb_index.json");
-
-        try {
-          if (!fs.existsSync(kbPath)) {
-            return res.status(400).json({
-              success: false,
-              error: "Arquivo kb_index.json não encontrado e o corpo da requisição está vazio"
-            });
-          }
-
-          await ensureCollectionCleared();
-
-          const fileContent = await fsPromises.readFile(kbPath, "utf-8");
-          const sanitizedContent = fileContent.replace(/\s+$/u, "");
-          const parsed = JSON.parse(sanitizedContent);
-          const docsFromFile = Array.isArray(parsed)
-            ? parsed
-            : Array.isArray(parsed?.documents)
-              ? parsed.documents
-              : Array.isArray(parsed?.data)
-                ? parsed.data
-                : Object.values(parsed || {}).find(Array.isArray) || null;
-
-          if (!Array.isArray(docsFromFile) || docsFromFile.length === 0) {
-            return res.status(400).json({
-              success: false,
-              error: "Arquivo kb_index.json não contém um array de documentos válido"
-            });
-          }
-
-          docsPayload = docsFromFile;
-          console.log(`[IMPORT-KNOWLEDGE] Corpo vazio; usando kb_index.json com ${docsPayload.length} documentos.`);
-        } catch (err) {
-          console.error("[IMPORT-KNOWLEDGE] Falha ao carregar kb_index.json:", err);
-          return res.status(500).json({
-            success: false,
-            error: "Falha ao carregar kb_index.json ou arquivo inexistente"
-          });
-        }
-      }
-
-      if (!Array.isArray(docsPayload) || docsPayload.length === 0) {
-        return res.status(400).json({
-          success: false,
-          error: "Payload deve ser um array de documentos com title, content, tags e source opcional"
-        });
-      }
-
-      console.log(`[IMPORT-KNOWLEDGE] Recebidos ${docsPayload.length} documentos para importação`);
-
-      await ensureCollectionCleared();
-
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      const docsPayload = Array.isArray(req.body?.documents) ? req.body.documents : Array.isArray(req.body) ? req.body : [];
+      if (!docsPayload.length) return res.status(400).json({ success: false, error: "Payload deve conter documentos" });
+      await clearKnowledgeCollection();
       const imported = [];
       const errors = [];
-
-      for (let i = 0; i < docsPayload.length; i++) {
+      for (let i = 0; i < docsPayload.length; i += 1) {
         const item = docsPayload[i] || {};
         const title = String(item.title || "").trim();
         const content = String(item.content || "").trim();
-        const tags = Array.isArray(item.tags) ? item.tags : [];
-        const source = item.source || "admin_import";
-        const legacyId = item.id || item.legacyId || null;
-        const embedding = normalizeEmbedding(item.embedding);
-
         if (!title || !content) {
-          const error = "Título e conteúdo são obrigatórios";
-          errors.push({ index: i, title: title || "(sem título)", error });
-          console.warn(`[IMPORT-KNOWLEDGE] Documento ${i + 1} ignorado: ${error}`);
+          errors.push({ index: i, title: title || "(sem título)", error: "Título e conteúdo são obrigatórios" });
           continue;
         }
-
         try {
-          console.log(`[IMPORT-KNOWLEDGE] (${i + 1}/${docsPayload.length}) Importando: ${title}`);
-          if (Array.isArray(item.embedding) && !embedding) {
-            console.warn(`[IMPORT-KNOWLEDGE] Embedding inválido no documento ${i + 1}; será gerado automaticamente.`);
-          }
-
-          const result = await addDocument(
-            title,
-            content,
-            source,
-            tags,
-            {
-              legacyId,
-              upsert: Boolean(legacyId),
-              ...(embedding ? { embedding } : {})
-            }
-          );
-          imported.push({ index: i, title, documentId: result.documentId.toString() });
+          const result = await addDocument(title, content, item.source || "admin_import", Array.isArray(item.tags) ? item.tags : []);
+          imported.push({ index: i, title, documentId: result.documentId?.toString?.() || null });
         } catch (err) {
-          console.error(`[IMPORT-KNOWLEDGE] Falha ao importar "${title}": ${err.message}`);
           errors.push({ index: i, title, error: err.message });
         }
       }
-
-      console.log(`[IMPORT-KNOWLEDGE] Finalizado. Sucesso: ${imported.length}, Erros: ${errors.length}`);
-
-      res.json({
-        success: errors.length === 0,
-        imported: imported.length,
-        errors,
-        documents: imported
-      });
+      return res.json({ success: errors.length === 0, imported: imported.length, errors, documents: imported });
     } catch (err) {
       console.error("[IMPORT-KNOWLEDGE] Erro geral na importação:", err);
-      res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
   router.get("/knowledge/list", adminGuard, async (req, res) => {
     try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
       const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       const { tag, resin, printer, search } = req.query;
       const page = Math.max(parseInt(req.query.page) || 1, 1);
       const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
       const skip = (page - 1) * limit;
-
       const filters = {};
       const tagFilter = tag || resin || printer;
-      if (tagFilter) {
-        filters.tags = { $elemMatch: { $regex: tagFilter, $options: "i" } };
-      }
+      if (tagFilter) filters.tags = { $elemMatch: { $regex: tagFilter, $options: "i" } };
       if (search) {
         filters.$or = [
           { title: { $regex: search, $options: "i" } },
           { content: { $regex: search, $options: "i" } }
         ];
       }
-
       const collection = getDocumentsCollection();
       const total = await collection.countDocuments(filters);
-      const documents = await collection.find(
-        filters,
-        { projection: { title: 1, tags: 1, source: 1, createdAt: 1 } }
-      )
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .toArray();
-
-      console.log(`📚 [LIST-KNOWLEDGE] Filtros: tag=${tagFilter || "---"} | search=${search || "---"} | total=${total}`);
-
-      res.json({
-        success: true,
-        documents,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit) || 1
-        }
-      });
+      const documents = await collection.find(filters, { projection: { title: 1, tags: 1, source: 1, createdAt: 1 } }).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray();
+      return res.json({ success: true, documents, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 } });
     } catch (err) {
-      console.error("❌ [LIST-KNOWLEDGE] Erro ao listar conhecimento:", err);
-      res.status(500).json({ success: false, error: err.message });
+      console.error("❌ [ADMIN] Erro ao listar knowledge:", err);
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
-  // ===== ROTAS DE PARÂMETROS DE IMPRESSÃO =====
-
-  router.get("/params/resins", adminGuard, async (req, res) => {
+  // GET públicas para alimentar o site e o painel sem 401
+  router.get("/params/resins", async (_req, res) => {
     try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB URI não configurada" });
-      }
-
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB URI não configurada" });
       const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       const collection = getPrintParametersCollection();
-      if (!collection) {
-        return res.status(503).json({ success: false, error: "Coleção parâmetros indisponível" });
-      }
-      const resins = await collection
-        .aggregate([
-          {
-            $group: {
-              _id: {
-                $ifNull: ["$resinId", { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }]
-              },
-              name: {
-                $first: { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }
-              },
-              profiles: { $sum: 1 }
-            }
-          },
-          { $match: { name: { $ne: null } } },
-          { $sort: { name: 1 } }
-        ])
-        .toArray();
-
-      console.log(`✅ [ADMIN] Listando ${resins.length} resinas diretamente do MongoDB`);
-
-      res.json({
-        success: true,
-        resins: resins.map((item) => ({
-          _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
-          name: item.name || "Sem nome",
-          description: `Perfis cadastrados: ${item.profiles ?? 0}`,
-          profiles: item.profiles ?? 0,
-          active: true
-        })),
-        total: resins.length,
-        source: "mongo"
-      });
+      const distinctResins = collection ? [
+        ...(await collection.distinct("resinName")),
+        ...(await collection.distinct("resin")),
+        ...(await collection.distinct("name"))
+      ] : [];
+      const resinNames = Array.from(new Set(distinctResins.filter((item) => typeof item === 'string' && item.trim()).map((item) => item.trim())));
+      if (resinNames.length === 0) resinNames.push(...PUBLIC_RESIN_FALLBACK);
+      const resins = Array.from(new Set(resinNames)).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })).map((name) => ({ _id: name, id: name, name }));
+      return res.json({ success: true, resins, total: resins.length, source: "mongo" });
     } catch (err) {
       console.error('❌ [ADMIN] Erro ao listar resinas:', err);
       return res.status(500).json({ success: false, error: err.message });
     }
   });
 
-  router.get("/params/printers", adminGuard, async (req, res) => {
+  router.get("/params/printers", async (req, res) => {
     try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
       const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       const { resinId } = req.query;
       const filter = {};
       if (resinId) {
@@ -441,125 +263,122 @@ function buildAdminRoutes(adminConfig = {}) {
           { resinName: new RegExp(`^${escapeRegex(resinId)}$`, "i") }
         ];
       }
-
       const collection = getPrintParametersCollection();
-      const printers = await collection.aggregate([
-        { $match: filter },
-        {
-          $group: {
-            _id: { $ifNull: ["$printerId", "$printer"] },
-            brand: { $first: "$brand" },
-            model: { $first: { $ifNull: ["$model", "$printer"] } },
-            resinIds: { $addToSet: { $ifNull: ["$resinId", "$resin"] } },
-            printerId: { $first: { $ifNull: ["$printerId", "$printer"] } }
-          }
-        },
-        { $sort: { brand: 1, model: 1 } }
-      ]).toArray();
-
-      const mapped = printers.map((item) => ({
-        id: item.printerId || item._id,
-        printerId: item.printerId || item._id,
-        brand: item.brand || "",
-        model: item.model || item.printerId || item._id,
-        resinIds: item.resinIds?.filter(Boolean) || []
-      }));
-
-      res.json({ success: true, printers: mapped, matchingPrinters: resinId ? mapped : undefined });
+      const distinctPrinters = collection ? [
+        ...(await collection.distinct("model", filter)),
+        ...(await collection.distinct("printer", filter))
+      ] : [];
+      const printerNames = Array.from(new Set(distinctPrinters.filter((item) => typeof item === 'string' && item.trim()).map((item) => item.trim())));
+      if (printerNames.length === 0) printerNames.push(...PUBLIC_PRINTER_FALLBACK);
+      const printers = Array.from(new Set(printerNames)).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })).map((name) => ({ _id: name, id: name, name, model: name, printerId: name }));
+      return res.json({ success: true, printers, matchingPrinters: resinId ? printers : undefined });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao listar impressoras:", err);
-      res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  router.post("/params/resins", adminGuard, async (req, res) => {
+    try {
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      const { name } = req.body || {};
+      if (!name) return res.status(400).json({ success: false, message: 'Nome da resina é obrigatório' });
+      const trimmedName = name.trim();
+      const resinId = trimmedName.toLowerCase().replace(/\s+/g, '-');
+      const collection = getPrintParametersCollection();
+      if (!collection) return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      const existing = await collection.findOne({ $or: [
+        { resinId: new RegExp(`^${escapeRegex(resinId)}$`, 'i') },
+        { resinName: new RegExp(`^${escapeRegex(trimmedName)}$`, 'i') },
+        { resin: new RegExp(`^${escapeRegex(trimmedName)}$`, 'i') }
+      ]});
+      if (!existing) {
+        await collection.insertOne({ resinId, resinName: trimmedName, resin: trimmedName, brand: '', model: '', printerId: '', params: {}, parametros: {}, status: 'draft', createdAt: new Date(), updatedAt: new Date(), createdBy: 'admin_panel' });
+      }
+      return res.json({ success: true, message: 'Resina adicionada com sucesso', resin: { _id: resinId, id: resinId, name: trimmedName, active: true } });
+    } catch (err) {
+      console.error('❌ Erro ao adicionar resina:', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  router.delete("/params/resins/:id", adminGuard, async (req, res) => {
+    try {
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      const { id } = req.params;
+      const collection = getPrintParametersCollection();
+      if (!collection) return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      await collection.updateMany({ $or: [
+        { resinId: new RegExp(`^${escapeRegex(id)}$`, 'i') },
+        { resinName: new RegExp(`^${escapeRegex(id)}$`, 'i') },
+        { resin: new RegExp(`^${escapeRegex(id)}$`, 'i') }
+      ]}, { $set: { status: 'deleted', deletedAt: new Date(), updatedAt: new Date() } });
+      return res.json({ success: true, message: 'Resina deletada com sucesso' });
+    } catch (err) {
+      console.error('❌ Erro ao deletar resina:', err);
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
   router.post("/params/printers", adminGuard, async (req, res) => {
     try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
       const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       const { brand, model, printerName } = req.body || {};
       const trimmedBrand = (brand || "").trim();
       const trimmedModel = (model || printerName || "").trim();
-
-      if (!trimmedBrand || !trimmedModel) {
-        return res.status(400).json({ success: false, error: "Marca e modelo são obrigatórios" });
-      }
-
+      if (!trimmedBrand || !trimmedModel) return res.status(400).json({ success: false, error: "Marca e modelo são obrigatórios" });
       const printerId = `${trimmedBrand}-${trimmedModel}`.toLowerCase().replace(/[^a-z0-9-]+/g, '-');
       const collection = getPrintParametersCollection();
-      if (!collection) {
-        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
-      }
-
-      const existing = await collection.findOne({
-        $or: [
-          { printerId: new RegExp(`^${escapeRegex(printerId)}$`, 'i') },
-          { printer: new RegExp(`^${escapeRegex(trimmedModel)}$`, 'i') },
-          { model: new RegExp(`^${escapeRegex(trimmedModel)}$`, 'i') }
-        ]
-      });
-
-      if (existing) {
-        return res.status(409).json({ success: false, error: "Esta impressora já está cadastrada" });
-      }
-
-      const doc = {
-        printerId,
-        printer: trimmedModel,
-        brand: trimmedBrand,
-        model: trimmedModel,
-        resinId: null,
-        resinName: null,
-        resin: null,
-        status: 'draft',
-        params: {},
-        parametros: {},
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        createdBy: 'admin_panel'
-      };
-
-      await collection.insertOne(doc);
-
-      res.json({
-        success: true,
-        message: 'Impressora adicionada com sucesso',
-        printer: {
-          id: printerId,
-          printerId,
-          brand: trimmedBrand,
-          model: trimmedModel,
-          resinIds: []
-        }
-      });
+      if (!collection) return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      const existing = await collection.findOne({ $or: [
+        { printerId: new RegExp(`^${escapeRegex(printerId)}$`, 'i') },
+        { printer: new RegExp(`^${escapeRegex(trimmedModel)}$`, 'i') },
+        { model: new RegExp(`^${escapeRegex(trimmedModel)}$`, 'i') }
+      ]});
+      if (existing) return res.status(409).json({ success: false, error: "Esta impressora já está cadastrada" });
+      await collection.insertOne({ printerId, printer: trimmedModel, brand: trimmedBrand, model: trimmedModel, resinId: null, resinName: null, resin: null, status: 'draft', params: {}, parametros: {}, createdAt: new Date(), updatedAt: new Date(), createdBy: 'admin_panel' });
+      return res.json({ success: true, message: 'Impressora adicionada com sucesso', printer: { id: printerId, printerId, brand: trimmedBrand, model: trimmedModel, resinIds: [] } });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao criar impressora:", err);
-      res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  router.delete("/params/printers/:id", adminGuard, async (req, res) => {
+    try {
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      const { id } = req.params;
+      const collection = getPrintParametersCollection();
+      if (!collection) return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      await collection.updateMany({ $or: [
+        { printerId: new RegExp(`^${escapeRegex(id)}$`, 'i') },
+        { printer: new RegExp(`^${escapeRegex(id)}$`, 'i') },
+        { model: new RegExp(`^${escapeRegex(id)}$`, 'i') }
+      ]}, { $set: { status: 'deleted', deletedAt: new Date(), updatedAt: new Date() } });
+      return res.json({ success: true, message: 'Impressora deletada com sucesso' });
+    } catch (err) {
+      console.error('❌ Erro ao deletar impressora:', err);
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
   router.get("/params/profiles", adminGuard, async (req, res) => {
     try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
       const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       const { resinId, printerId, status } = req.query;
       const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
       const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200);
       const skip = (page - 1) * limit;
-
       const filter = {};
       if (resinId) {
         const re = new RegExp(`^${escapeRegex(resinId)}$`, "i");
@@ -576,68 +395,29 @@ function buildAdminRoutes(adminConfig = {}) {
         }
       }
       if (status) filter.status = status;
-
       const collection = getPrintParametersCollection();
       const total = await collection.countDocuments(filter);
       const docs = await collection.find(filter).sort({ updatedAt: -1, createdAt: -1 }).skip(skip).limit(limit).toArray();
-
-      res.json({
-        success: true,
-        total,
-        page,
-        limit,
-        profiles: docs.map(buildProfileResponse)
-      });
+      return res.json({ success: true, total, page, limit, profiles: docs.map(buildProfileResponse) });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao listar perfis:", err);
-      res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
   router.post("/params/profiles", adminGuard, async (req, res) => {
     try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
       const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-
-      const {
-        resinId,
-        resinName,
-        printerId,
-        printerName,
-        brand,
-        model,
-        status,
-        params
-      } = req.body || {};
-
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      const { resinId, resinName, printerId, printerName, brand, model, status, params } = req.body || {};
       const normalizedResinId = (resinId || resinName || '').trim();
       const normalizedPrinterId = (printerId || printerName || '').trim();
-
-      if (!normalizedResinId || !normalizedPrinterId) {
-        return res.status(400).json({ success: false, error: 'Resina e impressora são obrigatórias' });
-      }
-
+      if (!normalizedResinId || !normalizedPrinterId) return res.status(400).json({ success: false, error: 'Resina e impressora são obrigatórias' });
       const collection = getPrintParametersCollection();
-      if (!collection) {
-        return res.status(503).json({ success: false, error: 'MongoDB indisponível' });
-      }
-
-      const duplicate = await collection.findOne({
-        resinId: new RegExp(`^${escapeRegex(normalizedResinId)}$`, 'i'),
-        printerId: new RegExp(`^${escapeRegex(normalizedPrinterId)}$`, 'i'),
-        status: { $ne: 'deleted' }
-      });
-
-      if (duplicate) {
-        return res.status(409).json({ success: false, error: 'Já existe um perfil para esta resina e impressora' });
-      }
-
+      if (!collection) return res.status(503).json({ success: false, error: 'MongoDB indisponível' });
+      const duplicate = await collection.findOne({ resinId: new RegExp(`^${escapeRegex(normalizedResinId)}$`, 'i'), printerId: new RegExp(`^${escapeRegex(normalizedPrinterId)}$`, 'i'), status: { $ne: 'deleted' } });
+      if (duplicate) return res.status(409).json({ success: false, error: 'Já existe um perfil para esta resina e impressora' });
       const doc = {
         resinId: normalizedResinId,
         resinName: (resinName || resinId || '').trim() || normalizedResinId,
@@ -653,449 +433,150 @@ function buildAdminRoutes(adminConfig = {}) {
         updatedAt: new Date(),
         createdBy: 'admin_panel'
       };
-
       const result = await collection.insertOne(doc);
-
-      res.json({
-        success: true,
-        message: 'Perfil criado com sucesso',
-        profile: buildProfileResponse({ ...doc, _id: result.insertedId })
-      });
+      return res.json({ success: true, message: 'Perfil criado com sucesso', profile: buildProfileResponse({ ...doc, _id: result.insertedId }) });
     } catch (err) {
       console.error('❌ [ADMIN] Erro ao criar perfil:', err);
-      res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  router.patch("/params/profiles/:id", adminGuard, async (req, res) => {
+    try {
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      const { id } = req.params;
+      const { resinName, resinId, brand, model, status, params } = req.body ?? {};
+      const updateFields = { updatedAt: new Date() };
+      if (typeof resinName === "string" && resinName.trim()) { const trimmedName = resinName.trim(); updateFields.resinName = trimmedName; updateFields.resin = trimmedName; }
+      if (typeof resinId === "string" && resinId.trim()) updateFields.resinId = resinId.trim();
+      if (typeof brand === "string") updateFields.brand = brand.trim();
+      if (typeof model === "string") updateFields.model = model.trim();
+      if (typeof status === "string" && status.trim()) updateFields.status = status.trim();
+      if (params && typeof params === "object") { updateFields.params = params; updateFields.parametros = params; }
+      const collection = getPrintParametersCollection();
+      if (!collection) return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      const query = mongoose.Types.ObjectId.isValid(id) ? { _id: new mongoose.Types.ObjectId(id) } : { _id: id };
+      const result = await collection.updateOne(query, { $set: updateFields });
+      if (!result.matchedCount) return res.status(404).json({ success: false, error: "Perfil não encontrado" });
+      return res.json({ success: true, message: "Perfil atualizado com sucesso" });
+    } catch (err) {
+      console.error("❌ [ADMIN] Erro ao atualizar perfil:", err);
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
   router.get("/params/stats", adminGuard, async (_req, res) => {
     try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
       const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       const collection = getPrintParametersCollection();
-      const activeProfileFilter = {
-        status: { $nin: ["deleted", "test"] },
-        isTest: { $ne: true }
-      };
-
+      const activeProfileFilter = { status: { $nin: ["deleted", "test"] }, isTest: { $ne: true } };
       const [resinAgg, printerAgg, total, comingSoon] = await Promise.all([
         collection.distinct("resinId"),
         collection.distinct("printerId"),
         collection.countDocuments(activeProfileFilter),
         collection.countDocuments({ ...activeProfileFilter, status: "coming_soon" })
       ]);
-
-      res.json({
-        success: true,
-        stats: {
-          totalResins: resinAgg.filter(Boolean).length,
-          totalPrinters: printerAgg.filter(Boolean).length,
-          totalProfiles: total,
-          comingSoonProfiles: comingSoon
-        }
-      });
+      return res.json({ success: true, stats: { totalResins: resinAgg.filter(Boolean).length, totalPrinters: printerAgg.filter(Boolean).length, totalProfiles: total, comingSoonProfiles: comingSoon } });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao obter estatísticas:", err);
-      res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
-  router.post("/params/resins", adminGuard, async (req, res) => {
-    try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-
-      const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-
-      const { name } = req.body;
-      
-      if (!name) {
-        return res.status(400).json({ success: false, message: 'Nome da resina é obrigatório' });
-      }
-
-      const trimmedName = name.trim();
-      const resinId = trimmedName.toLowerCase().replace(/\s+/g, '-');
-      const collection = getPrintParametersCollection();
-
-      if (!collection) {
-        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
-      }
-
-      const existing = await collection.findOne({
-        $or: [
-          { resinId: new RegExp(`^${escapeRegex(resinId)}$`, 'i') },
-          { resinName: new RegExp(`^${escapeRegex(trimmedName)}$`, 'i') },
-          { resin: new RegExp(`^${escapeRegex(trimmedName)}$`, 'i') }
-        ]
-      });
-
-      if (!existing) {
-        await collection.insertOne({
-          resinId,
-          resinName: trimmedName,
-          resin: trimmedName,
-          brand: '',
-          model: '',
-          printerId: '',
-          params: {},
-          parametros: {},
-          status: 'draft',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          createdBy: 'admin_panel'
-        });
-      }
-      
-      console.log(`✅ Nova resina adicionada em parametros: ${trimmedName}`);
-      
-      res.json({
-        success: true,
-        message: 'Resina adicionada com sucesso',
-        resin: {
-          _id: resinId,
-          name: trimmedName,
-          active: true
-        }
-      });
-    } catch (err) {
-      console.error('❌ Erro ao adicionar resina:', err);
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  router.delete("/params/resins/:id", adminGuard, async (req, res) => {
-    try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-
-      const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-
-      const { id } = req.params;
-      const collection = getPrintParametersCollection();
-      if (!collection) {
-        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
-      }
-
-      await collection.updateMany(
-        {
-          $or: [
-            { resinId: new RegExp(`^${escapeRegex(id)}$`, 'i') },
-            { resinName: new RegExp(`^${escapeRegex(id)}$`, 'i') },
-            { resin: new RegExp(`^${escapeRegex(id)}$`, 'i') }
-          ]
-        },
-        {
-          $set: {
-            status: 'deleted',
-            deletedAt: new Date(),
-            updatedAt: new Date()
-          }
-        }
-      );
-      
-      console.log(`✅ Resina deletada: ${id}`);
-      
-      res.json({
-        success: true,
-        message: 'Resina deletada com sucesso'
-      });
-    } catch (err) {
-      console.error('❌ Erro ao deletar resina:', err);
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  router.patch("/params/profiles/:id", adminGuard, async (req, res) => {
-    try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-
-      const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-
-      const { id } = req.params;
-      const {
-        resinName,
-        resinId,
-        brand,
-        model,
-        status,
-        params
-      } = req.body ?? {};
-
-      const updateFields = { updatedAt: new Date() };
-
-      if (typeof resinName === "string" && resinName.trim()) {
-        const trimmedName = resinName.trim();
-        updateFields.resinName = trimmedName;
-        updateFields.resin = trimmedName;
-      }
-
-      if (typeof resinId === "string" && resinId.trim()) {
-        updateFields.resinId = resinId.trim();
-      }
-
-      if (typeof brand === "string") {
-        updateFields.brand = brand.trim();
-      }
-
-      if (typeof model === "string") {
-        updateFields.model = model.trim();
-      }
-
-      if (typeof status === "string" && status.trim()) {
-        updateFields.status = status.trim();
-      }
-
-      if (params && typeof params === "object") {
-        updateFields.params = params;
-        updateFields.parametros = params;
-      }
-
-      const collection = getPrintParametersCollection();
-      if (!collection) {
-        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
-      }
-      const query = mongoose.Types.ObjectId.isValid(id)
-        ? { _id: new mongoose.Types.ObjectId(id) }
-        : { _id: id };
-
-      const result = await collection.updateOne(query, { $set: updateFields });
-      if (!result.matchedCount) {
-        return res.status(404).json({ success: false, error: "Perfil não encontrado" });
-      }
-
-      res.json({
-        success: true,
-        message: "Perfil atualizado com sucesso"
-      });
-    } catch (err) {
-      console.error("❌ [ADMIN] Erro ao atualizar perfil:", err);
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  router.get("/metrics", adminGuard, async (req, res, next) => {
+  router.get("/metrics", adminGuard, async (req, _res, next) => {
     req.url = "/metrics/resins";
     return next();
   });
 
   router.get("/metrics/resins", adminGuard, async (_req, res) => {
     try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
       const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       const collection = getPrintParametersCollection();
-      if (!collection) {
-        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
-      }
-      const categories = await collection
-        .aggregate([
-          {
-            $group: {
-              _id: {
-                $ifNull: ["$resinCategory", { $ifNull: ["$resinType", { $ifNull: ["$resinName", "$resin"] }] }]
-              },
-              name: {
-                $first: { $ifNull: ["$resinCategory", { $ifNull: ["$resinType", { $ifNull: ["$resinName", "$resin"] }] }] }
-              },
-              count: { $sum: 1 }
-            }
-          },
-          { $match: { name: { $ne: null } } },
-          { $sort: { count: -1 } }
-        ])
-        .toArray();
-
-      res.json({
-        success: true,
-        categories: categories.map((item) => ({
-          name: item.name,
-          count: item.count ?? 0
-        }))
-      });
+      if (!collection) return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      const categories = await collection.aggregate([
+        { $group: { _id: { $ifNull: ["$resinCategory", { $ifNull: ["$resinType", { $ifNull: ["$resinName", "$resin"] }] }] }, name: { $first: { $ifNull: ["$resinCategory", { $ifNull: ["$resinType", { $ifNull: ["$resinName", "$resin"] }] }] } }, count: { $sum: 1 } } },
+        { $match: { name: { $ne: null } } },
+        { $sort: { count: -1 } }
+      ]).toArray();
+      return res.json({ success: true, categories: categories.map((item) => ({ name: item.name, count: item.count ?? 0 })) });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao obter métricas de resinas:", err);
-      res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
   router.get("/clients", adminGuard, async (_req, res) => {
     try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
       const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       const collection = getCollection("users");
-      if (!collection) {
-        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
-      }
-
-      const clients = await collection
-        .find({})
-        .sort({ createdAt: -1 })
-        .limit(200)
-        .toArray();
-
-      res.json({
-        success: true,
-        clients: clients.map((client) => ({
-          id: client._id?.toString?.(),
-          name: client.name || client.fullName || client.companyName || "Cliente",
-          email: client.email || client.contactEmail || null,
-          phone: client.phone || client.contactPhone || null,
-          createdAt: client.createdAt || client.created || null
-        }))
-      });
+      if (!collection) return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      const clients = await collection.find({}).sort({ createdAt: -1 }).limit(200).toArray();
+      return res.json({ success: true, clients: clients.map((client) => ({ id: client._id?.toString?.(), name: client.name || client.fullName || client.companyName || "Cliente", email: client.email || client.contactEmail || null, phone: client.phone || client.contactPhone || null, createdAt: client.createdAt || client.created || null })) });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao listar clientes:", err);
-      res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
   router.get("/conversations", adminGuard, async (_req, res) => {
     try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
       const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       const collection = getCollection("conversas");
-      if (!collection) {
-        return res.status(503).json({ success: false, error: "MongoDB indisponível" });
-      }
-
-      const conversations = await collection
-        .find({})
-        .sort({ createdAt: -1 })
-        .limit(50)
-        .toArray();
-
-      res.json({
-        success: true,
-        conversations: conversations.map((item) => ({
-          id: item._id?.toString?.(),
-          user: item.userName || item.user || item.client || "Usuário",
-          prompt: item.userMessage || item.question || item.prompt || "",
-          response: item.botResponse || item.answer || item.response || "",
-          createdAt: item.createdAt || item.timestamp || null
-        }))
-      });
+      if (!collection) return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      const conversations = await collection.find({}).sort({ createdAt: -1 }).limit(50).toArray();
+      return res.json({ success: true, conversations: conversations.map((item) => ({ id: item._id?.toString?.(), user: item.userName || item.user || item.client || "Usuário", prompt: item.userMessage || item.question || item.prompt || "", response: item.botResponse || item.answer || item.response || "", createdAt: item.createdAt || item.timestamp || null })) });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao listar conversas:", err);
-      res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
-  // ===== ROTAS DE MENSAGENS E FORMULAÇÕES =====
   router.get("/messages", adminGuard, async (_req, res) => {
     try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB off" });
-      }
-      
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB off" });
       const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-      
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       const contactsCollection = getCollection("contacts");
       const fallbackCollection = getCollection("messages");
-
-      if (!contactsCollection && !fallbackCollection) {
-        return res.json({ success: true, messages: [] });
-      }
-
+      if (!contactsCollection && !fallbackCollection) return res.json({ success: true, messages: [] });
       let messages = [];
-      if (contactsCollection) {
-        messages = await contactsCollection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
-      }
-
+      if (contactsCollection) messages = await contactsCollection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
       if ((!messages || messages.length === 0) && fallbackCollection && fallbackCollection !== contactsCollection) {
         messages = await fallbackCollection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
       }
-      
-      console.log(`✅ [ADMIN] Listando ${messages.length} mensagens de contato`);
-      
-      res.json({
-        success: true,
-        messages: messages.map(msg => ({
-          id: msg._id?.toString(),
-          name: msg.name || msg.nome,
-          email: msg.email,
-          phone: msg.phone || msg.telefone,
-          message: msg.message || msg.mensagem,
-          date: msg.createdAt || msg.data
-        }))
-      });
+      return res.json({ success: true, messages: messages.map((msg) => ({ id: msg._id?.toString(), name: msg.name || msg.userName || msg.nome, email: msg.email || msg.userEmail, phone: msg.phone || msg.userPhone || msg.telefone, message: msg.message || msg.mensagem || msg.problemType, date: msg.createdAt || msg.data })) });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao buscar mensagens:", err);
-      res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
   router.get("/formulations", adminGuard, async (_req, res) => {
     try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB off" });
-      }
-      
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB off" });
       const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
       const sources = [
         { name: "custom_requests", filter: {} },
         { name: "formulacoes", filter: {} },
         { name: "orders", filter: { type: "custom_request" } }
       ];
-
       const seenIds = new Set();
       const aggregated = [];
-
       for (const { name, filter } of sources) {
         const collection = getCollection(name);
         if (!collection) continue;
-
-        const docs = await collection
-          .find(filter)
-          .sort({ createdAt: -1, _id: -1 })
-          .limit(100)
-          .toArray();
-
+        const docs = await collection.find(filter).sort({ createdAt: -1, _id: -1 }).limit(100).toArray();
         for (const doc of docs) {
           const docId = doc._id?.toString?.() ?? `${name}-${aggregated.length}`;
           if (seenIds.has(docId)) continue;
@@ -1103,447 +584,19 @@ function buildAdminRoutes(adminConfig = {}) {
           aggregated.push({ ...doc, __source: name });
           if (aggregated.length >= 100) break;
         }
-
         if (aggregated.length >= 100) break;
       }
-      
-      if (aggregated.length === 0) {
-        return res.json({ success: true, formulations: [] });
-      }
-
-      console.log(`✅ [ADMIN] Listando ${aggregated.length} solicitações de formulações`);
-
       const normalizeRequest = (req) => {
         const createdAt = req.createdAt || req.date || req.updatedAt || req.timestamp || req._id?.getTimestamp?.();
         const phone = req.phone || req.telefone || req.whatsapp || req.customerPhone || null;
         const color = req.color || req.cor || null;
         const details = req.details || req.description || req.desiredFeature || req.caracteristica || req.message || req.notes || null;
-
-        return {
-          id: req._id?.toString?.(),
-          source: req.__source,
-          name: req.name || req.nome || req.customerName || req.userName || "Cliente",
-          email: req.email || req.customerEmail || req.userEmail || null,
-          phone,
-          color,
-          desiredFeature: req.desiredFeature || req.caracteristica || null,
-          details,
-          description: details,
-          status: req.status || "Pendente",
-          createdAt,
-          date: createdAt
-        };
+        return { id: req._id?.toString?.(), source: req.__source, name: req.name || req.nome || req.customerName || req.userName || "Cliente", email: req.email || req.customerEmail || req.userEmail || null, phone, color, desiredFeature: req.desiredFeature || req.caracteristica || null, details, description: details, status: req.status || "Pendente", createdAt, date: createdAt };
       };
-      
-      res.json({
-        success: true,
-        formulations: aggregated.map(normalizeRequest)
-      });
+      return res.json({ success: true, formulations: aggregated.map(normalizeRequest) });
     } catch (err) {
       console.error("❌ [ADMIN] Erro ao buscar formulações:", err);
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  // ===== ROTAS DE CONHECIMENTO VISUAL (GALERIA) =====
-  router.get("/visual-knowledge", async (_req, res) => {
-    try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-      
-      const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-      
-      const collection = getCollection("visual_knowledge") || getCollection("gallery");
-      if (!collection) {
-        return res.json({ success: true, documents: [] });
-      }
-      
-      const docs = await collection.find({
-        $or: [
-          { approved: true },
-          { status: 'approved' }
-        ]
-      }).sort({ createdAt: -1 }).limit(100).toArray();
-      
-      console.log(`✅ [ADMIN] Listando ${docs.length} documentos visuais aprovados`);
-      
-      const mapped = docs.map(doc => ({
-          _id: doc._id?.toString(),
-          imageUrl: doc.imageUrl || doc.image,
-          defectType: doc.defectType || doc.tipo,
-          diagnosis: doc.diagnosis || doc.diagnostico,
-          solution: doc.solution || doc.solucao,
-          createdAt: doc.createdAt
-        }));
-
-      res.json({
-        success: true,
-        documents: mapped,
-        items: mapped
-      });
-    } catch (err) {
-      console.error("❌ [ADMIN] Erro ao buscar conhecimento visual:", err);
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  router.get("/visual-knowledge/pending", async (_req, res) => {
-    try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-      
-      const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-      
-      const collection =
-        getCollection("visual_knowledge_pending")
-        || getCollection("gallery_pending")
-        || getCollection("gallery");
-      if (!collection) {
-        return res.json({ success: true, pending: [] });
-      }
-      
-      const pending = await collection.find({
-        $or: [
-          { approved: false },
-          { approved: { $exists: false } },
-          { status: 'pending' }
-        ]
-      }).sort({ createdAt: -1 }).toArray();
-      
-      console.log(`✅ [ADMIN] Listando ${pending.length} fotos pendentes`);
-      
-      res.json({
-        success: true,
-        pending: pending.map(item => ({
-          _id: item._id?.toString(),
-          imageUrl: item.imageUrl || item.image || (Array.isArray(item.images) ? item.images[0] : null),
-          images: Array.isArray(item.images) ? item.images : [],
-          userName: item.userName || item.user || item.name,
-          resin: item.resin || null,
-          printer: item.printer || null,
-          settings: item.settings || {},
-          note: item.note || null,
-          createdAt: item.createdAt || null
-        }))
-      });
-    } catch (err) {
-      console.error("❌ [ADMIN] Erro ao buscar fotos pendentes:", err);
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  router.post("/visual-knowledge/:id/approve", adminGuard, async (req, res) => {
-    try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-      
-      const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-      
-      const { id } = req.params;
-      const { defectType, diagnosis, solution } = req.body;
-      
-      const pendingCollection =
-        getCollection("visual_knowledge_pending")
-        || getCollection("gallery_pending")
-        || getCollection("gallery");
-      const approvedCollection = getCollection("visual_knowledge") || getCollection("gallery");
-      
-      if (!pendingCollection || !approvedCollection) {
-        return res.status(503).json({ success: false, error: "Coleções não disponíveis" });
-      }
-      
-      const pendingDoc = await pendingCollection.findOne({ 
-        _id: mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id 
-      });
-      
-      if (!pendingDoc) {
-        return res.status(404).json({ success: false, error: "Foto não encontrada" });
-      }
-      
-      if (pendingCollection === approvedCollection) {
-        await approvedCollection.updateOne(
-          { _id: pendingDoc._id },
-          {
-            $set: {
-              approved: true,
-              status: "approved",
-              approvedAt: new Date(),
-              defectType: defectType || pendingDoc.defectType || pendingDoc.title || null,
-              diagnosis: diagnosis || pendingDoc.diagnosis || null,
-              solution: solution || pendingDoc.solution || null,
-              updatedAt: new Date()
-            }
-          }
-        );
-      } else {
-        await approvedCollection.insertOne({
-          imageUrl: pendingDoc.imageUrl || pendingDoc.image || (Array.isArray(pendingDoc.images) ? pendingDoc.images[0] : null),
-          images: Array.isArray(pendingDoc.images) ? pendingDoc.images : [],
-          defectType: defectType || pendingDoc.defectType || pendingDoc.title || null,
-          diagnosis: diagnosis || pendingDoc.diagnosis || null,
-          solution: solution || pendingDoc.solution || null,
-          approved: true,
-          status: "approved",
-          approvedAt: new Date(),
-          resin: pendingDoc.resin || null,
-          printer: pendingDoc.printer || null,
-          settings: pendingDoc.settings || {},
-          note: pendingDoc.note || null,
-          createdAt: pendingDoc.createdAt || new Date(),
-          updatedAt: new Date()
-        });
-        
-        await pendingCollection.deleteOne({ _id: pendingDoc._id });
-      }
-      
-      console.log(`✅ [ADMIN] Foto ${id} aprovada e movida para galeria`);
-      
-      res.json({ success: true, message: "Foto aprovada com sucesso" });
-    } catch (err) {
-      console.error("❌ [ADMIN] Erro ao aprovar foto:", err);
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  router.delete("/visual-knowledge/:id", adminGuard, async (req, res) => {
-    try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-      
-      const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-      
-      const { id } = req.params;
-      const collection = getCollection("visual_knowledge") || getCollection("visual_knowledge_pending");
-      
-      if (!collection) {
-        return res.status(503).json({ success: false, error: "Coleção não disponível" });
-      }
-      
-      await collection.deleteOne({ 
-        _id: mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id 
-      });
-      
-      console.log(`✅ [ADMIN] Foto ${id} deletada`);
-      
-      res.json({ success: true, message: "Foto deletada com sucesso" });
-    } catch (err) {
-      console.error("❌ [ADMIN] Erro ao deletar foto:", err);
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  // ===== ROTAS DE SUGESTÕES =====
-  router.get("/suggestions", async (_req, res) => {
-    try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-      
-      const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-      
-      const sources = [
-        getCollection("sugestoes"),
-        getCollection("suggestions")
-      ].filter(Boolean);
-
-      if (!sources.length) {
-        return res.json({ success: true, suggestions: [] });
-      }
-
-      const rawLists = await Promise.all(
-        sources.map((collection) => collection.find({}).sort({ createdAt: -1 }).limit(100).toArray())
-      );
-
-      const deduped = new Map();
-      rawLists.flat().forEach((entry) => {
-        const key = entry._id?.toString?.() || entry.id || entry.odIdLegacy || `${entry.userName}-${entry.createdAt}`;
-        if (!deduped.has(key)) {
-          deduped.set(key, entry);
-        }
-      });
-
-      const normalizeSuggestion = (sug) => {
-        const attachments = Array.isArray(sug.attachments) ? sug.attachments.filter(Boolean) : [];
-        const timestamp = sug.createdAt || sug.date || sug.timestamp || sug.updatedAt || new Date();
-
-        return {
-          _id: sug._id?.toString?.(),
-          id: sug._id?.toString?.() || sug.id || sug.odIdLegacy || null,
-          suggestion: sug.suggestion || sug.content || sug.descricao || '',
-          userName: sug.userName || sug.name || 'Usuário do site',
-          userPhone: sug.userPhone || sug.phone || null,
-          userEmail: sug.userEmail || sug.email || null,
-          lastUserMessage: sug.lastUserMessage || sug.question || null,
-          lastBotReply: sug.lastBotReply || sug.answer || null,
-          attachments,
-          history: sug.history || null,
-          source: sug.source || 'user',
-          status: sug.status || 'pending',
-          timestamp,
-          createdAt: timestamp,
-          approvedAt: sug.approvedAt || null,
-          rejectedAt: sug.rejectedAt || null,
-          rejectionReason: sug.rejectionReason || null
-        };
-      };
-
-      const normalized = Array.from(deduped.values())
-        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-        .slice(0, 100)
-        .map(normalizeSuggestion);
-      
-      console.log(`✅ [ADMIN] Listando ${normalized.length} sugestões`);
-      
-      res.json({
-        success: true,
-        suggestions: normalized
-      });
-    } catch (err) {
-      console.error("❌ [ADMIN] Erro ao buscar sugestões:", err);
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  router.post("/suggest-knowledge", async (req, res) => {
-    try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-      
-      const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-      
-      const { title, content, tags, source } = req.body;
-      
-      if (!title || !content) {
-        return res.status(400).json({ success: false, error: "Título e conteúdo são obrigatórios" });
-      }
-      
-      const collection = getCollection("sugestoes");
-      if (!collection) {
-        return res.status(503).json({ success: false, error: "Coleção não disponível" });
-      }
-      
-      const result = await collection.insertOne({
-        title,
-        content,
-        tags: tags || [],
-        source: source || 'user',
-        status: 'pending',
-        createdAt: new Date()
-      });
-      
-      console.log(`✅ [ADMIN] Nova sugestão criada: ${title}`);
-      
-      res.json({
-        success: true,
-        message: "Sugestão enviada com sucesso!",
-        suggestionId: result.insertedId.toString()
-      });
-    } catch (err) {
-      console.error("❌ [ADMIN] Erro ao criar sugestão:", err);
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  router.post("/suggestions/:id/approve", adminGuard, async (req, res) => {
-    try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-      
-      const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-      
-      const { id } = req.params;
-      const collection = getCollection("sugestoes");
-      
-      if (!collection) {
-        return res.status(503).json({ success: false, error: "Coleção não disponível" });
-      }
-      
-      const suggestion = await collection.findOne({
-        _id: mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id
-      });
-      
-      if (!suggestion) {
-        return res.status(404).json({ success: false, error: "Sugestão não encontrada" });
-      }
-      
-      // Adiciona ao conhecimento
-      await addDocument(
-        suggestion.title,
-        suggestion.content,
-        'user_suggestion',
-        suggestion.tags || []
-      );
-      
-      // Atualiza status
-      await collection.updateOne(
-        { _id: suggestion._id },
-        { $set: { status: 'approved', approvedAt: new Date() } }
-      );
-      
-      console.log(`✅ [ADMIN] Sugestão ${id} aprovada e adicionada ao conhecimento`);
-      
-      res.json({ success: true, message: "Sugestão aprovada com sucesso" });
-    } catch (err) {
-      console.error("❌ [ADMIN] Erro ao aprovar sugestão:", err);
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  router.delete("/suggestions/:id", adminGuard, async (req, res) => {
-    try {
-      if (!shouldInitMongo()) {
-        return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      }
-      
-      const mongoReady = await ensureMongoReady();
-      if (!mongoReady) {
-        return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-      }
-      
-      const { id } = req.params;
-      const collection = getCollection("sugestoes");
-      
-      if (!collection) {
-        return res.status(503).json({ success: false, error: "Coleção não disponível" });
-      }
-      
-      await collection.deleteOne({
-        _id: mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id
-      });
-      
-      console.log(`✅ [ADMIN] Sugestão ${id} deletada`);
-      
-      res.json({ success: true, message: "Sugestão deletada com sucesso" });
-    } catch (err) {
-      console.error("❌ [ADMIN] Erro ao deletar sugestão:", err);
-      res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
