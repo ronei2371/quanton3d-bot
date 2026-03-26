@@ -19,26 +19,23 @@ const app = express()
 const PORT = process.env.PORT || 10000
 const MONGODB_URI = process.env.MONGODB_URI || ''
 
-// ==========================================================
-// CORS - PERMITE O FRONTEND
-// ==========================================================
 const allowedOrigins = [
   'https://quanton3dia.onrender.com',
   'http://localhost:5173',
   'https://quanton3d-bot-v2.onrender.com',
   'http://localhost:3000',
   'http://localhost:10000'
-];
+]
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
+      if (!origin) return callback(null, true)
       if (allowedOrigins.includes(origin)) {
-        callback(null, true);
+        callback(null, true)
       } else {
-        console.log(`⚠️ Origem bloqueada: ${origin}`);
-        callback(null, true); // Mantém compatibilidade com clientes legados
+        console.log(`⚠️ Origem bloqueada: ${origin}`)
+        callback(null, true)
       }
     },
     credentials: true,
@@ -48,10 +45,7 @@ app.use(
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
-// ==========================================================
-// HEALTH CHECK
-// ==========================================================
-app.get('/health', async (req, res) => {
+app.get('/health', async (_req, res) => {
   try {
     const dbStatus = isConnected?.() ? 'connected' : 'disconnected'
     res.json({
@@ -65,10 +59,7 @@ app.get('/health', async (req, res) => {
   }
 })
 
-// ==========================================================
-// MÉTRICAS
-// ==========================================================
-app.get('/health/metrics', (req, res) => {
+app.get('/health/metrics', (_req, res) => {
   res.json({
     success: true,
     metrics: metrics.getStats(),
@@ -76,51 +67,41 @@ app.get('/health/metrics', (req, res) => {
   })
 })
 
-// ==========================================================
-// AUTENTICAÇÃO (SEM VALIDAÇÃO PARA PAINEL ANTIGO)
-// ==========================================================
 app.use('/auth', authRoutes)
 
 // ==========================================================
-// ROTAS ADMIN - PAINEL ANTIGO (SEM /api/)
+// PONTES PÚBLICAS PRIORITÁRIAS
+// Essas rotas precisam ficar ANTES do adminRoutes em /api
+// para evitar 401 nas caixas de resinas e impressoras do site.
 // ==========================================================
-const adminRoutes = buildAdminRoutes()
-
-// Compatibilidade: painel antigo (/admin/*) e frontend novo (/api/*)
-app.use('/admin', adminRoutes)
-app.use('/api', adminRoutes)
-
-// ==========================================================
-// ROTAS DA API
-// ==========================================================
-app.use('/api', apiRoutes)
-app.use('/api', suggestionsRoutes)
-
-// 🔄 PONTE DEFINITIVA (Consertando o erro <!doctype html> de vez)
-// O Codex mudou as rotas, então pegamos as chamadas antigas pela mão e levamos ao destino certo:
+app.get('/api/resins', (req, res, next) => { req.url = '/resins'; apiRoutes(req, res, next) })
+app.get('/api/params/resins', (req, res, next) => { req.url = '/params/resins'; apiRoutes(req, res, next) })
 app.get('/resins', (req, res, next) => { req.url = '/resins'; apiRoutes(req, res, next) })
 app.get('/params/resins', (req, res, next) => { req.url = '/params/resins'; apiRoutes(req, res, next) })
 
-app.get('/params/printers', (req, res, next) => { req.url = '/printers'; apiRoutes(req, res, next) })
-app.get('/api/params/printers', (req, res, next) => { req.url = '/printers'; apiRoutes(req, res, next) })
+app.get('/api/printers', (req, res, next) => { req.url = '/printers'; apiRoutes(req, res, next) })
+app.get('/api/params/printers', (req, res, next) => { req.url = '/params/printers'; apiRoutes(req, res, next) })
+app.get('/printers', (req, res, next) => { req.url = '/printers'; apiRoutes(req, res, next) })
+app.get('/params/printers', (req, res, next) => { req.url = '/params/printers'; apiRoutes(req, res, next) })
 
 app.get('/params/profiles', (req, res, next) => { req.url = '/profiles'; apiRoutes(req, res, next) })
 app.get('/api/params/profiles', (req, res, next) => { req.url = '/profiles'; apiRoutes(req, res, next) })
 
-// ==========================================================
-// ROTAS DO CHAT
-// ==========================================================
+const adminRoutes = buildAdminRoutes()
+app.use('/admin', adminRoutes)
+app.use('/api', adminRoutes)
+
+app.use('/api', apiRoutes)
+app.use('/api', suggestionsRoutes)
+
 app.use('/api', chatRoutes)
 app.use('/chat', chatRoutes)
 
-// ==========================================================
-// FRONTEND
-// ==========================================================
 const distPath = path.join(__dirname, 'dist')
 const adminPanelPath = path.join(__dirname, 'public', 'params-panel.html')
 app.use(express.static(distPath))
 
-app.get(['/admin', '/admin/'], (req, res) => {
+app.get(['/admin', '/admin/'], (_req, res) => {
   res.sendFile(adminPanelPath, (err) => {
     if (err) {
       res.sendFile(path.join(distPath, 'index.html'))
@@ -139,9 +120,6 @@ app.get('*', (req, res) => {
   })
 })
 
-// ==========================================================
-// INICIALIZAÇÃO
-// ==========================================================
 const startServer = async () => {
   try {
     console.log('\n🚀 INICIANDO QUANTON3D BOT...\n')
@@ -162,22 +140,22 @@ const startServer = async () => {
 
     try {
       if (isConnected()) {
-        await initializeRAG();
-        console.log('[INIT] ✅ RAG inicializado');
+        await initializeRAG()
+        console.log('[INIT] ✅ RAG inicializado')
 
-        const ragStatus = await checkRAGIntegrity();
+        const ragStatus = await checkRAGIntegrity()
         if (!ragStatus?.isValid || ragStatus.totalDocuments === 0) {
-          console.log('[INIT] ⚠️ Base de conhecimento vazia ou com embeddings faltando. Importando kb_index.json...');
+          console.log('[INIT] ⚠️ Base de conhecimento vazia ou com embeddings faltando. Importando kb_index.json...')
           try {
-            const bootstrapResult = await bootstrapKnowledgeFromFile();
-            console.log(`[INIT] 🔄 Bootstrap RAG: inseridos ${bootstrapResult.inserted || 0}, erros ${bootstrapResult.errors || 0}`);
+            const bootstrapResult = await bootstrapKnowledgeFromFile()
+            console.log(`[INIT] 🔄 Bootstrap RAG: inseridos ${bootstrapResult.inserted || 0}, erros ${bootstrapResult.errors || 0}`)
           } catch (bootstrapError) {
-            console.error('[INIT] ⚠️ Falha ao importar conhecimento local:', bootstrapError.message);
+            console.error('[INIT] ⚠️ Falha ao importar conhecimento local:', bootstrapError.message)
           }
         }
       }
     } catch (error) {
-      console.error('[INIT] ⚠️ RAG não disponível (continuando sem RAG)', error);
+      console.error('[INIT] ⚠️ RAG não disponível (continuando sem RAG)', error)
     }
 
     console.log('\n✨ Serviços prontos!\n')
@@ -194,7 +172,6 @@ const startServer = async () => {
       console.log(`🤖 Chat: /api/ask`)
       console.log('═══════════════════════════════════════════════\n')
     })
-
   } catch (error) {
     console.error('\n❌ ERRO FATAL:', error)
     process.exit(1)
