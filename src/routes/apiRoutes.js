@@ -306,14 +306,14 @@ const extractSettingsFromBody = (body = {}) => {
 router.post("/register-user", async (req, res) => {
   try {
     const { name, phone, email, resin, problemType, sessionId, origin, source } = req.body;
-
+    
     if (!name || !phone || !email) {
       return res.status(400).json({
         success: false,
         error: "Nome, telefone e email sao obrigatorios"
       });
     }
-
+    
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
       return res.status(503).json({
@@ -321,74 +321,32 @@ router.post("/register-user", async (req, res) => {
         error: "Banco de dados indisponivel"
       });
     }
-
-    const conversasCollection = getConversasCollection();
-    const contactsCollection = getCollection("contacts");
-    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : email;
-    const normalizedPhone = typeof phone === "string" ? phone.trim() : phone;
-    const normalizedName = typeof name === "string" ? name.trim() : name;
-    const normalizedOrigin = origin || source || 'Direto';
-    const now = new Date();
-
-    let contactFilter = null;
+    
     if (sessionId) {
-      contactFilter = { sessionId };
-    } else if (normalizedEmail) {
-      contactFilter = { userEmail: normalizedEmail };
-    } else if (normalizedPhone) {
-      contactFilter = { userPhone: normalizedPhone };
-    }
-
-    if (contactFilter) {
+      const conversasCollection = getConversasCollection(); 
       await conversasCollection.updateOne(
-        contactFilter,
+        { sessionId },
         {
           $set: {
-            sessionId: sessionId || null,
-            userName: normalizedName,
-            userPhone: normalizedPhone,
-            userEmail: normalizedEmail,
+            userName: name,
+            userPhone: phone,
+            userEmail: email,
             resin: resin || null,
             problemType: problemType || null,
-            origin: normalizedOrigin,
-            updatedAt: now
-          },
-          $setOnInsert: {
-            createdAt: now
+            origin: origin || source || 'Direto', // GRAVANDO O "COMO NOS CONHECEU" AQUI
+            updatedAt: new Date()
           }
         },
         { upsert: true }
       );
     }
-
-    if (contactsCollection) {
-      await contactsCollection.insertOne({
-        sessionId: sessionId || null,
-        userName: normalizedName,
-        userPhone: normalizedPhone,
-        userEmail: normalizedEmail,
-        resin: resin || null,
-        problemType: problemType || null,
-        origin: normalizedOrigin,
-        status: "pending",
-        createdAt: now,
-        updatedAt: now
-      });
-    }
-
-    console.log(`[API] Usuario registrado: ${normalizedName} (${normalizedEmail})`);
-
+    
+    console.log(`[API] Usuario registrado: ${name} (${email})`);
+    
     res.json({
       success: true,
       message: "Usuario registrado com sucesso",
-      user: {
-        name: normalizedName,
-        phone: normalizedPhone,
-        email: normalizedEmail,
-        resin,
-        problemType,
-        origin: normalizedOrigin
-      }
+      user: { name, phone, email, resin, problemType }
     });
   } catch (err) {
     console.error("[API] Erro ao registrar usuario:", err);
@@ -695,16 +653,11 @@ router.post("/gallery", upload.any(), async (req, res) => {
     }
 
     const galleryCollection = getCollection("gallery");
-    const finalSettings = {
-      ...extractSettingsFromBody(req.body),
-      ...parseGallerySettings(settings)
-    };
-
     const newEntry = {
       name: name?.trim() || null,
       resin: sanitizedResin,
       printer: printer.trim(),
-      settings: finalSettings,
+      settings: parseGallerySettings(settings),
       contact: contact?.trim() || null,
       images: finalImages,
       note: note?.trim() || null,
@@ -787,13 +740,24 @@ router.post("/suggest-knowledge", async (req, res) => {
   }
 });
 
+const mergeGallerySettings = (doc = {}) => ({
+  ...(doc.settings || {}),
+  ...(doc.layerHeightMm !== undefined ? { layerHeightMm: doc.layerHeightMm } : {}),
+  ...(doc.exposureTimeS !== undefined ? { exposureTimeS: doc.exposureTimeS } : {}),
+  ...(doc.baseExposureTimeS !== undefined ? { baseExposureTimeS: doc.baseExposureTimeS } : {}),
+  ...(doc.baseLayers !== undefined ? { baseLayers: doc.baseLayers } : {})
+});
+
 const buildGalleryResponse = (doc) => ({
-  id: doc._id?.toString?.(),
-  name: doc.name ?? null,
+  id: doc._id?.toString?.() || doc.id || doc.legacyId || null,
+  _id: doc._id?.toString?.() || doc.id || doc.legacyId || null,
+  name: doc.name ?? doc.userName ?? null,
+  contact: doc.contact ?? doc.userPhone ?? doc.userEmail ?? null,
   resin: doc.resin ?? null,
   printer: doc.printer ?? null,
-  settings: doc.settings ?? {},
-  images: Array.isArray(doc.images) ? doc.images : [],
+  imageUrl: Array.isArray(doc.images) ? (doc.images[0] || null) : (doc.imageUrl || doc.image || null),
+  settings: mergeGallerySettings(doc),
+  images: Array.isArray(doc.images) ? doc.images : (doc.imageUrl || doc.image ? [doc.imageUrl || doc.image] : []),
   note: doc.note ?? null,
   status: doc.status ?? "pending",
   createdAt: doc.createdAt ?? null,
@@ -869,7 +833,7 @@ router.get("/gallery/all", async (req, res) => {
 
     const { page, limit, skip } = normalizeGalleryPagination(req);
     const galleryCollection = getCollection("gallery");
-    const filter = {};
+    const filter = { status: { $ne: "deleted" } };
 
     const cursor = galleryCollection.find(filter, {
       sort: { createdAt: -1 },
@@ -898,54 +862,63 @@ router.get("/gallery/all", async (req, res) => {
   }
 });
 
-
 const buildGalleryLookupQueries = (rawId) => {
   const queries = [];
   const seen = new Set();
-
-  const addQuery = (query) => {
-    const key = JSON.stringify(query);
+  const push = (query) => {
+    const key = JSON.stringify(query, (_, value) => (value && value._bsontype === 'ObjectId' ? value.toString() : value));
     if (!seen.has(key)) {
       seen.add(key);
       queries.push(query);
     }
   };
-
   if (rawId) {
-    addQuery({ _id: rawId });
-    addQuery({ id: rawId });
-    addQuery({ legacyId: rawId });
+    push({ _id: rawId });
+    push({ id: rawId });
+    push({ legacyId: rawId });
   }
-
   if (rawId && ObjectId.isValid(rawId)) {
-    const objectId = new ObjectId(rawId);
-    addQuery({ _id: objectId });
+    push({ _id: new ObjectId(rawId) });
   }
-
   return queries;
 };
 
-const findAndUpdateGalleryItem = async (collection, rawId, update) => {
-  for (const query of buildGalleryLookupQueries(rawId)) {
-    const result = await collection.findOneAndUpdate(
-      query,
-      update,
-      { returnDocument: "after" }
-    );
-    const value = result?.value || result;
-    if (value && (value._id || value.id || value.legacyId)) {
-      return value;
+const getGalleryCollections = () => {
+  const candidates = [
+    getCollection('gallery'),
+    getCollection('visual_knowledge'),
+    getCollection('gallery_pending'),
+    getCollection('visual_knowledge_pending'),
+    typeof getVisualKnowledgeCollection === 'function' ? getVisualKnowledgeCollection() : null
+  ].filter(Boolean);
+  return Array.from(new Set(candidates));
+};
+
+const updateGalleryAcrossCollections = async (rawId, update) => {
+  for (const collection of getGalleryCollections()) {
+    for (const query of buildGalleryLookupQueries(rawId)) {
+      const result = await collection.findOneAndUpdate(query, update, { returnDocument: 'after' });
+      const doc = result?.value || result;
+      if (doc && (doc._id || doc.id || doc.legacyId)) return doc;
     }
   }
   return null;
 };
 
-const findAndDeleteGalleryItem = async (collection, rawId) => {
-  for (const query of buildGalleryLookupQueries(rawId)) {
-    const result = await collection.findOneAndDelete(query);
-    const value = result?.value || result;
-    if (value && (value._id || value.id || value.legacyId)) {
-      return value;
+const deleteGalleryAcrossCollections = async (rawId) => {
+  for (const collection of getGalleryCollections()) {
+    for (const query of buildGalleryLookupQueries(rawId)) {
+      const deleted = await collection.findOneAndDelete(query);
+      const doc = deleted?.value || deleted;
+      if (doc && (doc._id || doc.id || doc.legacyId)) return { mode: 'deleted', doc };
+
+      const updated = await collection.findOneAndUpdate(
+        query,
+        { $set: { status: 'deleted', approved: false, deletedAt: new Date(), updatedAt: new Date() } },
+        { returnDocument: 'after' }
+      );
+      const softDoc = updated?.value || updated;
+      if (softDoc && (softDoc._id || softDoc.id || softDoc.legacyId)) return { mode: 'soft-deleted', doc: softDoc };
     }
   }
   return null;
@@ -957,11 +930,7 @@ router.put('/gallery/:id/approve', adminGuard(async (req, res) => {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
 
-    const collection = getCollection("gallery");
-    if (!collection) return res.status(503).json({ success: false, error: 'Coleção de galeria indisponível' });
-
-    const updated = await findAndUpdateGalleryItem(
-      collection,
+    const updated = await updateGalleryAcrossCollections(
       req.params.id,
       { $set: { status: 'approved', approved: true, updatedAt: new Date() } }
     );
@@ -982,81 +951,21 @@ router.delete('/gallery/:id', adminGuard(async (req, res) => {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
 
-    const collection = getCollection("gallery");
-    if (!collection) return res.status(503).json({ success: false, error: 'Coleção de galeria indisponível' });
-
-    const deleted = await findAndDeleteGalleryItem(collection, req.params.id);
-
+    const deleted = await deleteGalleryAcrossCollections(req.params.id);
     if (!deleted) {
       return res.status(404).json({ success: false, error: 'Item não encontrado' });
     }
 
-    res.json({ success: true, deletedId: deleted._id?.toString?.() || deleted.id || deleted.legacyId || req.params.id });
+    res.json({
+      success: true,
+      mode: deleted.mode,
+      deletedId: deleted.doc?._id?.toString?.() || deleted.doc?.id || deleted.doc?.legacyId || req.params.id
+    });
   } catch (err) {
     console.error('[API] Erro ao deletar galeria:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 }));
-
-const buildContactResponse = (doc = {}) => ({
-  id: doc._id?.toString?.() || doc.id || doc.legacyId || null,
-  name: doc.userName || doc.name || doc.customerName || null,
-  phone: doc.userPhone || doc.phone || null,
-  email: doc.userEmail || doc.email || null,
-  resin: doc.resin || null,
-  problemType: doc.problemType || null,
-  origin: doc.origin || doc.source || 'Direto',
-  status: doc.status || 'pending',
-  sessionId: doc.sessionId || null,
-  createdAt: doc.createdAt || null,
-  updatedAt: doc.updatedAt || null
-});
-
-const listContacts = async (_req, res) => {
-  try {
-    const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
-    }
-
-    const contactsCollection = getCollection('contacts');
-    const conversasCollection = getConversasCollection();
-
-    let docs = [];
-    if (contactsCollection) {
-      docs = await contactsCollection
-        .find({})
-        .sort({ createdAt: -1, updatedAt: -1 })
-        .limit(1000)
-        .toArray();
-    }
-
-    if ((!docs || docs.length === 0) && conversasCollection) {
-      docs = await conversasCollection
-        .find({
-          $or: [
-            { userName: { $exists: true, $ne: null } },
-            { userEmail: { $exists: true, $ne: null } },
-            { userPhone: { $exists: true, $ne: null } },
-            { origin: { $exists: true, $ne: null } }
-          ]
-        })
-        .sort({ updatedAt: -1, createdAt: -1 })
-        .limit(500)
-        .toArray();
-    }
-
-    return res.json({
-      success: true,
-      contacts: docs.map(buildContactResponse)
-    });
-  } catch (err) {
-    console.error('[API] Erro ao listar contatos:', err);
-    return res.status(500).json({ success: false, error: 'Erro ao listar contatos' });
-  }
-};
-
-router.get('/contacts', adminGuard(listContacts));
 
 function normalizeParams(params = {}) {
   const root = params ?? {};
@@ -1142,7 +1051,7 @@ async function listParamResins() {
   return { resins };
 }
 
-const listDistinctResins = async (_req, res) => {
+router.get("/params/resins", async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
@@ -1150,40 +1059,50 @@ const listDistinctResins = async (_req, res) => {
     }
 
     const collection = getCollection("parametros");
-    const distinctResins = [
-      ...(await collection.distinct("resinName")),
-      ...(await collection.distinct("resin")),
-      ...(await collection.distinct("name"))
-    ];
-
-    const resins = Array.from(
-      new Set(
-        distinctResins
-          .filter((item) => typeof item === "string" && item.trim())
-          .map((item) => item.trim())
-      )
-    )
+    const distinctResins = await collection.distinct("resinName");
+    const resins = distinctResins
+      .filter((item) => typeof item === "string" && item.trim())
+      .map((item) => item.trim())
       .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
       .map((name) => ({
         _id: name,
-        id: name,
-        name,
-        label: name
+        name
       }));
 
-    return res.json({
+    res.json({
       success: true,
-      resins,
-      total: resins.length
+      resins
+    });
+  } catch (err) {
+    console.error("[API] Erro ao listar resinas de parâmetros:", err);
+    res.status(500).json({ success: false, error: "Erro ao listar resinas" });
+  }
+});
+
+router.get("/resins", async (_req, res) => {
+  try {
+    const result = await listParamResins();
+    if (result.error) {
+      return res.status(result.error.status).json(result.error.body);
+    }
+
+    const resins = result.resins || [];
+
+    res.json({
+      success: true,
+      resins: resins.map((item) => ({
+        _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
+        name: item.name || "Sem nome",
+        description: `Perfis: ${item.profiles ?? 0}`,
+        profiles: item.profiles ?? 0,
+        active: true
+      }))
     });
   } catch (err) {
     console.error("[API] Erro ao listar resinas:", err);
-    return res.status(500).json({ success: false, error: "Erro ao listar resinas" });
+    res.status(500).json({ success: false, error: "Erro ao listar resinas" });
   }
-};
-
-router.get("/params/resins", listDistinctResins);
-router.get("/resins", listDistinctResins);
+});
 
 router.get("/docs/fispqs", (_req, res) => {
   res.json({
@@ -1246,7 +1165,7 @@ const listPrinters = async (req, res) => {
   }
 };
 
-const listDistinctPrinters = async (req, res) => {
+router.get("/params/printers", async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
@@ -1263,43 +1182,26 @@ const listDistinctPrinters = async (req, res) => {
     }
 
     const collection = getCollection("parametros");
-    const docs = await collection.find(filter).project({ brand: 1, model: 1, printer: 1, printerId: 1 }).toArray();
-    const seen = new Set();
-    const printers = [];
-
-    for (const item of docs) {
-      const model = (item.model || item.printer || "").trim();
-      if (!model) continue;
-      const brand = (item.brand || "").trim();
-      const label = [brand, model].filter(Boolean).join(" ").trim() || model;
-      if (seen.has(label.toLowerCase())) continue;
-      seen.add(label.toLowerCase());
-      printers.push({
-        _id: label,
-        id: label,
-        name: label,
-        label,
-        brand,
-        model,
-        printerId: item.printerId || label
-      });
-    }
-
-    printers.sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }));
+    const distinctPrinters = await collection.distinct("model", filter);
+    const printers = distinctPrinters
+      .filter((item) => typeof item === "string" && item.trim())
+      .map((item) => item.trim())
+      .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
+      .map((name) => ({
+        _id: name,
+        name
+      }));
 
     return res.json({
       success: true,
-      printers,
-      total: printers.length
+      printers
     });
   } catch (err) {
     console.error("[API] Erro ao listar impressoras:", err);
     return res.status(500).json({ success: false, error: "Erro ao listar impressoras" });
   }
-};
-
-router.get("/params/printers", listDistinctPrinters);
-router.get("/printers", listDistinctPrinters);
+});
+router.get("/printers", listPrinters);
 router.post("/params/printers", async (req, res) => {
   req.query = { ...(req.query || {}), ...(req.body || {}) };
   return listPrinters(req, res);
