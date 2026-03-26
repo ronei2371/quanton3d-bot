@@ -77,25 +77,33 @@ app.use('/auth', authRoutes)
 app.get('/api/resins', (req, res, next) => { req.url = '/resins'; apiRoutes(req, res, next) })
 app.get('/api/params/resins', (req, res, next) => { req.url = '/params/resins'; apiRoutes(req, res, next) })
 app.get('/resins', (req, res, next) => { req.url = '/resins'; apiRoutes(req, res, next) })
+app.get('/api/resins', (req, res, next) => { req.url = '/resins'; apiRoutes(req, res, next) })
 app.get('/params/resins', (req, res, next) => { req.url = '/params/resins'; apiRoutes(req, res, next) })
+app.get('/api/params/resins', (req, res, next) => { req.url = '/params/resins'; apiRoutes(req, res, next) })
 
-app.get('/api/printers', (req, res, next) => { req.url = '/printers'; apiRoutes(req, res, next) })
-app.get('/api/params/printers', (req, res, next) => { req.url = '/params/printers'; apiRoutes(req, res, next) })
 app.get('/printers', (req, res, next) => { req.url = '/printers'; apiRoutes(req, res, next) })
+app.get('/api/printers', (req, res, next) => { req.url = '/printers'; apiRoutes(req, res, next) })
 app.get('/params/printers', (req, res, next) => { req.url = '/params/printers'; apiRoutes(req, res, next) })
+app.get('/api/params/printers', (req, res, next) => { req.url = '/params/printers'; apiRoutes(req, res, next) })
 
-app.get('/params/profiles', (req, res, next) => { req.url = '/profiles'; apiRoutes(req, res, next) })
-app.get('/api/params/profiles', (req, res, next) => { req.url = '/profiles'; apiRoutes(req, res, next) })
+app.get('/profiles', (req, res, next) => { req.url = '/profiles'; apiRoutes(req, res, next) })
+app.get('/api/profiles', (req, res, next) => { req.url = '/profiles'; apiRoutes(req, res, next) })
+app.get('/params/profiles', (req, res, next) => { req.url = '/params/profiles'; apiRoutes(req, res, next) })
+app.get('/api/params/profiles', (req, res, next) => { req.url = '/params/profiles'; apiRoutes(req, res, next) })
 
 const adminRoutes = buildAdminRoutes()
 app.use('/admin', adminRoutes)
-app.use('/api', adminRoutes)
 
+// Rotas públicas primeiro para evitar 401 indevido em /api/params/*
 app.use('/api', apiRoutes)
 app.use('/api', suggestionsRoutes)
 
+// Rotas admin continuam disponíveis em /api para o painel, mas vêm depois das públicas
+app.use('/api', adminRoutes)
+
 app.use('/api', chatRoutes)
 app.use('/chat', chatRoutes)
+
 
 const distPath = path.join(__dirname, 'dist')
 const adminPanelPath = path.join(__dirname, 'public', 'params-panel.html')
