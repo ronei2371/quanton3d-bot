@@ -31,6 +31,36 @@ const FISPQ_DOCUMENTS = [
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
 const ADMIN_SECRET = process.env.ADMIN_SECRET || process.env.VITE_ADMIN_API_TOKEN;
 
+
+const PUBLIC_RESIN_FALLBACK = [
+  'Athom Dental',
+  'Athom Washable',
+  'Poseidon',
+  'Pyroblast',
+  'Pyroblast+',
+  'Spin',
+  'Spin+',
+  'Spark',
+  'Iron',
+  'Iron 7030',
+  'Iron Skin',
+  'LowSmell',
+  'FlexForm',
+  'RPG',
+  'Alinhadores',
+  'Vulcan Cast'
+];
+
+const PUBLIC_PRINTER_FALLBACK = [
+  'Phrozen Sonic Mini 8K S',
+  'Elegoo Mars 3 Ultra',
+  'Elegoo Mars 5 Ultra',
+  'Elegoo Saturn 4 Ultra',
+  'Anycubic Photon Mono 2',
+  'Anycubic Photon Mono M5s Pro',
+  'Anycubic M3 Max'
+];
+
 const isAdminRequest = (req) => {
   const authHeader = req.headers.authorization || "";
   if (authHeader.startsWith("Bearer ")) {
@@ -323,10 +353,12 @@ router.post("/register-user", async (req, res) => {
     }
 
     const conversasCollection = getConversasCollection();
+    const contactsCollection = getCollection("contacts");
     const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : email;
     const normalizedPhone = typeof phone === "string" ? phone.trim() : phone;
     const normalizedName = typeof name === "string" ? name.trim() : name;
     const normalizedOrigin = origin || source || 'Direto';
+    const now = new Date();
 
     let contactFilter = null;
     if (sessionId) {
@@ -335,6 +367,22 @@ router.post("/register-user", async (req, res) => {
       contactFilter = { userEmail: normalizedEmail };
     } else if (normalizedPhone) {
       contactFilter = { userPhone: normalizedPhone };
+    }
+
+    if (contactsCollection) {
+      await contactsCollection.insertOne({
+        sessionId: sessionId || null,
+        userName: normalizedName,
+        userPhone: normalizedPhone,
+        userEmail: normalizedEmail,
+        resin: resin || null,
+        problemType: problemType || null,
+        origin: normalizedOrigin,
+        source: normalizedOrigin,
+        status: 'pending',
+        createdAt: now,
+        updatedAt: now
+      });
     }
 
     if (contactFilter) {
@@ -349,10 +397,10 @@ router.post("/register-user", async (req, res) => {
             resin: resin || null,
             problemType: problemType || null,
             origin: normalizedOrigin,
-            updatedAt: new Date()
+            updatedAt: now
           },
           $setOnInsert: {
-            createdAt: new Date()
+            createdAt: now
           }
         },
         { upsert: true }
@@ -881,19 +929,25 @@ router.put('/gallery/:id/approve', adminGuard(async (req, res) => {
     if (!mongoReady) return res.status(503).json({ success: false });
 
     const collection = getCollection("gallery");
+    if (!collection) {
+      return res.status(503).json({ success: false, error: 'Coleção gallery indisponível' });
+    }
     const rawId = req.params.id;
     const id = ObjectId.isValid(rawId) ? new ObjectId(rawId) : rawId;
-
-    let result = await collection.updateOne(
+    const filters = [
       { _id: id },
-      { $set: { status: 'approved', approved: true, updatedAt: new Date() } }
-    );
+      { _id: rawId },
+      { id: rawId },
+      { legacyId: rawId }
+    ];
 
-    if (!result.matchedCount && id !== rawId) {
+    let result = { matchedCount: 0 };
+    for (const filter of filters) {
       result = await collection.updateOne(
-        { _id: rawId },
+        filter,
         { $set: { status: 'approved', approved: true, updatedAt: new Date() } }
       );
+      if (result.matchedCount) break;
     }
 
     if (!result.matchedCount) {
@@ -913,12 +967,22 @@ router.delete('/gallery/:id', adminGuard(async (req, res) => {
     if (!mongoReady) return res.status(503).json({ success: false });
 
     const collection = getCollection("gallery");
+    if (!collection) {
+      return res.status(503).json({ success: false, error: 'Coleção gallery indisponível' });
+    }
     const rawId = req.params.id;
     const id = ObjectId.isValid(rawId) ? new ObjectId(rawId) : rawId;
+    const filters = [
+      { _id: id },
+      { _id: rawId },
+      { id: rawId },
+      { legacyId: rawId }
+    ];
 
-    let result = await collection.deleteOne({ _id: id });
-    if (!result.deletedCount && id !== rawId) {
-      result = await collection.deleteOne({ _id: rawId });
+    let result = { deletedCount: 0 };
+    for (const filter of filters) {
+      result = await collection.deleteOne(filter);
+      if (result.deletedCount) break;
     }
 
     if (!result.deletedCount) {
@@ -953,22 +1017,25 @@ const listContacts = async (_req, res) => {
       return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
     }
 
+    const contactsCollection = getCollection('contacts');
     const conversasCollection = getConversasCollection();
-    if (!conversasCollection) {
+    const collection = contactsCollection || conversasCollection;
+    if (!collection) {
       return res.status(503).json({ success: false, error: 'Coleção de contatos indisponível' });
     }
 
-    const docs = await conversasCollection
+    const docs = await collection
       .find({
         $or: [
           { userName: { $exists: true, $ne: null } },
           { userEmail: { $exists: true, $ne: null } },
           { userPhone: { $exists: true, $ne: null } },
-          { origin: { $exists: true, $ne: null } }
+          { origin: { $exists: true, $ne: null } },
+          { source: { $exists: true, $ne: null } }
         ]
       })
-      .sort({ updatedAt: -1, createdAt: -1 })
-      .limit(500)
+      .sort({ createdAt: -1, updatedAt: -1 })
+      .limit(1000)
       .toArray();
 
     return res.json({
@@ -1081,16 +1148,23 @@ const listDistinctResins = async (_req, res) => {
       ...(await collection.distinct("name"))
     ];
 
-    const resins = Array.from(
+    const resinNames = Array.from(
       new Set(
         distinctResins
           .filter((item) => typeof item === "string" && item.trim())
           .map((item) => item.trim())
       )
-    )
+    );
+
+    if (resinNames.length === 0) {
+      resinNames.push(...PUBLIC_RESIN_FALLBACK);
+    }
+
+    const resins = Array.from(new Set(resinNames))
       .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
       .map((name) => ({
         _id: name,
+        id: name,
         name
       }));
 
@@ -1190,17 +1264,26 @@ const listDistinctPrinters = async (req, res) => {
       ...(await collection.distinct("printer", filter))
     ];
 
-    const printers = Array.from(
+    const printerNames = Array.from(
       new Set(
         distinctPrinters
           .filter((item) => typeof item === "string" && item.trim())
           .map((item) => item.trim())
       )
-    )
+    );
+
+    if (printerNames.length === 0) {
+      printerNames.push(...PUBLIC_PRINTER_FALLBACK);
+    }
+
+    const printers = Array.from(new Set(printerNames))
       .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
       .map((name) => ({
         _id: name,
-        name
+        id: name,
+        name,
+        model: name,
+        printerId: name
       }));
 
     return res.json({
