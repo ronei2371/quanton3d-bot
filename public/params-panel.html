@@ -354,6 +354,9 @@
           <h1>Painel Administrativo Quanton3D</h1>
           <p>Gestão centralizada dos módulos CRM, RAG e parâmetros.</p>
         </div>
+
+        <div class="stats" id="stats" aria-live="polite"></div>
+
         <div style="display: flex; gap: 10px;">
           <a href="https://quanton3dia.onrender.com" class="btn secondary" style="text-decoration: none; display: flex; align-items: center;">⬅ Voltar ao Site</a>
           <button id="logout-btn" class="btn" style="background: var(--danger);">🔒 Sair</button>
@@ -365,7 +368,6 @@
         <button class="btn secondary" data-tab="messages" type="button">Mensagens</button>
         <button class="btn secondary" data-tab="formulations" type="button">Formulações</button>
       </div>
-      <section class="stats" id="stats" aria-live="polite"></section>
 
       <section class="tab-panel active" id="params-panel">
         <section class="filters">
@@ -422,6 +424,12 @@
       </section>
 
       <section class="tab-panel" id="messages-panel">
+        <div class="actions-bar">
+          <div>Mensagens recebidas</div>
+          <div>
+            <button class="btn" id="messages-refresh-button" type="button">Atualizar</button>
+          </div>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -440,6 +448,12 @@
       </section>
 
       <section class="tab-panel" id="formulations-panel">
+        <div class="actions-bar">
+          <div>Solicitações de formulação</div>
+          <div>
+            <button class="btn" id="formulations-refresh-button" type="button">Atualizar</button>
+          </div>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -517,23 +531,24 @@
           headers
         });
       };
+
       const state = {
         resins: [],
         printers: [],
         profiles: [],
         messages: [],
         formulations: [],
-        activeTab: "params",
         page: 1,
         limit: null,
         total: 0,
+        activeTab: "params",
         tabsLoaded: {
           messages: false,
           formulations: false
         }
       };
 
-      const tabs = Array.from(document.querySelectorAll(".tabs .btn"));
+      const tabs = Array.from(document.querySelectorAll(".tabs .btn[data-tab]"));
       const tabPanels = Array.from(document.querySelectorAll(".tab-panel"));
       const resinSelect = document.getElementById("resin-select");
       const printerSelect = document.getElementById("printer-select");
@@ -543,6 +558,7 @@
       const countInfo = document.getElementById("count-info");
       const emptyState = document.getElementById("empty-state");
       const pagination = document.getElementById("pagination");
+      const statsContainer = document.getElementById("stats");
       const knowledgeTitle = document.getElementById("knowledge-title");
       const knowledgeContent = document.getElementById("knowledge-content");
       const knowledgeStatus = document.getElementById("knowledge-status");
@@ -550,6 +566,8 @@
       const messagesEmpty = document.getElementById("messages-empty");
       const formulationsBody = document.getElementById("formulations-body");
       const formulationsEmpty = document.getElementById("formulations-empty");
+      const messagesRefreshButton = document.getElementById("messages-refresh-button");
+      const formulationsRefreshButton = document.getElementById("formulations-refresh-button");
 
       const statusLabels = {
         ok: "Ativo",
@@ -585,9 +603,9 @@
         const filtered = state.profiles.filter((profile) => {
           if (!search) return true;
           return (
-            profile.resinName.toLowerCase().includes(search) ||
-            profile.brand.toLowerCase().includes(search) ||
-            profile.model.toLowerCase().includes(search)
+            String(profile.resinName || "").toLowerCase().includes(search) ||
+            String(profile.brand || "").toLowerCase().includes(search) ||
+            String(profile.model || "").toLowerCase().includes(search)
           );
         });
 
@@ -597,8 +615,8 @@
         filtered.forEach((profile) => {
           const row = document.createElement("tr");
           row.innerHTML = `
-            <td data-label="Resina">${profile.resinName}</td>
-            <td data-label="Impressora">${profile.brand} ${profile.model}</td>
+            <td data-label="Resina">${profile.resinName || "-"}</td>
+            <td data-label="Impressora">${profile.brand || "-"} ${profile.model || ""}</td>
             <td data-label="Parâmetros">
               <div class="params">${formatParams(profile.params)}</div>
             </td>
@@ -667,9 +685,7 @@
           if (!(await ensureAuthenticatedAsync())) return;
           const response = await fetchWithAuth(`${API_ADMIN_BASE}/params/stats`);
           const data = await response.json();
-          if (!data.success) return;
-          const statsContainer = document.getElementById("stats");
-          if (!statsContainer) return;
+          if (!data.success || !statsContainer) return;
           const apiStats = data.stats || {};
           const stats = [
             { label: "Resinas", value: apiStats.totalResins ?? data.resins ?? 0 },
@@ -693,28 +709,49 @@
 
       const loadResins = async () => {
         if (!(await ensureAuthenticatedAsync())) return;
+        const currentValue = resinSelect.value;
         const response = await fetchWithAuth(`${API_ADMIN_BASE}/params/resins`);
         const data = await response.json();
         if (!data.success) return;
-        state.resins = data.resins;
-        resinSelect.innerHTML = `<option value="">Todas as resinas</option>` +
-          data.resins.map((resin) => {
+        state.resins = data.resins || [];
+        resinSelect.innerHTML =
+          `<option value="">Todas as resinas</option>` +
+          state.resins.map((resin) => {
             const resinId = resin.id || resin._id || resin.resinId || resin.name;
             return `<option value="${resinId}">${resin.name}</option>`;
           }).join("");
+
+        if (
+          currentValue &&
+          state.resins.some((resin) => (resin.id || resin._id || resin.resinId || resin.name) === currentValue)
+        ) {
+          resinSelect.value = currentValue;
+        }
       };
 
       const loadPrinters = async (resinId = "") => {
         if (!(await ensureAuthenticatedAsync())) return;
+        const currentValue = printerSelect.value;
         const response = await fetchWithAuth(
           resinId ? `${API_ADMIN_BASE}/params/printers?resinId=${resinId}` : `${API_ADMIN_BASE}/params/printers`
         );
         const data = await response.json();
         if (!data.success) return;
-        const printers = resinId ? data.matchingPrinters : data.printers;
+        const printers = resinId ? (data.matchingPrinters || []) : (data.printers || []);
         state.printers = printers;
-        printerSelect.innerHTML = `<option value="">Todas as impressoras</option>` +
-          printers.map((printer) => `<option value="${printer.id}">${printer.brand} ${printer.model}</option>`).join("");
+        printerSelect.innerHTML =
+          `<option value="">Todas as impressoras</option>` +
+          printers.map((printer) => {
+            const printerId = printer.id || printer._id || printer.printerId || `${printer.brand}-${printer.model}`;
+            return `<option value="${printerId}">${printer.brand} ${printer.model}</option>`;
+          }).join("");
+
+        if (
+          currentValue &&
+          printers.some((printer) => (printer.id || printer._id || printer.printerId || `${printer.brand}-${printer.model}`) === currentValue)
+        ) {
+          printerSelect.value = currentValue;
+        }
       };
 
       const loadProfiles = async () => {
@@ -731,8 +768,8 @@
         const response = await fetchWithAuth(`${API_ADMIN_BASE}/params/profiles?${params.toString()}`);
         const data = await response.json();
         if (!data.success) return;
-        state.profiles = data.profiles;
-        state.total = data.total;
+        state.profiles = data.profiles || [];
+        state.total = data.total || 0;
         updateCount();
         renderProfiles();
         renderPagination();
@@ -786,14 +823,22 @@
 
       const loadMessages = async () => {
         if (!(await ensureAuthenticatedAsync())) return;
+
+        messagesEmpty.hidden = true;
+        messagesEmpty.textContent = "Nenhuma mensagem encontrada.";
+        messagesBody.innerHTML = "";
+
         try {
           const response = await fetchWithAuth(`${API_ADMIN_BASE}/messages`);
           const data = await response.json();
           if (!data.success) throw new Error(data.message || data.error || "Erro ao carregar mensagens.");
+
           state.messages = data.messages || [];
           renderMessages();
         } catch (error) {
           console.error("Erro ao carregar mensagens", error);
+          state.messages = [];
+          messagesBody.innerHTML = "";
           messagesEmpty.hidden = false;
           messagesEmpty.textContent = "Erro ao carregar mensagens.";
         }
@@ -801,14 +846,22 @@
 
       const loadFormulations = async () => {
         if (!(await ensureAuthenticatedAsync())) return;
+
+        formulationsEmpty.hidden = true;
+        formulationsEmpty.textContent = "Nenhuma formulação encontrada.";
+        formulationsBody.innerHTML = "";
+
         try {
           const response = await fetchWithAuth(`${API_ADMIN_BASE}/formulations`);
           const data = await response.json();
           if (!data.success) throw new Error(data.message || data.error || "Erro ao carregar formulações.");
+
           state.formulations = data.formulations || [];
           renderFormulations();
         } catch (error) {
           console.error("Erro ao carregar formulações", error);
+          state.formulations = [];
+          formulationsBody.innerHTML = "";
           formulationsEmpty.hidden = false;
           formulationsEmpty.textContent = "Erro ao carregar formulações.";
         }
@@ -816,9 +869,11 @@
 
       const setActiveTab = async (tabId) => {
         state.activeTab = tabId;
+
         tabs.forEach((button) => {
           button.classList.toggle("active", button.dataset.tab === tabId);
         });
+
         tabPanels.forEach((panel) => {
           panel.classList.toggle("active", panel.id === `${tabId}-panel`);
         });
@@ -827,25 +882,46 @@
           await loadMessages();
           state.tabsLoaded.messages = true;
         }
+
         if (tabId === "formulations" && !state.tabsLoaded.formulations) {
           await loadFormulations();
           state.tabsLoaded.formulations = true;
         }
       };
 
-      document.getElementById("refresh-button").addEventListener("click", () => {
-        if (state.activeTab === "messages") {
-          state.tabsLoaded.messages = false;
-          loadMessages();
+      const refreshActiveTab = async () => {
+        const activeTab = state.activeTab || "params";
+
+        if (activeTab === "messages") {
+          await loadMessages();
+          state.tabsLoaded.messages = true;
           return;
         }
-        if (state.activeTab === "formulations") {
-          state.tabsLoaded.formulations = false;
-          loadFormulations();
+
+        if (activeTab === "formulations") {
+          await loadFormulations();
+          state.tabsLoaded.formulations = true;
           return;
         }
-        loadProfiles();
-        loadStats();
+
+        await loadStats();
+        await loadResins();
+        await loadPrinters(resinSelect.value);
+        await loadProfiles();
+      };
+
+      document.getElementById("refresh-button").addEventListener("click", async () => {
+        await refreshActiveTab();
+      });
+
+      messagesRefreshButton?.addEventListener("click", async () => {
+        await loadMessages();
+        state.tabsLoaded.messages = true;
+      });
+
+      formulationsRefreshButton?.addEventListener("click", async () => {
+        await loadFormulations();
+        state.tabsLoaded.formulations = true;
       });
 
       document.getElementById("clear-button").addEventListener("click", resetFilters);
@@ -910,7 +986,6 @@
       loadPrinters();
       loadProfiles();
 
-      // Lógica de Logout
       document.getElementById("logout-btn")?.addEventListener("click", () => {
         localStorage.removeItem(AUTH_TOKEN_KEY);
         localStorage.removeItem(AUTH_TOKEN_FALLBACK_KEY);
@@ -918,7 +993,6 @@
         window.location.reload();
       });
 
-      // Correção do Envio de Conhecimento
       const submitKnowledge = async () => {
         if (!(await ensureAuthenticatedAsync())) return;
         if (!knowledgeTitle || !knowledgeContent || !knowledgeStatus) return;
@@ -944,7 +1018,7 @@
           knowledgeStatus.textContent = "Erro: " + error.message;
         }
       };
-      // Reatribuir o evento ao novo botão
+
       const submitKnowledgeButton = document.getElementById("submit-knowledge");
       if (submitKnowledgeButton) {
         submitKnowledgeButton.onclick = submitKnowledge;
