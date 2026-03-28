@@ -365,6 +365,7 @@
         <button class="btn secondary" data-tab="messages" type="button">Mensagens</button>
         <button class="btn secondary" data-tab="formulations" type="button">Formulações</button>
       </div>
+      <section class="stats" id="stats" aria-live="polite"></section>
 
       <section class="tab-panel active" id="params-panel">
         <section class="filters">
@@ -522,6 +523,7 @@
         profiles: [],
         messages: [],
         formulations: [],
+        activeTab: "params",
         page: 1,
         limit: null,
         total: 0,
@@ -666,13 +668,15 @@
           const response = await fetchWithAuth(`${API_ADMIN_BASE}/params/stats`);
           const data = await response.json();
           if (!data.success) return;
+          const statsContainer = document.getElementById("stats");
+          if (!statsContainer) return;
           const apiStats = data.stats || {};
           const stats = [
             { label: "Resinas", value: apiStats.totalResins ?? data.resins ?? 0 },
             { label: "Impressoras", value: apiStats.totalPrinters ?? data.printers ?? 0 },
             { label: "Perfis", value: apiStats.totalProfiles ?? data.profiles ?? 0 }
           ];
-          document.getElementById("stats").innerHTML = stats
+          statsContainer.innerHTML = stats
             .map(
               (stat) => `
                 <div class="stat-card">
@@ -810,27 +814,36 @@
         }
       };
 
-      const setActiveTab = async (tabId) => {
+      const refreshActiveTabData = async (tabId, { force = false } = {}) => {
+        if (tabId === "params") {
+          await loadProfiles();
+          await loadStats();
+          return;
+        }
+        if (tabId === "messages" && (force || !state.tabsLoaded.messages)) {
+          await loadMessages();
+          state.tabsLoaded.messages = true;
+          return;
+        }
+        if (tabId === "formulations" && (force || !state.tabsLoaded.formulations)) {
+          await loadFormulations();
+          state.tabsLoaded.formulations = true;
+        }
+      };
+
+      const setActiveTab = async (tabId, options = {}) => {
+        state.activeTab = tabId;
         tabs.forEach((button) => {
           button.classList.toggle("active", button.dataset.tab === tabId);
         });
         tabPanels.forEach((panel) => {
           panel.classList.toggle("active", panel.id === `${tabId}-panel`);
         });
-
-        if (tabId === "messages" && !state.tabsLoaded.messages) {
-          await loadMessages();
-          state.tabsLoaded.messages = true;
-        }
-        if (tabId === "formulations" && !state.tabsLoaded.formulations) {
-          await loadFormulations();
-          state.tabsLoaded.formulations = true;
-        }
+        await refreshActiveTabData(tabId, options);
       };
 
-      document.getElementById("refresh-button").addEventListener("click", () => {
-        loadProfiles();
-        loadStats();
+      document.getElementById("refresh-button").addEventListener("click", async () => {
+        await setActiveTab(state.activeTab, { force: true });
       });
 
       document.getElementById("clear-button").addEventListener("click", resetFilters);
@@ -885,15 +898,14 @@
       });
 
       tabs.forEach((button) => {
-        button.addEventListener("click", () => {
-          setActiveTab(button.dataset.tab);
+        button.addEventListener("click", async () => {
+          await setActiveTab(button.dataset.tab);
         });
       });
 
-      loadStats();
       loadResins();
       loadPrinters();
-      loadProfiles();
+      setActiveTab("params", { force: true });
 
       // Lógica de Logout
       document.getElementById("logout-btn")?.addEventListener("click", () => {
