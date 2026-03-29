@@ -59,11 +59,8 @@ const adminGuard = (handler) => async (req, res) => {
   return handler(req, res);
 };
 
-// --- AJUDANTES GLOBAIS ---
 const isNil = (value) => value === undefined || value === null;
-
 const pickValue = (value, fallback = null) => (isNil(value) ? fallback : value);
-
 const pickNested = (field) => {
   if (isNil(field)) return null;
   if (typeof field === "object") {
@@ -71,15 +68,12 @@ const pickNested = (field) => {
   }
   return pickValue(field, null);
 };
-
 const pickWithFallback = (base, root, key) => {
   const primary = pickNested(base[key]);
   return pickValue(primary, pickNested(root[key]));
 };
-// -------------------------------------------------------
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
 const sanitizeNumericValue = (value) => {
   if (value === undefined || value === null) return null;
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
@@ -96,113 +90,86 @@ const sanitizeNumericValue = (value) => {
 const getQueryVariants = (value) => {
   const normalized = value.trim();
   if (!normalized) return [];
-
   const variants = new Set([normalized]);
-  if (normalized.includes(" ")) {
-    variants.add(normalized.replace(/ +/g, "+"));
-  }
-  if (normalized.includes("+")) {
-    variants.add(normalized.replace(/\+/g, " "));
-  }
-
+  if (normalized.includes(" ")) variants.add(normalized.replace(/ +/g, "+"));
+  if (normalized.includes("+")) variants.add(normalized.replace(/\+/g, " "));
   return Array.from(variants);
 };
 
-const buildCaseInsensitiveMatchers = (value) => {
-  const variants = getQueryVariants(value);
-  return variants.map((entry) => new RegExp(`^${escapeRegex(entry)}$`, "i"));
-};
+const buildCaseInsensitiveMatchers = (value) => getQueryVariants(value).map((entry) => new RegExp(`^${escapeRegex(entry)}$`, "i"));
 
 const buildResinFilter = (resinId) => {
   if (!resinId) return null;
   const matchers = buildCaseInsensitiveMatchers(resinId);
-  if (matchers.length === 0) return null;
+  if (!matchers.length) return null;
   return { $or: [{ resinId: { $in: matchers } }, { resin: { $in: matchers } }, { resinName: { $in: matchers } }] };
 };
 
 const buildPrinterFilter = (printerId) => {
   if (!printerId) return null;
   const matchers = buildCaseInsensitiveMatchers(printerId);
-  if (matchers.length === 0) return null;
+  if (!matchers.length) return null;
   return { $or: [{ printerId: { $in: matchers } }, { printer: { $in: matchers } }, { model: { $in: matchers } }] };
 };
 
-const getPartnersCollection = () => getCollection('partners');
-const getCustomRequestsCollection = () => getCollection('custom_requests');
-const getOrdersCollectionSafe = () => (
-  getOrdersCollection()
-  || getCollection('pedidos')
-  || getCustomRequestsCollection()
-);
+const getPartnersCollection = () => getCollection("partners");
+const getCustomRequestsCollection = () => getCollection("custom_requests");
+const getOrdersCollectionSafe = () => getOrdersCollection() || getCollection("pedidos") || getCustomRequestsCollection();
 
 const RESIN_ALIASES = {
-  spin: 'Spin+',
-  'spin+': 'Spin+',
-  spim: 'Spin+',
-  'iron7030': 'Iron 7030',
-  'iron 7030': 'Iron 7030',
-  iron: 'Iron 7030',
-  spark: 'Spark',
-  pyroblast: 'Pyroblast+',
-  'pyroblast+': 'Pyroblast+',
-  poseidon: 'Poseidon',
-  lowsmell: 'LowSmell',
-  'low smell': 'LowSmell'
+  spin: "Spin+",
+  "spin+": "Spin+",
+  spim: "Spin+",
+  iron7030: "Iron 7030",
+  "iron 7030": "Iron 7030",
+  iron: "Iron 7030",
+  spark: "Spark",
+  pyroblast: "Pyroblast+",
+  "pyroblast+": "Pyroblast+",
+  poseidon: "Poseidon",
+  lowsmell: "LowSmell",
+  "low smell": "LowSmell"
 };
 
 const sanitizeResinName = (raw) => {
-  if (!raw) return '';
+  if (!raw) return "";
   const trimmed = String(raw).trim();
-  if (!trimmed) return '';
+  if (!trimmed) return "";
   const normalized = trimmed.toLowerCase();
-  if (RESIN_ALIASES[normalized]) {
-    return RESIN_ALIASES[normalized];
-  }
-  const normalizedNoSpaces = normalized.replace(/\s+/g, '');
-  if (RESIN_ALIASES[normalizedNoSpaces]) {
-    return RESIN_ALIASES[normalizedNoSpaces];
-  }
+  if (RESIN_ALIASES[normalized]) return RESIN_ALIASES[normalized];
+  const normalizedNoSpaces = normalized.replace(/\s+/g, "");
+  if (RESIN_ALIASES[normalizedNoSpaces]) return RESIN_ALIASES[normalizedNoSpaces];
   return trimmed;
 };
 
-const normalizeString = (value, fallback = '') => (
-  typeof value === 'string' ? value.trim() : fallback
-);
-
+const normalizeString = (value, fallback = "") => (typeof value === "string" ? value.trim() : fallback);
 const normalizeStringArray = (...candidates) => {
   for (const candidate of candidates) {
     if (Array.isArray(candidate)) {
-      return candidate
-        .map((item) => (typeof item === 'string' ? item.trim() : ''))
-        .filter(Boolean);
+      return candidate.map((item) => (typeof item === "string" ? item.trim() : "")).filter(Boolean);
     }
-
-    if (typeof candidate === 'string' && candidate.trim()) {
-      return candidate
-        .split(/[,\n]/)
-        .map((item) => item.trim())
-        .filter(Boolean);
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.split(/[,\n]/).map((item) => item.trim()).filter(Boolean);
     }
   }
-
   return [];
 };
 
 const normalizePartnerResponse = (doc = {}) => {
   const imageCandidates = normalizeStringArray(doc.images, doc.gallery, doc.photos);
-  const imageUrl = normalizeString(doc.imageUrl || doc.image || imageCandidates[0] || '', '');
-  const website = normalizeString(doc.websiteUrl || doc.website_url || doc.link || doc.url || '', '');
-  const phone = normalizeString(doc.phone || doc.contactPhone || doc.contact?.phone || '', '');
-  const email = normalizeString(doc.email || doc.contactEmail || doc.contact?.email || '', '');
-  const whatsapp = normalizeString(doc.whatsapp || doc.contactWhatsapp || doc.contact?.whatsapp || phone, '');
+  const imageUrl = normalizeString(doc.imageUrl || doc.image || imageCandidates[0] || "", "");
+  const website = normalizeString(doc.websiteUrl || doc.website_url || doc.link || doc.url || "", "");
+  const phone = normalizeString(doc.phone || doc.contactPhone || doc.contact?.phone || "", "");
+  const email = normalizeString(doc.email || doc.contactEmail || doc.contact?.email || "", "");
+  const whatsapp = normalizeString(doc.whatsapp || doc.contactWhatsapp || doc.contact?.whatsapp || phone, "");
   const highlights = normalizeStringArray(doc.highlights, doc.specialties, doc.specialty);
 
   return {
     ...doc,
     id: doc._id?.toString?.() || doc.id || null,
     _id: doc._id?.toString?.() || doc.id || doc._id || null,
-    name: normalizeString(doc.name || doc.title || ''),
-    description: normalizeString(doc.description || doc.summary || ''),
+    name: normalizeString(doc.name || doc.title || ""),
+    description: normalizeString(doc.description || doc.summary || ""),
     imageUrl,
     image: imageUrl,
     images: imageUrl ? Array.from(new Set([imageUrl, ...imageCandidates])) : imageCandidates,
@@ -210,8 +177,8 @@ const normalizePartnerResponse = (doc = {}) => {
     url: website,
     websiteUrl: website,
     website_url: website,
-    specialty: normalizeString(doc.specialty || doc.category || highlights[0] || ''),
-    category: normalizeString(doc.category || doc.specialty || ''),
+    specialty: normalizeString(doc.specialty || doc.category || highlights[0] || ""),
+    category: normalizeString(doc.category || doc.specialty || ""),
     highlights,
     phone,
     email,
@@ -229,14 +196,14 @@ const normalizePartnerResponse = (doc = {}) => {
 };
 
 const buildPartnerPayload = (payload = {}, { partial = false } = {}) => {
-  const name = normalizeString(payload.name || payload.title || '');
-  const description = normalizeString(payload.description || payload.summary || '');
-  const imageUrl = normalizeString(payload.imageUrl || payload.image || '', '');
-  const website = normalizeString(payload.websiteUrl || payload.website_url || payload.link || payload.url || '', '');
-  const specialty = normalizeString(payload.specialty || payload.category || '', '');
-  const phone = normalizeString(payload.phone || payload.contactPhone || payload.contact?.phone || '', '');
-  const email = normalizeString(payload.email || payload.contactEmail || payload.contact?.email || '', '');
-  const whatsapp = normalizeString(payload.whatsapp || payload.contactWhatsapp || payload.contact?.whatsapp || phone, '');
+  const name = normalizeString(payload.name || payload.title || "");
+  const description = normalizeString(payload.description || payload.summary || "");
+  const imageUrl = normalizeString(payload.imageUrl || payload.image || "", "");
+  const website = normalizeString(payload.websiteUrl || payload.website_url || payload.link || payload.url || "", "");
+  const specialty = normalizeString(payload.specialty || payload.category || "", "");
+  const phone = normalizeString(payload.phone || payload.contactPhone || payload.contact?.phone || "", "");
+  const email = normalizeString(payload.email || payload.contactEmail || payload.contact?.email || "", "");
+  const whatsapp = normalizeString(payload.whatsapp || payload.contactWhatsapp || payload.contact?.whatsapp || phone, "");
   const images = normalizeStringArray(payload.images, payload.gallery, payload.photos, imageUrl);
   const highlights = normalizeStringArray(payload.highlights, payload.specialties, payload.specialty);
 
@@ -255,30 +222,19 @@ const buildPartnerPayload = (payload = {}, { partial = false } = {}) => {
     ...(Number.isFinite(Number(payload.order)) ? { order: Number(payload.order) } : {})
   };
 
-  if (partial) {
-    return fields;
-  }
-
-  return {
-    ...fields,
-    active: fields.active ?? true,
-    order: fields.order ?? 0
-  };
+  if (partial) return fields;
+  return { ...fields, active: fields.active ?? true, order: fields.order ?? 0 };
 };
 
 const parseGallerySettings = (rawSettings) => {
   if (!rawSettings) return {};
-  if (typeof rawSettings === 'object') {
-    return rawSettings;
-  }
-  if (typeof rawSettings === 'string') {
+  if (typeof rawSettings === "object") return rawSettings;
+  if (typeof rawSettings === "string") {
     try {
       const parsed = JSON.parse(rawSettings);
-      if (parsed && typeof parsed === 'object') {
-        return parsed;
-      }
+      if (parsed && typeof parsed === "object") return parsed;
       return rawSettings ? { summary: rawSettings } : {};
-    } catch (err) {
+    } catch {
       return { summary: rawSettings };
     }
   }
@@ -297,33 +253,23 @@ const extractSettingsFromBody = (body = {}) => {
 
   return Object.fromEntries(
     Object.entries(fields)
-      .filter(([, value]) => !isNil(value) && String(value).toString().trim() !== '')
-      .map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
+      .filter(([, value]) => !isNil(value) && String(value).trim() !== "")
+      .map(([key, value]) => [key, typeof value === "string" ? value.trim() : value])
   );
 };
 
-// 🟢 CIRURGIA 3: SALVANDO A ORIGEM PARA AS MÉTRICAS
 router.post("/register-user", async (req, res) => {
   try {
     const { name, phone, email, resin, problemType, sessionId, origin, source } = req.body;
-    
     if (!name || !phone || !email) {
-      return res.status(400).json({
-        success: false,
-        error: "Nome, telefone e email sao obrigatorios"
-      });
+      return res.status(400).json({ success: false, error: "Nome, telefone e email sao obrigatorios" });
     }
-    
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
-      return res.status(503).json({
-        success: false,
-        error: "Banco de dados indisponivel"
-      });
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     }
-    
     if (sessionId) {
-      const conversasCollection = getConversasCollection(); 
+      const conversasCollection = getConversasCollection();
       await conversasCollection.updateOne(
         { sessionId },
         {
@@ -333,49 +279,31 @@ router.post("/register-user", async (req, res) => {
             userEmail: email,
             resin: resin || null,
             problemType: problemType || null,
-            origin: origin || source || 'Direto', // GRAVANDO O "COMO NOS CONHECEU" AQUI
+            origin: origin || source || "Direto",
             updatedAt: new Date()
-          }
+          },
+          $setOnInsert: { createdAt: new Date() }
         },
         { upsert: true }
       );
     }
-    
-    console.log(`[API] Usuario registrado: ${name} (${email})`);
-    
-    res.json({
-      success: true,
-      message: "Usuario registrado com sucesso",
-      user: { name, phone, email, resin, problemType }
-    });
+    res.json({ success: true, message: "Usuario registrado com sucesso", user: { name, phone, email, resin, problemType } });
   } catch (err) {
     console.error("[API] Erro ao registrar usuario:", err);
-    res.status(500).json({
-      success: false,
-      error: "Erro ao registrar usuario"
-    });
+    res.status(500).json({ success: false, error: "Erro ao registrar usuario" });
   }
 });
 
 router.post("/contact", async (req, res) => {
   try {
     const { name, email, phone, subject, message } = req.body;
-    
     if (!name || !email || !message) {
-      return res.status(400).json({
-        success: false,
-        error: "Nome, email e mensagem sao obrigatorios"
-      });
+      return res.status(400).json({ success: false, error: "Nome, email e mensagem sao obrigatorios" });
     }
-    
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
-      return res.status(503).json({
-        success: false,
-        error: "Banco de dados indisponivel"
-      });
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     }
-    
     const messagesCollection = getCollection("messages");
     const newMessage = {
       name,
@@ -384,67 +312,125 @@ router.post("/contact", async (req, res) => {
       subject: subject || "Contato via Site",
       message,
       status: "pending",
+      resolved: false,
       approved: false,
       createdAt: new Date(),
       updatedAt: new Date()
     };
-    
     const result = await messagesCollection.insertOne(newMessage);
-    console.log(`[API] Mensagem de contato recebida de: ${name} (${email})`);
-    
-    res.json({
-      success: true,
-      message: "Mensagem enviada com sucesso! Entraremos em contato em breve.",
-      id: result.insertedId
-    });
+    res.json({ success: true, message: "Mensagem enviada com sucesso! Entraremos em contato em breve.", id: result.insertedId });
   } catch (err) {
     console.error("[API] Erro ao enviar mensagem de contato:", err);
-    res.status(500).json({
-      success: false,
-      error: "Erro ao enviar mensagem"
-    });
+    res.status(500).json({ success: false, error: "Erro ao enviar mensagem" });
   }
 });
+
+router.get("/contacts", adminGuard(async (_req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    }
+
+    const conversasCollection = getConversasCollection();
+    const docs = await conversasCollection
+      .find({
+        $or: [
+          { userName: { $exists: true, $ne: null } },
+          { userEmail: { $exists: true, $ne: null } },
+          { userPhone: { $exists: true, $ne: null } },
+          { origin: { $exists: true, $ne: null } }
+        ]
+      })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .limit(1000)
+      .toArray();
+
+    const contacts = docs.map((doc) => ({
+      _id: doc._id?.toString?.() || doc.id || doc.sessionId || null,
+      id: doc._id?.toString?.() || doc.id || doc.sessionId || null,
+      name: doc.userName || doc.name || "Cliente",
+      phone: doc.userPhone || doc.phone || null,
+      email: doc.userEmail || doc.email || null,
+      origin: doc.origin || doc.source || doc.origem || "Direto",
+      resin: doc.resin || null,
+      problemType: doc.problemType || null,
+      sessionId: doc.sessionId || null,
+      createdAt: doc.createdAt || doc.updatedAt || null,
+      updatedAt: doc.updatedAt || doc.createdAt || null
+    }));
+
+    return res.json({ success: true, contacts });
+  } catch (err) {
+    console.error("[API] Erro ao listar contatos:", err);
+    return res.status(500).json({ success: false, error: "Erro ao listar contatos" });
+  }
+}));
+
+router.get("/messages", adminGuard(async (_req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    }
+
+    const messagesCollection = getCollection("messages");
+    const docs = await messagesCollection.find({}).sort({ createdAt: -1 }).limit(500).toArray();
+    const messages = docs.map((doc) => ({
+      _id: doc._id?.toString?.() || doc.id || null,
+      id: doc._id?.toString?.() || doc.id || null,
+      name: doc.name || "Cliente",
+      email: doc.email || null,
+      phone: doc.phone || null,
+      subject: doc.subject || null,
+      message: doc.message || doc.text || "",
+      resolved: Boolean(doc.resolved || doc.status === "resolved" || doc.status === "done"),
+      status: doc.status || "pending",
+      createdAt: doc.createdAt || null,
+      updatedAt: doc.updatedAt || null
+    }));
+
+    return res.json({ success: true, messages });
+  } catch (err) {
+    console.error("[API] Erro ao listar mensagens:", err);
+    return res.status(500).json({ success: false, error: "Erro ao listar mensagens" });
+  }
+}));
 
 router.put("/contact/:id", adminGuard(async (req, res) => {
   try {
     const { id } = req.params;
     const body = req.body || {};
-    const status = normalizeString(body.status || body.situation || '');
+    const hasResolved = typeof body.resolved === "boolean";
+    const resolved = hasResolved ? body.resolved : undefined;
+    const status = hasResolved
+      ? (resolved ? "resolved" : "pending")
+      : normalizeString(body.status || body.situation || "");
 
     if (!status) {
-      return res.status(400).json({ success: false, error: 'Status é obrigatório' });
+      return res.status(400).json({ success: false, error: "Status é obrigatório" });
     }
 
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
-      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     }
 
-    const collections = [
-      getCollection('contacts'),
-      getCollection('messages'),
-      getOrdersCollectionSafe()
-    ].filter(Boolean);
-
-    if (collections.length === 0) {
-      return res.status(503).json({ success: false, error: 'Coleções de contato indisponíveis' });
+    const collections = [getCollection("contacts"), getCollection("messages"), getOrdersCollectionSafe()].filter(Boolean);
+    if (!collections.length) {
+      return res.status(503).json({ success: false, error: "Coleções de contato indisponíveis" });
     }
 
-    const filter = ObjectId.isValid(id)
-      ? { _id: new ObjectId(id) }
-      : { $or: [{ id }, { legacyId: id }] };
-
+    const filter = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { $or: [{ id }, { legacyId: id }] };
     let updatedCount = 0;
     let latestUpdated = null;
 
     for (const collection of collections) {
       const result = await collection.findOneAndUpdate(
         filter,
-        { $set: { status, updatedAt: new Date() } },
-        { returnDocument: 'after' }
+        { $set: { status, resolved: hasResolved ? resolved : status === "resolved", updatedAt: new Date() } },
+        { returnDocument: "after" }
       );
-
       const updated = result?.value || result;
       if (updated && (updated._id || updated.id || updated.legacyId)) {
         updatedCount += 1;
@@ -453,7 +439,7 @@ router.put("/contact/:id", adminGuard(async (req, res) => {
     }
 
     if (!updatedCount || !latestUpdated) {
-      return res.status(404).json({ success: false, error: 'Contato não encontrado' });
+      return res.status(404).json({ success: false, error: "Contato não encontrado" });
     }
 
     return res.json({
@@ -462,40 +448,30 @@ router.put("/contact/:id", adminGuard(async (req, res) => {
       contact: {
         id: latestUpdated._id?.toString?.() || latestUpdated.id || latestUpdated.legacyId || id,
         status: latestUpdated.status || status,
+        resolved: Boolean(latestUpdated.resolved ?? status === "resolved"),
         updatedAt: latestUpdated.updatedAt || null
       }
     });
   } catch (err) {
-    console.error('[API] Erro ao atualizar contato:', err);
-    return res.status(500).json({ success: false, error: 'Erro ao atualizar contato' });
+    console.error("[API] Erro ao atualizar contato:", err);
+    return res.status(500).json({ success: false, error: "Erro ao atualizar contato" });
   }
 }));
 
 router.post("/custom-request", async (req, res) => {
   try {
     const body = req.body ?? {};
-    const {
-      name,
-      phone,
-      email,
-      details
-    } = body;
+    const { name, phone, email, details } = body;
     const desiredFeature = body.desiredFeature ?? body.caracteristica;
     const color = body.color ?? body.cor;
 
     if (!name || !phone || !email || !desiredFeature) {
-      return res.status(400).json({
-        success: false,
-        error: "Nome, telefone, email e caracteristica desejada sao obrigatorios"
-      });
+      return res.status(400).json({ success: false, error: "Nome, telefone, email e caracteristica desejada sao obrigatorios" });
     }
 
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
-      return res.status(503).json({
-        success: false,
-        error: "Banco de dados indisponivel"
-      });
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     }
 
     const ordersCollection = getOrdersCollectionSafe();
@@ -518,27 +494,18 @@ router.post("/custom-request", async (req, res) => {
     };
 
     const result = await ordersCollection.insertOne(newRequest);
-    console.log(`[API] Pedido de formulacao customizada: ${name} (${email})`);
-
-    res.json({
-      success: true,
-      message: "Pedido enviado com sucesso! Entraremos em contato em breve.",
-      id: result.insertedId
-    });
+    res.json({ success: true, message: "Pedido enviado com sucesso! Entraremos em contato em breve.", id: result.insertedId });
   } catch (err) {
     console.error("[API] Erro ao enviar pedido customizado:", err);
-    res.status(500).json({
-      success: false,
-      error: "Erro ao enviar pedido"
-    });
+    res.status(500).json({ success: false, error: "Erro ao enviar pedido" });
   }
 });
 
 const buildOrderResponse = (doc = {}) => ({
   id: doc._id?.toString?.() || doc.id || doc.legacyId || null,
   _id: doc._id?.toString?.() || doc.id || doc.legacyId || null,
-  customerName: doc.name || doc.customerName || doc.userName || 'Cliente',
-  name: doc.name || doc.customerName || doc.userName || 'Cliente',
+  customerName: doc.name || doc.customerName || doc.userName || "Cliente",
+  name: doc.name || doc.customerName || doc.userName || "Cliente",
   phone: doc.phone || doc.userPhone || null,
   email: doc.email || doc.userEmail || null,
   desiredFeature: doc.desiredFeature || doc.caracteristica || null,
@@ -547,7 +514,7 @@ const buildOrderResponse = (doc = {}) => ({
   cor: doc.color || doc.cor || null,
   details: doc.details || doc.complementos || doc.notes || null,
   complementos: doc.details || doc.complementos || doc.notes || null,
-  status: doc.status || 'pending',
+  status: doc.status || "pending",
   createdAt: doc.createdAt || null,
   updatedAt: doc.updatedAt || null,
   items: Array.isArray(doc.items) ? doc.items : [],
@@ -555,147 +522,78 @@ const buildOrderResponse = (doc = {}) => ({
   type: doc.type || null
 });
 
-router.get('/orders', adminGuard(async (req, res) => {
+router.get("/orders", adminGuard(async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     const collection = getOrdersCollectionSafe();
-    if (!collection) {
-      return res.status(503).json({ success: false, error: 'Coleção de pedidos indisponível' });
-    }
-
+    if (!collection) return res.status(503).json({ success: false, error: "Coleção de pedidos indisponível" });
     const docs = await collection.find({}).sort({ createdAt: -1 }).toArray();
     res.json({ success: true, orders: docs.map(buildOrderResponse) });
   } catch (err) {
-    console.error('[API] Erro ao listar pedidos:', err);
-    res.status(500).json({ success: false, error: 'Erro ao listar pedidos' });
+    console.error("[API] Erro ao listar pedidos:", err);
+    res.status(500).json({ success: false, error: "Erro ao listar pedidos" });
   }
 }));
 
-router.get('/formulations', adminGuard(async (_req, res) => {
+router.get("/formulations", adminGuard(async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     const collection = getOrdersCollectionSafe();
-    if (!collection) {
-      return res.status(503).json({ success: false, error: 'Coleção de pedidos indisponível' });
-    }
+    if (!collection) return res.status(503).json({ success: false, error: "Coleção de pedidos indisponível" });
 
     const docs = await collection.find({
-      $or: [
-        { type: 'custom_request' },
-        { desiredFeature: { $exists: true } },
-        { caracteristica: { $exists: true } }
-      ]
+      $or: [{ type: "custom_request" }, { desiredFeature: { $exists: true } }, { caracteristica: { $exists: true } }]
     }).sort({ createdAt: -1 }).toArray();
 
     const requests = docs.map(buildOrderResponse);
     return res.json({ success: true, formulations: requests, requests });
   } catch (err) {
-    console.error('[API] Erro ao listar formulações:', err);
-    return res.status(500).json({ success: false, error: 'Erro ao listar formulações' });
+    console.error("[API] Erro ao listar formulações:", err);
+    return res.status(500).json({ success: false, error: "Erro ao listar formulações" });
   }
 }));
 
-router.put('/orders/:id', adminGuard(async (req, res) => {
+router.put("/orders/:id", adminGuard(async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body || {};
-
-    if (!status) {
-      return res.status(400).json({ success: false, error: 'Status é obrigatório' });
-    }
-
+    if (!status) return res.status(400).json({ success: false, error: "Status é obrigatório" });
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     const collection = getOrdersCollectionSafe();
-    if (!collection) {
-      return res.status(503).json({ success: false, error: 'Coleção de pedidos indisponível' });
-    }
-
+    if (!collection) return res.status(503).json({ success: false, error: "Coleção de pedidos indisponível" });
     const filter = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { $or: [{ legacyId: id }, { id }] };
     const updateResult = await collection.updateOne(filter, { $set: { status, updatedAt: new Date() } });
-
-    if (!updateResult.matchedCount) {
-      return res.status(404).json({ success: false, error: 'Pedido não encontrado' });
-    }
-
+    if (!updateResult.matchedCount) return res.status(404).json({ success: false, error: "Pedido não encontrado" });
     res.json({ success: true });
   } catch (err) {
-    console.error('[API] Erro ao atualizar pedido:', err);
-    res.status(500).json({ success: false, error: 'Erro ao atualizar pedido' });
+    console.error("[API] Erro ao atualizar pedido:", err);
+    res.status(500).json({ success: false, error: "Erro ao atualizar pedido" });
   }
 }));
 
 router.post("/gallery", upload.any(), async (req, res) => {
   try {
-    const {
-      name,
-      resin,
-      printer,
-      settings,
-      image,
-      images,
-      imageUrl,
-      note,
-      contact
-    } = req.body;
+    const { name, resin, printer, settings, image, images, imageUrl, note, contact } = req.body;
     const sanitizedResin = sanitizeResinName(resin);
-
     if (!sanitizedResin || !printer) {
-      return res.status(400).json({
-        success: false,
-        error: "Resina e impressora sao obrigatorias"
-      });
+      return res.status(400).json({ success: false, error: "Resina e impressora sao obrigatorias" });
     }
 
-    const payloadImages = Array.isArray(images)
-      ? images.filter(Boolean)
-      : image
-        ? [image]
-        : [];
-
-    const imageUrlPayload = Array.isArray(imageUrl)
-      ? imageUrl.filter(Boolean)
-      : typeof imageUrl === "string" && imageUrl.trim()
-        ? [imageUrl.trim()]
-        : [];
-
+    const payloadImages = Array.isArray(images) ? images.filter(Boolean) : image ? [image] : [];
+    const imageUrlPayload = Array.isArray(imageUrl) ? imageUrl.filter(Boolean) : typeof imageUrl === "string" && imageUrl.trim() ? [imageUrl.trim()] : [];
     const multipartImages = Array.isArray(req.files)
-      ? req.files
-        .filter((file) => file?.buffer)
-        .map((file) => {
-          const mimeType = file.mimetype || "application/octet-stream";
-          const base64 = file.buffer.toString("base64");
-          return `data:${mimeType};base64,${base64}`;
-        })
+      ? req.files.filter((file) => file?.buffer).map((file) => `data:${file.mimetype || "application/octet-stream"};base64,${file.buffer.toString("base64")}`)
       : [];
-
     const finalImages = imageUrlPayload.length > 0 ? imageUrlPayload : payloadImages.length > 0 ? payloadImages : multipartImages;
-
-    if (finalImages.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: "Envie ao menos uma imagem"
-      });
+    if (!finalImages.length) {
+      return res.status(400).json({ success: false, error: "Envie ao menos uma imagem" });
     }
 
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({
-        success: false,
-        error: "Banco de dados indisponivel"
-      });
-    }
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
 
     const galleryCollection = getCollection("gallery");
     const newEntry = {
@@ -713,50 +611,23 @@ router.post("/gallery", upload.any(), async (req, res) => {
     };
 
     const result = await galleryCollection.insertOne(newEntry);
-    console.log(`[API] Nova foto enviada para galeria: ${sanitizedResin} / ${printer}`);
-
-    res.json({
-      success: true,
-      message: "Fotos enviadas com sucesso! Em breve aparecerão na galeria.",
-      id: result.insertedId
-    });
+    res.json({ success: true, message: "Fotos enviadas com sucesso! Em breve aparecerão na galeria.", id: result.insertedId });
   } catch (err) {
     console.error("[API] Erro ao enviar fotos para galeria:", err);
-    res.status(500).json({
-      success: false,
-      error: "Erro ao enviar fotos"
-    });
+    res.status(500).json({ success: false, error: "Erro ao enviar fotos" });
   }
 });
 
 router.post("/suggest-knowledge", async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     const collection = getCollection("sugestoes") || getCollection("suggestions");
-    if (!collection) {
-      return res.status(503).json({ success: false, error: "Coleção de sugestões indisponível" });
-    }
+    if (!collection) return res.status(503).json({ success: false, error: "Coleção de sugestões indisponível" });
 
-    const {
-      suggestion,
-      userName,
-      userPhone,
-      sessionId,
-      lastUserMessage,
-      lastBotReply,
-      attachment,
-      attachments: attachmentList,
-      imageUrl
-    } = req.body || {};
-
+    const { suggestion, userName, userPhone, sessionId, lastUserMessage, lastBotReply, attachment, attachments: attachmentList, imageUrl } = req.body || {};
     const attachments = [];
-    if (Array.isArray(attachmentList)) {
-      attachments.push(...attachmentList.filter(Boolean));
-    }
+    if (Array.isArray(attachmentList)) attachments.push(...attachmentList.filter(Boolean));
     if (attachment) attachments.push(attachment);
     if (imageUrl) attachments.push(imageUrl);
 
@@ -766,23 +637,21 @@ router.post("/suggest-knowledge", async (req, res) => {
 
     const doc = {
       suggestion: suggestion.trim(),
-      userName: (userName || '').trim() || 'Usuário do site',
+      userName: (userName || "").trim() || "Usuário do site",
       userPhone: userPhone || null,
       sessionId: sessionId || null,
       lastUserMessage: lastUserMessage || null,
       lastBotReply: lastBotReply || null,
       attachments,
-      status: 'pending',
+      status: "pending",
       createdAt: new Date()
     };
 
     const result = await collection.insertOne(doc);
-    console.log(`[API] Sugestão registrada: ${doc.userName}`);
-
-    res.json({ success: true, message: 'Sugestão enviada com sucesso!', suggestionId: result.insertedId.toString() });
+    res.json({ success: true, message: "Sugestão enviada com sucesso!", suggestionId: result.insertedId.toString() });
   } catch (err) {
-    console.error('[API] Erro ao registrar sugestão:', err);
-    res.status(500).json({ success: false, error: 'Erro ao registrar sugestão' });
+    console.error("[API] Erro ao registrar sugestão:", err);
+    res.status(500).json({ success: false, error: "Erro ao registrar sugestão" });
   }
 });
 
@@ -813,105 +682,49 @@ const buildGalleryResponse = (doc) => {
 const normalizeGalleryPagination = (req) => {
   const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
   const limitRaw = parseInt(req.query.limit, 10);
-  const limit = Number.isFinite(limitRaw) && limitRaw > 0
-    ? Math.min(limitRaw, MAX_GALLERY_PAGE_SIZE)
-    : 20;
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, MAX_GALLERY_PAGE_SIZE) : 20;
   return { page, limit, skip: (page - 1) * limit };
 };
 
-// ==========================================
-// ROTA OTIMIZADA PELO GPT-5 (GALERIA APROVADA)
-// ==========================================
 router.get("/gallery", async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({
-        success: false,
-        error: "Banco de dados indisponivel"
-      });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     const { page, limit, skip } = normalizeGalleryPagination(req);
     const galleryCollection = getCollection("gallery");
     const filter = { status: "approved" };
-
-    const cursor = galleryCollection.find(filter, {
-      sort: { createdAt: -1 },
-      skip,
-      limit
-    });
-
-    // Busca dupla simultânea (muito mais rápido)
     const [docs, total] = await Promise.all([
-      cursor.toArray(),
+      galleryCollection.find(filter, { sort: { createdAt: -1 }, skip, limit }).toArray(),
       galleryCollection.countDocuments(filter)
     ]);
-
-    res.json({
-      success: true,
-      total,
-      page,
-      limit,
-      images: docs.map(buildGalleryResponse)
-    });
+    res.json({ success: true, total, page, limit, images: docs.map(buildGalleryResponse) });
   } catch (err) {
     console.error("[API] Erro ao listar galeria:", err);
-    res.status(500).json({
-      success: false,
-      error: "Erro ao listar galeria"
-    });
+    res.status(500).json({ success: false, error: "Erro ao listar galeria" });
   }
 });
 
-// ==========================================
-// ROTA OTIMIZADA PELO GPT-5 (GALERIA COMPLETA)
-// ==========================================
-router.get("/gallery/all", async (req, res) => {
+router.get("/gallery/all", adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({
-        success: false,
-        error: "Banco de dados indisponivel"
-      });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     const { page, limit, skip } = normalizeGalleryPagination(req);
     const galleryCollection = getCollection("gallery");
     const filter = { status: { $ne: "deleted" } };
-
-    const cursor = galleryCollection.find(filter, {
-      sort: { createdAt: -1 },
-      skip,
-      limit
-    });
-
     const [docs, total] = await Promise.all([
-      cursor.toArray(),
+      galleryCollection.find(filter, { sort: { createdAt: -1 }, skip, limit }).toArray(),
       galleryCollection.countDocuments(filter)
     ]);
-
-    res.json({
-      success: true,
-      total,
-      page,
-      limit,
-      images: docs.map(buildGalleryResponse)
-    });
+    res.json({ success: true, total, page, limit, images: docs.map(buildGalleryResponse) });
   } catch (err) {
     console.error("[API] Erro ao listar galeria completa:", err);
-    res.status(500).json({
-      success: false,
-      error: "Erro ao listar galeria"
-    });
+    res.status(500).json({ success: false, error: "Erro ao listar galeria" });
   }
-});
+}));
 
 const buildGalleryLookupQueries = (rawId) => {
   const queries = [];
   const seen = new Set();
-
   const push = (query) => {
     const key = JSON.stringify(query, (_, value) => (value && value._bsontype === "ObjectId" ? value.toString() : value));
     if (!seen.has(key)) {
@@ -925,122 +738,92 @@ const buildGalleryLookupQueries = (rawId) => {
     push({ id: rawId });
     push({ legacyId: rawId });
   }
-
   if (rawId && ObjectId.isValid(rawId)) {
     const objectId = new ObjectId(rawId);
     push({ _id: objectId });
     push({ id: objectId.toString() });
     push({ legacyId: objectId.toString() });
   }
-
   return queries;
 };
 
-const getGalleryCollections = () => {
-  const candidates = [
-    getCollection("gallery"),
-    getCollection("visual_knowledge"),
-    getCollection("gallery_pending"),
-    getCollection("visual_knowledge_pending"),
-    typeof getVisualKnowledgeCollection === "function" ? getVisualKnowledgeCollection() : null
-  ].filter(Boolean);
+const getGalleryCollections = () => [getCollection("gallery"), getCollection("gallery_pending"), getCollection("visual_knowledge_pending")].filter(Boolean);
 
-  return Array.from(new Set(candidates));
+const findGalleryAcrossCollections = async (rawId) => {
+  for (const collection of getGalleryCollections()) {
+    for (const query of buildGalleryLookupQueries(rawId)) {
+      const doc = await collection.findOne(query);
+      if (doc && (doc._id || doc.id || doc.legacyId)) {
+        return { collection, doc };
+      }
+    }
+  }
+  return null;
 };
 
 const updateGalleryAcrossCollections = async (rawId, update) => {
-  for (const collection of getGalleryCollections()) {
-    for (const query of buildGalleryLookupQueries(rawId)) {
-      const result = await collection.findOneAndUpdate(query, update, { returnDocument: "after" });
-      const doc = result?.value || result;
-      if (doc && (doc._id || doc.id || doc.legacyId)) {
-        return doc;
-      }
-    }
-  }
-  return null;
+  const found = await findGalleryAcrossCollections(rawId);
+  if (!found) return null;
+  await found.collection.updateOne({ _id: found.doc._id }, update);
+  return found.collection.findOne({ _id: found.doc._id });
 };
 
 const deleteGalleryAcrossCollections = async (rawId) => {
-  for (const collection of getGalleryCollections()) {
-    for (const query of buildGalleryLookupQueries(rawId)) {
-      const deleted = await collection.findOneAndDelete(query);
-      const deletedDoc = deleted?.value || deleted;
-      if (deletedDoc && (deletedDoc._id || deletedDoc.id || deletedDoc.legacyId)) {
-        return { mode: "deleted", doc: deletedDoc };
-      }
+  const found = await findGalleryAcrossCollections(rawId);
+  if (!found) return null;
 
-      const updated = await collection.findOneAndUpdate(
-        query,
-        {
-          $set: {
-            status: "deleted",
-            approved: false,
-            deletedAt: new Date(),
-            updatedAt: new Date()
-          }
-        },
-        { returnDocument: "after" }
-      );
-
-      const softDoc = updated?.value || updated;
-      if (softDoc && (softDoc._id || softDoc.id || softDoc.legacyId)) {
-        return { mode: "soft-deleted", doc: softDoc };
-      }
-    }
+  const deleteResult = await found.collection.deleteOne({ _id: found.doc._id });
+  if (deleteResult.deletedCount) {
+    return { mode: "deleted", doc: found.doc };
   }
+
+  await found.collection.updateOne(
+    { _id: found.doc._id },
+    { $set: { status: "deleted", approved: false, deletedAt: new Date(), updatedAt: new Date() } }
+  );
+  const softDoc = await found.collection.findOne({ _id: found.doc._id });
+  if (softDoc) return { mode: "soft-deleted", doc: softDoc };
   return null;
 };
 
-router.put('/gallery/:id/approve', adminGuard(async (req, res) => {
+const approveGalleryHandler = async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
-    }
-
-    const updated = await updateGalleryAcrossCollections(req.params.id, {
-      $set: { status: 'approved', approved: true, updatedAt: new Date() }
-    });
-
-    if (!updated) {
-      return res.status(404).json({ success: false, error: 'Item nao encontrado' });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    const updated = await updateGalleryAcrossCollections(req.params.id, { $set: { status: "approved", approved: true, updatedAt: new Date() } });
+    if (!updated) return res.status(404).json({ success: false, error: "Item nao encontrado" });
     return res.json({ success: true, item: buildGalleryResponse(updated) });
   } catch (err) {
-    console.error('[API] Erro ao aprovar galeria:', err);
+    console.error("[API] Erro ao aprovar galeria:", err);
     return res.status(500).json({ success: false, error: err.message });
   }
-}));
+};
 
-router.delete('/gallery/:id', adminGuard(async (req, res) => {
+const deleteGalleryHandler = async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     const deleted = await deleteGalleryAcrossCollections(req.params.id);
-    if (!deleted) {
-      return res.status(404).json({ success: false, error: 'Item nao encontrado' });
-    }
-
+    if (!deleted) return res.status(404).json({ success: false, error: "Item nao encontrado" });
     return res.json({
       success: true,
       mode: deleted.mode,
       deletedId: deleted.doc?._id?.toString?.() || deleted.doc?.id || deleted.doc?.legacyId || req.params.id
     });
   } catch (err) {
-    console.error('[API] Erro ao deletar galeria:', err);
+    console.error("[API] Erro ao deletar galeria:", err);
     return res.status(500).json({ success: false, error: err.message });
   }
-}));
+};
+
+router.put("/gallery/:id/approve", adminGuard(approveGalleryHandler));
+router.post("/gallery/:id/approve", adminGuard(approveGalleryHandler));
+router.delete("/gallery/:id", adminGuard(deleteGalleryHandler));
+router.post("/gallery/:id/delete", adminGuard(deleteGalleryHandler));
 
 function normalizeParams(params = {}) {
   const root = params ?? {};
   const base = root.parametros ?? {};
-  
   const getParam = (key) => pickWithFallback(base, root, key);
   const getBottomExposure = () => {
     const direct = getParam("bottomExposureS");
@@ -1063,7 +846,7 @@ function normalizeParams(params = {}) {
     restBeforeLiftS: sanitizeNumericValue(getParam("restBeforeLiftS")),
     restAfterLiftS: sanitizeNumericValue(getParam("restAfterLiftS")),
     restAfterRetractS: sanitizeNumericValue(getParam("restAfterRetractS")),
-    uvPower: sanitizeNumericValue(getParam("uvPower")),
+    uvPower: sanitizeNumericValue(getParam("uvPower"))
   };
 }
 
@@ -1086,37 +869,25 @@ function buildProfileResponse(doc) {
 async function listParamResins() {
   const mongoReady = await ensureMongoReady();
   if (!mongoReady) {
-    return {
-      error: { status: 503, body: { success: false, error: "Banco de dados indisponivel" } }
-    };
+    return { error: { status: 503, body: { success: false, error: "Banco de dados indisponivel" } } };
   }
 
   const db = getDb();
-  const collections = await db
-    .listCollections({ name: "parametros" })
-    .toArray();
-  if (collections.length === 0) {
-    return { resins: [] };
-  }
+  const collections = await db.listCollections({ name: "parametros" }).toArray();
+  if (collections.length === 0) return { resins: [] };
 
   const collection = getCollection("parametros");
-  const resins = await collection
-    .aggregate([
-      {
-        $group: {
-          _id: {
-            $ifNull: ["$resinId", { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }]
-          },
-          name: {
-            $first: { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }
-          },
-          profiles: { $sum: 1 }
-        }
-      },
-      { $match: { name: { $ne: null } } },
-      { $sort: { name: 1 } }
-    ])
-    .toArray();
+  const resins = await collection.aggregate([
+    {
+      $group: {
+        _id: { $ifNull: ["$resinId", { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }] },
+        name: { $first: { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] } },
+        profiles: { $sum: 1 }
+      }
+    },
+    { $match: { name: { $ne: null } } },
+    { $sort: { name: 1 } }
+  ]).toArray();
 
   return { resins };
 }
@@ -1124,21 +895,14 @@ async function listParamResins() {
 router.get("/params/resins", async (_req, res) => {
   try {
     const result = await listParamResins();
-    if (result.error) {
-      return res.status(result.error.status).json(result.error.body);
-    }
-
+    if (result.error) return res.status(result.error.status).json(result.error.body);
     const resins = (result.resins || []).map((item) => ({
       _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
       id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
       name: item.name || "Sem nome",
       profiles: item.profiles ?? 0
     }));
-
-    res.json({
-      success: true,
-      resins
-    });
+    res.json({ success: true, resins });
   } catch (err) {
     console.error("[API] Erro ao listar resinas de parâmetros:", err);
     res.status(500).json({ success: false, error: "Erro ao listar resinas" });
@@ -1148,12 +912,8 @@ router.get("/params/resins", async (_req, res) => {
 router.get("/resins", async (_req, res) => {
   try {
     const result = await listParamResins();
-    if (result.error) {
-      return res.status(result.error.status).json(result.error.body);
-    }
-
+    if (result.error) return res.status(result.error.status).json(result.error.body);
     const resins = result.resins || [];
-
     res.json({
       success: true,
       resins: resins.map((item) => ({
@@ -1174,57 +934,29 @@ router.get("/docs/fispqs", (_req, res) => {
   res.json({
     success: true,
     updatedAt: new Date().toISOString(),
-    documents: FISPQ_DOCUMENTS.map((doc) => ({
-      ...doc,
-      status: "available",
-      requestEmail: "atendimento@quanton3d.com.br"
-    }))
+    documents: FISPQ_DOCUMENTS.map((doc) => ({ ...doc, status: "available", requestEmail: "atendimento@quanton3d.com.br" }))
   });
 });
 
 const listPrinters = async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     const { resinId } = req.query;
     const filter = { status: { $ne: "deleted" } };
     if (resinId) {
       const resinFilter = buildResinFilter(resinId);
-      if (resinFilter) {
-        Object.assign(filter, resinFilter);
-      }
+      if (resinFilter) Object.assign(filter, resinFilter);
     }
     const collection = getCollection("parametros");
-    const printers = await collection
-      .aggregate([
-        { $match: filter },
-        {
-          $group: {
-            _id: { $ifNull: ["$printerId", "$printer"] },
-            brand: { $first: "$brand" },
-            model: { $first: { $ifNull: ["$model", "$printer"] } },
-            resinIds: { $addToSet: { $ifNull: ["$resinId", "$resin"] } }
-          }
-        },
-        { $sort: { brand: 1, model: 1 } }
-      ])
-      .toArray();
+    const printers = await collection.aggregate([
+      { $match: filter },
+      { $group: { _id: { $ifNull: ["$printerId", "$printer"] }, brand: { $first: "$brand" }, model: { $first: { $ifNull: ["$model", "$printer"] } }, resinIds: { $addToSet: { $ifNull: ["$resinId", "$resin"] } } } },
+      { $sort: { brand: 1, model: 1 } }
+    ]).toArray();
 
-    const mapped = printers.map((item) => ({
-      id: item._id,
-      brand: item.brand,
-      model: item.model,
-      resinIds: item.resinIds
-    }));
-
-    return res.json({
-      success: true,
-      printers: mapped,
-      matchingPrinters: resinId ? mapped : undefined
-    });
+    const mapped = printers.map((item) => ({ id: item._id, brand: item.brand, model: item.model, resinIds: item.resinIds }));
+    return res.json({ success: true, printers: mapped, matchingPrinters: resinId ? mapped : undefined });
   } catch (err) {
     console.error("[API] Erro ao listar impressoras:", err);
     return res.status(500).json({ success: false, error: "Erro ao listar impressoras" });
@@ -1234,56 +966,30 @@ const listPrinters = async (req, res) => {
 router.get("/params/printers", async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     const { resinId } = req.query;
     const filter = { status: { $ne: "deleted" } };
     if (resinId) {
       const resinFilter = buildResinFilter(resinId);
-      if (resinFilter) {
-        Object.assign(filter, resinFilter);
-      }
+      if (resinFilter) Object.assign(filter, resinFilter);
     }
-
     const collection = getCollection("parametros");
     const distinctPrinters = await collection.distinct("model", filter);
-    const printers = distinctPrinters
-      .filter((item) => typeof item === "string" && item.trim())
-      .map((item) => item.trim())
-      .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
-      .map((name) => ({
-        _id: name,
-        name
-      }));
-
-    return res.json({
-      success: true,
-      printers
-    });
+    const printers = distinctPrinters.filter((item) => typeof item === "string" && item.trim()).map((item) => item.trim()).sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" })).map((name) => ({ _id: name, name }));
+    return res.json({ success: true, printers });
   } catch (err) {
     console.error("[API] Erro ao listar impressoras:", err);
     return res.status(500).json({ success: false, error: "Erro ao listar impressoras" });
   }
 });
 router.get("/printers", listPrinters);
-router.post("/params/printers", async (req, res) => {
-  req.query = { ...(req.query || {}), ...(req.body || {}) };
-  return listPrinters(req, res);
-});
-router.post("/printers", async (req, res) => {
-  req.query = { ...(req.query || {}), ...(req.body || {}) };
-  return listPrinters(req, res);
-});
+router.post("/params/printers", async (req, res) => { req.query = { ...(req.query || {}), ...(req.body || {}) }; return listPrinters(req, res); });
+router.post("/printers", async (req, res) => { req.query = { ...(req.query || {}), ...(req.body || {}) }; return listPrinters(req, res); });
 
 const listProfiles = async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     const { resinId, printerId, status } = req.query;
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limitRaw = parseInt(req.query.limit, 10);
@@ -1293,9 +999,7 @@ const listProfiles = async (req, res) => {
     const filter = { status: { $ne: "deleted" } };
     if (resinId) {
       const resinFilter = buildResinFilter(resinId);
-      if (resinFilter) {
-        Object.assign(filter, resinFilter);
-      }
+      if (resinFilter) Object.assign(filter, resinFilter);
     }
     if (printerId) {
       const printerFilter = buildPrinterFilter(printerId);
@@ -1312,13 +1016,7 @@ const listProfiles = async (req, res) => {
     if (limit) cursor.skip(skip).limit(limit);
     const docs = await cursor.toArray();
 
-    return res.json({
-      success: true,
-      total,
-      page: limit ? page : 1,
-      limit: limit || null,
-      profiles: docs.map(buildProfileResponse)
-    });
+    return res.json({ success: true, total, page: limit ? page : 1, limit: limit || null, profiles: docs.map(buildProfileResponse) });
   } catch (err) {
     console.error("[API] Erro ao listar perfis de impressão:", err);
     return res.status(500).json({ success: false, error: "Erro ao listar perfis" });
@@ -1327,48 +1025,22 @@ const listProfiles = async (req, res) => {
 
 router.get("/params/profiles", listProfiles);
 router.get("/profiles", listProfiles);
-router.post("/params/profiles", async (req, res) => {
-  req.query = { ...(req.query || {}), ...(req.body || {}) };
-  return listProfiles(req, res);
-});
-router.post("/profiles", async (req, res) => {
-  req.query = { ...(req.query || {}), ...(req.body || {}) };
-  return listProfiles(req, res);
-});
+router.post("/params/profiles", async (req, res) => { req.query = { ...(req.query || {}), ...(req.body || {}) }; return listProfiles(req, res); });
+router.post("/profiles", async (req, res) => { req.query = { ...(req.query || {}), ...(req.body || {}) }; return listProfiles(req, res); });
 
 router.get("/params/stats", async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     const collection = getCollection("parametros");
-    const activeProfileFilter = {
-      status: { $nin: ["deleted", "test"] },
-      isTest: { $ne: true }
-    };
-
+    const activeProfileFilter = { status: { $nin: ["deleted", "test"] }, isTest: { $ne: true } };
     const [resinAgg, printerAgg, total] = await Promise.all([
       collection.distinct("resinId"),
       collection.distinct("printerId"),
       collection.countDocuments(activeProfileFilter)
     ]);
-
-    const comingSoon = await collection.countDocuments({
-      ...activeProfileFilter,
-      status: "coming_soon"
-    });
-
-    res.json({
-      success: true,
-      stats: {
-        totalResins: resinAgg.length,
-        totalPrinters: printerAgg.length,
-        totalProfiles: total,
-        comingSoonProfiles: comingSoon
-      }
-    });
+    const comingSoon = await collection.countDocuments({ ...activeProfileFilter, status: "coming_soon" });
+    res.json({ success: true, stats: { totalResins: resinAgg.length, totalPrinters: printerAgg.length, totalProfiles: total, comingSoonProfiles: comingSoon } });
   } catch (err) {
     console.error("[API] Erro ao obter estatísticas de parâmetros:", err);
     res.status(500).json({ success: false, error: "Erro ao obter estatísticas" });
@@ -1377,357 +1049,204 @@ router.get("/params/stats", async (_req, res) => {
 
 const buildVisualKnowledgeResponse = (doc) => ({
   id: doc._id?.toString?.() || doc.id || null,
-  title: doc.title || doc.name || 'Sem título',
+  title: doc.title || doc.name || "Sem título",
   description: doc.description || doc.summary || null,
   imageUrl: doc.imageUrl || doc.image || (Array.isArray(doc.images) ? doc.images[0] : null),
-  images: Array.isArray(doc.images) ? doc.images : (doc.imageUrl || doc.image ? [doc.imageUrl || doc.image] : []),
+  images: Array.isArray(doc.images) ? doc.images : doc.imageUrl || doc.image ? [doc.imageUrl || doc.image] : [],
   resin: doc.resin || null,
   printer: doc.printer || null,
   settings: doc.settings || {},
   note: doc.note || null,
   tags: Array.isArray(doc.tags) ? doc.tags : [],
-  source: doc.source || 'manual',
+  source: doc.source || "manual",
   createdAt: doc.createdAt || null,
   updatedAt: doc.updatedAt || null
 });
 
-// ==========================================
-// ROTA DE LISTA APROVADA - BUG 2 CORRIGIDO
-// ==========================================
-router.get('/visual-knowledge', async (req, res) => {
+router.get("/visual-knowledge", async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     const { page, limit, skip } = normalizeGalleryPagination(req);
-    // Garantindo que ele não ignore os dados caso uma coleção falhe
-    const collection = getVisualKnowledgeCollection() || getCollection('gallery');
-    
+    const collection = getVisualKnowledgeCollection() || getCollection("gallery");
     const total = await collection.countDocuments({});
-    const docs = await collection
-      .find({})
-      .sort({ updatedAt: -1, createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .toArray();
-
+    const docs = await collection.find({}).sort({ updatedAt: -1, createdAt: -1 }).skip(skip).limit(limit).toArray();
     const mapped = docs.map(buildVisualKnowledgeResponse);
-    return res.json({
-      success: true,
-      total,
-      page,
-      limit,
-      items: mapped,
-      documents: mapped
-    });
+    return res.json({ success: true, total, page, limit, items: mapped, documents: mapped });
   } catch (err) {
-    console.error('[API] Erro ao listar conhecimento visual:', err);
-    return res.status(500).json({ success: false, error: 'Erro ao listar conhecimento visual' });
+    console.error("[API] Erro ao listar conhecimento visual:", err);
+    return res.status(500).json({ success: false, error: "Erro ao listar conhecimento visual" });
   }
 });
 
-router.post('/visual-knowledge', upload.any(), async (req, res) => {
+router.post("/visual-knowledge", upload.any(), async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     const payload = req.body || {};
-    const title = typeof payload.title === 'string' && payload.title.trim()
-      ? payload.title.trim()
-      : (typeof payload.defectType === 'string' && payload.defectType.trim() ? payload.defectType.trim() : 'Treinamento visual');
-    let imageUrl = typeof payload.imageUrl === 'string' && payload.imageUrl.trim()
-      ? payload.imageUrl.trim()
-      : (typeof payload.image === 'string' ? payload.image.trim() : '');
+    const title = typeof payload.title === "string" && payload.title.trim() ? payload.title.trim() : typeof payload.defectType === "string" && payload.defectType.trim() ? payload.defectType.trim() : "Treinamento visual";
+    let imageUrl = typeof payload.imageUrl === "string" && payload.imageUrl.trim() ? payload.imageUrl.trim() : typeof payload.image === "string" ? payload.image.trim() : "";
 
     if (!imageUrl && Array.isArray(req.files) && req.files.length > 0) {
       const file = req.files[0];
-      if (file?.buffer?.length) {
-        imageUrl = `data:${file.mimetype || 'image/jpeg'};base64,${file.buffer.toString('base64')}`;
-      }
+      if (file?.buffer?.length) imageUrl = `data:${file.mimetype || "image/jpeg"};base64,${file.buffer.toString("base64")}`;
     }
-
-    if (!imageUrl) {
-      return res.status(400).json({ success: false, error: 'imageUrl é obrigatório' });
-    }
+    if (!imageUrl) return res.status(400).json({ success: false, error: "imageUrl é obrigatório" });
 
     const collection = getVisualKnowledgeCollection();
     const now = new Date();
     const doc = {
       title,
-      description: typeof payload.description === 'string'
-        ? payload.description.trim()
-        : (typeof payload.solution === 'string' ? payload.solution.trim() : null),
+      description: typeof payload.description === "string" ? payload.description.trim() : typeof payload.solution === "string" ? payload.solution.trim() : null,
       imageUrl,
-      tags: Array.isArray(payload.tags)
-        ? payload.tags.filter(Boolean)
-        : [payload.defectType, payload.category].filter(Boolean),
-      source: typeof payload.source === 'string' && payload.source.trim() ? payload.source.trim() : 'manual',
+      tags: Array.isArray(payload.tags) ? payload.tags.filter(Boolean) : [payload.defectType, payload.category].filter(Boolean),
+      source: typeof payload.source === "string" && payload.source.trim() ? payload.source.trim() : "manual",
       createdAt: now,
       updatedAt: now
     };
-
     const result = await collection.insertOne(doc);
     return res.status(201).json({ success: true, item: buildVisualKnowledgeResponse({ ...doc, _id: result.insertedId }) });
   } catch (err) {
-    console.error('[API] Erro ao criar conhecimento visual:', err);
-    return res.status(500).json({ success: false, error: 'Erro ao criar conhecimento visual' });
+    console.error("[API] Erro ao criar conhecimento visual:", err);
+    return res.status(500).json({ success: false, error: "Erro ao criar conhecimento visual" });
   }
 });
 
-const readAdminToken = (req) => (
-  req.headers["x-admin-secret"] ||
-  req.headers["admin-secret"] ||
-  req.query?.auth ||
-  req.body?.auth ||
-  req.query?.token
-);
-
+const readAdminToken = (req) => req.headers["x-admin-secret"] || req.headers["admin-secret"] || req.query?.auth || req.body?.auth || req.query?.token;
 const isValidAdminToken = (req) => {
   const token = readAdminToken(req);
   if (!token) return false;
-  const accepted = [
-    process.env.ADMIN_SECRET,
-    process.env.VITE_ADMIN_API_TOKEN,
-    process.env.ADMIN_API_TOKEN,
-    'quanton3d_admin_secret'
-  ].filter(Boolean);
+  const accepted = [process.env.ADMIN_SECRET, process.env.VITE_ADMIN_API_TOKEN, process.env.ADMIN_API_TOKEN, "quanton3d_admin_secret"].filter(Boolean);
   return accepted.includes(token);
 };
 
-router.get('/partners', async (_req, res) => {
+router.get("/partners", async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     const collection = getPartnersCollection();
-    if (!collection) {
-      return res.json({ success: true, partners: [] });
-    }
-
+    if (!collection) return res.json({ success: true, partners: [] });
     const partners = await collection.find({}).sort({ order: 1, createdAt: -1 }).toArray();
     return res.json({ success: true, partners: partners.map(normalizePartnerResponse) });
   } catch (err) {
-    console.error('[API] Erro ao listar parceiros:', err);
-    return res.status(500).json({ success: false, error: 'Erro ao listar parceiros' });
+    console.error("[API] Erro ao listar parceiros:", err);
+    return res.status(500).json({ success: false, error: "Erro ao listar parceiros" });
   }
 });
 
-router.post('/partners', async (req, res) => {
+router.post("/partners", async (req, res) => {
   try {
-    if (!isValidAdminToken(req)) {
-      return res.status(401).json({ success: false, error: 'unauthorized' });
-    }
-
+    if (!isValidAdminToken(req)) return res.status(401).json({ success: false, error: "unauthorized" });
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     const payload = req.body || {};
-    const name = typeof payload.name === 'string' ? payload.name.trim() : '';
-    if (!name) {
-      return res.status(400).json({ success: false, error: 'Nome é obrigatório' });
-    }
-
+    const name = typeof payload.name === "string" ? payload.name.trim() : "";
+    if (!name) return res.status(400).json({ success: false, error: "Nome é obrigatório" });
     const collection = getPartnersCollection();
     const now = new Date();
-    const doc = {
-      ...buildPartnerPayload(payload),
-      createdAt: now,
-      updatedAt: now
-    };
-
+    const doc = { ...buildPartnerPayload(payload), createdAt: now, updatedAt: now };
     const result = await collection.insertOne(doc);
     return res.status(201).json({ success: true, partner: normalizePartnerResponse({ ...doc, _id: result.insertedId }) });
   } catch (err) {
-    console.error('[API] Erro ao criar parceiro:', err);
-    return res.status(500).json({ success: false, error: 'Erro ao criar parceiro' });
+    console.error("[API] Erro ao criar parceiro:", err);
+    return res.status(500).json({ success: false, error: "Erro ao criar parceiro" });
   }
 });
 
-
-router.post('/partners/upload-image', upload.any(), async (req, res) => {
+router.post("/partners/upload-image", upload.any(), async (req, res) => {
   try {
-    if (!isValidAdminToken(req)) {
-      return res.status(401).json({ success: false, error: 'unauthorized' });
-    }
-
+    if (!isValidAdminToken(req)) return res.status(401).json({ success: false, error: "unauthorized" });
     const payload = req.body || {};
-    let imageUrl = typeof payload.imageUrl === 'string' && payload.imageUrl.trim()
-      ? payload.imageUrl.trim()
-      : (typeof payload.image === 'string' ? payload.image.trim() : '');
-
+    let imageUrl = typeof payload.imageUrl === "string" && payload.imageUrl.trim() ? payload.imageUrl.trim() : typeof payload.image === "string" ? payload.image.trim() : "";
     if (!imageUrl && Array.isArray(req.files) && req.files.length > 0) {
       const file = req.files[0];
-      if (file?.buffer?.length) {
-        imageUrl = `data:${file.mimetype || 'image/jpeg'};base64,${file.buffer.toString('base64')}`;
-      }
+      if (file?.buffer?.length) imageUrl = `data:${file.mimetype || "image/jpeg"};base64,${file.buffer.toString("base64")}`;
     }
-
-    if (!imageUrl) {
-      return res.status(400).json({ success: false, error: 'image obrigatório' });
-    }
-
+    if (!imageUrl) return res.status(400).json({ success: false, error: "image obrigatório" });
     return res.json({ success: true, imageUrl, url: imageUrl });
   } catch (err) {
-    console.error('[API] Erro no upload de imagem de parceiro:', err);
-    return res.status(500).json({ success: false, error: 'Erro no upload da imagem' });
+    console.error("[API] Erro no upload de imagem de parceiro:", err);
+    return res.status(500).json({ success: false, error: "Erro no upload da imagem" });
   }
 });
 
-router.put('/partners/:id', async (req, res) => {
+router.put("/partners/:id", async (req, res) => {
   try {
-    if (!isValidAdminToken(req)) {
-      return res.status(401).json({ success: false, error: 'unauthorized' });
-    }
-
+    if (!isValidAdminToken(req)) return res.status(401).json({ success: false, error: "unauthorized" });
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     const { id } = req.params;
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, error: 'ID inválido' });
-    }
-
+    if (!ObjectId.isValid(id)) return res.status(400).json({ success: false, error: "ID inválido" });
     const collection = getPartnersCollection();
     const payload = req.body || {};
-    const updates = {
-      ...buildPartnerPayload(payload, { partial: true }),
-      updatedAt: new Date()
-    };
-
-    const result = await collection.findOneAndUpdate(
-      { _id: new ObjectId(id) },
-      { $set: updates },
-      { returnDocument: 'after' }
-    );
-
+    const updates = { ...buildPartnerPayload(payload, { partial: true }), updatedAt: new Date() };
+    const result = await collection.findOneAndUpdate({ _id: new ObjectId(id) }, { $set: updates }, { returnDocument: "after" });
     const updatedPartner = result?.value || result;
-    if (!updatedPartner || !updatedPartner._id) {
-      return res.status(404).json({ success: false, error: 'Parceiro não encontrado' });
-    }
-
+    if (!updatedPartner || !updatedPartner._id) return res.status(404).json({ success: false, error: "Parceiro não encontrado" });
     return res.json({ success: true, partner: normalizePartnerResponse(updatedPartner) });
   } catch (err) {
-    console.error('[API] Erro ao atualizar parceiro:', err);
-    return res.status(500).json({ success: false, error: 'Erro ao atualizar parceiro' });
+    console.error("[API] Erro ao atualizar parceiro:", err);
+    return res.status(500).json({ success: false, error: "Erro ao atualizar parceiro" });
   }
 });
 
-router.delete('/partners/:id', async (req, res) => {
+router.delete("/partners/:id", async (req, res) => {
   try {
-    if (!isValidAdminToken(req)) {
-      return res.status(401).json({ success: false, error: 'unauthorized' });
-    }
-
+    if (!isValidAdminToken(req)) return res.status(401).json({ success: false, error: "unauthorized" });
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     const { id } = req.params;
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, error: 'ID inválido' });
-    }
-
+    if (!ObjectId.isValid(id)) return res.status(400).json({ success: false, error: "ID inválido" });
     const collection = getPartnersCollection();
     const result = await collection.deleteOne({ _id: new ObjectId(id) });
-    if (!result.deletedCount) {
-      return res.status(404).json({ success: false, error: 'Parceiro não encontrado' });
-    }
-
+    if (!result.deletedCount) return res.status(404).json({ success: false, error: "Parceiro não encontrado" });
     return res.json({ success: true });
   } catch (err) {
-    console.error('[API] Erro ao remover parceiro:', err);
-    return res.status(500).json({ success: false, error: 'Erro ao remover parceiro' });
+    console.error("[API] Erro ao remover parceiro:", err);
+    return res.status(500).json({ success: false, error: "Erro ao remover parceiro" });
   }
 });
 
-router.post('/add-knowledge', async (req, res) => {
+router.post("/add-knowledge", async (req, res) => {
   try {
-    if (!isValidAdminToken(req)) {
-      return res.status(401).json({ success: false, error: 'unauthorized' });
-    }
-
+    if (!isValidAdminToken(req)) return res.status(401).json({ success: false, error: "unauthorized" });
     const payload = req.body || {};
-    const title = typeof payload.title === 'string' ? payload.title.trim() : '';
-    const content = typeof payload.content === 'string' ? payload.content.trim() : '';
-    const source = typeof payload.source === 'string' && payload.source.trim() ? payload.source.trim() : 'admin_panel';
-    const tags = Array.isArray(payload.tags) ? payload.tags.filter(Boolean) : ['admin'];
-
-    if (!title || !content) {
-      return res.status(400).json({ success: false, error: 'title e content são obrigatórios' });
-    }
-
+    const title = typeof payload.title === "string" ? payload.title.trim() : "";
+    const content = typeof payload.content === "string" ? payload.content.trim() : "";
+    const source = typeof payload.source === "string" && payload.source.trim() ? payload.source.trim() : "admin_panel";
+    const tags = Array.isArray(payload.tags) ? payload.tags.filter(Boolean) : ["admin"];
+    if (!title || !content) return res.status(400).json({ success: false, error: "title e content são obrigatórios" });
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
-    }
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
     const result = await addDocument(title, content, source, tags);
     return res.status(201).json({ success: true, result });
   } catch (err) {
-    console.error('[API] Erro ao adicionar knowledge:', err);
-    return res.status(500).json({ success: false, error: 'Erro ao adicionar knowledge' });
+    console.error("[API] Erro ao adicionar knowledge:", err);
+    return res.status(500).json({ success: false, error: "Erro ao adicionar knowledge" });
   }
 });
 
-router.get('/knowledge', async (_req, res) => {
+router.get("/knowledge", async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
-    }
-
-    const collection = getCollection('documents');
-    if (!collection) {
-      return res.json({ success: true, documents: [] });
-    }
-
-    const documents = await collection
-      .find({}, { projection: { title: 1, tags: 1, source: 1, createdAt: 1 } })
-      .sort({ createdAt: -1 })
-      .limit(200)
-      .toArray();
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    const collection = getCollection("documents");
+    if (!collection) return res.json({ success: true, documents: [] });
+    const documents = await collection.find({}, { projection: { title: 1, tags: 1, source: 1, createdAt: 1 } }).sort({ createdAt: -1 }).limit(200).toArray();
     return res.json({ success: true, documents });
   } catch (err) {
-    console.error('[API] Erro ao listar knowledge:', err);
-    return res.status(500).json({ success: false, error: 'Erro ao listar knowledge' });
+    console.error("[API] Erro ao listar knowledge:", err);
+    return res.status(500).json({ success: false, error: "Erro ao listar knowledge" });
   }
 });
 
-router.get('/visual-knowledge/pending', async (_req, res) => {
+router.get("/visual-knowledge/pending", async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
-    }
-
-    const pendingCollection = getCollection('gallery');
-    if (!pendingCollection) {
-      return res.json({ success: true, pending: [] });
-    }
-
-    const pendingDocs = await pendingCollection
-      .find({
-        $or: [
-          { approved: false },
-          { status: 'pending' }
-        ]
-      })
-      .sort({ createdAt: -1 })
-      .limit(200)
-      .toArray();
-
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    const pendingCollection = getCollection("gallery");
+    if (!pendingCollection) return res.json({ success: true, pending: [] });
+    const pendingDocs = await pendingCollection.find({ $or: [{ approved: false }, { status: "pending" }] }).sort({ createdAt: -1 }).limit(200).toArray();
     return res.json({
       success: true,
       pending: pendingDocs.map((item) => ({
@@ -1736,12 +1255,12 @@ router.get('/visual-knowledge/pending', async (_req, res) => {
         userName: item.userName || item.user || item.name || null,
         defectType: item.defectType || item.title || null,
         createdAt: item.createdAt || null,
-        status: item.status || (item.approved ? 'approved' : 'pending')
+        status: item.status || (item.approved ? "approved" : "pending")
       }))
     });
   } catch (err) {
-    console.error('[API] Erro ao listar conhecimento visual pendente:', err);
-    return res.status(500).json({ success: false, error: 'Erro ao listar pendências visuais' });
+    console.error("[API] Erro ao listar conhecimento visual pendente:", err);
+    return res.status(500).json({ success: false, error: "Erro ao listar pendências visuais" });
   }
 });
 
