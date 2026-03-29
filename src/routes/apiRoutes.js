@@ -305,23 +305,15 @@ const extractSettingsFromBody = (body = {}) => {
 // 🟢 CIRURGIA 3: SALVANDO A ORIGEM PARA AS MÉTRICAS
 router.post("/register-user", async (req, res) => {
   try {
-    const body = req.body || {};
-    const name = normalizeString(body.name || "");
-    const phone = normalizeString(body.phone || "");
-    const email = normalizeString(body.email || "");
-    const resin = normalizeString(body.resin || "", "") || null;
-    const problemType = normalizeString(body.problemType || "", "") || null;
-    const sessionId = normalizeString(body.sessionId || "", "") || null;
-    const originValue = normalizeString(body.origin || body.source || "Direto", "Direto");
-    const now = new Date();
-
+    const { name, phone, email, resin, problemType, sessionId, origin, source } = req.body;
+    
     if (!name || !phone || !email) {
       return res.status(400).json({
         success: false,
         error: "Nome, telefone e email sao obrigatorios"
       });
     }
-
+    
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
       return res.status(503).json({
@@ -329,67 +321,36 @@ router.post("/register-user", async (req, res) => {
         error: "Banco de dados indisponivel"
       });
     }
-
-    const conversasCollection = getConversasCollection();
-    if (conversasCollection) {
-      const fallbackFilters = [];
-      if (sessionId) fallbackFilters.push({ sessionId });
-      if (email) fallbackFilters.push({ userEmail: email });
-      if (phone) fallbackFilters.push({ userPhone: phone });
-
-      const conversationFilter =
-        fallbackFilters.length === 1
-          ? fallbackFilters[0]
-          : { $or: fallbackFilters };
-
+    
+    if (sessionId) {
+      const conversasCollection = getConversasCollection(); 
       await conversasCollection.updateOne(
-        conversationFilter,
+        { sessionId },
         {
           $set: {
-            sessionId,
             userName: name,
             userPhone: phone,
             userEmail: email,
-            resin,
-            problemType,
-            origin: originValue,
-            updatedAt: now
-          },
-          $setOnInsert: {
-            createdAt: now
+            resin: resin || null,
+            problemType: problemType || null,
+            origin: origin || source || 'Direto', // GRAVANDO O "COMO NOS CONHECEU" AQUI
+            updatedAt: new Date()
           }
         },
         { upsert: true }
       );
     }
-
-    const contactsCollection = getCollection("contacts");
-    if (contactsCollection) {
-      await contactsCollection.insertOne({
-        name,
-        phone,
-        email,
-        resin,
-        problemType,
-        origin: originValue,
-        source: originValue,
-        sessionId,
-        status: "active",
-        createdAt: now,
-        updatedAt: now
-      });
-    }
-
+    
     console.log(`[API] Usuario registrado: ${name} (${email})`);
-
-    return res.json({
+    
+    res.json({
       success: true,
       message: "Usuario registrado com sucesso",
-      user: { name, phone, email, resin, problemType, origin: originValue }
+      user: { name, phone, email, resin, problemType }
     });
   } catch (err) {
     console.error("[API] Erro ao registrar usuario:", err);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       error: "Erro ao registrar usuario"
     });
@@ -423,6 +384,7 @@ router.post("/contact", async (req, res) => {
       subject: subject || "Contato via Site",
       message,
       status: "pending",
+      approved: false,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -473,6 +435,9 @@ router.put("/contact/:id", adminGuard(async (req, res) => {
       ? { _id: new ObjectId(id) }
       : { $or: [{ id }, { legacyId: id }] };
 
+    let updatedCount = 0;
+    let latestUpdated = null;
+
     for (const collection of collections) {
       const result = await collection.findOneAndUpdate(
         filter,
@@ -482,74 +447,27 @@ router.put("/contact/:id", adminGuard(async (req, res) => {
 
       const updated = result?.value || result;
       if (updated && (updated._id || updated.id || updated.legacyId)) {
-        return res.json({
-          success: true,
-          contact: {
-            id: updated._id?.toString?.() || updated.id || updated.legacyId || id,
-            status: updated.status || status,
-            updatedAt: updated.updatedAt || null
-          }
-        });
+        updatedCount += 1;
+        latestUpdated = updated;
       }
     }
 
-    return res.status(404).json({ success: false, error: 'Contato não encontrado' });
-  } catch (err) {
-    console.error('[API] Erro ao atualizar contato:', err);
-    return res.status(500).json({ success: false, error: 'Erro ao atualizar contato' });
-  }
-}));
-
-router.get("/contacts", adminGuard(async (_req, res) => {
-  try {
-    const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({
-        success: false,
-        error: "Banco de dados indisponivel"
-      });
+    if (!updatedCount || !latestUpdated) {
+      return res.status(404).json({ success: false, error: 'Contato não encontrado' });
     }
-
-    const contactsCollection = getCollection("contacts");
-    if (!contactsCollection) {
-      return res.json({
-        success: true,
-        contacts: [],
-        total: 0
-      });
-    }
-
-    const docs = await contactsCollection
-      .find({ status: { $ne: "deleted" } })
-      .sort({ createdAt: -1 })
-      .limit(1000)
-      .toArray();
-
-    const contacts = docs.map((doc) => ({
-      id: doc._id?.toString?.() || doc.id || doc.legacyId || null,
-      _id: doc._id?.toString?.() || doc.id || doc.legacyId || null,
-      name: doc.name || doc.userName || "Sem nome",
-      phone: doc.phone || doc.userPhone || null,
-      email: doc.email || doc.userEmail || null,
-      origin: doc.origin || doc.source || "Direto",
-      resin: doc.resin || null,
-      problemType: doc.problemType || null,
-      status: doc.status || "active",
-      createdAt: doc.createdAt || null,
-      updatedAt: doc.updatedAt || null
-    }));
 
     return res.json({
       success: true,
-      contacts,
-      total: contacts.length
+      updatedCount,
+      contact: {
+        id: latestUpdated._id?.toString?.() || latestUpdated.id || latestUpdated.legacyId || id,
+        status: latestUpdated.status || status,
+        updatedAt: latestUpdated.updatedAt || null
+      }
     });
   } catch (err) {
-    console.error("[API] Erro ao listar contatos:", err);
-    return res.status(500).json({
-      success: false,
-      error: "Erro ao listar contatos"
-    });
+    console.error('[API] Erro ao atualizar contato:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao atualizar contato' });
   }
 }));
 
@@ -594,6 +512,7 @@ router.post("/custom-request", async (req, res) => {
       color: color || null,
       details: details || null,
       status: "pending",
+      approved: false,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -616,18 +535,24 @@ router.post("/custom-request", async (req, res) => {
 });
 
 const buildOrderResponse = (doc = {}) => ({
-  id: doc._id?.toString?.(),
+  id: doc._id?.toString?.() || doc.id || doc.legacyId || null,
+  _id: doc._id?.toString?.() || doc.id || doc.legacyId || null,
   customerName: doc.name || doc.customerName || doc.userName || 'Cliente',
+  name: doc.name || doc.customerName || doc.userName || 'Cliente',
   phone: doc.phone || doc.userPhone || null,
   email: doc.email || doc.userEmail || null,
-  desiredFeature: doc.desiredFeature || null,
-  color: doc.color || null,
+  desiredFeature: doc.desiredFeature || doc.caracteristica || null,
+  caracteristica: doc.desiredFeature || doc.caracteristica || null,
+  color: doc.color || doc.cor || null,
+  cor: doc.color || doc.cor || null,
   details: doc.details || doc.complementos || doc.notes || null,
+  complementos: doc.details || doc.complementos || doc.notes || null,
   status: doc.status || 'pending',
   createdAt: doc.createdAt || null,
   updatedAt: doc.updatedAt || null,
   items: Array.isArray(doc.items) ? doc.items : [],
-  notes: doc.notes || doc.details || null
+  notes: doc.notes || doc.details || null,
+  type: doc.type || null
 });
 
 router.get('/orders', adminGuard(async (req, res) => {
@@ -650,6 +575,34 @@ router.get('/orders', adminGuard(async (req, res) => {
   }
 }));
 
+router.get('/formulations', adminGuard(async (_req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const collection = getOrdersCollectionSafe();
+    if (!collection) {
+      return res.status(503).json({ success: false, error: 'Coleção de pedidos indisponível' });
+    }
+
+    const docs = await collection.find({
+      $or: [
+        { type: 'custom_request' },
+        { desiredFeature: { $exists: true } },
+        { caracteristica: { $exists: true } }
+      ]
+    }).sort({ createdAt: -1 }).toArray();
+
+    const requests = docs.map(buildOrderResponse);
+    return res.json({ success: true, formulations: requests, requests });
+  } catch (err) {
+    console.error('[API] Erro ao listar formulações:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao listar formulações' });
+  }
+}));
+
 router.put('/orders/:id', adminGuard(async (req, res) => {
   try {
     const { id } = req.params;
@@ -669,7 +622,7 @@ router.put('/orders/:id', adminGuard(async (req, res) => {
       return res.status(503).json({ success: false, error: 'Coleção de pedidos indisponível' });
     }
 
-    const filter = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { legacyId: id };
+    const filter = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { $or: [{ legacyId: id }, { id }] };
     const updateResult = await collection.updateOne(filter, { $set: { status, updatedAt: new Date() } });
 
     if (!updateResult.matchedCount) {
@@ -695,7 +648,7 @@ router.post("/gallery", upload.any(), async (req, res) => {
       imageUrl,
       note,
       contact
-    } = req.body || {};
+    } = req.body;
     const sanitizedResin = sanitizeResinName(resin);
 
     if (!sanitizedResin || !printer) {
@@ -719,20 +672,15 @@ router.post("/gallery", upload.any(), async (req, res) => {
 
     const multipartImages = Array.isArray(req.files)
       ? req.files
-          .filter((file) => file?.buffer)
-          .map((file) => {
-            const mimeType = file.mimetype || "application/octet-stream";
-            const base64 = file.buffer.toString("base64");
-            return `data:${mimeType};base64,${base64}`;
-          })
+        .filter((file) => file?.buffer)
+        .map((file) => {
+          const mimeType = file.mimetype || "application/octet-stream";
+          const base64 = file.buffer.toString("base64");
+          return `data:${mimeType};base64,${base64}`;
+        })
       : [];
 
-    const finalImages =
-      imageUrlPayload.length > 0
-        ? imageUrlPayload
-        : payloadImages.length > 0
-          ? payloadImages
-          : multipartImages;
+    const finalImages = imageUrlPayload.length > 0 ? imageUrlPayload : payloadImages.length > 0 ? payloadImages : multipartImages;
 
     if (finalImages.length === 0) {
       return res.status(400).json({
@@ -750,16 +698,11 @@ router.post("/gallery", upload.any(), async (req, res) => {
     }
 
     const galleryCollection = getCollection("gallery");
-    const finalSettings = {
-      ...extractSettingsFromBody(req.body),
-      ...parseGallerySettings(settings)
-    };
-
     const newEntry = {
       name: name?.trim() || null,
       resin: sanitizedResin,
-      printer: String(printer).trim(),
-      settings: finalSettings,
+      printer: printer.trim(),
+      settings: { ...extractSettingsFromBody(req.body), ...parseGallerySettings(settings) },
       contact: contact?.trim() || null,
       images: finalImages,
       note: note?.trim() || null,
@@ -772,14 +715,14 @@ router.post("/gallery", upload.any(), async (req, res) => {
     const result = await galleryCollection.insertOne(newEntry);
     console.log(`[API] Nova foto enviada para galeria: ${sanitizedResin} / ${printer}`);
 
-    return res.json({
+    res.json({
       success: true,
       message: "Fotos enviadas com sucesso! Em breve aparecerão na galeria.",
       id: result.insertedId
     });
   } catch (err) {
     console.error("[API] Erro ao enviar fotos para galeria:", err);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       error: "Erro ao enviar fotos"
     });
@@ -843,18 +786,29 @@ router.post("/suggest-knowledge", async (req, res) => {
   }
 });
 
-const buildGalleryResponse = (doc) => ({
-  id: doc._id?.toString?.(),
-  name: doc.name ?? null,
-  resin: doc.resin ?? null,
-  printer: doc.printer ?? null,
-  settings: doc.settings ?? {},
-  images: Array.isArray(doc.images) ? doc.images : [],
-  note: doc.note ?? null,
-  status: doc.status ?? "pending",
-  createdAt: doc.createdAt ?? null,
-  updatedAt: doc.updatedAt ?? null
-});
+const buildGalleryResponse = (doc) => {
+  const normalizedImages = Array.isArray(doc.images) ? doc.images : [];
+  const primaryImage = doc.imageUrl || doc.image || normalizedImages[0] || null;
+  return {
+    id: doc._id?.toString?.() || doc.id || doc.legacyId || null,
+    _id: doc._id?.toString?.() || doc.id || doc.legacyId || null,
+    legacyId: doc.legacyId || null,
+    name: doc.name ?? doc.userName ?? null,
+    userName: doc.userName ?? doc.name ?? null,
+    resin: doc.resin ?? null,
+    printer: doc.printer ?? null,
+    settings: doc.settings ?? {},
+    images: normalizedImages,
+    imageUrl: primaryImage,
+    image: primaryImage,
+    note: doc.note ?? null,
+    contact: doc.contact ?? null,
+    approved: doc.approved ?? doc.status === "approved",
+    status: doc.status ?? "pending",
+    createdAt: doc.createdAt ?? null,
+    updatedAt: doc.updatedAt ?? null
+  };
+};
 
 const normalizeGalleryPagination = (req) => {
   const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
@@ -959,9 +913,7 @@ const buildGalleryLookupQueries = (rawId) => {
   const seen = new Set();
 
   const push = (query) => {
-    const key = JSON.stringify(query, (_, value) =>
-      value && value._bsontype === "ObjectId" ? value.toString() : value
-    );
+    const key = JSON.stringify(query, (_, value) => (value && value._bsontype === "ObjectId" ? value.toString() : value));
     if (!seen.has(key)) {
       seen.add(key);
       queries.push(query);
@@ -975,7 +927,10 @@ const buildGalleryLookupQueries = (rawId) => {
   }
 
   if (rawId && ObjectId.isValid(rawId)) {
-    push({ _id: new ObjectId(rawId) });
+    const objectId = new ObjectId(rawId);
+    push({ _id: objectId });
+    push({ id: objectId.toString() });
+    push({ legacyId: objectId.toString() });
   }
 
   return queries;
@@ -1037,81 +992,48 @@ const deleteGalleryAcrossCollections = async (rawId) => {
   return null;
 };
 
-router.put("/gallery/:id/approve", adminGuard(async (req, res) => {
+router.put('/gallery/:id/approve', adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
-      return res.status(503).json({
-        success: false,
-        error: "Banco de dados indisponivel"
-      });
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
     }
 
-    const updated = await updateGalleryAcrossCollections(
-      req.params.id,
-      {
-        $set: {
-          status: "approved",
-          approved: true,
-          updatedAt: new Date()
-        }
-      }
-    );
+    const updated = await updateGalleryAcrossCollections(req.params.id, {
+      $set: { status: 'approved', approved: true, updatedAt: new Date() }
+    });
 
     if (!updated) {
-      return res.status(404).json({
-        success: false,
-        error: "Item nao encontrado"
-      });
+      return res.status(404).json({ success: false, error: 'Item nao encontrado' });
     }
 
-    return res.json({
-      success: true,
-      item: buildGalleryResponse(updated)
-    });
+    return res.json({ success: true, item: buildGalleryResponse(updated) });
   } catch (err) {
-    console.error("[API] Erro ao aprovar galeria:", err);
-    return res.status(500).json({
-      success: false,
-      error: err.message
-    });
+    console.error('[API] Erro ao aprovar galeria:', err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 }));
 
-router.delete("/gallery/:id", adminGuard(async (req, res) => {
+router.delete('/gallery/:id', adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
-      return res.status(503).json({
-        success: false,
-        error: "Banco de dados indisponivel"
-      });
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
     }
 
     const deleted = await deleteGalleryAcrossCollections(req.params.id);
-
     if (!deleted) {
-      return res.status(404).json({
-        success: false,
-        error: "Item nao encontrado"
-      });
+      return res.status(404).json({ success: false, error: 'Item nao encontrado' });
     }
 
     return res.json({
       success: true,
       mode: deleted.mode,
-      deletedId:
-        deleted.doc?._id?.toString?.() ||
-        deleted.doc?.id ||
-        deleted.doc?.legacyId ||
-        req.params.id
+      deletedId: deleted.doc?._id?.toString?.() || deleted.doc?.id || deleted.doc?.legacyId || req.params.id
     });
   } catch (err) {
-    console.error("[API] Erro ao deletar galeria:", err);
-    return res.status(500).json({
-      success: false,
-      error: err.message
-    });
+    console.error('[API] Erro ao deletar galeria:', err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 }));
 
@@ -1201,21 +1123,17 @@ async function listParamResins() {
 
 router.get("/params/resins", async (_req, res) => {
   try {
-    const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    const result = await listParamResins();
+    if (result.error) {
+      return res.status(result.error.status).json(result.error.body);
     }
 
-    const collection = getCollection("parametros");
-    const distinctResins = await collection.distinct("resinName");
-    const resins = distinctResins
-      .filter((item) => typeof item === "string" && item.trim())
-      .map((item) => item.trim())
-      .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
-      .map((name) => ({
-        _id: name,
-        name
-      }));
+    const resins = (result.resins || []).map((item) => ({
+      _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
+      id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
+      name: item.name || "Sem nome",
+      profiles: item.profiles ?? 0
+    }));
 
     res.json({
       success: true,
@@ -1272,7 +1190,7 @@ const listPrinters = async (req, res) => {
     }
 
     const { resinId } = req.query;
-    const filter = {};
+    const filter = { status: { $ne: "deleted" } };
     if (resinId) {
       const resinFilter = buildResinFilter(resinId);
       if (resinFilter) {
@@ -1321,7 +1239,7 @@ router.get("/params/printers", async (req, res) => {
     }
 
     const { resinId } = req.query;
-    const filter = {};
+    const filter = { status: { $ne: "deleted" } };
     if (resinId) {
       const resinFilter = buildResinFilter(resinId);
       if (resinFilter) {
@@ -1372,7 +1290,7 @@ const listProfiles = async (req, res) => {
     const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, MAX_PARAMS_PAGE_SIZE) : null;
     const skip = limit ? (page - 1) * limit : 0;
 
-    const filter = {};
+    const filter = { status: { $ne: "deleted" } };
     if (resinId) {
       const resinFilter = buildResinFilter(resinId);
       if (resinFilter) {
