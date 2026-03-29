@@ -747,7 +747,16 @@ const buildGalleryLookupQueries = (rawId) => {
   return queries;
 };
 
-const getGalleryCollections = () => [getCollection("gallery"), getCollection("gallery_pending"), getCollection("visual_knowledge_pending")].filter(Boolean);
+const getGalleryCollections = () => {
+  const candidates = [
+    getCollection("gallery"),
+    getCollection("visual_knowledge"),
+    getCollection("gallery_pending"),
+    getCollection("visual_knowledge_pending"),
+    typeof getVisualKnowledgeCollection === "function" ? getVisualKnowledgeCollection() : null
+  ].filter(Boolean);
+  return Array.from(new Set(candidates));
+};
 
 const findGalleryAcrossCollections = async (rawId) => {
   for (const collection of getGalleryCollections()) {
@@ -773,17 +782,12 @@ const deleteGalleryAcrossCollections = async (rawId) => {
   if (!found) return null;
 
   const deleteResult = await found.collection.deleteOne({ _id: found.doc._id });
-  if (deleteResult.deletedCount) {
+  if (deleteResult?.deletedCount) {
     return { mode: "deleted", doc: found.doc };
   }
 
-  await found.collection.updateOne(
-    { _id: found.doc._id },
-    { $set: { status: "deleted", approved: false, deletedAt: new Date(), updatedAt: new Date() } }
-  );
-  const softDoc = await found.collection.findOne({ _id: found.doc._id });
-  if (softDoc) return { mode: "soft-deleted", doc: softDoc };
-  return null;
+  // Se encontrou o documento mas não conseguiu deletar, tratamos como erro (não fazemos soft delete)
+  throw new Error("Falha ao remover documento da galeria");
 };
 
 const approveGalleryHandler = async (req, res) => {
