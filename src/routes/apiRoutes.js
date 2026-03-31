@@ -49,9 +49,7 @@ const isAdminRequest = (req) => {
   }
 
   const legacySecret = req.headers["x-admin-secret"] || req.query?.auth || req.body?.auth;
-  if (legacySecret && legacySecret === ADMIN_SECRET) {
-    return true;
-  }
+  if (legacySecret && legacySecret === ADMIN_SECRET) return true;
 
   return false;
 };
@@ -63,7 +61,7 @@ const adminGuard = (handler) => async (req, res) => {
   return handler(req, res);
 };
 
-// ====================== HELPERS GLOBAIS (ÚNICOS) ======================
+// ====================== HELPERS GLOBAIS ======================
 const isNil = (value) => value === undefined || value === null;
 
 const normalizeString = (value, fallback = '') => (typeof value === 'string' ? value.trim() : fallback);
@@ -193,16 +191,7 @@ router.post("/register-user", async (req, res) => {
       const conversasCollection = getConversasCollection();
       await conversasCollection.updateOne(
         { sessionId },
-        {
-          $set: {
-            userName: name.trim(),
-            userPhone: phone.trim(),
-            userEmail: email.trim().toLowerCase(),
-            resin: resin || null,
-            problemType: problemType || null,
-            updatedAt: new Date()
-          }
-        },
+        { $set: { userName: name.trim(), userPhone: phone.trim(), userEmail: email.trim().toLowerCase(), resin, problemType, updatedAt: new Date() } },
         { upsert: true }
       );
     }
@@ -303,7 +292,7 @@ router.post("/custom-request", async (req, res) => {
   }
 });
 
-// ====================== ROTAS DE GALERIA ======================
+// ====================== GALERIA ======================
 router.post("/gallery", upload.any(), async (req, res) => {
   try {
     const { name, resin, printer, settings, image, images, imageUrl, note, contact } = req.body;
@@ -400,7 +389,7 @@ router.get('/visual-knowledge/pending', async (_req, res) => {
 
     res.json({
       success: true,
-      pending: pendingDocs.map(item => ({
+      pending: pendingDocs.map((item) => ({
         _id: item._id?.toString?.() || item.id || null,
         imageUrl: item.imageUrl || item.image || (Array.isArray(item.images) ? item.images[0] : null),
         userName: item.userName || item.user || item.name || null,
@@ -447,20 +436,16 @@ router.put('/visual-knowledge/:id/approve', adminGuard(async (req, res) => {
   }
 });
 
-// ====================== PARÂMETROS ======================
+// ====================== PARÂMETROS OTIMIZADOS ======================
 router.get("/params/resins", async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
-    }
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
 
     const collection = getCollection("parametros");
-    if (!collection) {
-      return res.json({ success: true, resins: [] });
-    }
+    if (!collection) return res.json({ success: true, resins: [] });
 
-    const resins = await collection.aggregate([
+    const stats = await collection.aggregate([
       {
         $group: {
           _id: { $ifNull: ["$resinId", { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }] },
@@ -474,7 +459,7 @@ router.get("/params/resins", async (_req, res) => {
 
     res.json({
       success: true,
-      resins: resins.map((item) => ({
+      resins: stats.map(item => ({
         _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
         name: item.name || "Sem nome",
         description: `Perfis: ${item.profiles ?? 0}`,
@@ -487,6 +472,7 @@ router.get("/params/resins", async (_req, res) => {
     res.status(500).json({ success: false, error: "Erro ao listar resinas" });
   }
 });
+
 const listPrinters = async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -598,7 +584,7 @@ router.get("/params/stats", async (_req, res) => {
   }
 });
 
-// ====================== PARCEIROS (OTIMIZADO) ======================
+// ====================== PARCEIROS ======================
 router.get('/partners', async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -646,6 +632,12 @@ router.post('/partners', adminGuard(async (req, res) => {
   }
 });
 
-// ... (PUT e DELETE de partners mantidos da versão anterior)
+// ====================== OUTRAS ROTAS ======================
+router.get("/nuke-and-seed", async (_req, res) => {
+  return res.status(410).json({
+    success: false,
+    error: "Rota descontinuada. A coleção 'parametros' no MongoDB é a fonte de verdade."
+  });
+});
 
 export { router as apiRoutes };
