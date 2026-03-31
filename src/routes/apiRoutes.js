@@ -451,9 +451,15 @@ router.put('/visual-knowledge/:id/approve', adminGuard(async (req, res) => {
 router.get("/params/resins", async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getCollection("parametros");
+    if (!collection) {
+      return res.json({ success: true, resins: [] });
+    }
+
     const resins = await collection.aggregate([
       {
         $group: {
@@ -468,7 +474,7 @@ router.get("/params/resins", async (_req, res) => {
 
     res.json({
       success: true,
-      resins: resins.map(item => ({
+      resins: resins.map((item) => ({
         _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
         name: item.name || "Sem nome",
         description: `Perfis: ${item.profiles ?? 0}`,
@@ -481,7 +487,6 @@ router.get("/params/resins", async (_req, res) => {
     res.status(500).json({ success: false, error: "Erro ao listar resinas" });
   }
 });
-
 const listPrinters = async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
