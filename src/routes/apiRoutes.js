@@ -17,15 +17,6 @@ import { addDocument } from "../../rag-search.js";
 const router = express.Router();
 const MAX_PARAMS_PAGE_SIZE = 200;
 const MAX_GALLERY_PAGE_SIZE = 100;
- codex/revert-changes-to-apiroutes.js-and-adminpanel.jsx-y45qq1
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 4 * 1024 * 1024,
-    files: 8
-  }
-});
-
 const upload = multer();
  main
 const FISPQ_DOCUMENTS = [
