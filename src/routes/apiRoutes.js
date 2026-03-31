@@ -274,9 +274,6 @@ const buildPartnerPayload = (payload = {}, { partial = false } = {}) => {
   };
 };
 
-
-const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
 const sanitizeNumericValue = (value) => {
   if (value === undefined || value === null) return null;
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
