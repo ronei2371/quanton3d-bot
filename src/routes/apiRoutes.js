@@ -764,9 +764,9 @@ const normalizeGalleryPagination = (req) => {
   return { page, limit, skip: (page - 1) * limit };
 };
 
-// ==========================================
+// ---
 // ROTA OTIMIZADA PELO GPT-5 (GALERIA APROVADA)
-// ==========================================
+// ---
 router.get("/gallery", async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -809,9 +809,9 @@ router.get("/gallery", async (req, res) => {
   }
 });
 
-// ==========================================
+// ---
 // ROTA OTIMIZADA PELO GPT-5 (GALERIA COMPLETA)
-// ==========================================
+// ---
 router.get("/gallery/all", async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -1168,9 +1168,9 @@ const buildVisualKnowledgeResponse = (doc) => ({
   updatedAt: doc.updatedAt || null
 });
 
-// ==========================================
+// ---
 // ROTA DE LISTA APROVADA - BUG 2 CORRIGIDO
-// ==========================================
+// ---
 router.get('/visual-knowledge', async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -1485,9 +1485,9 @@ router.get('/knowledge', async (_req, res) => {
   }
 });
 
-// ==========================================
+// ---
 // ROTA PENDENTE - BUGS 1 E 3 CORRIGIDOS 
-// ==========================================
+// ---
 router.get('/visual-knowledge/pending', async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
