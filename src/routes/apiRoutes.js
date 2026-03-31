@@ -6,97 +6,106 @@ import * as db from "../../db.js";
 import { addDocument } from "../../rag-search.js";
 
 const router = express.Router();
-const MAX_PARAMS_PAGE_SIZE = 200;
-const MAX_GALLERY_PAGE_SIZE = 100;
 const upload = multer();
 
-const FISPQ_DOCUMENTS = [
-  { resin: "Iron 7030", slug: "iron-7030" },
-  { resin: "Spin+", slug: "spin-plus" },
-  { resin: "Iron Skin", slug: "iron-skin" },
-  { resin: "LowSmell", slug: "lowsmell" },
-  { resin: "Poseidon", slug: "poseidon" },
-  { resin: "Pyroblast+", slug: "pyroblast-plus" },
-  { resin: "Spark", slug: "spark" }
-];
-
-// ====================== ADAPTER DB ======================
-const getCollection = (name) => {
-  if (typeof db.getCollection === "function") return db.getCollection(name);
-  return null;
-};
-
-const getConversasCollection = () => db.getConversasCollection?.() || getCollection("conversas");
-const getOrdersCollectionSafe = () => db.getOrdersCollection?.() || getCollection("pedidos") || getCollection("custom_requests");
-
-// ====================== SEGURANÇA ======================
-const ADMIN_SECRET = process.env.ADMIN_SECRET || process.env.ADMIN_API_TOKEN || "quanton3d_secret";
+// --- CONFIGURAÇÕES DE SEGURANÇA ---
+const ADMIN_SECRET = process.env.ADMIN_SECRET || "quanton3d_secret";
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || "quanton-secret-2026";
 
-const isAdminRequest = (req) => {
-  const authHeader = req.headers.authorization || "";
-  if (authHeader.startsWith("Bearer ")) {
-    try {
-      jwt.verify(authHeader.slice(7), ADMIN_JWT_SECRET);
-      return true;
-    } catch { return false; }
+// --- HELPERS DE BANCO DE DADOS (FONTE DA VERDADE) ---
+const getCol = (name) => (typeof db.getCollection === 'function' ? db.getCollection(name) : null);
+const getConversasCol = () => db.getConversasCollection?.() || getCol('conversas');
+const getOrdersCol = () => db.getOrdersCollection?.() || getCol('pedidos') || getCol('custom_requests');
+
+const isAdmin = (req) => {
+  const auth = req.headers.authorization || "";
+  if (auth.startsWith("Bearer ")) {
+    try { return !!jwt.verify(auth.slice(7), ADMIN_JWT_SECRET); } catch { return false; }
   }
   const secret = req.headers["x-admin-secret"] || req.query?.auth || req.body?.auth;
   return secret === ADMIN_SECRET;
 };
 
-const adminGuard = (handler) => async (req, res) => {
-  if (!isAdminRequest(req)) return res.status(401).json({ success: false, error: "unauthorized" });
-  return handler(req, res);
+const adminOnly = (fn) => async (req, res) => {
+  if (!isAdmin(req)) return res.status(401).json({ success: false, error: "Unauthorized" });
+  return fn(req, res);
 };
 
-// ====================== HELPERS ======================
-const normalizeString = (value, fallback = "") => (typeof value === "string" ? value.trim() : fallback);
+// --- ROTAS PÚBLICAS ---
 
-// ====================== ROTAS PÚBLICAS ======================
 router.post("/register-user", async (req, res) => {
   try {
     const { name, phone, email, sessionId } = req.body || {};
     if (sessionId) {
-      const col = getConversasCollection();
-      await col.updateOne({ sessionId }, { $set: { userName: name, userPhone: phone, userEmail: email, updatedAt: new Date() } }, { upsert: true });
+      const col = getConversasCol();
+      if (col) {
+        await col.updateOne(
+          { sessionId },
+          { $set: { userName: name, userPhone: phone, userEmail: email, updatedAt: new Date() } },
+          { upsert: true }
+        );
+      }
     }
     res.json({ success: true });
-  } catch { res.status(500).json({ success: false }); }
+  } catch (err) { res.status(500).json({ success: false }); }
 });
 
 router.post("/custom-request", async (req, res) => {
   try {
     const { name, phone, email, desiredFeature, color } = req.body || {};
-    const col = getOrdersCollectionSafe();
-    await col.insertOne({ name, phone, email, desiredFeature, color, status: "pending", createdAt: new Date() });
+    const col = getOrdersCol();
+    if (col) {
+      await col.insertOne({
+        type: "custom_request",
+        name, phone, email, desiredFeature, color,
+        status: "pending", createdAt: new Date()
+      });
+    }
     res.json({ success: true });
-  } catch { res.status(500).json({ success: false }); }
+  } catch (err) { res.status(500).json({ success: false }); }
 });
 
-// ====================== ROTAS ADMIN ======================
-router.get("/params/resins", async (_req, res) => {
+// --- ROTAS ADMINISTRATIVAS ---
+
+router.get("/params/resins", async (req, res) => {
   try {
-    const col = getCollection("parametros");
-    const stats = await col.aggregate([{ $group: { _id: "$resinName", profiles: { $sum: 1 } } }, { $sort: { _id: 1 } }]).toArray();
-    res.json({ success: true, resins: stats.map(s => ({ id: s._id, name: s._id, profiles: s.profiles })) });
-  } catch { res.status(500).json({ success: false }); }
+    const col = getCol("parametros");
+    if (!col) return res.status(503).json({ success: false, error: "DB Offline" });
+    const data = await col.aggregate([
+      { $group: { _id: "$resinName", count: { $sum: 1 } } },
+      { $sort: { _id: 1 } }
+    ]).toArray();
+    res.json({ success: true, resins: data.map(d => ({ id: d._id, name: d._id || "Sem Nome", profiles: d.count })) });
+  } catch (err) { res.status(500).json({ success: false }); }
 });
 
-router.post("/add-knowledge", adminGuard(async (req, res) => {
+router.get("/orders", adminOnly(async (req, res) => {
+  try {
+    const col = getOrdersCol();
+    const data = await col.find({}).sort({ createdAt: -1 }).toArray();
+    res.json({ success: true, orders: data });
+  } catch (err) { res.status(500).json({ success: false }); }
+});
+
+router.post("/add-knowledge", adminOnly(async (req, res) => {
   try {
     const { title, content } = req.body;
     const result = await addDocument(title, content, "admin_panel", ["admin"]);
     res.status(201).json({ success: true, result });
-  } catch { res.status(500).json({ success: false }); }
+  } catch (err) { res.status(500).json({ success: false }); }
 });
 
-// PROTEÇÃO CONTRA SOBREPOSIÇÃO DE DADOS
-router.get("/nuke-and-seed", async (_req, res) => {
-  return res.status(410).json({ 
-    success: false, 
-    error: "Rota descontinuada. A coleção 'parametros' no MongoDB é a fonte de verdade e não deve ser atualizada automaticamente." 
-  });
+router.get("/partners", async (req, res) => {
+  try {
+    const col = getCol("partners");
+    const data = await col.find({ active: true }).sort({ order: 1 }).toArray();
+    res.json({ success: true, partners: data });
+  } catch (err) { res.status(500).json({ success: false }); }
+});
+
+// 🛡️ TRAVA DE SEGURANÇA: NUNCA SOBRESCREVER DADOS
+router.get("/nuke-and-seed", (req, res) => {
+  res.status(410).json({ success: false, error: "Ação bloqueada: o MongoDB é a fonte da verdade e não deve ser resetado." });
 });
 
 export { router as apiRoutes };
