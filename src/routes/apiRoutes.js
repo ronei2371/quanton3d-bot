@@ -770,9 +770,9 @@ const normalizeGalleryPagination = (req) => {
   return { page, limit, skip: (page - 1) * limit };
 };
 
-// ---
+// ==========================================
 // ROTA OTIMIZADA PELO GPT-5 (GALERIA APROVADA)
-// ---
+// ==========================================
 router.get("/gallery", async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -815,9 +815,9 @@ router.get("/gallery", async (req, res) => {
   }
 });
 
-// ---
+// ==========================================
 // ROTA OTIMIZADA PELO GPT-5 (GALERIA COMPLETA)
-// ---
+// ==========================================
 router.get("/gallery/all", async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -871,7 +871,6 @@ const updateGalleryStatus = async (req, res, forcedStatus = null) => {
     const incomingStatus = forcedStatus ?? req.body?.status;
     const normalizedStatus = typeof incomingStatus === 'string' ? incomingStatus.trim().toLowerCase() : '';
     const allowed = new Set(['approved', 'rejected', 'pending']);
-
     if (!allowed.has(normalizedStatus)) {
       return res.status(400).json({ success: false, error: 'Status inválido' });
     }
@@ -1230,9 +1229,9 @@ const buildVisualKnowledgeResponse = (doc) => ({
   updatedAt: doc.updatedAt || null
 });
 
-// ---
+// ==========================================
 // ROTA DE LISTA APROVADA - BUG 2 CORRIGIDO
-// ---
+// ==========================================
 router.get('/visual-knowledge', async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -1243,10 +1242,7 @@ router.get('/visual-knowledge', async (req, res) => {
     const { page, limit, skip } = normalizeGalleryPagination(req);
     // Garantindo que ele não ignore os dados caso uma coleção falhe
     const collection = getVisualKnowledgeCollection() || getCollection('gallery');
-    if (!collection) {
-      return res.json({ success: true, total: 0, page, limit, items: [], documents: [] });
-    }
-
+    
     const total = await collection.countDocuments({});
     const docs = await collection
       .find({})
@@ -1546,9 +1542,9 @@ router.get('/knowledge', async (_req, res) => {
   }
 });
 
-// ---
+// ==========================================
 // ROTA PENDENTE - BUGS 1 E 3 CORRIGIDOS 
-// ---
+// ==========================================
 router.get('/visual-knowledge/pending', async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -1559,7 +1555,7 @@ router.get('/visual-knowledge/pending', async (_req, res) => {
     // Bug 1: Usar gallery direto
     const pendingCollection = getCollection('gallery');
     if (!pendingCollection) {
-      return res.json({ success: true, pending: [], documents: [] });
+      return res.json({ success: true, pending: [] });
     }
 
     // Bug 3: Filtro corrigido, removendo o $exists para não trazer itens aprovados
@@ -1574,19 +1570,16 @@ router.get('/visual-knowledge/pending', async (_req, res) => {
       .limit(200)
       .toArray();
 
-    const pending = pendingDocs.map((item) => ({
-      _id: item._id?.toString?.() || item.id || null,
-      imageUrl: item.imageUrl || item.image || (Array.isArray(item.images) ? item.images[0] : null),
-      userName: item.userName || item.user || item.name || null,
-      defectType: item.defectType || item.title || null,
-      createdAt: item.createdAt || null,
-      status: item.status || (item.approved ? 'approved' : 'pending')
-    }));
-
     return res.json({
       success: true,
-      pending,
-      documents: pending
+      pending: pendingDocs.map((item) => ({
+        _id: item._id?.toString?.() || item.id || null,
+        imageUrl: item.imageUrl || item.image || (Array.isArray(item.images) ? item.images[0] : null),
+        userName: item.userName || item.user || item.name || null,
+        defectType: item.defectType || item.title || null,
+        createdAt: item.createdAt || null,
+        status: item.status || (item.approved ? 'approved' : 'pending')
+      }))
     });
   } catch (err) {
     console.error('[API] Erro ao listar conhecimento visual pendente:', err);
