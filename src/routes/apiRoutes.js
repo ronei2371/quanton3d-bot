@@ -28,12 +28,8 @@ const FISPQ_DOCUMENTS = [
   { resin: "Spark", slug: "spark" }
 ];
 
-const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || "quanton-admin-fallback-secret";
-codex/revert-changes-to-apiroutes.js-and-adminpanel.jsx-y45qq1
-const ADMIN_SECRET = process.env.ADMIN_SECRET || process.env.VITE_ADMIN_API_TOKEN || process.env.ADMIN_API_TOKEN || null;
 
-const ADMIN_SECRET = process.env.ADMIN_SECRET || process.env.VITE_ADMIN_API_TOKEN || "quanton3d_admin_secret";
- main
+const ADMIN_SECRET = process.env.ADMIN_SECRET || process.env.VITE_ADMIN_API_TOKEN || process.env.ADMIN_API_TOKEN || null;
 
 const isAdminRequest = (req) => {
   const authHeader = req.headers.authorization || "";
@@ -46,6 +42,14 @@ const isAdminRequest = (req) => {
       return false;
     }
   }
+
+  const legacySecret = req.headers["x-admin-secret"] || req.query?.auth || req.body?.auth;
+  if (legacySecret && legacySecret === ADMIN_SECRET) {
+    return true;
+  }
+
+  return false;
+};
 
   const legacySecret = req.headers["x-admin-secret"] || req.query?.auth || req.body?.auth;
   if (legacySecret && legacySecret === ADMIN_SECRET) {
