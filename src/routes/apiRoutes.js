@@ -912,6 +912,7 @@ const updateGalleryStatus = async (req, res, forcedStatus = null) => {
 };
 
 router.put("/gallery/:id", async (req, res) => updateGalleryStatus(req, res));
+router.patch("/gallery/:id/status", async (req, res) => updateGalleryStatus(req, res));
 router.post("/gallery/:id/approve", async (req, res) => updateGalleryStatus(req, res, 'approved'));
 
 function normalizeParams(params = {}) {
