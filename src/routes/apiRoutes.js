@@ -88,18 +88,7 @@ const pickWithFallback = (base, root, key) => {
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-const sanitizeNumericValue = (value) => {
-  if (value === undefined || value === null) return null;
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  if (typeof value === "string") {
-    const normalized = value.replace(/,/g, ".").trim();
-    const match = normalized.match(/-?\d+(?:\.\d+)?/);
-    if (!match) return null;
-    const parsed = Number(match[0]);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-};
+
 
 const getQueryVariants = (value) => {
   const normalized = value.trim();
