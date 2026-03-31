@@ -568,6 +568,7 @@ router.put('/orders/:id', adminGuard(async (req, res) => {
     if (!mongoReady) {
       return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
     }
+ codex/revert-changes-to-apiroutes.js-and-adminpanel.jsx-agzwh4
 
     const collection = getOrdersCollectionSafe();
     if (!collection) {
@@ -1175,6 +1176,615 @@ router.get('/visual-knowledge', async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
     if (!mongoReady) {
+=======
+
+    const collection = getOrdersCollectionSafe();
+    if (!collection) {
+      return res.status(503).json({ success: false, error: 'Coleção de pedidos indisponível' });
+    }
+
+    const filter = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { legacyId: id };
+    const updateResult = await collection.updateOne(filter, { $set: { status, updatedAt: new Date() } });
+
+    if (!updateResult.matchedCount) {
+      return res.status(404).json({ success: false, error: 'Pedido não encontrado' });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[API] Erro ao atualizar pedido:', err);
+    res.status(500).json({ success: false, error: 'Erro ao atualizar pedido' });
+  }
+}));
+
+router.post("/gallery", upload.any(), async (req, res) => {
+  try {
+    const {
+      name,
+      resin,
+      printer,
+      settings,
+      image,
+      images,
+      imageUrl,
+      note,
+      contact
+    } = req.body;
+    const sanitizedResin = sanitizeResinName(resin);
+
+    if (!sanitizedResin || !printer) {
+      return res.status(400).json({
+        success: false,
+        error: "Resina e impressora sao obrigatorias"
+      });
+    }
+
+    const payloadImages = Array.isArray(images)
+      ? images.filter(Boolean)
+      : image
+        ? [image]
+        : [];
+
+    const imageUrlPayload = Array.isArray(imageUrl)
+      ? imageUrl.filter(Boolean)
+      : typeof imageUrl === "string" && imageUrl.trim()
+        ? [imageUrl.trim()]
+        : [];
+
+    const multipartImages = Array.isArray(req.files)
+      ? req.files
+        .filter((file) => file?.buffer)
+        .map((file) => {
+          const mimeType = file.mimetype || "application/octet-stream";
+          const base64 = file.buffer.toString("base64");
+          return `data:${mimeType};base64,${base64}`;
+        })
+      : [];
+
+    const finalImages = imageUrlPayload.length > 0 ? imageUrlPayload : payloadImages.length > 0 ? payloadImages : multipartImages;
+
+    if (finalImages.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Envie ao menos uma imagem"
+      });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({
+        success: false,
+        error: "Banco de dados indisponivel"
+      });
+    }
+
+    const galleryCollection = getCollection("gallery");
+    const parsedSettings = parseGallerySettings(settings);
+    const fallbackSettings = extractSettingsFromBody(req.body);
+    const mergedSettings = { ...fallbackSettings, ...parsedSettings };
+    const hasSettings = Object.keys(mergedSettings).length > 0;
+
+    const newEntry = {
+      name: name?.trim() || null,
+      resin: sanitizedResin,
+      printer: printer.trim(),
+      settings: hasSettings ? mergedSettings : {},
+      contact: contact?.trim() || null,
+      images: finalImages,
+      note: note?.trim() || null,
+      status: "pending",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await galleryCollection.insertOne(newEntry);
+    console.log(`[API] Nova foto enviada para galeria: ${sanitizedResin} / ${printer}`);
+
+    res.json({
+      success: true,
+      message: "Fotos enviadas com sucesso! Em breve aparecerão na galeria.",
+      id: result.insertedId
+    });
+  } catch (err) {
+    console.error("[API] Erro ao enviar fotos para galeria:", err);
+    res.status(500).json({
+      success: false,
+      error: "Erro ao enviar fotos"
+    });
+  }
+});
+
+router.post("/suggest-knowledge", async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    }
+
+    const collection = getCollection("sugestoes") || getCollection("suggestions");
+    if (!collection) {
+      return res.status(503).json({ success: false, error: "Coleção de sugestões indisponível" });
+    }
+
+    const {
+      suggestion,
+      userName,
+      userPhone,
+      sessionId,
+      lastUserMessage,
+      lastBotReply,
+      attachment,
+      attachments: attachmentList,
+      imageUrl
+    } = req.body || {};
+
+    const attachments = [];
+    if (Array.isArray(attachmentList)) {
+      attachments.push(...attachmentList.filter(Boolean));
+    }
+    if (attachment) attachments.push(attachment);
+    if (imageUrl) attachments.push(imageUrl);
+
+    if (!suggestion || typeof suggestion !== "string" || !suggestion.trim()) {
+      return res.status(400).json({ success: false, error: "Sugestao é obrigatória" });
+    }
+
+    const doc = {
+      suggestion: suggestion.trim(),
+      userName: (userName || '').trim() || 'Usuário do site',
+      userPhone: userPhone || null,
+      sessionId: sessionId || null,
+      lastUserMessage: lastUserMessage || null,
+      lastBotReply: lastBotReply || null,
+      attachments,
+      status: 'pending',
+      createdAt: new Date()
+    };
+
+    const result = await collection.insertOne(doc);
+    console.log(`[API] Sugestão registrada: ${doc.userName}`);
+
+    res.json({ success: true, message: 'Sugestão enviada com sucesso!', suggestionId: result.insertedId.toString() });
+  } catch (err) {
+    console.error('[API] Erro ao registrar sugestão:', err);
+    res.status(500).json({ success: false, error: 'Erro ao registrar sugestão' });
+  }
+});
+
+const buildGalleryResponse = (doc) => ({
+  id: doc._id?.toString?.(),
+  name: doc.name ?? null,
+  resin: doc.resin ?? null,
+  printer: doc.printer ?? null,
+  settings: doc.settings ?? {},
+  images: Array.isArray(doc.images) ? doc.images : [],
+  note: doc.note ?? null,
+  status: doc.status ?? "pending",
+  createdAt: doc.createdAt ?? null,
+  updatedAt: doc.updatedAt ?? null
+});
+
+const normalizeGalleryPagination = (req) => {
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const limitRaw = parseInt(req.query.limit, 10);
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0
+    ? Math.min(limitRaw, MAX_GALLERY_PAGE_SIZE)
+    : 20;
+  return { page, limit, skip: (page - 1) * limit };
+};
+
+// ==========================================
+// ROTA OTIMIZADA PELO GPT-5 (GALERIA APROVADA)
+// ==========================================
+router.get("/gallery", async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({
+        success: false,
+        error: "Banco de dados indisponivel"
+      });
+    }
+
+    const { page, limit, skip } = normalizeGalleryPagination(req);
+    const galleryCollection = getCollection("gallery");
+    const filter = { status: "approved" };
+
+    const cursor = galleryCollection.find(filter, {
+      sort: { createdAt: -1 },
+      skip,
+      limit
+    });
+
+    // Busca dupla simultânea (muito mais rápido)
+    const [docs, total] = await Promise.all([
+      cursor.toArray(),
+      galleryCollection.countDocuments(filter)
+    ]);
+
+    res.json({
+      success: true,
+      total,
+      page,
+      limit,
+      images: docs.map(buildGalleryResponse)
+    });
+  } catch (err) {
+    console.error("[API] Erro ao listar galeria:", err);
+    res.status(500).json({
+      success: false,
+      error: "Erro ao listar galeria"
+    });
+  }
+});
+
+// ==========================================
+// ROTA OTIMIZADA PELO GPT-5 (GALERIA COMPLETA)
+// ==========================================
+router.get("/gallery/all", async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({
+        success: false,
+        error: "Banco de dados indisponivel"
+      });
+    }
+
+    const { page, limit, skip } = normalizeGalleryPagination(req);
+    const galleryCollection = getCollection("gallery");
+    const filter = {};
+
+    const cursor = galleryCollection.find(filter, {
+      sort: { createdAt: -1 },
+      skip,
+      limit
+    });
+
+    const [docs, total] = await Promise.all([
+      cursor.toArray(),
+      galleryCollection.countDocuments(filter)
+    ]);
+
+    res.json({
+      success: true,
+      total,
+      page,
+      limit,
+      images: docs.map(buildGalleryResponse)
+    });
+  } catch (err) {
+    console.error("[API] Erro ao listar galeria completa:", err);
+    res.status(500).json({
+      success: false,
+      error: "Erro ao listar galeria"
+    });
+  }
+});
+
+function normalizeParams(params = {}) {
+  const root = params ?? {};
+  const base = root.parametros ?? {};
+  
+  const getParam = (key) => pickWithFallback(base, root, key);
+  const getBottomExposure = () => {
+    const direct = getParam("bottomExposureS");
+    if (!isNil(direct)) return direct;
+    const baseExposure = getParam("baseExposureTimeS");
+    if (!isNil(baseExposure)) return baseExposure;
+    return getParam("bottomExposureTimeS");
+  };
+
+  return {
+    layerHeightMm: sanitizeNumericValue(getParam("layerHeightMm") ?? getParam("layerHeight")),
+    exposureTimeS: sanitizeNumericValue(getParam("exposureTimeS") ?? getParam("exposureTime") ?? getParam("normalExposureS")),
+    bottomExposureS: sanitizeNumericValue(getBottomExposure()),
+    bottomLayers: sanitizeNumericValue(getParam("bottomLayers") ?? getParam("baseLayers")),
+    baseExposureTimeS: sanitizeNumericValue(getBottomExposure()),
+    baseLayers: sanitizeNumericValue(getParam("bottomLayers") ?? getParam("baseLayers")),
+    liftSpeedMmMin: sanitizeNumericValue(getParam("liftSpeedMmMin") ?? getParam("liftSpeed") ?? getParam("liftSpeedMmM")),
+    uvOffDelayS: sanitizeNumericValue(getParam("uvOffDelayS")),
+    uvOffDelayBaseS: sanitizeNumericValue(getParam("uvOffDelayBaseS")),
+    restBeforeLiftS: sanitizeNumericValue(getParam("restBeforeLiftS")),
+    restAfterLiftS: sanitizeNumericValue(getParam("restAfterLiftS")),
+    restAfterRetractS: sanitizeNumericValue(getParam("restAfterRetractS")),
+    uvPower: sanitizeNumericValue(getParam("uvPower")),
+  };
+}
+
+function buildProfileResponse(doc) {
+  const resinName = doc.resinName ?? doc.resin ?? doc.name ?? "Sem nome";
+  const printerLabel = doc.model ?? doc.printer ?? "";
+  return {
+    id: doc.id ?? doc._id?.toString?.(),
+    resinId: doc.resinId ?? resinName.toLowerCase().replace(/\s+/g, "-"),
+    resinName,
+    printerId: doc.printerId ?? printerLabel.toLowerCase().replace(/\s+/g, "-"),
+    brand: doc.brand ?? "",
+    model: doc.model ?? doc.printer ?? "",
+    params: normalizeParams(doc.params || doc.parametros || doc.raw || {}),
+    status: doc.status || "ok",
+    updatedAt: doc.updatedAt || doc.createdAt || null
+  };
+}
+
+async function listParamResins() {
+  const mongoReady = await ensureMongoReady();
+  if (!mongoReady) {
+    return {
+      error: { status: 503, body: { success: false, error: "Banco de dados indisponivel" } }
+    };
+  }
+
+  const db = getDb();
+  const collections = await db
+    .listCollections({ name: "parametros" })
+    .toArray();
+  if (collections.length === 0) {
+    return { resins: [] };
+  }
+
+  const collection = getCollection("parametros");
+  const resins = await collection
+    .aggregate([
+      {
+        $group: {
+          _id: {
+            $ifNull: ["$resinId", { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }]
+          },
+          name: {
+            $first: { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }
+          },
+          profiles: { $sum: 1 }
+        }
+      },
+      { $match: { name: { $ne: null } } },
+      { $sort: { name: 1 } }
+    ])
+    .toArray();
+
+  return { resins };
+}
+
+router.get("/params/resins", async (_req, res) => {
+  try {
+    const result = await listParamResins();
+    if (result.error) {
+      return res.status(result.error.status).json(result.error.body);
+    }
+
+    const resins = result.resins || [];
+
+    res.json({
+      success: true,
+      resins: resins.map((item) => ({
+        _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
+        name: item.name || "Sem nome",
+        description: `Perfis: ${item.profiles ?? 0}`,
+        profiles: item.profiles ?? 0,
+        active: true
+      }))
+    });
+  } catch (err) {
+    console.error("[API] Erro ao listar resinas de parâmetros:", err);
+    res.status(500).json({ success: false, error: "Erro ao listar resinas" });
+  }
+});
+
+router.get("/resins", async (_req, res) => {
+  try {
+    const result = await listParamResins();
+    if (result.error) {
+      return res.status(result.error.status).json(result.error.body);
+    }
+
+    const resins = result.resins || [];
+
+    res.json({
+      success: true,
+      resins: resins.map((item) => ({
+        _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
+        name: item.name || "Sem nome",
+        description: `Perfis: ${item.profiles ?? 0}`,
+        profiles: item.profiles ?? 0,
+        active: true
+      }))
+    });
+  } catch (err) {
+    console.error("[API] Erro ao listar resinas:", err);
+    res.status(500).json({ success: false, error: "Erro ao listar resinas" });
+  }
+});
+
+router.get("/docs/fispqs", (_req, res) => {
+  res.json({
+    success: true,
+    updatedAt: new Date().toISOString(),
+    documents: FISPQ_DOCUMENTS.map((doc) => ({
+      ...doc,
+      status: "available",
+      requestEmail: "atendimento@quanton3d.com.br"
+    }))
+  });
+});
+
+const listPrinters = async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    }
+
+    const { resinId } = req.query;
+    const filter = {};
+    if (resinId) {
+      const resinFilter = buildResinFilter(resinId);
+      if (resinFilter) {
+        Object.assign(filter, resinFilter);
+      }
+    }
+    const collection = getCollection("parametros");
+    const printers = await collection
+      .aggregate([
+        { $match: filter },
+        {
+          $group: {
+            _id: { $ifNull: ["$printerId", "$printer"] },
+            brand: { $first: "$brand" },
+            model: { $first: { $ifNull: ["$model", "$printer"] } },
+            resinIds: { $addToSet: { $ifNull: ["$resinId", "$resin"] } }
+          }
+        },
+        { $sort: { brand: 1, model: 1 } }
+      ])
+      .toArray();
+
+    const mapped = printers.map((item) => ({
+      id: item._id,
+      brand: item.brand,
+      model: item.model,
+      resinIds: item.resinIds
+    }));
+
+    return res.json({
+      success: true,
+      printers: mapped,
+      matchingPrinters: resinId ? mapped : undefined
+    });
+  } catch (err) {
+    console.error("[API] Erro ao listar impressoras:", err);
+    return res.status(500).json({ success: false, error: "Erro ao listar impressoras" });
+  }
+};
+
+router.get("/params/printers", listPrinters);
+router.get("/printers", listPrinters);
+router.post("/params/printers", async (req, res) => {
+  req.query = { ...(req.query || {}), ...(req.body || {}) };
+  return listPrinters(req, res);
+});
+router.post("/printers", async (req, res) => {
+  req.query = { ...(req.query || {}), ...(req.body || {}) };
+  return listPrinters(req, res);
+});
+
+const listProfiles = async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    }
+
+    const { resinId, printerId, status } = req.query;
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limitRaw = parseInt(req.query.limit, 10);
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, MAX_PARAMS_PAGE_SIZE) : null;
+    const skip = limit ? (page - 1) * limit : 0;
+
+    const filter = {};
+    if (resinId) {
+      const resinFilter = buildResinFilter(resinId);
+      if (resinFilter) {
+        Object.assign(filter, resinFilter);
+      }
+    }
+    if (printerId) {
+      const printerFilter = buildPrinterFilter(printerId);
+      if (printerFilter) {
+        filter.$and = filter.$and || [];
+        filter.$and.push(printerFilter);
+      }
+    }
+    if (status) filter.status = status;
+
+    const collection = getCollection("parametros");
+    const total = await collection.countDocuments(filter);
+    const cursor = collection.find(filter).sort({ updatedAt: -1, createdAt: -1 });
+    if (limit) cursor.skip(skip).limit(limit);
+    const docs = await cursor.toArray();
+
+    return res.json({
+      success: true,
+      total,
+      page: limit ? page : 1,
+      limit: limit || null,
+      profiles: docs.map(buildProfileResponse)
+    });
+  } catch (err) {
+    console.error("[API] Erro ao listar perfis de impressão:", err);
+    return res.status(500).json({ success: false, error: "Erro ao listar perfis" });
+  }
+};
+
+router.get("/params/profiles", listProfiles);
+router.post("/params/profiles", async (req, res) => {
+  req.query = { ...(req.query || {}), ...(req.body || {}) };
+  return listProfiles(req, res);
+});
+
+router.get("/params/stats", async (_req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+    }
+
+    const collection = getCollection("parametros");
+    const activeProfileFilter = {
+      status: { $nin: ["deleted", "test"] },
+      isTest: { $ne: true }
+    };
+
+    const [resinAgg, printerAgg, total] = await Promise.all([
+      collection.distinct("resinId"),
+      collection.distinct("printerId"),
+      collection.countDocuments(activeProfileFilter)
+    ]);
+
+    const comingSoon = await collection.countDocuments({
+      ...activeProfileFilter,
+      status: "coming_soon"
+    });
+
+    res.json({
+      success: true,
+      stats: {
+        totalResins: resinAgg.length,
+        totalPrinters: printerAgg.length,
+        totalProfiles: total,
+        comingSoonProfiles: comingSoon
+      }
+    });
+  } catch (err) {
+    console.error("[API] Erro ao obter estatísticas de parâmetros:", err);
+    res.status(500).json({ success: false, error: "Erro ao obter estatísticas" });
+  }
+});
+
+const buildVisualKnowledgeResponse = (doc) => ({
+  id: doc._id?.toString?.() || doc.id || null,
+  title: doc.title || doc.name || 'Sem título',
+  description: doc.description || doc.summary || null,
+  imageUrl: doc.imageUrl || doc.image || (Array.isArray(doc.images) ? doc.images[0] : null),
+  images: Array.isArray(doc.images) ? doc.images : (doc.imageUrl || doc.image ? [doc.imageUrl || doc.image] : []),
+  resin: doc.resin || null,
+  printer: doc.printer || null,
+  settings: doc.settings || {},
+  note: doc.note || null,
+  tags: Array.isArray(doc.tags) ? doc.tags : [],
+  source: doc.source || 'manual',
+  createdAt: doc.createdAt || null,
+  updatedAt: doc.updatedAt || null
+});
+
+// ==========================================
+// ROTA DE LISTA APROVADA - BUG 2 CORRIGIDO
+// ==========================================
+router.get('/visual-knowledge', async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+ main
       return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
     }
 
@@ -1495,7 +2105,11 @@ router.get('/visual-knowledge/pending', async (_req, res) => {
     // Bug 1: Usar gallery direto
     const pendingCollection = getCollection('gallery');
     if (!pendingCollection) {
+ codex/revert-changes-to-apiroutes.js-and-adminpanel.jsx-agzwh4
       return res.json({ success: true, pending: [], documents: [] });
+
+      return res.json({ success: true, pending: [] });
+ main
     }
 
     // Bug 3: Filtro corrigido, removendo o $exists para não trazer itens aprovados
@@ -1510,6 +2124,7 @@ router.get('/visual-knowledge/pending', async (_req, res) => {
       .limit(200)
       .toArray();
 
+ codex/revert-changes-to-apiroutes.js-and-adminpanel.jsx-agzwh4
     const pending = pendingDocs.map((item) => ({
       _id: item._id?.toString?.() || item.id || null,
       imageUrl: item.imageUrl || item.image || (Array.isArray(item.images) ? item.images[0] : null),
@@ -1523,6 +2138,18 @@ router.get('/visual-knowledge/pending', async (_req, res) => {
       success: true,
       pending,
       documents: pending
+
+    return res.json({
+      success: true,
+      pending: pendingDocs.map((item) => ({
+        _id: item._id?.toString?.() || item.id || null,
+        imageUrl: item.imageUrl || item.image || (Array.isArray(item.images) ? item.images[0] : null),
+        userName: item.userName || item.user || item.name || null,
+        defectType: item.defectType || item.title || null,
+        createdAt: item.createdAt || null,
+        status: item.status || (item.approved ? 'approved' : 'pending')
+      }))
+ main
     });
   } catch (err) {
     console.error('[API] Erro ao listar conhecimento visual pendente:', err);
