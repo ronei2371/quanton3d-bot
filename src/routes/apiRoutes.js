@@ -18,7 +18,6 @@ const router = express.Router();
 const MAX_PARAMS_PAGE_SIZE = 200;
 const MAX_GALLERY_PAGE_SIZE = 100;
 const upload = multer();
- main
 const FISPQ_DOCUMENTS = [
   { resin: "Iron 7030", slug: "iron-7030" },
   { resin: "Spin+", slug: "spin-plus" },
