@@ -63,7 +63,7 @@ const adminGuard = (handler) => async (req, res) => {
   return handler(req, res);
 };
 
-// ====================== HELPERS GLOBAIS (ÚNICOS) ======================
+// ====================== HELPERS GLOBAIS ======================
 const isNil = (value) => value === undefined || value === null;
 
 const pickValue = (value, fallback = null) => (isNil(value) ? fallback : value);
@@ -168,7 +168,7 @@ const sanitizeNumericValue = (value) => {
   return null;
 };
 
-// ====================== FUNÇÕES QUE FALTAVAM ======================
+// ====================== FUNÇÕES AUXILIARES ======================
 const buildOrderResponse = (doc = {}) => ({
   id: doc._id?.toString?.(),
   customerName: doc.name || doc.customerName || doc.userName || 'Cliente',
@@ -498,7 +498,7 @@ router.put('/orders/:id', adminGuard(async (req, res) => {
   }
 });
 
-// ====================== GALERIA E VISUAL KNOWLEDGE ======================
+// ====================== GALERIA ======================
 router.get("/gallery", async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -524,6 +524,7 @@ router.get("/gallery", async (req, res) => {
   }
 });
 
+// ====================== VISUAL KNOWLEDGE ======================
 router.get('/visual-knowledge', async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -576,7 +577,112 @@ router.get('/visual-knowledge/pending', async (_req, res) => {
   }
 });
 
+router.put('/visual-knowledge/:id/approve', adminGuard(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { defectType, diagnosis, solution } = req.body;
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+
+    const galleryCollection = getCollection('gallery');
+    if (!galleryCollection) return res.status(503).json({ success: false, error: 'Coleção gallery indisponível' });
+
+    const filter = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { id };
+    const update = {
+      status: 'approved',
+      approved: true,
+      approvedAt: new Date(),
+      defectType,
+      diagnosis,
+      solution,
+      updatedAt: new Date()
+    };
+
+    const result = await galleryCollection.findOneAndUpdate(filter, { $set: update }, { returnDocument: 'after' });
+
+    if (!result.value) return res.status(404).json({ success: false, error: 'Item não encontrado' });
+
+    res.json({ success: true, item: buildVisualKnowledgeResponse(result.value) });
+  } catch (err) {
+    console.error('[API] Erro ao aprovar visual knowledge:', err);
+    res.status(500).json({ success: false, error: 'Erro ao aprovar item' });
+  }
+});
+
+router.post('/visual-knowledge', upload.any(), async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+
+    const payload = req.body || {};
+    const title = typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : (typeof payload.defectType === 'string' && payload.defectType.trim() ? payload.defectType.trim() : 'Treinamento visual');
+    let imageUrl = typeof payload.imageUrl === 'string' && payload.imageUrl.trim() ? payload.imageUrl.trim() : (typeof payload.image === 'string' ? payload.image.trim() : '');
+
+    if (!imageUrl && Array.isArray(req.files) && req.files.length > 0) {
+      const file = req.files[0];
+      if (file?.buffer?.length) {
+        imageUrl = `data:${file.mimetype || 'image/jpeg'};base64,${file.buffer.toString('base64')}`;
+      }
+    }
+
+    if (!imageUrl) return res.status(400).json({ success: false, error: 'imageUrl é obrigatório' });
+
+    const collection = getVisualKnowledgeCollection();
+    const now = new Date();
+    const doc = {
+      title,
+      description: typeof payload.description === 'string' ? payload.description.trim() : (typeof payload.solution === 'string' ? payload.solution.trim() : null),
+      imageUrl,
+      tags: Array.isArray(payload.tags) ? payload.tags.filter(Boolean) : [payload.defectType, payload.category].filter(Boolean),
+      source: typeof payload.source === 'string' && payload.source.trim() ? payload.source.trim() : 'manual',
+      createdAt: now,
+      updatedAt: now
+    };
+
+    const result = await collection.insertOne(doc);
+    return res.status(201).json({ success: true, item: buildVisualKnowledgeResponse({ ...doc, _id: result.insertedId }) });
+  } catch (err) {
+    console.error('[API] Erro ao criar conhecimento visual:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao criar conhecimento visual' });
+  }
+});
+
 // ====================== PARÂMETROS ======================
+router.get("/params/resins", async (_req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
+
+    const collection = getCollection("parametros");
+    const resins = await collection.aggregate([
+      {
+        $group: {
+          _id: { $ifNull: ["$resinId", { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }] },
+          name: { $first: { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] } },
+          profiles: { $sum: 1 }
+        }
+      },
+      { $match: { name: { $ne: null } } },
+      { $sort: { name: 1 } }
+    ]).toArray();
+
+    res.json({
+      success: true,
+      resins: resins.map((item) => ({
+        _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
+        name: item.name || "Sem nome",
+        description: `Perfis: ${item.profiles ?? 0}`,
+        profiles: item.profiles ?? 0,
+        active: true
+      }))
+    });
+  } catch (err) {
+    console.error("[API] Erro ao listar resinas:", err);
+    res.status(500).json({ success: false, error: "Erro ao listar resinas" });
+  }
+});
+
 const listPrinters = async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -664,7 +770,7 @@ const listProfiles = async (req, res) => {
         printerId: doc.printerId ?? (doc.model ?? doc.printer ?? "").toLowerCase().replace(/\s+/g, "-"),
         brand: doc.brand ?? "",
         model: doc.model ?? doc.printer ?? "",
-        params: {}, // normalizeParams pode ser adicionado aqui se necessário
+        params: doc.params || doc.parametros || {},
         status: doc.status || "ok",
         updatedAt: doc.updatedAt || doc.createdAt || null
       }))
@@ -674,40 +780,6 @@ const listProfiles = async (req, res) => {
     return res.status(500).json({ success: false, error: "Erro ao listar perfis" });
   }
 };
-
-router.get("/params/resins", async (_req, res) => {
-  try {
-    const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponivel" });
-
-    const collection = getCollection("parametros");
-    const resins = await collection.aggregate([
-      {
-        $group: {
-          _id: { $ifNull: ["$resinId", { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }] },
-          name: { $first: { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] } },
-          profiles: { $sum: 1 }
-        }
-      },
-      { $match: { name: { $ne: null } } },
-      { $sort: { name: 1 } }
-    ]).toArray();
-
-    res.json({
-      success: true,
-      resins: resins.map((item) => ({
-        _id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
-        name: item.name || "Sem nome",
-        description: `Perfis: ${item.profiles ?? 0}`,
-        profiles: item.profiles ?? 0,
-        active: true
-      }))
-    });
-  } catch (err) {
-    console.error("[API] Erro ao listar resinas:", err);
-    res.status(500).json({ success: false, error: "Erro ao listar resinas" });
-  }
-});
 
 router.get("/params/printers", listPrinters);
 router.get("/params/profiles", listProfiles);
@@ -744,7 +816,7 @@ router.get("/params/stats", async (_req, res) => {
   }
 });
 
-// ====================== OUTRAS ROTAS ======================
+// ====================== PARCEIROS ======================
 router.get('/partners', async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -754,14 +826,136 @@ router.get('/partners', async (_req, res) => {
     if (!collection) return res.json({ success: true, partners: [] });
 
     const partners = await collection.find({}).sort({ order: 1, createdAt: -1 }).toArray();
-    return res.json({ success: true, partners: partners.map((doc) => ({ ...doc })) });
+    return res.json({ success: true, partners });
   } catch (err) {
     console.error('[API] Erro ao listar parceiros:', err);
     return res.status(500).json({ success: false, error: 'Erro ao listar parceiros' });
   }
 });
 
-// Rotas adicionais de conhecimento e partners podem ser expandidas conforme necessário
+router.post('/partners', adminGuard(async (req, res) => {
+  try {
+    const payload = req.body || {};
+    const name = normalizeString(payload.name || payload.title || '');
+    if (!name) return res.status(400).json({ success: false, error: 'Nome é obrigatório' });
+
+    const collection = getPartnersCollection();
+    const now = new Date();
+    const doc = {
+      name,
+      description: normalizeString(payload.description || payload.summary || ''),
+      imageUrl: normalizeString(payload.imageUrl || payload.image || ''),
+      link: normalizeString(payload.websiteUrl || payload.link || ''),
+      specialty: normalizeString(payload.specialty || payload.category || ''),
+      phone: normalizeString(payload.phone || ''),
+      email: normalizeString(payload.email || ''),
+      whatsapp: normalizeString(payload.whatsapp || ''),
+      active: payload.active !== undefined ? Boolean(payload.active) : true,
+      order: Number.isFinite(Number(payload.order)) ? Number(payload.order) : 0,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    const result = await collection.insertOne(doc);
+    res.status(201).json({ success: true, partner: { ...doc, _id: result.insertedId } });
+  } catch (err) {
+    console.error('[API] Erro ao criar parceiro:', err);
+    res.status(500).json({ success: false, error: 'Erro ao criar parceiro' });
+  }
+});
+
+router.put('/partners/:id', adminGuard(async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) return res.status(400).json({ success: false, error: 'ID inválido' });
+
+    const payload = req.body || {};
+    const updates = {
+      description: normalizeString(payload.description),
+      imageUrl: normalizeString(payload.imageUrl),
+      link: normalizeString(payload.link || payload.websiteUrl),
+      specialty: normalizeString(payload.specialty),
+      phone: normalizeString(payload.phone),
+      email: normalizeString(payload.email),
+      whatsapp: normalizeString(payload.whatsapp),
+      active: payload.active !== undefined ? Boolean(payload.active) : undefined,
+      order: Number.isFinite(Number(payload.order)) ? Number(payload.order) : undefined,
+      updatedAt: new Date()
+    };
+
+    const collection = getPartnersCollection();
+    const result = await collection.findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: updates },
+      { returnDocument: 'after' }
+    );
+
+    if (!result.value) return res.status(404).json({ success: false, error: 'Parceiro não encontrado' });
+
+    res.json({ success: true, partner: result.value });
+  } catch (err) {
+    console.error('[API] Erro ao atualizar parceiro:', err);
+    res.status(500).json({ success: false, error: 'Erro ao atualizar parceiro' });
+  }
+});
+
+router.delete('/partners/:id', adminGuard(async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) return res.status(400).json({ success: false, error: 'ID inválido' });
+
+    const collection = getPartnersCollection();
+    const result = await collection.deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount === 0) return res.status(404).json({ success: false, error: 'Parceiro não encontrado' });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[API] Erro ao remover parceiro:', err);
+    res.status(500).json({ success: false, error: 'Erro ao remover parceiro' });
+  }
+});
+
+// ====================== CONHECIMENTO RAG ======================
+router.post('/add-knowledge', adminGuard(async (req, res) => {
+  try {
+    const { title, content, source = 'admin_panel', tags = ['admin'] } = req.body;
+
+    if (!title || !content) {
+      return res.status(400).json({ success: false, error: 'title e content são obrigatórios' });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+
+    const result = await addDocument(title, content, source, tags);
+    res.status(201).json({ success: true, result });
+  } catch (err) {
+    console.error('[API] Erro ao adicionar knowledge:', err);
+    res.status(500).json({ success: false, error: 'Erro ao adicionar knowledge' });
+  }
+});
+
+router.get('/knowledge', async (_req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+
+    const collection = getCollection('documents');
+    if (!collection) return res.json({ success: true, documents: [] });
+
+    const documents = await collection
+      .find({}, { projection: { title: 1, tags: 1, source: 1, createdAt: 1 } })
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .toArray();
+
+    return res.json({ success: true, documents });
+  } catch (err) {
+    console.error('[API] Erro ao listar knowledge:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao listar knowledge' });
+  }
+});
 
 router.get("/nuke-and-seed", async (_req, res) => {
   return res.status(410).json({
