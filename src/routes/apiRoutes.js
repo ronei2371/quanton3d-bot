@@ -17,7 +17,13 @@ import { addDocument } from "../../rag-search.js";
 const router = express.Router();
 const MAX_PARAMS_PAGE_SIZE = 200;
 const MAX_GALLERY_PAGE_SIZE = 100;
-const upload = multer();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 4 * 1024 * 1024,
+    files: 8
+  }
+});
 const FISPQ_DOCUMENTS = [
   { resin: "Iron 7030", slug: "iron-7030" },
   { resin: "Spin+", slug: "spin-plus" },
@@ -29,7 +35,7 @@ const FISPQ_DOCUMENTS = [
 ];
 
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || "quanton-admin-fallback-secret";
-const ADMIN_SECRET = process.env.ADMIN_SECRET || process.env.VITE_ADMIN_API_TOKEN || "quanton3d_admin_secret";
+const ADMIN_SECRET = process.env.ADMIN_SECRET || process.env.VITE_ADMIN_API_TOKEN || process.env.ADMIN_API_TOKEN || null;
 
 const isAdminRequest = (req) => {
   const authHeader = req.headers.authorization || "";
@@ -853,6 +859,62 @@ router.get("/gallery/all", async (req, res) => {
   }
 });
 
+
+
+const updateGalleryStatus = async (req, res, forcedStatus = null) => {
+  try {
+    if (!isValidAdminToken(req) && !isAdminRequest(req)) {
+      return res.status(401).json({ success: false, error: 'unauthorized' });
+    }
+
+    const { id } = req.params;
+    const incomingStatus = forcedStatus ?? req.body?.status;
+    const normalizedStatus = typeof incomingStatus === 'string' ? incomingStatus.trim().toLowerCase() : '';
+    const allowed = new Set(['approved', 'rejected', 'pending']);
+
+    if (!allowed.has(normalizedStatus)) {
+      return res.status(400).json({ success: false, error: 'Status inválido' });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: 'Banco de dados indisponivel' });
+    }
+
+    const galleryCollection = getCollection('gallery');
+    if (!galleryCollection) {
+      return res.status(503).json({ success: false, error: 'Coleção de galeria indisponível' });
+    }
+
+    const filter = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { _id: id };
+    const update = {
+      status: normalizedStatus,
+      approved: normalizedStatus === 'approved',
+      updatedAt: new Date(),
+      ...(normalizedStatus === 'approved' ? { approvedAt: new Date() } : {})
+    };
+
+    const result = await galleryCollection.findOneAndUpdate(
+      filter,
+      { $set: update },
+      { returnDocument: 'after' }
+    );
+
+    const updated = result?.value || result;
+    if (!updated || !updated._id) {
+      return res.status(404).json({ success: false, error: 'Item não encontrado' });
+    }
+
+    return res.json({ success: true, item: buildGalleryResponse(updated) });
+  } catch (err) {
+    console.error('[API] Erro ao atualizar status da galeria:', err);
+    return res.status(500).json({ success: false, error: 'Erro ao atualizar item da galeria' });
+  }
+};
+
+router.put("/gallery/:id", async (req, res) => updateGalleryStatus(req, res));
+router.post("/gallery/:id/approve", async (req, res) => updateGalleryStatus(req, res, 'approved'));
+
 function normalizeParams(params = {}) {
   const root = params ?? {};
   const base = root.parametros ?? {};
@@ -1272,8 +1334,7 @@ const isValidAdminToken = (req) => {
   const accepted = [
     process.env.ADMIN_SECRET,
     process.env.VITE_ADMIN_API_TOKEN,
-    process.env.ADMIN_API_TOKEN,
-    'quanton3d_admin_secret'
+    process.env.ADMIN_API_TOKEN
   ].filter(Boolean);
   return accepted.includes(token);
 };
