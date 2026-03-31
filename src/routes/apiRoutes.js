@@ -51,14 +51,7 @@ const isAdminRequest = (req) => {
   return false;
 };
 
-  const legacySecret = req.headers["x-admin-secret"] || req.query?.auth || req.body?.auth;
-  if (legacySecret && legacySecret === ADMIN_SECRET) {
-    return true;
-  }
-
-  return false;
-};
-
+ 
 const adminGuard = (handler) => async (req, res) => {
   if (!isAdminRequest(req)) {
     return res.status(401).json({ success: false, error: "unauthorized" });
