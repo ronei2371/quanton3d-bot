@@ -27,14 +27,22 @@ const adminOnly = (fn) => async (req, res) => {
 };
 
 // --- BANCO DE DADOS (REGRAS AGENTS.MD) ---
-const getCol = (name) => (typeof db.getCollection === 'function' ? db.getCollection(name) : null);
+const getCol = (name) => (typeof db.getCollection === "function" ? db.getCollection(name) : null);
+
+const getParametrosCollection = async () => {
+  const mongoDb = db.getDb?.();
+  if (!mongoDb) return db.getCollection("parametros");
+
+  await mongoDb.listCollections({ name: "parametros" }).toArray();
+  return mongoDb.collection("parametros") || db.getCollection("parametros");
+};
 
 // --- ROTAS PÚBLICAS ---
 router.post("/register-user", async (req, res) => {
   try {
     const { name, phone, email, sessionId } = req.body || {};
     if (sessionId) {
-      const col = db.getConversasCollection?.() || getCol('conversas');
+      const col = db.getConversasCollection?.() || getCol("conversas");
       if (col) {
         await col.updateOne(
           { sessionId },
@@ -50,7 +58,7 @@ router.post("/register-user", async (req, res) => {
 router.post("/custom-request", async (req, res) => {
   try {
     const { name, phone, email, desiredFeature, color } = req.body || {};
-    const col = db.getOrdersCollection?.() || getCol('custom_requests');
+    const col = db.getOrdersCollection?.() || getCol("custom_requests");
     if (col) {
       await col.insertOne({
         name, phone, email, desiredFeature, color,
@@ -64,7 +72,7 @@ router.post("/custom-request", async (req, res) => {
 // --- ROTAS ADMINISTRATIVAS ---
 router.get("/params/resins", async (req, res) => {
   try {
-    const col = getCol("parametros"); // FONTE DA VERDADE (459 resinas)
+    const col = await getParametrosCollection(); // FONTE DA VERDADE: coleção parametros no MongoDB
     if (!col) return res.status(503).json({ success: false, error: "DB Offline" });
     const data = await col.aggregate([
       { $group: { _id: "$resinName", count: { $sum: 1 } } },
@@ -74,17 +82,57 @@ router.get("/params/resins", async (req, res) => {
   } catch (err) { res.status(500).json({ success: false }); }
 });
 
+router.get("/visual-knowledge", async (req, res) => {
+  try {
+    const col = db.getVisualKnowledgeCollection?.() || getCol("visual_knowledge");
+    if (!col) return res.status(503).json({ success: false, error: "DB Offline" });
+
+    const items = await col.find({}).sort({ createdAt: -1 }).limit(100).toArray();
+    return res.status(200).json({ success: true, items });
+  } catch (err) {
+    return res.status(500).json({ success: false });
+  }
+});
+
+router.post("/visual-knowledge", async (req, res) => {
+  try {
+    const { title, imageUrl, description } = req.body || {};
+    if (!title || !imageUrl) {
+      return res.status(400).json({ success: false, error: "title e imageUrl são obrigatórios" });
+    }
+
+    const col = db.getVisualKnowledgeCollection?.() || getCol("visual_knowledge");
+    if (!col) return res.status(503).json({ success: false, error: "DB Offline" });
+
+    const doc = {
+      title,
+      imageUrl,
+      description: description || "",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await col.insertOne(doc);
+    return res.status(201).json({ success: true, id: result.insertedId, item: { ...doc, _id: result.insertedId } });
+  } catch (err) {
+    return res.status(500).json({ success: false });
+  }
+});
+
 router.post("/add-knowledge", adminOnly(async (req, res) => {
   try {
     const { title, content } = req.body;
     const result = await addDocument(title, content, "admin_panel", ["admin"]);
     res.status(201).json({ success: true, result });
   } catch (err) { res.status(500).json({ success: false }); }
-});
+}));
 
 // 🛡️ PROTEÇÃO CONTRA SOBREPOSIÇÃO (NÃO APAGAR DADOS)
 router.get("/nuke-and-seed", (req, res) => {
-  res.status(410).json({ success: false, error: "Bloqueado: Use o MongoDB como fonte de verdade." });
+  res.status(410).json({
+    success: false,
+    error: "Rota descontinuada. A coleção 'parametros' no MongoDB é a fonte de verdade"
+  });
 });
 
 export { router as apiRoutes };
