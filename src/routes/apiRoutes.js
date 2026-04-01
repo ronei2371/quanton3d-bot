@@ -80,7 +80,7 @@ router.post("/add-knowledge", adminOnly(async (req, res) => {
     const result = await addDocument(title, content, "admin_panel", ["admin"]);
     res.status(201).json({ success: true, result });
   } catch (err) { res.status(500).json({ success: false }); }
-});
+}));
 
 // 🛡️ PROTEÇÃO CONTRA SOBREPOSIÇÃO (NÃO APAGAR DADOS)
 router.get("/nuke-and-seed", (req, res) => {
