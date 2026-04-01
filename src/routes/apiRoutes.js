@@ -28,7 +28,11 @@ const adminOnly = (fn) => async (req, res) => {
   return fn(req, res);
 };
 
+ codex/analise-e-corrija-erros-no-deploy-sp7zyx
 // --- BANCO DE DADOS (AGENTS.MD) ---
+
+// --- BANCO DE DADOS (REGRAS AGENTS.MD) ---
+ main
 const getCol = (name) => (typeof db.getCollection === "function" ? db.getCollection(name) : null);
 
 const getParametrosCollection = async () => {
@@ -38,6 +42,7 @@ const getParametrosCollection = async () => {
   await mongoDb.listCollections({ name: "parametros" }).toArray();
   return mongoDb.collection("parametros") || db.getCollection("parametros");
 };
+ codex/analise-e-corrija-erros-no-deploy-sp7zyx
 
 const normalizeItem = (value, fallback = "Não informado") => {
   if (typeof value === "string") {
@@ -48,10 +53,13 @@ const normalizeItem = (value, fallback = "Não informado") => {
   return String(value);
 };
 
+ main
+
 // --- ROTAS PÚBLICAS ---
 router.post("/register-user", async (req, res) => {
   try {
     const { name, phone, email, sessionId } = req.body || {};
+ codex/analise-e-corrija-erros-no-deploy-sp7zyx
     if (!sessionId) return res.status(400).json({ success: false, error: "sessionId é obrigatório" });
 
     const col = db.getConversasCollection?.() || getCol("conversas");
@@ -74,10 +82,25 @@ router.post("/register-user", async (req, res) => {
   } catch {
     return res.status(500).json({ success: false });
   }
+
+    if (sessionId) {
+      const col = db.getConversasCollection?.() || getCol("conversas");
+      if (col) {
+        await col.updateOne(
+          { sessionId },
+          { $set: { userName: name, userPhone: phone, userEmail: email, updatedAt: new Date() } },
+          { upsert: true }
+        );
+      }
+    }
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false }); }
+ main
 });
 
 router.post("/custom-request", async (req, res) => {
   try {
+ codex/analise-e-corrija-erros-no-deploy-sp7zyx
     const { name, phone, email, desiredFeature, color, notes } = req.body || {};
     const col = db.getOrdersCollection?.() || getCol("orders") || getCol("custom_requests");
     if (!col) return res.status(503).json({ success: false, error: "DB Offline" });
@@ -99,11 +122,24 @@ router.post("/custom-request", async (req, res) => {
   } catch {
     return res.status(500).json({ success: false });
   }
+
+    const { name, phone, email, desiredFeature, color } = req.body || {};
+    const col = db.getOrdersCollection?.() || getCol("custom_requests");
+    if (col) {
+      await col.insertOne({
+        name, phone, email, desiredFeature, color,
+        status: "pending", createdAt: new Date()
+      });
+    }
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false }); }
+ main
 });
 
 // --- DADOS DE PARÂMETROS (FONTE DA VERDADE: parametros) ---
 router.get("/params/resins", async (req, res) => {
   try {
+ codex/analise-e-corrija-erros-no-deploy-sp7zyx
     const col = await getParametrosCollection();
     if (!col) return res.status(503).json({ success: false, error: "DB Offline" });
 
@@ -206,6 +242,9 @@ router.post("/visual-knowledge", async (req, res) => {
     }
 
     const col = db.getVisualKnowledgeCollection?.() || getCol("visual_knowledge");
+
+    const col = await getParametrosCollection(); // FONTE DA VERDADE: coleção parametros no MongoDB
+ main
     if (!col) return res.status(503).json({ success: false, error: "DB Offline" });
 
     const doc = {
@@ -223,6 +262,43 @@ router.post("/visual-knowledge", async (req, res) => {
   }
 });
 
+router.get("/visual-knowledge", async (req, res) => {
+  try {
+    const col = db.getVisualKnowledgeCollection?.() || getCol("visual_knowledge");
+    if (!col) return res.status(503).json({ success: false, error: "DB Offline" });
+
+    const items = await col.find({}).sort({ createdAt: -1 }).limit(100).toArray();
+    return res.status(200).json({ success: true, items });
+  } catch (err) {
+    return res.status(500).json({ success: false });
+  }
+});
+
+router.post("/visual-knowledge", async (req, res) => {
+  try {
+    const { title, imageUrl, description } = req.body || {};
+    if (!title || !imageUrl) {
+      return res.status(400).json({ success: false, error: "title e imageUrl são obrigatórios" });
+    }
+
+    const col = db.getVisualKnowledgeCollection?.() || getCol("visual_knowledge");
+    if (!col) return res.status(503).json({ success: false, error: "DB Offline" });
+
+    const doc = {
+      title,
+      imageUrl,
+      description: description || "",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await col.insertOne(doc);
+    return res.status(201).json({ success: true, id: result.insertedId, item: { ...doc, _id: result.insertedId } });
+  } catch (err) {
+    return res.status(500).json({ success: false });
+  }
+});
+
 router.post("/add-knowledge", adminOnly(async (req, res) => {
   try {
     const { title, content } = req.body || {};
@@ -231,15 +307,24 @@ router.post("/add-knowledge", adminOnly(async (req, res) => {
     }
 
     const result = await addDocument(title, content, "admin_panel", ["admin"]);
+ codex/analise-e-corrija-erros-no-deploy-sp7zyx
     return res.status(201).json({ success: true, result });
   } catch {
     return res.status(500).json({ success: false });
   }
+
+    res.status(201).json({ success: true, result });
+  } catch (err) { res.status(500).json({ success: false }); }
+ main
 }));
 
 // 🛡️ PROTEÇÃO CONTRA SOBREPOSIÇÃO (NÃO APAGAR DADOS)
 router.get("/nuke-and-seed", (req, res) => {
+ codex/analise-e-corrija-erros-no-deploy-sp7zyx
   return res.status(410).json({
+
+  res.status(410).json({
+ main
     success: false,
     error: "Rota descontinuada. A coleção 'parametros' no MongoDB é a fonte de verdade"
   });
