@@ -1,0 +1,50 @@
+ da Elegoo no YouTube para substituí-la ou o motor, se necessário.
+
+
+Portas USB: Certifique-se de que as portas USB estejam limpas e funcionais. Derramamentos de resina podem danificá-las.
+
+
+13. Reutilizando o IPA
+Filtrando o IPA: Depois de limpar suas impressões com IPA, você pode curar o excesso de resina no IPA sob luz UV. Filtre as partículas de resina curada para prolongar a vida útil do IPA.
+
+
+14. Limpando o FEP e as Placas de Construção
+Limpeza do FEP: Use IPA para limpar cuidadosamente o seu filme FEP, evitando arranhões. Se aparecerem arranhões, substitua o filme.
+
+
+Limpeza da placa de construção: Limpe regularmente a placa de construção com IPA e lixe levemente se necessário para melhorar a aderência.
+
+
+15. Descarte Seguro de Resíduos de Resina
+O descarte adequado de resíduos de resina e materiais residuais é crucial para garantir a segurança e a responsabilidade ambiental. Aqui estão as etapas para lidar com resíduos de resina:
+
+
+Cure a Resina: Qualquer resíduo de resina líquida ou resíduo de resina não curada deve ser curado (exposto à luz UV) antes do descarte. Isso se aplica a resíduos de resina no seu tanque, impressões com falhas ou suportes usados. Uma vez totalmente curada, a resina se torna inerte e pode ser descartada com segurança.
+
+
+Lixeira: Use uma lixeira lacrada ou fechada especificamente para resina curada e materiais contaminados (luvas, lenços, toalhas de papel, etc.). Isso evitará que quaisquer vapores de resina sejam liberados e garantirá que não haja exposição acidental.
+
+
+Descarte de Resina Não Curada: Não despeje resina líquida na pia ou em ralos. A resina não curada é perigosa para a saúde e o meio ambiente. Se você tiver resíduos de resina não curada, como da limpeza do seu tanque ou ferramentas, coloque-a sob luz UV ou na luz solar direta para curá-la antes do descarte. Isso inclui resinas laváveis com água!
+
+
+Manuseio de IPA Contaminado com Resina : Se você usar IPA para limpar impressões ou ferramentas, deixe o IPA descansar em um recipiente até que a resina se deposite ou evapore o IPA em uma área bem ventilada, deixando a resina curar antes do descarte.
+
+
+Regulamentos locais: Sempre verifique os regulamentos locais para o descarte adequado de materiais perigosos, pois as diretrizes podem variar dependendo da sua localização.
+
+
+16. Dicas de Especialistas
+Pistola de calor para remoção de suportes: Use uma pistola de calor para enfraquecer os suportes, facilitando a remoção sem danificar o modelo.
+
+
+Mini-furadeira para furos de drenagem: Se você esqueceu de adicionar furos de drenagem no seu fatiador, use uma mini-furadeira para perfurá-los após a impressão estar concluída.
+
+
+Sugestões de ferramentas: Invista em um bom raspador, mini-furadeira e paquímetro digital para medir tolerâncias.
+
+
+Verifique o cabo na sua nova Elegoo Saturn 4
+
+
+Quando você receber sua Elegoo Saturn 4 pela primeira vez, é importante verificar o cabo do motor do eixo Z dentro da impressora. Às vezes, este cabo pode ser colocado incorreta

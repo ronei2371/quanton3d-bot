@@ -1,0 +1,147 @@
+izada: Utilizar solventes compatíveis e técnicas que não degradem o
+material.
+
+
+Substituição Preventiva: Trocar filme antes de falhas catastróficas baseado em
+inspeções regulares.
+
+
+Armazenamento de Filmes: Manter filmes sobressalentes em ambiente controlado e
+protegido de UV.
+10.3.3 Sistema de Filtragem
+
+
+Limpeza de Filtros: Remover e limpar filtros de resina conforme cronograma de
+manutenção.
+
+
+Substituição de Elementos: Trocar elementos filtrantes quando saturados ou
+danificados.
+
+
+Verificação de Vedações: Inspecionar vedações para prevenir vazamentos e
+contaminação.
+
+
+
+
+10.4 Manutenção do Sistema Óptico
+
+
+10.4.1 Limpeza de Lentes e Espelhos
+
+
+Preparação: Desligar completamente sistema e aguardar resfriamento antes da
+limpeza.
+
+
+Solventes Apropriados: Utilizar apenas solventes recomendados pelo fabricante para
+evitar danos aos revestimentos.
+
+
+Técnica de Limpeza: Movimentos circulares suaves do centro para fora, utilizando
+materiais não abrasivos.
+
+
+Inspeção Óptica: Verificar ausência de riscos, manchas ou depósitos após limpeza.
+
+
+
+
+10.4.2 Calibração de Intensidade
+
+
+Medição Regular: Utilizar medidores de UV calibrados para verificar intensidade
+luminosa.
+
+
+Mapeamento de Uniformidade: Medir intensidade em múltiplos pontos da área de
+impressão.
+
+
+Ajustes de Compensação: Aplicar correções por software quando variações excedem
+tolerâncias.
+
+
+Documentação: Registrar medições para acompanhar degradação ao longo do
+tempo.
+10.4.3 Substituição de Fontes Luminosas
+
+
+Monitoramento de Vida Útil: Acompanhar horas de uso e degradação de
+performance.
+
+
+Procedimentos de Substituição: Seguir protocolos específicos do fabricante para
+troca segura.
+
+
+Calibração      Pós-Substituição:   Recalibrar sistema após instalação de novos
+componentes.
+
+
+
+
+10.5 Manutenção Mecânica
+
+
+10.5.1 Sistema de Movimentação
+
+
+Lubrificação:     Aplicar   lubrificantes   apropriados   conforme    cronograma   de
+manutenção.
+
+
+Verificação de Folgas: Inspecionar guias lineares e fusos para detectar desgaste
+excessivo.
+
+
+Alinhamento: Verificar alinhamento de eixos utilizando instrumentos de precisão.
+
+
+Calibração de Motores: Ajustar parâmetros de motores para manter precisão de
+posicionamento.
+
+
+
+
+10.5.2 Estrutura e Chassi
+
+
+Inspeção de Fixações: Verificar torque de parafusos e conexões estruturais.
+
+
+Nivelamento da Base: Confirmar nivelamento da impressora utilizando níveis de
+precisão.
+
+
+Isolamento de Vibrações: Verificar eficácia de sistemas de isolamento e substituir
+quando necessário.
+
+
+
+
+10.5.3 Sistemas Elétricos
+
+
+Inspeção de Cabos: Verificar integridade de cabos e conectores.
+
+
+Teste de Continuidade: Verificar continuidade elétrica de circuitos críticos.
+Calibração de Sensores: Ajustar sensores de posição e proximidade conforme
+necessário.
+
+
+
+
+10.6 Gestão de Resíduos e Meio Ambiente
+
+
+10.6.1 Classificação de Resíduos
+
+
+Resina Não Curada: Classificar como resíduo perigoso devido à toxicidade e
+reatividade.
+
+
+Solventes Contaminados: Coletar separadamente para recuperação ou descar

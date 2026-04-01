@@ -1,0 +1,126 @@
+ializadas de suporte.
+Paredes finas com espessura inferior a 1mm necessitam suportes internos para
+prevenir flambagem.
+
+
+A frequência de suportes para paredes é calculada por:
+
+
+L_máx = π × √(E × t³)/(12 × σcr)
+
+
+Onde: - t = espessura da parede - σcr = tensão crítica de flambagem
+
+
+Elementos em balanço requerem suportes dimensionados para resistir a momentos
+fletores:
+
+
+M_máx = F × L
+
+
+Onde L é o comprimento do balanço.
+
+
+
+
+5.2.5 Modelos de Personagens
+
+
+Modelos de personagens apresentam geometrias complexas com variações
+significativas de seção transversal e elementos delicados como dedos, cabelos e
+acessórios. A estratégia de suporte deve preservar detalhes finos enquanto fornece
+sustentação adequada.
+Para extremidades como dedos, suportes pontuais são preferíveis a suportes lineares
+para minimizar marcas visíveis. O diâmetro do ponto de contato é otimizado por:
+
+
+d_ótimo = √(4 × F)/(π × σadm)
+
+
+Cabelos e elementos filiformes requerem suportes de árvore que se ramificam para
+distribuir cargas sem criar concentrações de tensão.
+
+
+
+
+5.2.6 Aplicações Dentárias
+
+
+Modelos dentários requerem precisão dimensional excepcional e acabamento
+superficial superior. Suportes devem ser posicionados em áreas não críticas, evitando
+superfícies oclusais e margens de preparos.
+
+
+A rugosidade superficial introduzida pelos suportes deve ser inferior a Ra = 0,1μm para
+aplicações protéticas. Isto requer pontos de contato com diâmetro inferior a 0,2mm e
+ângulos de separação otimizados.
+
+
+
+
+5.3 Tipos de Suportes e Suas Aplicações
+
+
+5.3.1 Suportes Pontuais
+
+
+Suportes pontuais consistem em conexões simples entre a peça e estruturas de apoio,
+minimizando marcas na superfície final. São ideais para superfícies que serão
+posteriormente polidas ou para áreas onde pequenas marcas são aceitáveis.
+
+
+O dimensionamento de suportes pontuais baseia-se na resistência ao cisalhamento:
+
+
+τ = F/(π × d × h)
+
+
+Onde: - τ = tensão de cisalhamento - d = diâmetro do ponto de contato - h = altura do
+ponto de contato
+
+
+A altura ótima do ponto de contato é tipicamente 2-3 vezes o diâmetro para garantir
+resistência adequada sem dificultar excessivamente a remoção.
+
+
+
+
+5.3.2 Suportes Lineares
+
+
+Suportes lineares distribuem cargas ao longo de linhas de contato, sendo adequados
+para bordas de peças ou elementos que requerem suporte contínuo. O
+dimensionamento considera a resistência à flexão:
+σf = M × c/I
+
+
+Onde: - M = momento fletor aplicado - c = distância ao eixo neutro - I = momento de
+inércia da seção
+
+
+
+
+5.3.3 Suportes de Árvore
+
+
+Suportes de árvore ramificam-se a partir de uma base comum, distribuindo cargas
+eficientemente enquanto minimizam o material de suporte necessário. A otimização
+topológica determina a configuração ótima de ramificações.
+
+
+O ângulo de ramificação ótimo é calculado por:
+
+
+θ_ótimo = arccos(√(2)/2) ≈ 45°
+
+
+Este ângulo minimiza tensões de concentração nos pontos de bifurcação.
+
+
+
+
+5.3.4 Suportes Adaptativos
+
+
+Suportes adaptativos ajustam automaticamente sua densidade e c

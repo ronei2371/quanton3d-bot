@@ -1,0 +1,11 @@
+15. O que são as manchas brancas na peça e como evitá-las ?
+As manchas brancas que surgem na peça após o processo de lavagem e cura são resíduos do álcool utilizado. Quando esse álcool entra em contato com a luz UV, provoca o esbranquiçamento em pequenos pontos. Esse fenômeno é bastante comum quando se utiliza álcool com um percentual de pureza inferior a 95% ou que já contenha muita resina residual devido às limpezas anteriores.
+Para evitar a ocorrência dessas manchas, recomendamos a utilização de álcool com o maior grau de pureza possível. Além disso, é importante trocar o álcool regularmente para evitar o acúmulo de resina. Outro ponto crucial é permitir que a peça seque e que o álcool evapore completamente antes de colocar a peça na cabine de cura. Seguindo essas orientações, você poderá prevenir a formação de manchas brancas em suas peças.
+
+
+16. Por que minha peça impressa trincou ?
+Existem três causas comuns para o surgimento de trincas em peças impressas.
+a) Cura não uniforme: A primeira causa é resultante de processos de cura não uniforme. Quando a cura é irregular, uma parte da peça pode expandir mais do que outra, criando um ponto de pressão interna que resulta em uma trinca. Para evitar esse problema, é importante priorizar processos de cura nos quais as peças sejam expostas a luzes UV controladas e com intensidade padrão.
+b) Presença de umidade ou água no interior da peça: A segunda causa mais comum é a presença de umidade ou água no interior da peça. A partícula de água compromete a estabilidade dimensional do modelo, levando-o à ruptura. Para evitar esse problema, recomendamos que o último enxágue da peça seja feito em álcool absoluto.
+c) Utilização de resinas de baixa qualidade: A terceira causa mais comum para esse problema é a utilização de resinas de baixa qualidade, que não utilizam matérias-primas que garantem a estabilidade dimensional do modelo impresso. Recomendamos sempre a utilização de resinas de alta qualidade para garantir a durabilidade e a estabilidade da peça impressa.
+

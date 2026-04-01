@@ -1,0 +1,18 @@
+klash) ou desalinhamento do acoplador motor/fuso.,,Lubrificação: Limpe o fuso Z com IPA e aplique graxa de lítio branca (não óleo comum). Aperto: Verificar e apertar o acoplador do motor.
+Peças estão sempre 0.5mm mais altas/baixas,,Z-Offset Incorreto. O valor de Z=0 não está onde deveria estar.,,Ajuste Fino: Reajuste o Z-offset para que o papel de nivelamento deslize com leve atrito. Calibração: Utilize a função de babystepping durante a impressão das primeiras camadas para ajustes de precisão.
+
+
+Sintoma (O que o Cliente Vê),Diagnóstico mais Provável,Solução Rápida (Ação)
+Peças falham só no inverno ou em ar-condicionado,,Temperatura Baixa da Resina/Placa. Temperaturas abaixo de 20∘C aumentam a viscosidade e falham a adesão inicial. ,,Aquecimento: Mantenha a resina e o ambiente entre 25∘C e 30∘C (ideal). Pré-Aquecimento: Ligue a impressora por 30 a 60 minutos antes de imprimir para aquecer passivamente a build plate. 
+"Superfície fica ""fosca"" ou com textura irregular",,"Variação de Viscosidade. Flutuações de temperatura (ex: ar-condicionado liga/desliga) causam viscosidade desigual, afetando a qualidade da cura. ",,Estabilidade: Use um gabinete com controle de temperatura (enclosure) para manter a resina constante entre 25∘C e 30∘C. 
+Camadas sem adesão em dias úmidos,,Umidade Excessiva. Água absorvida pela resina (higroscopicidade) ou condensação nos componentes ópticos. ,,Desumidificação: Mantenha a Umidade Relativa (UR) abaixo de 50%. Armazenamento: Guarde a resina em recipientes herméticos com sílica-gel. 
+
+
+Sintoma (O que o Cliente Vê),Diagnóstico de Material Específico,Solução Avançada (Ação)
+Resina de Alta Resistência (Ex: Quanton PRO-TEMP) quebra fácil,,Sub-cura ou Baixa Tg não atingida. Resinas de engenharia exigem energia extrema e/ou temperatura ideal para atingir as propriedades máximas. ,,Aumento Extremo: Aumente o tempo de exposição em 50% a 100% (ex: de 4s para 8s). Pós-Cura em Água Quente: Cure a peça submersa em água morna (50∘C) ou em câmara aquecida para ativar as propriedades finais. 
+Resinas com muito pigmento (Preto Sólido) falham,,Penetração de Luz Insuficiente. O pigmento impede que a luz UV atinja a profundidade da camada. ,,Camadas Finas: Reduza a altura da camada para 0.02mm ou 0.03mm. Mistura Constante: Misture a resina no tanque a cada 1 hora ou use a função de agitação (se disponível) para evitar que o pigmento sedimente. 
+Resinas Cerâmicas/Preenchidas falham no meio,,Sedimentação de Partículas. Partículas pesadas (cerâmica/fibra) afundam rapidamente no tanque. ,,"Agitação Vigorosa: Agite vigorosamente a resina antes de despejar e a cada 1 hora de impressão longa. Parâmetro: Use alturas de camada maiores (0.05mm) e exposição mais longa para ""bloquear"" o enchimento na cura. "
+
+
+Sintoma (O que o Cliente Vê),Diagnóstico mais Provável,Solução Avançada (Ação)
+Peça fica um pouco maior que o modelo CAD,,"Super-Cura Lateral Excessiva. Vazamento de UV (light bleed) para além do pixel, resultando em cura lateral (oversizing)

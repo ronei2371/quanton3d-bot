@@ -1,0 +1,27 @@
+services:
+  # Configuração do Bot (Backend)
+  - type: web
+    name: quanton3d-bot-v2
+    env: node
+    plan: starter
+    buildCommand: corepack enable && pnpm install --no-frozen-lockfile && pnpm run build
+    startCommand: node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 20.x
+      - key: MONGODB_URI
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CI
+        value: "true"
+
+  # Configuração do Site (Static Site)
+  - type: web
+    name: quanton3dia
+    env: static
+    buildCommand: corepack enable && pnpm install --no-frozen-lockfile && pnpm run build
+    staticPublishPath: dist
+    envVars:
+      - key: CI
+        value: "true"

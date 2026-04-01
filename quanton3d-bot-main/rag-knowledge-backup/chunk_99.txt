@@ -1,0 +1,92 @@
+ar drasticamente os tempos de cura necessários e as propriedades mecânicas
+finais das peças.
+
+
+
+
+1.3.2 Sistema de Filtragem de Ar
+
+
+Sistemas de filtragem de ar com filtros de carvão ativado remove vapores orgânicos
+voláteis emitidos pelas resinas durante o processo de cura. Estes sistemas são
+essenciais para manter a qualidade do ar no ambiente de trabalho e reduzir a
+exposição a compostos potencialmente nocivos.
+
+
+Ventiladores de baixo ruído garantem circulação adequada do ar filtrado, mantendo
+pressão ligeiramente negativa no interior da impressora para evitar a dispersão de
+vapores no ambiente externo.
+
+
+
+
+1.4 Especificações Técnicas Típicas
+
+
+As especificações técnicas variam significativamente entre diferentes modelos e
+fabricantes, mas alguns parâmetros são fundamentais para avaliar a adequação de
+uma impressora para aplicações específicas:
+
+
+Resolução XY: Determina o menor detalhe que pode ser reproduzido no plano
+horizontal. Impressoras DLP típicas oferecem resoluções entre 47µm e 100µm,
+enquanto sistemas SLA podem atingir resoluções inferiores a 25µm.
+
+
+Resolução Z: Define a menor espessura de camada possível. Valores típicos variam
+entre 0,01mm e 0,2 mm, sendo que camadas mais finas resultam em melhor qualidade
+superficial mas aumentam significativamente o tempo de impressão.
+
+
+Volume de Construção: Especifica as dimensões máximas das peças que podem ser
+produzidas. Impresoras desktop típicas oferecem volumes entre 120x68x150mm e
+200x125x250mm.
+
+
+Velocidade de Impressão: Medida tipicamente em mm/hora de altura construída,
+varia entre 10 mm/e 50mm/h dependendo da tecnologia e configurações utilizadas.
+
+
+
+
+
+
+
+
+MÓDULO 2: EQUIPAMENTOS DE SEGURANÇA E
+CUIDADOS PARA A SAÚDE
+
+
+2.1 Riscos Associados à Impressão 3D de Resina
+
+
+A impressão 3D de resina envolve a manipulação de materiais químicos que
+apresentam riscos significativos à saúde humana quando não manuseados
+adequadamente. A compreensão destes riscos e a implementação de medidas de
+proteção apropriadas são fundamentais para garantir um ambiente de trabalho
+seguro e saudável.
+
+
+As resinas fotopolimerizáveis contêm monômeros e oligômeros acrilatos que podem
+causar sensibilização cutânea, irritação das vias respiratórias e, em casos de exposição
+prolongada, efeitos sistêmicos mais graves. Estudos toxicológicos demonstram que a
+exposição repetida a estes compostos pode resultar em dermatite de contato alérgica,
+que uma vez desenvolvida, torna-se uma condição permanente e progressiva.
+
+
+
+
+2.2 Equipamentos de Proteção Individual (EPI)
+
+
+2.2.1 Proteção das Mãos
+
+
+Luvas de proteção constituem o EPI mais crítico na manipulação de resinas
+fotopolimerizáveis. Luvas de nitrila oferecem excelente resistência química à maioria
+das resinas comerciais, mantendo flexibilidade adequada para manipulação precisa
+de peças pequenas. A espessura mínima recomendada é de 0,2mm, sendo que luvas
+mais espessas oferecem proteção superior mas reduzem a destreza manual.
+
+
+Luvas de neoprene representam uma alternativa 

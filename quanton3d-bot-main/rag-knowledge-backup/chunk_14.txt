@@ -1,0 +1,84 @@
+zadas oferecem
+resistência superior nestas condições.
+
+
+
+
+3.3.2 Compatibilidade com Equipamento
+
+
+Diferentes impressoras apresentam características específicas que afetam a
+compatibilidade com resinas. Comprimento de onda da fonte luminosa é
+fundamental: resinas formuladas para 405nm podem não curar adequadamente em
+impressoras que operam em 365nm.
+
+
+Potência   luminosa    disponível   determina   tempos    de   exposição    necessários.
+Impressoras com fontes de baixa potência requerem resinas de alta reatividade ou
+tempos de exposição prolongados que podem afetar a produtividade.
+
+
+Volume da plataforma de construção influencia a escolha de resinas para peças
+grandes. Resinas com baixa contração de cura são preferíveis para peças de grandes
+dimensões para minimizar tensões internas e distorções.
+
+
+
+
+3.3.3 Considerações de Pós-Processamento
+
+
+Diferentes resinas requerem protocolos específicos de pós-processamento que podem
+influenciar significativamente a seleção. Resinas flexíveis são mais difíceis de limpar e
+podem requerer solventes especializados.
+Tempo e temperatura de pós-cura variam significativamente entre formulações.
+Resinas que requerem pós-cura prolongada podem não ser adequadas para
+aplicações com prazos apertados.
+
+
+Facilidade de remoção de suportes é consideração importante para peças com
+geometrias complexas. Resinas muito resistentes podem requerer ferramentas
+especializadas ou técnicas de remoção que aumentam o risco de danos à peça.
+
+
+
+
+3.4 Parâmetros de Impressão por Tipo de Resina
+
+
+3.4.1 Tempos de Exposição
+
+
+Os tempos de exposição constituem o parâmetro mais crítico na impressão de resina,
+determinando diretamente a qualidade e precisão dimensional das peças. Tempos
+insuficientes resultam em cura incompleta, causando deformações ou falhas
+estruturais, enquanto tempos excessivos causam super-cura que compromete
+detalhes finos e precisão dimensional.
+
+
+Para resinas padrão em impressoras LCD de 405nm, tempos típicos variam entre 1,5-3
+segundos por camada para espessuras de 0,05mm. Resinas resistentes geralmente
+requerem tempos 20-30% superiores devido à presença de modificadores que
+absorvem parcialmente a radiação UV.
+
+
+Resinas flexíveis apresentam cinética de cura mais lenta, requerendo tempos de
+exposição 50-100% superiores às resinas padrão. Esta característica deve ser
+considerada no planejamento de produção, pois pode duplicar o tempo total de
+impressão.
+
+
+
+
+3.4.2 Velocidades de Elevação
+
+
+A velocidade de elevação da plataforma após cada exposição afeta significativamente
+a qualidade da impressão e a vida útil do filme FEP. Velocidades excessivas podem
+causar falhas de adesão entre camadas ou danos ao filme, enquanto velocidades
+muito baixas aumentam desnecessariamente o tempo de impressão.
+
+
+Velocidades típicas para resinas padrão situam-se entre 3-5 mm/min durante a
+separação inicial do filme FEP, acelerando para 60-120 mm/min durante o movimento
+de reposicionamento. Resinas de alta viscosidade podem requerer velocidad

@@ -1,0 +1,37 @@
+po da camada de queima ou esfregue a placa de construção para melhor aderência.
+
+
+Arranhões no filme FEP: Substitua o FEP se ocorrerem arranhões, pois eles podem levar a falhas na impressão.
+
+
+Teste de tela: Se você estiver tendo problemas com impressões com falhas ou camadas inconsistentes, vale a pena executar um teste de tela/teste de exposição para verificar o estado da tela LCD da sua impressora. Este teste garante que a luz UV seja distribuída corretamente em toda a tela. Em muitos fatiadores ou firmwares, você pode executar um teste de tela iniciando uma "limpeza a seco do tanque", que mostrará uma imagem sólida na tela. Se alguma área da tela não estiver sendo exibida corretamente (por exemplo, pixels mortos), isso pode indicar que sua tela LCD precisa ser substituída.
+
+
+*18. Amostras de Calibração
+Usar uma ferramenta como o Phrozen XP Finder é uma ótima maneira de calibrar os tempos de exposição, mas na Elegoo Saturn, você pode simplificar ainda mais o processo imprimindo várias versões de uma impressão de calibração de uma só vez. Muitos programas de fatiamento, como o ChiTuBox, permitem que você configure um único trabalho de impressão com diferentes configurações de exposição em vários modelos ou amostras de teste. Este método é útil quando você precisa ajustar as configurações de exposição para diferentes resinas.
+
+
+Veja como funciona:
+
+
+Configuração no Fatiador: Carregue a amostra de calibração ou o modelo que você deseja testar no fatiador. Duplique o modelo várias vezes, cada um com um tempo de exposição diferente. Você pode ajustar manualmente essas configurações no fatiador ou usar uma matriz de teste pré-fabricada, como as disponíveis para calibração de resina.
+
+
+Variando os tempos de exposição: Para cada duplicata, defina um tempo de exposição diferente para as camadas base e as camadas regulares. Por exemplo, você pode testar tempos de exposição variando de 2,5 segundos a 3,5 segundos em incrementos de 0,1 segundos para encontrar a exposição ideal para sua resina.
+
+
+Impressão simultânea: Como você está imprimindo várias amostras de calibração em um único trabalho de impressão, você economiza tempo testando várias configurações de exposição simultaneamente. Depois que a impressão estiver concluída, você pode comparar facilmente os resultados e determinar qual tempo de exposição produz o melhor detalhe e aderência da camada.
+
+
+Ajuste fino: Depois de selecionar o melhor resultado do seu teste inicial, você pode executar outra rodada de calibração com incrementos mais finos (por exemplo, 0,05 segundos) para chegar ao tempo de exposição perfeito.
+
+
+*19. Ferramentas de Fatiamento: Opções Gratuitas vs. Pagas
+O software de fatiamento é essencial para preparar seus modelos 3D para impressão, e existem várias ferramentas de fatiamento disponíveis, gratuitas e pagas, cada uma com suas próprias vantagens e desvantagens.
+
+
+Ferramentas de Fatiamento Populares:
+ChiTuBox (versões gratuita e Pro):
+
+
+Versão gratuita: Um dos fatiadores mais usa

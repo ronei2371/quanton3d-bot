@@ -1,0 +1,138 @@
+nutos   após
+desligamento para remover vapores residuais.
+
+
+
+
+10.1.2 Remoção e Manuseio de Peças
+
+
+Equipamentos de Proteção: Utilizar EPI completo durante toda manipulação de
+peças não processadas.
+
+
+Ferramentas Adequadas: Espátulas flexíveis de plástico ou metal para remoção sem
+danos à plataforma.
+
+
+Técnica de Remoção: Aplicar força gradual e uniforme, iniciando por uma
+extremidade e progredindo sistematicamente.
+
+
+Contenção de Resíduos: Utilizar bandejas para coletar resina que escorre durante
+remoção.
+10.1.3 Inspeção Inicial de Qualidade
+
+
+Verificação Visual: Inspeção completa para detectar defeitos, falhas de impressão ou
+contaminação.
+
+
+Documentação de Problemas: Registrar qualquer anomalia para análise posterior e
+melhoria de processos.
+
+
+Classificação de Peças: Separar peças por qualidade e requisitos de pós-
+processamento.
+
+
+
+
+10.2 Limpeza da Plataforma de Construção
+
+
+10.2.1 Remoção de Resíduos
+
+
+A limpeza adequada da plataforma é essencial para manter adesão consistente em
+impressões futuras:
+
+
+Raspagem Inicial: Utilizar espátula plástica para remover resina curada aderida,
+evitando riscos na superfície.
+
+
+Dissolução Química: Aplicar IPA ou solvente apropriado para amolecer resíduos
+persistentes.
+
+
+Limpeza Mecânica: Utilizar escova de cerdas macias para remover resíduos sem
+danificar textura da superfície.
+
+
+Enxágue Final: Lavar com solvente limpo para remover todos os resíduos de limpeza.
+
+
+
+
+10.2.2 Manutenção da Textura Superficial
+
+
+Preservação da Rugosidade: Evitar abrasivos que possam alisar excessivamente a
+superfície texturizada.
+
+
+Retexturização: Quando necessário, utilizar jateamento suave ou ataque químico
+controlado para restaurar textura.
+
+
+Verificação de Planicidade: Inspeção periódica com régua de precisão para detectar
+deformações.
+10.2.3 Proteção Contra Corrosão
+
+
+Secagem Completa: Garantir remoção total de umidade antes do armazenamento.
+
+
+Aplicação de Protetor: Utilizar filmes protetivos ou óleos anticorrosivos quando
+apropriado.
+
+
+Armazenamento       Adequado:   Manter    em   ambiente    seco   e   protegido   de
+contaminantes.
+
+
+
+
+10.3 Manutenção do Sistema de Resina
+
+
+10.3.1 Limpeza do Tanque
+
+
+Remoção de Resina: Drenar completamente resina não utilizada para recipiente
+limpo e rotulado.
+
+
+Limpeza Inicial: Remover resíduos sólidos com espátula flexível, evitando danos ao
+filme FEP.
+
+
+Lavagem com Solvente: Utilizar IPA para dissolver resíduos oleosos e resina
+parcialmente curada.
+
+
+Inspeção do FEP: Verificar integridade do filme, procurando por rasgos, opacidade ou
+deformações.
+
+
+
+
+10.3.2 Manutenção do Filme FEP
+
+
+Verificação de Tensão: Confirmar tensão adequada através de teste de deflexão
+controlada.
+
+
+Limpeza Especializada: Utilizar solventes compatíveis e técnicas que não degradem o
+material.
+
+
+Substituição Preventiva: Trocar filme antes de falhas catastróficas baseado em
+inspeções regulares.
+
+
+Armazenamento de Filmes: Manter filmes sobressalentes em ambiente controlado e
+protegido de UV.
+10.3.3 Sistema de Filt

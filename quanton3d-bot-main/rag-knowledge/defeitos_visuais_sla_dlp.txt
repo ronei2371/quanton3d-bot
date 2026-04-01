@@ -1,0 +1,52 @@
+BASE VISUAL - DEFEITOS COMUNS EM IMPRESSAO 3D (SLA/DLP/LCD)
+
+OBJETIVO
+- Ajudar a identificar sintomas visuais e sugerir perguntas de diagnostico.
+- As sugestoes abaixo sao gerais e precisam de confirmacao com dados do cliente.
+- Nunca presuma parametros ou resina sem informacao explicita.
+
+SINTOMAS E HIPOTESES (SEM NUMEROS EXATOS)
+
+1) SUBCURA (peca mole, pegajosa, opaca)
+- Possiveis causas: exposicao insuficiente, temperatura baixa, resina vencida ou mal misturada.
+- Perguntar: modelo da impressora, resina, tempo de exposicao normal/base, temperatura ambiente, altura de camada.
+
+2) SOBRECURA (perda de detalhes, fragilidade, amarelamento)
+- Possiveis causas: exposicao alta, luz vazando, tempo de base excessivo.
+- Perguntar: tempos de exposicao, anti-aliasing, tipo de LCD (mono/convencional).
+
+3) DELAMINACAO (separacao entre camadas)
+- Possiveis causas: exposicao baixa, lift speed alto, tempo de repouso insuficiente, resina fria.
+- Perguntar: velocidade de lift, rest time, temperatura e altura de camada.
+
+4) FALHA DE SUPORTE (partes caidas ou deformadas)
+- Possiveis causas: poucos suportes, pontos de contato fracos, orientacao ruim.
+- Perguntar: software de fatiamento, densidade de suportes, angulo da peca.
+
+5) WARPING/EMPENAMENTO (curvatura ou bordas levantadas)
+- Possiveis causas: tensao interna, base pequena, exposicao base alta, temperatura instavel.
+- Perguntar: tipo de base/raft, camadas base, tamanho da peca, temperatura ambiente.
+
+6) PIXELS MORTOS / ARTEFATOS REGULARES
+- Possiveis causas: LCD com falhas, sujeira no LCD/FEP, vazamento de luz.
+- Perguntar: se o defeito repete no mesmo ponto em impressoes diferentes.
+
+7) LINHAS DE CAMADA VISIVEIS
+- Possiveis causas: altura de camada alta, vibracao, variacao de lift.
+- Perguntar: altura de camada, velocidades e estabilidade da impressora.
+
+8) BOLHAS OU POROSIDADE
+- Possiveis causas: resina com bolhas, agitacao excessiva, tempo de repouso curto.
+- Perguntar: como a resina foi misturada e quanto tempo descansou.
+
+COMO RESPONDER QUANDO HOUVER IMAGEM
+- Descrever o que esta visivel sem concluir a causa unica.
+- Listar 2 ou 3 hipoteses maximas e pedir dados objetivos.
+- Se o cliente nao informar resina/impressora, solicitar antes de recomendar ajustes.
+
+EXEMPLO DE PERGUNTAS OBJETIVAS
+- Qual impressora e qual resina?
+- Altura de camada e tempo de exposicao normal/base?
+- Velocidade de lift e tempos de repouso?
+- Temperatura ambiente e idade da resina?
+- Orientacao da peca e configuracao de suportes?

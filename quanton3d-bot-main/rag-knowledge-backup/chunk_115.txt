@@ -1,0 +1,122 @@
+etermina a distribuição de tensões sob carregamentos
+típicos de uso. Planos de separação são posicionados preferencialmente em regiões
+onde:
+
+
+σ_von_mises < 0,3 × σ_yield
+
+
+Esta condição garante que a separação não comprometa significativamente a
+integridade estrutural.
+
+
+
+
+6.2 Estratégias de Separação por Tipo de Geometria
+
+
+6.2.1 Separação Planar Simples
+
+
+A separação planar simples utiliza planos retos para dividir o modelo em seções
+menores. Esta abordagem é adequada para geometrias regulares onde planos
+naturais de separação são evidentes.
+
+
+O posicionamento ótimo do plano de corte minimiza a área de interface:
+
+
+A Interface = ∫∫ dA
+
+
+Onde a integral é calculada sobre a superfície de intersecção entre o plano e o modelo.
+
+
+Para geometrias cilíndricas, a separação perpendicular ao eixo principal minimiza a
+área de interface e facilita o alinhamento durante a montagem.
+
+
+
+
+6.2.2 Separação por Características Geométricas
+
+
+Modelos complexos frequentemente apresentam características geométricas naturais
+que sugerem pontos de separação ótimos. Juntas, flanges, mudanças de seção e
+elementos decorativos podem mascarar efetivamente as linhas de separação.
+
+
+A identificação automática de características utiliza algoritmos de reconhecimento de
+padrões que analisam: - Variações bruscas de curvatura - Mudanças significativas de
+seção transversal - Elementos repetitivos ou simétricos - Regiões de baixa tensão
+estrutural
+6.2.3 Separação Interlocking
+
+
+Sistemas de encaixe interlocking criam conexões mecânicas que eliminam a
+necessidade de adesivos ou fixadores externos. O design destes sistemas requer
+consideração cuidadosa das tolerâncias de impressão e propriedades mecânicas da
+resina.
+
+
+Para encaixes por interferência, a tolerância ótima é:
+
+
+δ = 0,001 × D + 0,05mm
+
+
+Onde D é o diâmetro nominal do encaixe em milímetros.
+
+
+
+
+6.2.4 Separação com Elementos de Fixação
+
+
+Quando encaixes mecânicos não são viáveis, elementos de fixação externos como
+Parafusos, pinos ou adesivos podem ser utilizados. O design deve incorporar
+características que facilitem o alinhamento e distribuam tensões adequadamente.
+
+
+Para fixação por parafusos, o diâmetro do furo piloto é:
+
+
+d_piloto = d_parafuso - passo
+
+
+Onde o passo é a distância entre roscas consecutivas.
+
+
+
+
+6.3 Sistemas de Encaixe e Alinhamento
+
+
+6.3.1 Encaixes Cilíndricos
+
+
+Encaixes cilíndricos são os mais simples de implementar e oferecem excelente
+resistência a cargas axiais. O dimensionamento considera as tolerâncias de impressão
+e contração da resina:
+
+
+d_macho = d_nominal - δ/2 d_fêmea = d_nominal + δ/2
+
+
+Onde δ é a folga total desejada.
+
+
+A profundidade de encaixe deve ser no mínimo 1,5 vezes o diâmetro para garantir
+estabilidade adequada:
+
+
+L_encaixe ≥ 1,5 × d_nominal
+6.3.2 Encaixes Cônicos
+
+
+Encaixes cônicos oferecem auto-alinhamento e compensação automática de
+tolerâncias. O ângulo do cone é tipicamente entre 1:10 e 1:20 para facilitar montagem
+sem comprometer a retenção.
+
+
+A força de retenção em encaixes c

@@ -1,0 +1,156 @@
+ão de defeitos
+maiores.
+
+
+
+
+11.4.3 Retoque e Acabamento
+
+
+Primers de Adesão: Aplicação de primers para melhorar adesão de tintas e
+revestimentos.
+
+
+Tintas Especializadas: Utilização de tintas compatíveis com resinas curadas.
+
+
+Técnicas de Pintura: Aplicação por pincel, aerógrafo ou imersão conforme necessário.
+
+
+Proteção Final: Aplicação de vernizes ou seladores para proteção e acabamento.
+11.5 União de Peças Separadas
+
+
+11.5.1 Preparação de Superfícies
+
+
+Limpeza: Remoção completa de contaminantes, óleos e resíduos de processamento.
+
+
+Rugosidade: Criação de rugosidade controlada para melhorar adesão mecânica.
+
+
+Desengorduramento: Utilização de solventes para garantir superfícies livres de
+contaminação.
+
+
+Secagem: Remoção completa de umidade antes da aplicação de adesivos.
+
+
+
+
+11.5.2 Seleção de Adesivos
+
+
+Adesivos Estruturais: Epóxis ou acrílicos para aplicações que requerem alta
+resistência.
+
+
+Adesivos de Cura UV: Para união rápida com equipamento UV disponível.
+
+
+Cianoacrilatos: Para uniões rápidas de pequenas peças com ajuste preciso.
+
+
+Adesivos Flexíveis: Poliuretanos para aplicações que requerem flexibilidade.
+
+
+
+
+11.5.3 Técnicas de União
+
+
+Alinhamento Preciso: Utilização de gabaritos e dispositivos para garantir
+posicionamento correto.
+
+
+Pressão Controlada: Aplicação de pressão uniforme durante cura do adesivo.
+
+
+Tempo de Cura: Respeitar tempos de cura especificados para máxima resistência.
+
+
+Remoção de Excessos: Limpeza cuidadosa de adesivo excedente antes da cura
+completa.
+
+
+
+
+11.5.4 Sistemas de Encaixe Mecânico
+
+
+Encaixes por Pressão: Design de características que permitem união sem adesivos.
+
+
+Sistemas Rosqueados: Incorporação de roscas para união desmontável.
+
+
+Pinos e Furos: Sistemas de alinhamento e fixação mecânica.
+Encaixes Bayoneta: Sistemas de união rápida com travamento rotacional.
+
+
+
+
+11.6 Controle de Qualidade do Acabamento
+
+
+11.6.1 Medição de Rugosidade
+
+
+Rugosímetros: Instrumentos para medição quantitativa da rugosidade superficial.
+
+
+Padrões de Referência: Comparação com amostras padrão de rugosidade conhecida.
+
+
+Mapeamento de Superfície: Medição em múltiplos pontos para caracterização
+completa.
+
+
+Documentação: Registro de medições para controle estatístico de processo.
+
+
+
+
+11.6.2 Inspeção Visual
+
+
+Iluminação Adequada: Utilização de iluminação controlada para detectar defeitos.
+
+
+Magnificação: Lupas ou microscópios para inspeção de detalhes finos.
+
+
+Padrões de Comparação: Amostras de referência para avaliação de qualidade.
+
+
+Critérios Objetivos: Estabelecimento de critérios quantitativos de aceitação.
+
+
+
+
+11.6.3 Testes Funcionais
+
+
+Testes de Ajuste: Verificação de tolerâncias dimensionais e encaixes.
+
+
+Testes de Resistência: Avaliação de propriedades mecânicas após processamento.
+
+
+Testes de Durabilidade: Avaliação de resistência a fadiga e envelhecimento.
+
+
+Validação de Performance: Confirmação de que peças atendem especificações
+funcionais.
+
+
+
+
+11.7 Otimização de Processos
+
+
+11.7.1 Automação de Acabamento
+
+
+Sistemas Roboti

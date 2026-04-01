@@ -1,0 +1,144 @@
+r
+estabilidade adequada:
+
+
+L_encaixe ≥ 1,5 × d_nominal
+6.3.2 Encaixes Cônicos
+
+
+Encaixes cônicos oferecem auto-alinhamento e compensação automática de
+tolerâncias. O ângulo do cone é tipicamente entre 1:10 e 1:20 para facilitar montagem
+sem comprometer a retenção.
+
+
+A força de retenção em encaixes cônicos é:
+
+
+F_retenção = μ × F_normal × cos(α/2)
+
+
+Onde: - μ = coeficiente de atrito - F_normal = força normal de contato - α = ângulo do
+cone
+
+
+
+
+6.3.3 Encaixes Bayoneta
+
+
+Encaixes bayoneta combinam movimento rotacional com translacional para criar
+conexões seguras e facilmente removíveis. O design requer precisão dimensional
+elevada para garantir funcionamento suave.
+
+
+O torque necessário para operação é:
+
+
+T=F×r×μ
+
+
+Onde: - F = força axial aplicada - r = raio médio do encaixe - μ = coeficiente de atrito
+
+
+
+
+6.3.4 Sistemas de Alinhamento
+
+
+Sistemas de alinhamento garantem posicionamento preciso das partes durante
+montagem. Pinos e furos de referência são comumente utilizados, com tolerâncias
+apertadas para garantir precisão:
+
+
+Tolerância_pino = ±0,02mm Tolerância_furo = +0,05/+0,02mm
+
+
+
+
+6.4 Considerações de Manufatura
+
+
+6.4.1 Orientação de Impressão
+
+
+A orientação de cada parte separada deve ser otimizada independentemente para
+minimizar suportes e maximizar qualidade superficial. Superfícies de encaixe devem
+ser orientadas para minimizar escalonamento e garantir precisão dimensional.
+
+
+Para superfícies cilíndricas, a orientação vertical minimiza o escalonamento:
+Erro_escalonamento = espessura_camada × sin(θ)
+
+
+Onde θ é o ângulo da superfície em relação à horizontal.
+
+
+
+
+6.4.2 Pós-Processamento de Interfaces
+
+
+Superfícies de encaixe frequentemente requerem pós-processamento para garantir
+ajuste adequado. Técnicas incluem:
+
+
+     Furação de precisão para furos de alinhamento
+
+
+     Torneamento de superfícies cilíndricas
+
+
+     Retificação de superfícies planas
+
+
+     Polimento para reduzir atrito
+
+
+
+
+6.4.3 Controle de Qualidade
+
+
+A verificação dimensional das interfaces é crítica para garantir montagem adequada.
+Instrumentos de medição incluem:
+
+
+     Paquímetros para dimensões externas
+
+
+     Micrômetros internos para furos
+
+
+     Calibradores passa/não-passa para tolerâncias críticas
+
+
+     Máquinas de medição por coordenadas para geometrias complexas
+
+
+
+
+6.5 Otimização de Layout na Plataforma
+
+
+6.5.1 Algoritmos de Empacotamento
+
+
+O posicionamento ótimo de múltiplas partes na plataforma de construção utiliza
+algoritmos de empacotamento que maximizam a utilização do espaço disponível. O
+problema é formulado como:
+
+
+Maximizar: Σ(Vi × xi) Sujeito a: Σ(Ai × xi) ≤ A_plataforma
+
+
+Onde: - Vi = volume da parte i - xi = variável binária (1 se a parte é incluída, 0 caso
+contrário) - Ai = área projetada da parte i
+6.5.2 Considerações de Suporte Compartilhado
+
+
+Partes próximas podem compartilhar estruturas de suporte, reduzindo o material
+necessário e melhorando a eficiência. A distância mínima entre partes para suporte
+compartilhado é:
+
+
+d_mín = 2 × h_suporte

@@ -1,0 +1,87 @@
+m que produtos de
+degradação não sejam liberados em contato com tecidos biológicos.
+
+
+Aplicações incluem guias cirúrgicos, modelos anatômicos para planejamento
+cirúrgico, dispositivos médicos temporários e próteses dentárias. O processamento
+requer   protocolos   de   limpeza   e   esterilização   específicos   para   manter   a
+biocompatibilidade.
+
+
+
+
+3.2.5 Resinas Cerâmicas
+
+
+Resinas cerâmicas incorporam cargas cerâmicas de alta pureza que conferem
+propriedades únicas após processamento térmico adequado. Durante a impressão,
+comportam-se como resinas convencionais, mas após queima controlada, resultam
+em peças cerâmicas puras com propriedades superiores.
+
+
+O processo de queima remove completamente a matriz polimérica, deixando apenas a
+estrutura cerâmica. Contração durante este processo pode atingir 15-20%, requerendo
+compensação dimensional durante o design da peça.
+
+
+Aplicações incluem componentes eletrônicos de alta temperatura, ferramentas de
+corte especializadas, implantes médicos cerâmicos e protótipos para indústria
+aeroespacial. O processamento requer fornos especializados capazes de atingir
+temperaturas superiores a 1000°C.
+
+
+
+
+3.2.6 Resinas Metálicas
+
+
+Resinas metálicas contêm partículas metálicas finamente divididas que conferem
+propriedades similares aos metais após processamento adequado. Sistemas típicos
+incluem aço inoxidável, cobre, bronze e ligas especializadas para aplicações
+específicas.
+
+
+O processamento pós-impressão envolve remoção da matriz polimérica através de
+solventes ou queima controlada, seguida de sinterização para consolidação da
+estrutura metálica. Densidade final típica atinge 85-95% da densidade teórica do
+metal puro.
+
+
+Estas resinas permitem produção de peças metálicas complexas impossíveis de
+fabricar através de métodos convencionais, sendo particularmente valiosas para
+prototipagem de componentes aeroespaciais e automotivos.
+
+
+
+
+3.3 Critérios de Seleção de Resinas
+
+
+3.3.1 Análise de Requisitos da Aplicação
+
+
+A seleção adequada de resina inicia-se com análise detalhada dos requisitos da
+aplicação final. Fatores críticos incluem propriedades mecânicas necessárias,
+condições ambientais de uso, requisitos estéticos e restrições de custo.
+
+
+Para protótipos conceituais que serão utilizados apenas para visualização, resinas
+padrão oferecem excelente relação custo-benefício. Aplicações que requerem teste
+funcional necessitam resinas com propriedades mecânicas similares ao material final
+pretendido.
+
+
+Condições ambientais como temperatura, umidade e exposição química devem ser
+consideradas. Resinas padrão podem degradar-se rapidamente quando expostas à luz
+UV intensa ou temperaturas elevadas, enquanto formulações especializadas oferecem
+resistência superior nestas condições.
+
+
+
+
+3.3.2 Compatibilidade com Equipamento
+
+
+Diferentes impressoras apresentam características específicas que afetam a
+compatibilidade com resinas. Comprimento de onda da fonte luminosa é
+fundamental: resinas formuladas para 405nm podem não curar

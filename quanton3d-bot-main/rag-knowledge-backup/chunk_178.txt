@@ -1,0 +1,47 @@
+Impressão: Limpeza e Remoção de Suportes
+Dica de Remoção de Suportes: Após a impressão, use uma pistola de calor para amolecer os suportes para facilitar a remoção sem danificar o modelo.
+
+
+Furos de drenagem em modelos ocos: Certifique-se de que toda a resina seja drenada das partes ocas do seu modelo. Lave o interior de modelos ocos com álcool isopropílico (IPA) para limpar qualquer resíduo de resina não curada.
+
+
+Modelos ocos e acúmulo de gás: Se houver resina presa no interior, ela pode liberar gás e causar rachaduras ou explosões nos modelos. A limpeza e a drenagem adequadas são essenciais.
+
+
+Lavando suas Impressões
+Remova o excesso de resina: Após a impressão, remova o seu modelo da placa de construção e limpe imediatamente o excesso de resina. Você pode usar álcool isopropílico (IPA) ou uma solução lavável com água dedicada se estiver usando resina lavável com água.
+
+
+O sistema de IPA de 2 ou 3 frascos:
+
+
+Primeira lavagem (frasco de IPA sujo): Mergulhe a impressão no primeiro frasco contendo IPA sujo ou usado. Este frasco removerá a maior parte da resina líquida da superfície da impressão. Agite suavemente ou use uma escova macia para ajudar a soltar a resina.
+
+
+Segunda lavagem (frasco de IPA mais limpo): Mova a impressão para um segundo frasco com IPA mais limpo. Esta segunda lavagem remove qualquer resíduo de resina e proporciona uma limpeza mais completa, garantindo que nenhum resíduo pegajoso permaneça na superfície.
+
+
+Lavagem opcional (frasco de IPA mais limpo): Para um acabamento super limpo, use um terceiro frasco com IPA fresco e limpo para o enxágue final. Esta etapa garante que a impressão esteja completamente livre de qualquer resina e proporciona um acabamento impecável.
+
+
+Limpadores ultrassônicos ou estações de lavagem: Para melhores resultados, use um limpador ultrassônico ou uma estação de lavagem dedicada. Essas ferramentas ajudam a limpar o modelo de forma mais completa, especialmente para impressões complexas ou detalhadas.
+
+
+Remova os suportes: A maioria das pessoas remove os suportes após a lavagem, antes da cura.
+
+
+Reutilize o IPA : Para minimizar o desperdício, você pode reutilizar o IPA filtrando-o. Deixe a resina decantar no fundo do recipiente, depois use uma luz UV para curar a lama de resina. Depois de curada, filtre o IPA em um recipiente limpo e continue usando-o para lavagens futuras.
+
+
+Secagem: Após a lavagem, deixe o seu modelo secar completamente antes de prosseguir para o processo de cura. Você pode secar a impressão com uma toalha de papel ou secá-la ao ar por alguns minutos.
+
+
+10. Limpeza do Tanque e Manutenção Regular
+O que é uma limpeza do tanque? Uma limpeza do tanque é uma função especial em algumas impressoras para limpar o tanque expondo a luz UV, curando qualquer resíduo de resina para facilitar a remoção.
+
+
+Quando usar: Use a limpeza do tanque ao trocar de resina ou antes de iniciar um novo projeto para garantir que o tanque esteja limpo e livre de detritos.
+
+
+11. Substituindo os Filmes FEP
+FEP vs

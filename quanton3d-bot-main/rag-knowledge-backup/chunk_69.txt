@@ -1,0 +1,29 @@
+/Não-Passa para tolerâncias críticas4.Para geometrias complexas, o 
+ ideal é o uso de Máquinas de Medição por Coordenadas (CMM), que oferecem precisão de $\pm 0.001mm$5.6. Processamento e Remoção de Suportes (
+ Maximizando a Superfície)Onde posicionar e como remover os suportes para preservar a área funcional do modelo.Posicionamento Estratégico
+ : Os suportes devem ser posicionados em áreas não críticas, evitando superfícies oclusais e margens de preparos6.Minimizando Marcas: 
+ O diâmetro do ponto de contato dos suportes é otimizado, sendo necessário que seja inferior a $0.2mm$ para garantir a rugosidade 
+ superficial exigida7.Acabamento da Superfície de Encaixe: As superfícies de encaixe e união das peças (que são comuns em grandes arcos ou modelos seccionados) 
+ frequentemente requerem pós-processamento para garantir o ajuste adequado8.Técnicas incluem furação de precisão para furos de alinhamento e 
+ retificação de superfícies planas9999.7. Riscos e Soluções em Pós-Cura (Falhas de Propriedade)A falha mais comum em resinas odontológicas está relacionada ao encolhimento 
+ e fragilidade.Rachaduras Pós-Cura: Resinas odontológicas rígidas podem rachar devido à contração extrema durante o pós-processamento10.Protocolo:
+ O bot deve aconselhar a usar a Cura Lenta e Controlada (não apenas luz UV, mas temperatura controlada). A cura deve ser feita em duas etapas 
+ (cura inicial, remoção de suportes, cura final) para aliviar a tensão11.Problemas com Flexíveis: Peças como alinhadores ou gengivas precisam de 
+ propriedades elásticas. Resinas flexíveis requerem movimentação cuidadosa durante a lavagem para evitar dobramentos que 
+ possam causar danos permanentes12.Odor Químico: Um odor químico persistente indica sub-cura na parte interna da peça oca, onde o monômero 
+ líquido permanece13.Solução: Aumentar o tempo de pós-cura e usar um ponteiro UV para curar o interior da peça através dos orifícios de respiro14.8. 
+ Infraestrutura e Conformidade Regulatória (Nível Industrial)Para clínicas ou laboratórios que buscam o mais alto padrão de qualidade:Validação do Setup: 
+ O laboratório deve ter um sistema de pós-processamento validado15.Controle Ambiental: Sistemas de
+ climatização precisos (controle de temperatura $\pm 1^{\circ}C$ e umidade $\pm 5\%$) 
+ são cruciais para a consistência dos resultados16.Nível Avançado: A integração com sistemas CAD/CAM e 
+ a obtenção de Certificações ISO (como ISO 10993) são obrigatórias para a produção médica17.Este aprofundamento fornece detalhes sobre medição, protocolo e falhas de material, garantindo que o seu bot da 
+ Quanton3D atenda aos requisitos de um engenheiro de processos odontológicos.
+
+
+. Otimização do Slicer para Precisão Odontológica
+A precisão de um guia cirúrgico ou modelo de alinhador começa na configuração do software de fatiamento (slicer).
+
+
+
+
+Altura de Camada: Para capturar detalhes finos e a geometria crítica da arcada dentária, o bot deve aconselhar a redução da Altura de Camada (Layer Height) para 0.0

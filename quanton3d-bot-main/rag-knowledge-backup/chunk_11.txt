@@ -1,0 +1,77 @@
+esina.
+
+
+A interface do ChiTuBox organiza-se em módulos distintos: preparação do modelo,
+geração de suportes, configuração de parâmetros de impressão e visualização de
+camadas. Esta organização modular permite fluxo de trabalho eficiente, desde a
+importação do modelo até a geração do arquivo final para impressão.
+
+
+O sistema de detecção automática de ilhas é uma funcionalidade crítica que identifica
+geometrias que podem falhar durante a impressão devido à falta de suporte
+adequado. Ilhas são seções da peça que não possuem conexão física com a
+plataforma de construção ou com outras partes já impressas, resultando em falhas de
+impressão quando não adequadamente suportadas.
+
+
+
+
+3.1.2 PrusaSlicer - Versatilidade e Precisão
+
+
+PrusaSlicer, originalmente desenvolvido para impressoras de filamento, expandiu
+suas capacidades para incluir suporte completo à impressão de resina. Sua
+arquitetura modular permite personalização extensiva de parâmetros, sendo
+particularmente valorizado por usuários avançados que necessitam controle fino
+sobre o processo de impressão.
+
+
+O sistema de perfis do PrusaSlicer permite armazenamento e compartilhamento de
+configurações otimizadas para combinações específicas de impressora e resina. Esta
+funcionalidade é especialmente valiosa em ambientes profissionais onde múltiplos
+operadores utilizam equipamentos similares.
+A funcionalidade de simulação de impressão oferece visualização detalhada do
+processo camada por camada, permitindo identificação prévia de potenciais
+problemas como colisões de suporte ou áreas de cura insuficiente.
+
+
+
+
+3.1.3 Lychee Slicer - Inovação e Automação
+
+
+Lychee Slicer representa uma abordagem mais moderna ao fatiamento, incorporando
+algoritmos de inteligência artificial para automação de tarefas tradicionalmente
+manuais. Seu sistema de geração automática de suportes utiliza análise de tensões e
+forças para determinar posicionamento e densidade ótimos dos suportes.
+
+
+A interface baseada em nuvem permite sincronização de configurações entre
+diferentes dispositivos e colaboração em equipe para projetos complexos.
+Funcionalidades de análise preditiva estimam tempo de impressão, consumo de
+resina e probabilidade de sucesso baseada em parâmetros históricos.
+
+
+
+
+3.2 Classificação e Características das Resinas
+
+
+3.2.1 Resinas Padrão (Standard)
+
+
+As resinas padrão constituem a categoria mais amplamente utilizada, oferecendo
+equilíbrio adequado entre facilidade de uso, propriedades mecânicas e custo.
+Formuladas tipicamente com oligômeros de acrilato de uretano e monômeros
+diluentes, apresentam viscosidade otimizada para impressão em temperatura
+ambiente.
+
+
+Propriedades mecânicas típicas incluem resistência à tração entre 40-60 MPa, módulo
+de elasticidade de 2000-3000 MPa e alongamento na ruptura de 3-6%. Estas
+características tornam as resinas padrão adequadas para prototipagem geral, modelos
+conceituais e peças decorativas que não requerem propriedades mecânicas
+especializadas.
+
+
+A estabilidade dimensional das re

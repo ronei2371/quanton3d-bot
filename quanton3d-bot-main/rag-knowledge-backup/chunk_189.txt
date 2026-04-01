@@ -1,0 +1,13 @@
+5. Qual é a velocidade de impressão de cada resina?
+A velocidade de impressão pode variar dependendo da impressora 3D e da resina utilizada. Cada impressora possui uma fonte de luz UV com potência diferente, e essas configurações podem variar de acordo com o modelo da impressora. Além disso, o tipo de resina usada também pode influenciar na velocidade de impressão.
+Em nosso site, disponibilizamos as configurações recomendadas para as impressoras mais populares disponíveis no mercado atualmente. Essas configurações podem ajudá-lo a otimizar a velocidade de impressão para cada tipo de resina.
+Caso você não encontre a configuração específica para o seu equipamento ou ainda tenha dúvidas, não hesite em entrar em contato com nosso suporte. Ficaremos felizes em atendê-lo. Você pode nos contatar pelo WhatsApp no número (31) 3271-6935.
+
+
+
+6. Quais parâmetros devo utilizar?
+Os parâmetros de impressão variam de acordo com a sua impressora e a resina utilizada. Para facilitar esse processo, catalogamos as impressoras mais populares no mercado brasileiro para as nossas linhas de resinas. No entanto, se você não encontrar a sua impressora no nosso filtro de pesquisa, não se preocupe. Entre em contato com o nosso suporte técnico pelo WhatsApp (31) 3271-6935, informando a marca da impressora e a resina que deseja parametrizar. Estamos sempre prontos para ajudá-lo a obter os melhores resultados de impressão.
+Por que eu preciso de suporte?
+Os suportes são fundamentais para obter impressões de alta qualidade de forma consistente. Sem eles, as peças pendentes não teriam onde crescer e acabariam aderindo ao filme de FEP (etileno propileno fluorado), resultando em impressões malsucedidas. Portanto, o uso de suportes é essencial para garantir que suas impressões sejam bem-sucedidas e que você obtenha os melhores resultados possíveis. Lembre-se, nosso suporte técnico está sempre à disposição para quaisquer dúvidas ou problemas que você possa ter durante o processo de impressão.
+
+

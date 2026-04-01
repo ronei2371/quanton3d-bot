@@ -1,0 +1,136 @@
+: Utilização de nitrogênio para prevenir inibição por
+oxigênio.
+
+
+
+
+9.4.3 Parâmetros de Cura UV
+
+
+Comprimento de Onda: 365nm oferece penetração superior comparado a 405nm
+para pós-cura.
+
+
+Intensidade: 5-15 mW/cm² é adequada para a maioria das resinas.
+
+
+Tempo: 10-30 minutos dependendo da espessura e tipo de resina.
+
+
+Temperatura: 40-60°C acelera significativamente o processo.
+
+
+
+
+9.4.4 Cura Térmica em Fornos
+
+
+A cura térmica oferece alternativa prática quando câmaras UV não estão disponíveis:
+Temperatura: 60-80°C para resinas padrão, 80-120°C para resinas de alta
+performance.
+
+
+Tempo: 1-4 horas dependendo da temperatura e espessura da peça.
+
+
+Rampa de Aquecimento: Aquecimento gradual (2-5°C/min) previne tensões térmicas.
+
+
+Atmosfera: Atmosfera inerte (nitrogênio) melhora eficiência e previne degradação
+oxidativa.
+
+
+
+
+9.5 Controle de Qualidade do Pós-Processamento
+
+
+9.5.1 Testes de Limpeza
+
+
+Teste de Pegajosidade: Superfícies adequadamente limpas não devem apresentar
+pegajosidade residual.
+
+
+Teste de Solvente: Aplicação de solvente fresco não deve dissolver material da
+superfície.
+
+
+Inspeção Visual: Ausência de filme oleoso ou resíduos visíveis na superfície.
+
+
+
+
+9.5.2 Verificação de Cura
+
+
+Teste de Dureza: Medição de dureza Shore antes e após pós-cura para verificar
+melhoria.
+
+
+Teste de Flexão: Peças adequadamente curadas devem apresentar comportamento
+elástico consistente.
+
+
+Análise Térmica: DSC (Calorimetria Diferencial de Varredura) pode quantificar grau de
+cura.
+
+
+
+
+9.5.3 Documentação e Rastreabilidade
+
+
+Registros de Processo: Documentar parâmetros utilizados para cada lote.
+
+
+Testes de Qualidade: Registrar resultados de testes para controle estatístico.
+
+
+Rastreabilidade: Manter ligação entre peças finais e parâmetros de processamento.
+MÓDULO 10: CUIDADOS E PROCEDIMENTOS APÓS
+IMPRESSÃO, LIMPEZA DO EQUIPAMENTO E SUA
+IMPRESSORA
+
+
+10.1 Procedimentos Imediatos Pós-Impressão
+
+
+Os cuidados imediatos após conclusão da impressão são críticos para preservar tanto
+a qualidade das peças quanto a integridade do equipamento. Procedimentos
+adequados previnem contaminação cruzada, degradação de componentes e
+garantem condições ótimas para impressões subsequentes.
+
+
+
+
+10.1.1 Sequência de Desligamento
+
+
+Elevação da Plataforma: Mover plataforma para posição mais alta para facilitar
+acesso e drenagem completa de resina.
+
+
+Drenagem de Resina: Permitir drenagem gravitacional por 5-10 minutos antes de
+remover peças para minimizar desperdício.
+
+
+Desligamento Sequencial: Desligar sistemas na ordem inversa da inicialização:
+primeiro aquecimento, depois iluminação, finalmente controles principais.
+
+
+Ventilação   Continuada:   Manter    ventilação   ativa   por   15-30   minutos   após
+desligamento para remover vapores residuais.
+
+
+
+
+10.1.2 Remoção e Manuseio de Peças
+
+
+Equipamentos de Proteção: Utilizar EPI completo durante toda manipulação de
+peças não processadas.
+
+
+Ferramentas Adequadas: Espátulas flexíveis de plástico ou metal para remoção sem
+danos à plataforma.

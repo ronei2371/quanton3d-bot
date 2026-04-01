@@ -1,0 +1,10 @@
+1. As resinas Quanton3D são compatíveis com a minha impressora?
+Resposta: Sim, as resinas Quanton3D são compatíveis com uma ampla gama de impressoras. Elas funcionam com impressoras DLP/SLA/mSLA (LCD) cujo comprimento de onda esteja entre 380 e 440 nanômetros. Isso inclui as principais impressoras do mercado, como Anycubic Photon, Anycubic Photon S, Creality LD002R EZY 3D, Wanhao D7, Anet N4, Elegoo Mars, Elegoo Mars 2 Pro, Longer Orange 30, entre outras.
+Além disso, em nosso site, na seção “Seletor de Parâmetros”, você encontrará uma lista completa de todas as impressoras compatíveis com nossas resinas. Se a sua impressora não estiver na lista, isso não significa necessariamente que nossas resinas não funcionarão com ela. Estamos aqui para ajudá-lo a encontrar a melhor opção e configurá-la em sua máquina. Para isso, oferecemos suporte por meio do WhatsApp. 
+Entre em contato conosco no número (31) 3271-6935
+
+
+2. Quais cuidados devo ter ao utilizar resinas para impressoras 3D?
+Conforme indicado nos rótulos das nossas resinas Quanton3D, elas devem ser sempre manipuladas com o uso de Equipamentos de Proteção Individual (EPIs). É recomendado o uso de luvas nitrílicas, máscara com filtros contra vapores orgânicos e gases ácidos, avental impermeável químico e óculos de proteção para garantir a sua segurança durante a manipulação. Uma vez que a peça esteja completamente curada, você poderá manipulá-la normalmente sem o uso de EPIs. Para obter mais informações sobre a segurança, consulte as instruções de uso disponíveis em nosso site e nos rótulos de cada resina Quanton3D.
+a) Quais são os primeiros socorros se houver contato da resina com meu corpo?
+Você deve sempre utilizar os EPIs necessários e seguir todas as precauções de segurança durante a impressão 3D, de acordo com as instruções do fabricante da impressora 3D. Se, mesmo assim, ocorrer um acidente e houver contato da resina com seu corpo, você poderá encontrar instruções na IFU (Instrução de Uso) e na SDS (Folha de Dados de Segurança). Lembre-se, a segurança é sempre a prioridade ao manipular resinas para impressoras 3D

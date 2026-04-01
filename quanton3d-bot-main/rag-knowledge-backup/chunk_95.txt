@@ -1,0 +1,83 @@
+ida
+
+
+O maior perigo de resinas não autorizadas é o risco à saúde. Produtos sem registro legal no 
+Brasil não garantem a conformidade com as normas sanitárias e podem conter componentes químicos altamente tóxicos ou 
+cancerígenos, em níveis perigosos. Não há Ficha de Informações de Segurança (FISPQ) confiável, expondo o usuário a riscos como reações alérgicas graves, queimaduras e problemas respiratórios.
+
+
+Chunk 12: Inconsistência de Qualidade e Danos ao Equipamento
+
+
+Resinas sem controle de qualidade legal apresentam inconsistência na formulação. Isso resulta em falhas
+frequentes de impressão, peças com baixa resistência ou péssima precisão dimensional. Pior, a
+composição química pode não ser otimizada, podendo causar danos irreversíveis à impressora, como desgaste prematuro da tela LCD, degradação da cuba FEP ou obstrução da passagem da luz UV.
+
+
+Chunk 13: Riscos Legais e Fiscais para Empresas
+
+
+Para empresas, comprar resinas sem registro legal e sem nota fiscal é um risco fiscal e legal grave. A aquisição de
+produtos de contrabando ou sem procedência legal pode gerar problemas com a Receita Federal e órgãos de fiscalização.
+A Quanton3D oferece produtos com total conformidade fiscal, garantindo a legalidade de toda a cadeia de suprimentos do cliente.
+
+
+Chunk 14: Falta de ANVISA e Aplicações Críticas
+
+
+Em aplicações sensíveis, especialmente as odontológicas ou médicas, a resina precisa ter 
+registro na ANVISA (Agência Nacional de Vigilância Sanitária). Comprar resinas sem essa certificação é ilegal e 
+coloca em risco a saúde do paciente final. A Quanton3D assegura que suas linhas específicas atendem a todas as exigências dos órgãos reguladores.
+
+
+Chunk 15: Conclusão de Vendas (Diferencial de Segurança)
+
+
+Ao escolher a Quanton3D, o cliente está optando por resinas legalmente
+registradas, com FISPQ e controle de qualidade rigoroso. A segurança e a tranquilidade de estar trabalhando 
+com um produto certificado e fiscalizado não têm preço, protegendo a saúde do operador e o investimento na impressora.
+
+
+A Quanton3D oferece soluções inovadoras, como as resinas com baixo odor (Low Smell) e a linha Poseidon, que é elogiada por ser Lavável com Água. Estas opções simplificam o pós-processamento, 
+geram economia ao cliente (eliminando o uso de álcool) e melhoram o ambiente de trabalho.
+   1. Explicação e apresentação sobre partes de uma impressora de resina
+
+
+   2. Equipamentos de segurança e cuidados para a saúde
+
+
+   3. Explicação sobre fatiadores e tipos de resina
+
+
+   4. Como calibrar a sua resina e correções de parâmetros
+
+
+   5. Como fazer suportes
+
+
+   6. Como separar modelos
+
+
+   7. Como nivelar a sua impressora
+
+
+   8. Como colocar para imprimir
+
+
+   9. Lavagem e cura para diferentes tipos de resina
+
+
+ 10. Cuidados e procedimentos após impressão
+
+
+ 11. Polimento, lixar e remoção dos suportes
+
+
+ 12. Erros que podem ocorrer e como solucionar
+
+
+ 13. Sugestões de futuros investimentos
+
+
+ 14. Marcas confiáveis e sugestões de impressoras
+ 15. Marcas o

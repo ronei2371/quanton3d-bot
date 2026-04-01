@@ -1,0 +1,48 @@
+lhada da sua impressão deve ficar voltada para longe da placa de construção para melhor qualidade.
+
+
+Suportes: Concentre-se em colocar suportes nas partes menos visíveis do modelo, como a parte inferior. Certifique-se de que as saliências estejam devidamente suportadas para evitar falhas.
+
+
+Furos de drenagem para modelos ocos: Se você estiver imprimindo modelos ocos, certifique-se de adicionar furos de drenagem (um no ponto mais alto e outro no ponto mais baixo) para permitir que a resina não curada escoe durante a limpeza.
+
+
+Armadilhas de Resina e Ilhas: Cuidado com seções que podem prender resina não curada ou partes isoladas da impressão que não estão conectadas durante as camadas iniciais. Essas podem causar falhas na impressão.
+
+
+Forças de descolamento: Orientar o seu modelo em ângulo minimiza as forças de sucção e descolamento que ocorrem durante a elevação da camada, reduzindo a chance de impressões com falhas.
+
+
+4. Seleção e Formatação do Pen Drive
+Escolhendo um pen drive: Compre um pen drive confiável e rápido. Procure marcas de renome (por exemplo, SanDisk ou Kingston) e certifique-se de que ele tenha armazenamento suficiente para arquivos fatiados.
+
+
+Formatação: Formate o pen drive em FAT32 para garantir compatibilidade com a maioria das impressoras de resina. Isso ajuda a evitar problemas ao carregar arquivos na impressora.
+
+
+5. Preparação/Segurança em Primeiro Lugar!
+Respiradores: Certifique-se de que está usando uma máscara respiratória 7502 ao manusear resina não curada.
+
+
+Luvas de nitrila: Sempre manuseie resina não curada com luvas de nitrila. SEMPRE!
+
+
+Ventilação: Você pode comprar uma tenda de ventilação online para remover com segurança os vapores de resina do seu espaço de trabalho.
+
+
+Verifique se há bolhas: Bolhas de ar na resina podem causar defeitos na impressão. Mexa a resina lentamente antes de despejá-la no tanque e use uma espátula de silicone para remover suavemente quaisquer bolhas. Você também pode deixar a resina descansar por alguns minutos para permitir que as bolhas subam à superfície.
+
+
+Temperatura do ambiente de trabalho: Em geral, a temperatura recomendada da resina é de aproximadamente 25–⁠35°C (77–95°F) para resultados de impressão ótimos. Se o seu quarto estiver muito frio, você pode aquecê-lo para atingir essa faixa usando um aquecedor de ambiente (também em uma tenda) ou com fitas aquecedoras ou envelopes aquecedores ao redor do tanque de resina. A temperatura ambiente consistente ajuda na qualidade da impressão e na viscosidade da resina.
+
+
+Tapetes de plástico: Use tapetes de plástico especiais para reter quaisquer derramamentos de resina, que você pode curar facilmente do lado de fora para descarte seguro.
+
+
+Toalhas de papel: Tenha toalhas de papel à mão para reter resina não curada o tempo todo.
+
+
+Filtros de ar: Embora não sejam perfeitos, os filtros de ar podem ajudar a reduzir as partículas transportadas pelo ar, mas não eliminarão todos os vapores.
+
+
+Dica profissional: tenha todos esses materiais a

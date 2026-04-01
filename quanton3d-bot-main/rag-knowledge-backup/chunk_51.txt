@@ -1,0 +1,94 @@
+emperatura que afetam adesão - Falhas de impressão em 20-30% dos casos
+reportados
+
+
+Defeitos de Fabricação: - Tela LCD com vida útil reduzida (300-500 impressões vs.
+1000+ esperado) - Fonte UV com distribuição não uniforme - Problemas de vedação
+que permitem vazamentos - Componentes eletrônicos com falhas prematuras
+
+
+Evidências de Campo: - Múltiplos relatórios em fóruns especializados - Taxa de
+retorno elevada em primeiros 6 meses - Problemas não resolvidos em múltiplas
+revisões de firmware - Suporte técnico com respostas padronizadas inadequadas
+
+
+
+
+15.2.2 Marcas Chinesas Sem Certificação
+
+
+Problemas Comuns:
+
+
+Falta de Controle de Qualidade: - Variações significativas entre unidades do mesmo
+modelo - Componentes de qualidade inconsistente - Montagem inadequada com
+folgas excessivas - Falta de testes de qualidade antes do envio
+
+
+Documentação Inadequada: - Manuais de usuário incompletos ou mal traduzidos -
+Especificações técnicas imprecisas ou ausentes - Falta de diagramas de peças para
+manutenção - Ausência de procedimentos de calibração detalhados
+
+
+Suporte Técnico Inexistente: - Comunicação apenas por email com respostas lentas -
+Falta de conhecimento técnico da equipe de suporte - Dificuldade para obtenção de
+peças de reposição - Ausência de atualizações de software
+
+
+
+
+15.2.3 Modelos Descontinuados Sem Suporte
+
+
+Problemas de Obsolescência:
+
+
+Falta   de   Atualizações: - Software desatualizado com bugs conhecidos -
+Incompatibilidade com sistemas operacionais modernos - Falta de perfis para resinas
+atuais - Vulnerabilidades de segurança não corrigidas
+
+
+Peças de Reposição Indisponíveis: - Componentes críticos fora de linha - Filmes FEP
+com especificações proprietárias - Telas LCD com conectores específicos - Fontes de
+alimentação com características únicas
+15.3 Problemas por Categoria
+
+
+15.3.1 Impressoras de Entrada com Qualidade Inadequada
+
+
+Características Problemáticas:
+
+
+Construção Mecânica Deficiente: - Estruturas com rigidez inadequada que causam
+vibrações - Guias lineares de baixa qualidade com folgas excessivas - Motores de passo
+sem encoders que perdem posição - Acoplamentos mecânicos com desgaste
+prematuro
+
+
+Sistemas Ópticos Inadequados: - LEDs UV de baixa qualidade com degradação
+rápida - Lentes plásticas que amarelam com o tempo - Distribuição não uniforme de
+luz na área de impressão - Falta de sistemas de resfriamento para componentes
+ópticos
+
+
+Exemplos de Modelos Problemáticos: - Impressoras genéricas sem marca definida -
+Modelos com preços extremamente baixos (<US$ 150) - Produtos vendidos apenas em
+marketplaces sem suporte - Clones de marcas conhecidas com qualidade inferior
+
+
+
+
+15.3.2 Modelos com Problemas de Software
+
+
+Problemas de Firmware:
+
+
+Bugs Persistentes: - Travamentos durante impressões longas - Perda de
+configurações após desligamento - Problemas de comunicação com computador -
+Interface de usuário confusa ou não intuitiva
+
+
+Falta de Recursos Essenciais: - Ausência de detecção de fim de resina - Falta de
+pausa/retom

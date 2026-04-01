@@ -1,0 +1,21 @@
+ontológicas certificadas (como Formlabs Form 3B, NextDent)21.Setup Inicial: Software de planejamento odontológico e
+ um sistema de pós-processamento validado (limpeza e cura)22.Expansão: Investimento em equipamentos de medição dimensional de precisão e sistema de esterilização adequado23.Nível Industrial: 
+ Integração com sistemas CAD/CAM e a obtenção de Certificações ISO para produção médica24.
+ Validação e Precisão Dimensional em Aplicações OdontológicasO sucesso de guias cirúrgicos e modelos de alinhamento reside na tolerância dimensional,.
+ que é mais rigorosa do que em prototipagem comum.Tolerância Crítica: Os modelos dentários requerem precisão dimensional excepcional
+ e acabamento superficial superior1. Para aplicações protéticas, a rugosidade superficial introduzida pelos suportes deve ser inferior a $Ra=0.1\mu m$2.Inspeção 
+ Dimensional: A validação da precisão é feita através de instrumentos de medição de alta precisão3.O bot deve recomendar o uso de Paquímetros 
+ para dimensões externas, Micrômetros internos para furos e Calibradores Passa/Não-Passa para tolerâncias críticas4.Para geometrias complexas, o 
+ ideal é o uso de Máquinas de Medição por Coordenadas (CMM), que oferecem precisão de $\pm 0.001mm$5.6. Processamento e Remoção de Suportes (
+ Maximizando a Superfície)Onde posicionar e como remover os suportes para preservar a área funcional do modelo.Posicionamento Estratégico
+ : Os suportes devem ser posicionados em áreas não críticas, evitando superfícies oclusais e margens de preparos6.Minimizando Marcas: 
+ O diâmetro do ponto de contato dos suportes é otimizado, sendo necessário que seja inferior a $0.2mm$ para garantir a rugosidade 
+ superficial exigida7.Acabamento da Superfície de Encaixe: As superfícies de encaixe e união das peças (que são comuns em grandes arcos ou modelos seccionados) 
+ frequentemente requerem pós-processamento para garantir o ajuste adequado8.Técnicas incluem furação de precisão para furos de alinhamento e 
+ retificação de superfícies planas9999.7. Riscos e Soluções em Pós-Cura (Falhas de Propriedade)A falha mais comum em resinas odontológicas está relacionada ao encolhimento 
+ e fragilidade.Rachaduras Pós-Cura: Resinas odontológicas rígidas podem rachar devido à contração extrema durante o pós-processamento10.Protocolo:
+ O bot deve aconselhar a usar a Cura Lenta e Controlada (não apenas luz UV, mas temperatura controlada). A cura deve ser feita em duas etapas 
+ (cura inicial, remoção de suportes, cura final) para aliviar a tensão11.Problemas com Flexíveis: Peças como alinhadores ou gengivas precisam de 
+ propriedades elásticas. Resinas flexíveis requerem movimentação cuidadosa durante a lavagem para evitar dobramentos que 
+ possam causar danos permanentes12.Odor Químico: Um odor químico persistente indica sub-cura na parte interna da peça oca, onde o monômero 
+ líquido permanece13.Solução: Aumentar o tempo de pós-cura e usar um ponteiro UV para curar o interior da peça através dos orifícios de respiro14.

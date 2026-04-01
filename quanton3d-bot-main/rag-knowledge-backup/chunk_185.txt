@@ -1,0 +1,40 @@
+ra criar o objeto camada por camada. Exemplos incluem Chitubox e Lychee Slicer.
+
+
+Suportes: Estruturas temporárias adicionadas durante o processo de fatiamento para apoiar partes de um modelo que ficam suspensas no ar, evitando que falhem durante a impressão.
+
+
+Tanque de Resina: O recipiente que contém a resina líquida durante a impressão. Ele fica abaixo da placa de construção e acima do filme FEP.
+
+
+Cura: O processo de endurecimento da resina impressa usando luz UV, tornando o objeto forte e durável. As impressões são geralmente curadas após serem lavadas para remover o excesso de resina.
+
+
+Luz LED (Luz UV): Uma fonte de luz especial em impressoras de resina que emite luz ultravioleta (UV) para curar (endurecer) cada camada de resina à medida que a impressão progride. Esta luz é crítica para a impressora transformar a resina líquida em um objeto sólido.
+
+
+Camadas/Camada: Impressões em resina são feitas camada por camada. Cada camada fina de resina é curada e endurecida pela luz UV, e a impressora repete esse processo até que o objeto esteja completo.
+
+
+Exposição: A quantidade de tempo que a luz UV brilha em cada camada de resina para endurecê-la. Tempos de exposição adequados são essenciais para garantir que a resina cure corretamente e que a impressão saia corretamente.
+
+
+Eixo Z: O eixo vertical que controla o movimento para cima e para baixo da placa de construção durante a impressão. Cada vez que uma camada é curada, a placa de construção se eleva e a próxima camada é impressa.
+
+
+Saliências: Partes de um modelo que se estendem para fora sem suporte direto abaixo. Os suportes são geralmente necessários para imprimir essas seções.
+
+
+Furos de Drenagem: Pequenos furos colocados em modelos ocos para permitir que a resina não curada escoe durante ou após a impressão, evitando que fique presa dentro da impressão.
+
+
+Limpeza do Tanque: Um recurso ou método usado para limpar o tanque de resina, geralmente curando uma fina camada de resina no fundo do tanque e depois descolando-a, removendo quaisquer detritos ou resíduos de resina.
+
+
+Construindo Camadas: O processo de criar um objeto empilhando uma camada de resina curada sobre a outra, construindo gradualmente o modelo 3D completo.
+
+
+Forças de Descolamento: As forças que ocorrem quando a camada curada é levantada do filme FEP durante a impressão. Essas forças podem afetar a qualidade e a estabilidade da impressão, especialmente se não forem gerenciadas corretamente.
+
+
+Calibração: O processo de ajuste das configurações para garantir impressões precisas. Isso geralmente envolve ajustar o nivelamento da placa de construção e as configurações de exposição para diferentes tipos de resina

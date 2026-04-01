@@ -1,0 +1,22 @@
+: Mantenha a Umidade Relativa (UR) abaixo de 50%. Armazenamento: Guarde a resina em recipientes herméticos com sílica-gel. 
+
+
+Sintoma (O que o Cliente Vê),Diagnóstico de Material Específico,Solução Avançada (Ação)
+Resina de Alta Resistência (Ex: Quanton PRO-TEMP) quebra fácil,,Sub-cura ou Baixa Tg não atingida. Resinas de engenharia exigem energia extrema e/ou temperatura ideal para atingir as propriedades máximas. ,,Aumento Extremo: Aumente o tempo de exposição em 50% a 100% (ex: de 4s para 8s). Pós-Cura em Água Quente: Cure a peça submersa em água morna (50∘C) ou em câmara aquecida para ativar as propriedades finais. 
+Resinas com muito pigmento (Preto Sólido) falham,,Penetração de Luz Insuficiente. O pigmento impede que a luz UV atinja a profundidade da camada. ,,Camadas Finas: Reduza a altura da camada para 0.02mm ou 0.03mm. Mistura Constante: Misture a resina no tanque a cada 1 hora ou use a função de agitação (se disponível) para evitar que o pigmento sedimente. 
+Resinas Cerâmicas/Preenchidas falham no meio,,Sedimentação de Partículas. Partículas pesadas (cerâmica/fibra) afundam rapidamente no tanque. ,,"Agitação Vigorosa: Agite vigorosamente a resina antes de despejar e a cada 1 hora de impressão longa. Parâmetro: Use alturas de camada maiores (0.05mm) e exposição mais longa para ""bloquear"" o enchimento na cura. "
+
+
+Sintoma (O que o Cliente Vê),Diagnóstico mais Provável,Solução Avançada (Ação)
+Peça fica um pouco maior que o modelo CAD,,"Super-Cura Lateral Excessiva. Vazamento de UV (light bleed) para além do pixel, resultando em cura lateral (oversizing).",,Redução de Exposição: Reduza o tempo de exposição em incrementos de 0.1s até que a dimensão seja precisa. Anti-Aliasing: Aumente o nível de Anti-Aliasing para 8 para suavizar a transição do pixel e reduzir a cura lateral.
+Furos/Encaixes não fecham (Peça muito grande),,Super-exposição e Encolhimento Volumétrico da resina durante a cura.,,Compensação de Buraco: Utilize a função Hole Compensation no slicer para aumentar o diâmetro dos furos em 0.1mm a 0.2mm no modelo.
+Empenamento/Deformação Pós-Cura,,Tensão residual e contração desigual durante a cura final.,,"Cura Lenta: Utilize a cura em baixa temperatura e potência, garantindo que a peça esfrie muito lentamente após a cura para aliviar o estresse interno."
+
+
+Fator de Qualidade,Padrão de Referência,Ação de Verificação pelo Cliente
+Tolerância de Nivelamento,Precisão inferior a 0.02mm em toda a área da plataforma.,Imprimir testes de primeira camada em múltiplas regiões e medir a espessura. A variação máxima aceitável é ±10% da espessura nominal.
+Qualidade Superficial (Rugosidade),Rugosidade ideal para próteses: Ra<0.1μm.,,Progressão de Lixamento: Utilize lixamento progressivo de 220−400 grit (para marcas) até 3000−5000 grit (acabamento final).
+Profundidade de Encaixe,"Mínimo de 1,5 vezes o diâmetro do encaixe.",Use Paquímetros para dimensões externas e Micrômetros internos para furos e encaixes críticos.
+
+
+Área de Risco,Requisito (Protoco

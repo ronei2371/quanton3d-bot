@@ -1,0 +1,48 @@
+oras para limpar o tanque expondo a luz UV, curando qualquer resíduo de resina para facilitar a remoção.
+
+
+Quando usar: Use a limpeza do tanque ao trocar de resina ou antes de iniciar um novo projeto para garantir que o tanque esteja limpo e livre de detritos.
+
+
+11. Substituindo os Filmes FEP
+FEP vs. PFA : Os filmes PFA oferecem forças de sucção mais baixas, tornando-os uma opção melhor em alguns casos, mas o FEP é a escolha mais comum e barata.
+
+
+Substituição do filme: O Saturn S4U possui um contador de camadas que o notifica quando é hora de substituir o filme FEP (após cerca de 60.000 camadas).
+
+
+12. Limpando a Impressora
+Resina derramada na impressora: Se a resina derramar na sua impressora, limpe-a imediatamente com IPA e um pano de microfibra. Para resina curada, use uma lâmina de barbear em um ângulo baixo para raspá-la.
+
+
+Trocando a tela: Se a resina danificar a tela, siga os tutoriais oficiais da Elegoo no YouTube para substituí-la ou o motor, se necessário.
+
+
+Portas USB: Certifique-se de que as portas USB estejam limpas e funcionais. Derramamentos de resina podem danificá-las.
+
+
+13. Reutilizando o IPA
+Filtrando o IPA: Depois de limpar suas impressões com IPA, você pode curar o excesso de resina no IPA sob luz UV. Filtre as partículas de resina curada para prolongar a vida útil do IPA.
+
+
+14. Limpando o FEP e as Placas de Construção
+Limpeza do FEP: Use IPA para limpar cuidadosamente o seu filme FEP, evitando arranhões. Se aparecerem arranhões, substitua o filme.
+
+
+Limpeza da placa de construção: Limpe regularmente a placa de construção com IPA e lixe levemente se necessário para melhorar a aderência.
+
+
+15. Descarte Seguro de Resíduos de Resina
+O descarte adequado de resíduos de resina e materiais residuais é crucial para garantir a segurança e a responsabilidade ambiental. Aqui estão as etapas para lidar com resíduos de resina:
+
+
+Cure a Resina: Qualquer resíduo de resina líquida ou resíduo de resina não curada deve ser curado (exposto à luz UV) antes do descarte. Isso se aplica a resíduos de resina no seu tanque, impressões com falhas ou suportes usados. Uma vez totalmente curada, a resina se torna inerte e pode ser descartada com segurança.
+
+
+Lixeira: Use uma lixeira lacrada ou fechada especificamente para resina curada e materiais contaminados (luvas, lenços, toalhas de papel, etc.). Isso evitará que quaisquer vapores de resina sejam liberados e garantirá que não haja exposição acidental.
+
+
+Descarte de Resina Não Curada: Não despeje resina líquida na pia ou em ralos. A resina não curada é perigosa para a saúde e o meio ambiente. Se você tiver resíduos de resina não curada, como da limpeza do seu tanque ou ferramentas, coloque-a sob luz UV ou na luz solar direta para curá-la antes do descarte. Isso inclui resinas laváveis com água!
+
+
+Manuseio de IPA Contaminado com Resina : Se você usar IPA para limpar impressões ou ferramentas, deixe o IPA descansar em um recipiente até que a resina se deposite ou evapore o IPA em uma área bem ventilada

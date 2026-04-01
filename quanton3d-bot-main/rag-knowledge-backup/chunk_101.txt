@@ -1,0 +1,90 @@
+te resistente protege a roupa e a pele de
+respingos acidentais. Materiais como Tyvek ou polietileno laminado oferecem
+excelente resistência química mantendo respirabilidade adequada para conforto
+durante uso prolongado.
+
+
+Calçados fechados com solas resistentes a produtos químicos são essenciais para
+proteger os pés de derramamentos acidentais. Materiais como borracha nitrílica ou
+neoprene oferecem proteção adequada contra a maioria das resinas e solventes
+utilizados.
+
+
+
+
+2.3 Ventilação e Controle Ambiental
+
+
+2.3.1 Sistemas de Ventilação
+
+
+Ventilação adequada é fundamental para manter concentrações de vapores orgânicos
+abaixo dos limites de exposição ocupacional. Sistemas de exaustão localizada, como
+capelas químicas ou cabines de fluxo laminar, oferecem proteção superior comparada
+à ventilação geral do ambiente.
+
+
+A taxa de renovação do ar deve ser calculada considerando o volume do ambiente,
+tipos de resinas utilizadas e intensidade de uso. Como regra geral, ambientes
+dedicados à impressão 3D de resina devem ter no mínimo 6 renovações de ar por
+hora, podendo chegar a 12-15 renovações em ambientes de uso intensivo.
+
+
+Sistemas de filtragem com carvão ativado no ponto de exaustão previnem a liberação
+de vapores orgânicos no ambiente externo, sendo particularmente importantes em
+áreas urbanas ou quando a exaustão ocorre próximo a janelas ou sistemas de ar
+condicionado.
+
+
+
+
+2.3.2 Monitoramento da Qualidade do Ar
+
+
+Detectores de vapores orgânicos voláteis (VOC) permitem monitoramento contínuo da
+qualidade do ar no ambiente de trabalho. Dispositivos portáteis com alarmes sonoros
+alertam para concentrações excessivas, permitindo ação corretiva imediata.
+
+
+Medições regulares com equipamentos calibrados são recomendadas para validar a
+eficácia dos sistemas de ventilação e identificar necessidades de manutenção ou
+melhorias. Registros destas medições são importantes para demonstrar conformidade
+com regulamentações de saúde ocupacional.
+
+
+
+
+2.4 Procedimentos de Emergência
+
+
+2.4.1 Exposição Cutânea
+
+
+Em caso de contato direto da resina com a pele, a área afetada deve ser
+imediatamente lavada com água abundante por no mínimo 15 minutos. Sabões
+suaves podem auxiliar na remoção, mas solventes orgânicos devem ser evitados pois
+podem aumentar a absorção cutânea.
+
+
+Após a lavagem inicial, a área deve ser observada para sinais de irritação como
+vermelhidão, inchaço ou formação de bolhas. Sintomas persistentes ou agravamento
+após 24 horas requerem avaliação médica especializada.
+2.4.2 Exposição Ocular
+
+
+Contato de resina com os olhos constituem emergência médica que requer irrigação
+Com água limpa por no mínimo 20 minutos. Lentes de contato devem ser
+removidas se possível, mas a irrigação não deve ser retardada para esta remoção.
+
+
+Avaliação oftalmológica é obrigatória mesmo em casos aparentemente leves, pois
+danos à córnea podem não ser imediatamente aparentes mas resultar em
+complicações graves se não tratados adequadamente.
+
+
+
+
+2.4.3 Inalação
+
+
+Exposição a conce

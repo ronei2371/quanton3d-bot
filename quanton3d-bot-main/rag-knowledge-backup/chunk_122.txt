@@ -1,0 +1,145 @@
+na: Verificar se o consumo está dentro do esperado baseado no
+volume calculado da peça.
+
+
+
+
+8.4.2 Sinais de Problemas
+
+
+Ruídos Anômalos: Sons diferentes do normal podem indicar problemas mecânicos ou
+forças excessivas de separação.
+
+
+Variações de Tempo: Camadas que demoram significativamente mais que o normal
+podem indicar problemas de adesão ou movimento.
+Odores Incomuns: Cheiros diferentes podem indicar superaquecimento ou
+problemas com a resina.
+
+
+
+
+8.4.3 Intervenções Possíveis
+
+
+Pausa de Emergência: Capacidade de pausar a impressão para investigar problemas
+sem perder o progresso.
+
+
+Ajustes em Tempo Real: Alguns sistemas permitem ajustes de parâmetros durante a
+impressão para corrigir problemas menores.
+
+
+Monitoramento Remoto: Sistemas com conectividade permitem supervisão à
+distância através de aplicativos móveis.
+
+
+
+
+8.5 Finalização e Pós-Processamento Imediato
+
+
+8.5.1 Procedimentos de Finalização
+
+
+Elevação Final: Mover plataforma para posição mais alta para facilitar remoção da
+peça.
+
+
+Drenagem: Permitir drenagem completa da resina não curada da peça antes da
+remoção.
+
+
+Documentação: Registrar tempo total, consumo real de resina e observações sobre
+qualidade.
+
+
+
+
+8.5.2 Remoção da Peça
+
+
+Ferramentas Adequadas: Utilizar espátulas flexíveis de plástico ou metal para evitar
+danos à plataforma ou peça.
+
+
+Técnica de Remoção: Aplicar força gradual e uniforme, evitando movimentos bruscos
+que podem causar quebras.
+
+
+Inspeção Inicial: Verificação visual imediata para detectar defeitos óbvios ou falhas de
+impressão.
+8.5.3 Limpeza Inicial
+
+
+Remoção de Suportes: Remover suportes grosseiros imediatamente após remoção
+da plataforma, enquanto a resina ainda está relativamente macia.
+
+
+Limpeza Preliminar: Remoção de resina não curada aderida à superfície utilizando
+solvente apropriado.
+
+
+Preparação para Cura: Posicionar peça adequadamente para pós-cura, garantindo
+exposição uniforme à luz UV.
+
+
+
+
+8.6 Otimização de Fluxo de Trabalho
+
+
+8.6.1 Planejamento de Produção
+
+
+Agrupamento de Peças: Agrupar peças com parâmetros similares para minimizar
+mudanças de configuração.
+
+
+Sequenciamento: Organizar ordem de produção para otimizar utilização de resina e
+minimizar desperdícios.
+
+
+Preparação Antecipada: Preparar arquivos e materiais para múltiplas impressões
+para reduzir tempo de setup.
+
+
+
+
+8.6.2 Automação de Processos
+
+
+Scripts de Configuração: Automatizar configuração de parâmetros através de scripts
+ou perfis pré-definidos.
+
+
+Monitoramento Automático: Implementar sistemas de alerta para notificar sobre
+conclusão ou problemas.
+
+
+Integração de Sistemas: Conectar impressora com sistemas de gestão de produção
+para rastreamento automático.
+
+
+
+
+8.6.3 Controle de Qualidade
+
+
+Inspeção Sistemática: Implementar checklist de verificação para cada etapa do
+processo.
+
+
+Registro de Dados: Manter registros detalhados de parâmetros e resultados para
+análise estatística.
+Melhoria Contínua: Utilizar dados coletados para otimização contínua de parâmetros
+e processos.
+
+
+
+
+
+
+
+
+MÓD
