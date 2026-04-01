@@ -79,7 +79,7 @@ router.post("/register-user", async (req, res) => {
 router.post("/custom-request", async (req, res) => {
   try {
     const { name, phone, email, desiredFeature, color, notes } = req.body || {};
-    const col = db.getOrdersCollection?.() || getCol("orders");
+    const col = db.getOrdersCollection?.() || getCol("orders") || getCol("custom_requests");
     if (!col) return res.status(503).json({ success: false, error: "DB Offline" });
 
     await col.insertOne({
@@ -176,7 +176,7 @@ router.get("/params/printers", async (req, res) => {
 
 router.get("/partners", async (req, res) => {
   try {
-    const col = db.getCollection?.("partners") || getCol("partners");
+    const col = getCol("partners");
     if (!col) return res.status(503).json({ success: false, error: "DB Offline" });
 
     const partners = await col.find({}).sort({ createdAt: -1 }).toArray();
