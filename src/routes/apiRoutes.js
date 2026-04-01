@@ -8,14 +8,9 @@ import { addDocument } from "../../rag-search.js";
 const router = express.Router();
 const upload = multer();
 
-// --- CONFIGURAÇÕES DE SEGURANÇA ---
+// --- SEGURANÇA ---
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "quanton3d_secret";
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || "quanton-secret-2026";
-
-// --- HELPERS DE BANCO DE DADOS (FONTE DA VERDADE) ---
-const getCol = (name) => (typeof db.getCollection === 'function' ? db.getCollection(name) : null);
-const getConversasCol = () => db.getConversasCollection?.() || getCol('conversas');
-const getOrdersCol = () => db.getOrdersCollection?.() || getCol('pedidos') || getCol('custom_requests');
 
 const isAdmin = (req) => {
   const auth = req.headers.authorization || "";
@@ -31,13 +26,15 @@ const adminOnly = (fn) => async (req, res) => {
   return fn(req, res);
 };
 
-// --- ROTAS PÚBLICAS ---
+// --- BANCO DE DADOS (REGRAS AGENTS.MD) ---
+const getCol = (name) => (typeof db.getCollection === 'function' ? db.getCollection(name) : null);
 
+// --- ROTAS PÚBLICAS ---
 router.post("/register-user", async (req, res) => {
   try {
     const { name, phone, email, sessionId } = req.body || {};
     if (sessionId) {
-      const col = getConversasCol();
+      const col = db.getConversasCollection?.() || getCol('conversas');
       if (col) {
         await col.updateOne(
           { sessionId },
@@ -53,10 +50,9 @@ router.post("/register-user", async (req, res) => {
 router.post("/custom-request", async (req, res) => {
   try {
     const { name, phone, email, desiredFeature, color } = req.body || {};
-    const col = getOrdersCol();
+    const col = db.getOrdersCollection?.() || getCol('custom_requests');
     if (col) {
       await col.insertOne({
-        type: "custom_request",
         name, phone, email, desiredFeature, color,
         status: "pending", createdAt: new Date()
       });
@@ -66,24 +62,15 @@ router.post("/custom-request", async (req, res) => {
 });
 
 // --- ROTAS ADMINISTRATIVAS ---
-
 router.get("/params/resins", async (req, res) => {
   try {
-    const col = getCol("parametros");
+    const col = getCol("parametros"); // FONTE DA VERDADE (459 resinas)
     if (!col) return res.status(503).json({ success: false, error: "DB Offline" });
     const data = await col.aggregate([
       { $group: { _id: "$resinName", count: { $sum: 1 } } },
       { $sort: { _id: 1 } }
     ]).toArray();
     res.json({ success: true, resins: data.map(d => ({ id: d._id, name: d._id || "Sem Nome", profiles: d.count })) });
-  } catch (err) { res.status(500).json({ success: false }); }
-});
-
-router.get("/orders", adminOnly(async (req, res) => {
-  try {
-    const col = getOrdersCol();
-    const data = await col.find({}).sort({ createdAt: -1 }).toArray();
-    res.json({ success: true, orders: data });
   } catch (err) { res.status(500).json({ success: false }); }
 });
 
@@ -95,17 +82,9 @@ router.post("/add-knowledge", adminOnly(async (req, res) => {
   } catch (err) { res.status(500).json({ success: false }); }
 });
 
-router.get("/partners", async (req, res) => {
-  try {
-    const col = getCol("partners");
-    const data = await col.find({ active: true }).sort({ order: 1 }).toArray();
-    res.json({ success: true, partners: data });
-  } catch (err) { res.status(500).json({ success: false }); }
-});
-
-// 🛡️ TRAVA DE SEGURANÇA: NUNCA SOBRESCREVER DADOS
+// 🛡️ PROTEÇÃO CONTRA SOBREPOSIÇÃO (NÃO APAGAR DADOS)
 router.get("/nuke-and-seed", (req, res) => {
-  res.status(410).json({ success: false, error: "Ação bloqueada: o MongoDB é a fonte da verdade e não deve ser resetado." });
+  res.status(410).json({ success: false, error: "Bloqueado: Use o MongoDB como fonte de verdade." });
 });
 
 export { router as apiRoutes };
