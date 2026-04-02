@@ -255,9 +255,54 @@ function buildAdminRoutes(adminConfig = {}) {
 
   router.post("/params/resins", adminGuard, async (req, res) => {
     try {
-      const { name } = req.body;
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+
+      const { name, description } = req.body ?? {};
       if (!name) return res.status(400).json({ success: false, message: "Nome da resina é obrigatório" });
-      res.json({ success: true, message: "Resina adicionada", resin: { _id: name.toLowerCase().replace(/\s+/g, "-"), name, active: true } });
+
+      const trimmedName = String(name).trim();
+      if (!trimmedName) return res.status(400).json({ success: false, message: "Nome da resina é obrigatório" });
+
+      const collection = getPrintParametersCollection();
+      if (!collection) return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+
+      const duplicated = await collection.findOne({
+        $or: [
+          { resinName: { $regex: `^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" } },
+          { resin: { $regex: `^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" } },
+          { name: { $regex: `^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" } }
+        ]
+      });
+
+      if (duplicated) {
+        return res.status(409).json({ success: false, message: "Resina já cadastrada" });
+      }
+
+      const now = new Date();
+      const payload = {
+        resinName: trimmedName,
+        resin: trimmedName,
+        name: trimmedName,
+        description: typeof description === "string" ? description.trim() : "",
+        status: "active",
+        source: "admin_manual",
+        createdAt: now,
+        updatedAt: now,
+        params: {}
+      };
+
+      const result = await collection.insertOne(payload);
+      res.status(201).json({
+        success: true,
+        message: "Resina adicionada",
+        resin: {
+          _id: result.insertedId?.toString?.() || trimmedName.toLowerCase().replace(/\s+/g, "-"),
+          name: trimmedName,
+          active: true
+        }
+      });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -265,7 +310,40 @@ function buildAdminRoutes(adminConfig = {}) {
 
   router.delete("/params/resins/:id", adminGuard, async (req, res) => {
     try {
-      res.json({ success: true, message: "Resina deletada" });
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      const mongoReady = await ensureMongoReady();
+      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+
+      const collection = getPrintParametersCollection();
+      if (!collection) return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+
+      const { id } = req.params;
+      const byName = String(req.query.name || "").trim();
+      const decodedId = decodeURIComponent(String(id || "").trim());
+      const normalizedFromSlug = decodedId.replace(/-/g, " ").trim();
+      const candidates = [decodedId, normalizedFromSlug, byName].filter(Boolean);
+
+      if (!candidates.length) {
+        return res.status(400).json({ success: false, error: "Identificador da resina não informado" });
+      }
+
+      const regexMatchers = candidates.map((value) => new RegExp(`^${value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i"));
+
+      const query = {
+        $or: [
+          { resinId: { $in: candidates } },
+          { resinName: { $in: regexMatchers } },
+          { resin: { $in: regexMatchers } },
+          { name: { $in: regexMatchers } }
+        ]
+      };
+
+      const result = await collection.deleteMany(query);
+      if (!result.deletedCount) {
+        return res.status(404).json({ success: false, error: "Resina não encontrada" });
+      }
+
+      res.json({ success: true, message: "Resina deletada", deletedProfiles: result.deletedCount });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -362,7 +440,8 @@ function buildAdminRoutes(adminConfig = {}) {
       const collection = getPrintParametersCollection();
       if (!collection) return res.status(503).json({ success: false, error: "MongoDB indisponível" });
 
-      const categories = await collection.aggregate([
+      const [categories, totalProfiles, totalResins, usersCount, conversasWithCadastro, lastClientRegistration] = await Promise.all([
+        collection.aggregate([
         {
           $group: {
             _id: { $ifNull: ["$resinCategory", { $ifNull: ["$resinType", { $ifNull: ["$resinName", "$resin"] }] }] },
@@ -372,9 +451,41 @@ function buildAdminRoutes(adminConfig = {}) {
         },
         { $match: { name: { $ne: null } } },
         { $sort: { count: -1 } }
-      ]).toArray();
+      ]).toArray(),
+        collection.countDocuments({}),
+        collection.distinct("resinName").then((names) => names.filter(Boolean).length),
+        getCollection("users")?.countDocuments({}) ?? Promise.resolve(0),
+        getCollection("conversas")?.countDocuments({
+          $or: [
+            { userName: { $exists: true, $ne: null, $ne: "" } },
+            { userPhone: { $exists: true, $ne: null, $ne: "" } },
+            { userEmail: { $exists: true, $ne: null, $ne: "" } }
+          ]
+        }) ?? Promise.resolve(0),
+        getCollection("conversas")?.find({
+          $or: [
+            { userName: { $exists: true, $ne: null, $ne: "" } },
+            { userPhone: { $exists: true, $ne: null, $ne: "" } },
+            { userEmail: { $exists: true, $ne: null, $ne: "" } }
+          ]
+        })
+          .sort({ updatedAt: -1, createdAt: -1 })
+          .limit(1)
+          .toArray() ?? Promise.resolve([])
+      ]);
 
-      res.json({ success: true, categories: categories.map((item) => ({ name: item.name, count: item.count ?? 0 })) });
+      res.json({
+        success: true,
+        categories: categories.map((item) => ({ name: item.name, count: item.count ?? 0 })),
+        totals: {
+          profiles: totalProfiles ?? 0,
+          resins: totalResins ?? 0,
+          clients: (usersCount ?? 0) + (conversasWithCadastro ?? 0),
+          usersCollection: usersCount ?? 0,
+          initialRegistration: conversasWithCadastro ?? 0
+        },
+        lastClientRegistrationAt: lastClientRegistration?.[0]?.updatedAt || lastClientRegistration?.[0]?.createdAt || null
+      });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -390,16 +501,51 @@ function buildAdminRoutes(adminConfig = {}) {
       const collection = getCollection("users");
       if (!collection) return res.status(503).json({ success: false, error: "MongoDB indisponível" });
 
-      const clients = await collection.find({}).sort({ createdAt: -1 }).limit(200).toArray();
+      const [usersClients, conversasClients] = await Promise.all([
+        collection.find({}).sort({ createdAt: -1 }).limit(200).toArray(),
+        (getCollection("conversas") || collection)
+          .find({
+            $or: [
+              { userName: { $exists: true, $ne: null, $ne: "" } },
+              { userPhone: { $exists: true, $ne: null, $ne: "" } },
+              { userEmail: { $exists: true, $ne: null, $ne: "" } }
+            ]
+          })
+          .sort({ updatedAt: -1, createdAt: -1 })
+          .limit(200)
+          .toArray()
+      ]);
+
+      const dedupe = new Map();
+      const putClient = (client, source) => {
+        const email = String(client.email || client.contactEmail || client.userEmail || "").trim().toLowerCase();
+        const phone = String(client.phone || client.contactPhone || client.userPhone || "").trim();
+        const name = String(client.name || client.fullName || client.companyName || client.userName || "").trim().toLowerCase();
+        const key = email || phone || name || client._id?.toString?.();
+        if (!key) return;
+        if (!dedupe.has(key)) {
+          dedupe.set(key, {
+            id: client._id?.toString?.() || key,
+            name: client.name || client.fullName || client.companyName || client.userName || "Cliente",
+            email: client.email || client.contactEmail || client.userEmail || null,
+            phone: client.phone || client.contactPhone || client.userPhone || null,
+            createdAt: client.createdAt || client.created || client.updatedAt || null,
+            source
+          });
+        }
+      };
+
+      usersClients.forEach((client) => putClient(client, "users"));
+      conversasClients.forEach((client) => putClient(client, "conversas"));
+      const clients = Array.from(dedupe.values()).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       res.json({
         success: true,
-        clients: clients.map((c) => ({
-          id: c._id?.toString?.(),
-          name: c.name || c.fullName || c.companyName || "Cliente",
-          email: c.email || c.contactEmail || null,
-          phone: c.phone || c.contactPhone || null,
-          createdAt: c.createdAt || c.created || null
-        }))
+        clients,
+        total: clients.length,
+        sources: {
+          users: usersClients.length,
+          conversas: conversasClients.length
+        }
       });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
