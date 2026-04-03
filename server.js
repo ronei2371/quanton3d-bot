@@ -8,6 +8,7 @@ import { apiRoutes } from './src/routes/apiRoutes.js'
 import { suggestionsRoutes } from './src/routes/suggestionsRoutes.js'
 import { authRoutes } from './src/routes/authRoutes.js'
 import { buildAdminRoutes } from './src/routes/adminRoutes.js'
+import { galleryRoutes } from './src/routes/galleryRoutes.js'
 import { metrics } from './src/utils/metrics.js'
 import { connectToMongo, isConnected } from './db.js'
 import { initializeRAG, checkRAGIntegrity, bootstrapKnowledgeFromFile } from './rag-search.js'
@@ -69,17 +70,10 @@ app.get('/health/metrics', (_req, res) => {
 
 app.use('/auth', authRoutes)
 
-// ==========================================================
-// PONTES PÚBLICAS PRIORITÁRIAS
-// Essas rotas precisam ficar ANTES do adminRoutes em /api
-// para evitar 401 nas caixas de resinas e impressoras do site.
-// ==========================================================
 app.get('/api/resins', (req, res, next) => { req.url = '/resins'; apiRoutes(req, res, next) })
 app.get('/api/params/resins', (req, res, next) => { req.url = '/params/resins'; apiRoutes(req, res, next) })
 app.get('/resins', (req, res, next) => { req.url = '/resins'; apiRoutes(req, res, next) })
-app.get('/api/resins', (req, res, next) => { req.url = '/resins'; apiRoutes(req, res, next) })
 app.get('/params/resins', (req, res, next) => { req.url = '/params/resins'; apiRoutes(req, res, next) })
-app.get('/api/params/resins', (req, res, next) => { req.url = '/params/resins'; apiRoutes(req, res, next) })
 
 app.get('/printers', (req, res, next) => { req.url = '/printers'; apiRoutes(req, res, next) })
 app.get('/api/printers', (req, res, next) => { req.url = '/printers'; apiRoutes(req, res, next) })
@@ -94,16 +88,13 @@ app.get('/api/params/profiles', (req, res, next) => { req.url = '/params/profile
 const adminRoutes = buildAdminRoutes()
 app.use('/admin', adminRoutes)
 
-// Rotas públicas primeiro para evitar 401 indevido em /api/params/*
 app.use('/api', apiRoutes)
 app.use('/api', suggestionsRoutes)
-
-// Rotas admin continuam disponíveis em /api para o painel, mas vêm depois das públicas
+app.use('/api', galleryRoutes)
 app.use('/api', adminRoutes)
 
 app.use('/api', chatRoutes)
 app.use('/chat', chatRoutes)
-
 
 const distPath = path.join(__dirname, 'dist')
 const adminPanelPath = path.join(__dirname, 'public', 'params-panel.html')
@@ -111,9 +102,7 @@ app.use(express.static(distPath))
 
 app.get(['/admin', '/admin/'], (_req, res) => {
   res.sendFile(adminPanelPath, (err) => {
-    if (err) {
-      res.sendFile(path.join(distPath, 'index.html'))
-    }
+    if (err) res.sendFile(path.join(distPath, 'index.html'))
   })
 })
 
@@ -122,9 +111,7 @@ app.get('*', (req, res) => {
     return res.status(404).json({ error: 'Rota não encontrada', path: req.path })
   }
   res.sendFile(path.join(distPath, 'index.html'), (err) => {
-    if (err) {
-      res.status(404).json({ error: 'Frontend não encontrado' })
-    }
+    if (err) res.status(404).json({ error: 'Frontend não encontrado' })
   })
 })
 
@@ -150,20 +137,18 @@ const startServer = async () => {
       if (isConnected()) {
         await initializeRAG()
         console.log('[INIT] ✅ RAG inicializado')
-
         const ragStatus = await checkRAGIntegrity()
         if (!ragStatus?.isValid || ragStatus.totalDocuments === 0) {
-          console.log('[INIT] ⚠️ Base de conhecimento vazia ou com embeddings faltando. Importando kb_index.json...')
           try {
             const bootstrapResult = await bootstrapKnowledgeFromFile()
-            console.log(`[INIT] 🔄 Bootstrap RAG: inseridos ${bootstrapResult.inserted || 0}, erros ${bootstrapResult.errors || 0}`)
+            console.log(`[INIT] 🔄 Bootstrap RAG: inseridos ${bootstrapResult.inserted || 0}`)
           } catch (bootstrapError) {
-            console.error('[INIT] ⚠️ Falha ao importar conhecimento local:', bootstrapError.message)
+            console.error('[INIT] ⚠️ Falha bootstrap:', bootstrapError.message)
           }
         }
       }
     } catch (error) {
-      console.error('[INIT] ⚠️ RAG não disponível (continuando sem RAG)', error)
+      console.error('[INIT] ⚠️ RAG não disponível', error)
     }
 
     console.log('\n✨ Serviços prontos!\n')
@@ -173,11 +158,9 @@ const startServer = async () => {
       console.log('🤖 QUANTON3D BOT ONLINE!')
       console.log('═══════════════════════════════════════════════')
       console.log(`📡 Porta: ${PORT}`)
-      console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`)
       console.log(`💚 Health: /health`)
       console.log(`🔐 Auth: /auth/login`)
-      console.log(`👤 Admin: /admin/*`)
-      console.log(`🤖 Chat: /api/ask`)
+      console.log(`📸 Gallery: /api/gallery`)
       console.log('═══════════════════════════════════════════════\n')
     })
   } catch (error) {
