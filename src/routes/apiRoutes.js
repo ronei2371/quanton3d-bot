@@ -351,7 +351,7 @@ router.put('/visual-knowledge/:id/approve', adminGuard(async (req, res) => {
       { returnDocument: 'after' }
     );
 
-    if (!result.value) return res.status(404).json({ success: false, error: 'Item não encontrado' });
+    if (!result || !result.value) return res.status(404).json({ success: false, error: 'Item não encontrado' });
 
     res.json({ success: true, item: result.value });
   } catch (err) {
@@ -359,6 +359,7 @@ router.put('/visual-knowledge/:id/approve', adminGuard(async (req, res) => {
     res.status(500).json({ success: false, error: 'Erro ao aprovar item' });
   }
 }));
+
 
 
 // ====================== PARÂMETROS ======================
