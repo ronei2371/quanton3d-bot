@@ -358,7 +358,7 @@ router.put('/visual-knowledge/:id/approve', adminGuard(async (req, res) => {
     console.error('[API] Erro ao aprovar item:', err);
     res.status(500).json({ success: false, error: 'Erro ao aprovar item' });
   }
-}));
+};
 
 
 
