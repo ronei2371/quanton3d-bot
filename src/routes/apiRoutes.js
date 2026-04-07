@@ -41,7 +41,6 @@ const adminGuard = (handler) => async (req, res) => {
   return handler(req, res);
 };
 
-// ====================== HELPERS ======================
 const normalizeString = (value, fallback = '') => (typeof value === 'string' ? value.trim() : fallback);
 
 const buildResinFilter = (resinId) => {
@@ -57,7 +56,7 @@ const buildPrinterFilter = (printerId) => {
 const getPartnersCollection = () => getCollection('partners');
 const getOrdersCollectionSafe = () => getOrdersCollection() || getCollection('pedidos') || getCollection('custom_requests');
 
-// ====================== ROTAS DE MÉTRICAS ======================
+// ====================== MÉTRICAS ======================
 router.get('/metrics', adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -93,7 +92,7 @@ router.get('/metrics', adminGuard(async (req, res) => {
   }
 }));
 
-// ====================== ROTAS DE MENSAGENS ======================
+// ====================== MENSAGENS ======================
 router.get('/contact', adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -123,7 +122,7 @@ router.get('/contact', adminGuard(async (req, res) => {
   }
 }));
 
-// ====================== ROTAS DE PEDIDOS / FÓRMULAS ======================
+// ====================== FORMULAÇÕES ======================
 router.get('/formulations', adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -154,7 +153,7 @@ router.get('/formulations', adminGuard(async (req, res) => {
   }
 }));
 
-// ====================== ROTAS DE CONVERSAS / CLIENTES ======================
+// ====================== CONVERSAS ======================
 router.get('/conversas', adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -274,6 +273,24 @@ router.get('/gallery', async (req, res) => {
   }
 });
 
+router.get('/gallery/all', adminGuard(async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+
+    const collection = getCollection("gallery");
+    if (!collection) return res.json({ success: true, images: [], entries: [] });
+
+    const limit = parseInt(req.query.limit) || 100;
+    const entries = await collection.find({}).sort({ createdAt: -1 }).limit(limit).toArray();
+
+    res.json({ success: true, images: entries, entries, total: entries.length });
+  } catch (err) {
+    console.error("[API] Erro ao listar galeria completa:", err);
+    res.status(500).json({ success: false, error: "Erro ao listar galeria" });
+  }
+}));
+
 // ====================== VISUAL KNOWLEDGE ======================
 router.get('/visual-knowledge', async (req, res) => {
   try {
@@ -334,6 +351,7 @@ router.get('/visual-knowledge/pending', async (_req, res) => {
   }
 });
 
+// ✅ CORRIGIDO: fechamento correto com ))
 router.put('/visual-knowledge/:id/approve', adminGuard(async (req, res) => {
   try {
     const { id } = req.params;
@@ -358,9 +376,7 @@ router.put('/visual-knowledge/:id/approve', adminGuard(async (req, res) => {
     console.error('[API] Erro ao aprovar item:', err);
     res.status(500).json({ success: false, error: 'Erro ao aprovar item' });
   }
-};
-
-
+}));
 
 // ====================== PARÂMETROS ======================
 router.get("/params/resins", async (_req, res) => {
@@ -399,6 +415,39 @@ router.get("/params/resins", async (_req, res) => {
   }
 });
 
+router.get("/resins", async (_req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+
+    const collection = getCollection("parametros");
+    if (!collection) return res.json({ success: true, resins: [] });
+
+    const stats = await collection.aggregate([
+      {
+        $group: {
+          _id: { $ifNull: ["$resinId", { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }] },
+          name: { $first: { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] } },
+          profiles: { $sum: 1 }
+        }
+      },
+      { $match: { name: { $ne: null } } },
+      { $sort: { name: 1 } }
+    ]).toArray();
+
+    res.json({
+      success: true,
+      resins: stats.map(item => ({
+        id: item._id || item.name?.toLowerCase().replace(/\s+/g, "-"),
+        name: item.name || "Sem nome",
+        profiles: item.profiles ?? 0
+      }))
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Erro ao listar resinas" });
+  }
+});
+
 router.get("/params/printers", async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
@@ -408,28 +457,68 @@ router.get("/params/printers", async (req, res) => {
     const filter = resinId ? buildResinFilter(resinId) : {};
 
     const collection = getCollection("parametros");
+    if (!collection) return res.json({ success: true, printers: [] });
+
     const printers = await collection.aggregate([
-      { $match: filter },
+      { $match: filter || {} },
       {
         $group: {
-          _id: { $ifNull: ["$printerId", "$printer"] },
+          _id: { $ifNull: ["$printerId", { $ifNull: ["$printerName", { $ifNull: ["$printer", "$model"] }] }] },
+          name: { $first: { $ifNull: ["$printerName", { $ifNull: ["$printer", "$model"] }] } },
           brand: { $first: "$brand" },
-          model: { $first: { $ifNull: ["$model", "$printer"] } }
+          model: { $first: { $ifNull: ["$model", "$printer"] } },
+          profiles: { $sum: 1 }
         }
       },
-      { $sort: { brand: 1, model: 1 } }
+      { $match: { name: { $ne: null } } },
+      { $sort: { name: 1 } }
     ]).toArray();
 
     res.json({
       success: true,
       printers: printers.map(item => ({
         id: item._id,
+        name: item.name || item.model,
         brand: item.brand,
-        model: item.model
+        model: item.model,
+        profiles: item.profiles ?? 0
       }))
     });
   } catch (err) {
     console.error("[API] Erro ao listar impressoras:", err);
+    res.status(500).json({ success: false, error: "Erro ao listar impressoras" });
+  }
+});
+
+router.get("/printers", async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+
+    const collection = getCollection("parametros");
+    if (!collection) return res.json({ success: true, printers: [] });
+
+    const printers = await collection.aggregate([
+      {
+        $group: {
+          _id: { $ifNull: ["$printerId", { $ifNull: ["$printerName", { $ifNull: ["$printer", "$model"] }] }] },
+          name: { $first: { $ifNull: ["$printerName", { $ifNull: ["$printer", "$model"] }] } },
+          profiles: { $sum: 1 }
+        }
+      },
+      { $match: { name: { $ne: null } } },
+      { $sort: { name: 1 } }
+    ]).toArray();
+
+    res.json({
+      success: true,
+      printers: printers.map(item => ({
+        id: item._id,
+        name: item.name,
+        profiles: item.profiles ?? 0
+      }))
+    });
+  } catch (err) {
     res.status(500).json({ success: false, error: "Erro ao listar impressoras" });
   }
 });
@@ -445,6 +534,8 @@ router.get("/params/profiles", async (req, res) => {
     if (printerId) Object.assign(filter, buildPrinterFilter(printerId));
 
     const collection = getCollection("parametros");
+    if (!collection) return res.json({ success: true, profiles: [] });
+
     const profiles = await collection.find(filter).sort({ updatedAt: -1 }).limit(100).toArray();
 
     res.json({
@@ -452,7 +543,7 @@ router.get("/params/profiles", async (req, res) => {
       profiles: profiles.map(doc => ({
         id: doc._id?.toString(),
         resinName: doc.resinName || doc.resin,
-        printer: doc.printer,
+        printer: doc.printer || doc.printerName,
         params: doc.params || doc.parametros || {},
         status: doc.status || "ok"
       }))
@@ -460,6 +551,32 @@ router.get("/params/profiles", async (req, res) => {
   } catch (err) {
     console.error("[API] Erro ao listar perfis:", err);
     res.status(500).json({ success: false, error: "Erro ao listar perfis" });
+  }
+});
+
+router.get("/params/stats", async (_req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+
+    const collection = getCollection("parametros");
+    if (!collection) return res.json({ success: true, totalResins: 0, totalPrinters: 0, activeProfiles: 0 });
+
+    const [resinsData, printersData, total] = await Promise.all([
+      collection.aggregate([{ $group: { _id: { $ifNull: ["$resinName", "$resin"] } } }]).toArray(),
+      collection.aggregate([{ $group: { _id: { $ifNull: ["$printerName", "$printer"] } } }]).toArray(),
+      collection.countDocuments()
+    ]);
+
+    res.json({
+      success: true,
+      totalResins: resinsData.length,
+      totalPrinters: printersData.length,
+      activeProfiles: total
+    });
+  } catch (err) {
+    console.error("[API] Erro ao buscar stats:", err);
+    res.status(500).json({ success: false, error: "Erro ao buscar stats" });
   }
 });
 
@@ -473,10 +590,8 @@ router.get('/partners', async (_req, res) => {
     if (!collection) return res.json({ success: true, partners: [] });
 
     const partners = await collection.find({ active: true }).sort({ order: 1, createdAt: -1 }).toArray();
-
     res.json({ success: true, partners });
   } catch (err) {
-    console.error('[API] Erro ao listar parceiros:', err);
     res.status(500).json({ success: false, error: 'Erro ao listar parceiros' });
   }
 });
@@ -488,14 +603,12 @@ router.post('/partners', adminGuard(async (req, res) => {
 
     const collection = getPartnersCollection();
     const doc = { ...req.body, createdAt: new Date(), updatedAt: new Date() };
-
     const result = await collection.insertOne(doc);
     res.status(201).json({ success: true, partner: { ...doc, _id: result.insertedId } });
   } catch (err) {
-    console.error('[API] Erro ao criar parceiro:', err);
     res.status(500).json({ success: false, error: 'Erro ao criar parceiro' });
   }
-});
+}));
 
 router.put('/partners/:id', adminGuard(async (req, res) => {
   try {
@@ -509,15 +622,12 @@ router.put('/partners/:id', adminGuard(async (req, res) => {
       { $set: { ...req.body, updatedAt: new Date() } },
       { returnDocument: 'after' }
     );
-
     if (!result.value) return res.status(404).json({ success: false, error: 'Parceiro não encontrado' });
-
     res.json({ success: true, partner: result.value });
   } catch (err) {
-    console.error('[API] Erro ao atualizar parceiro:', err);
     res.status(500).json({ success: false, error: 'Erro ao atualizar parceiro' });
   }
-});
+}));
 
 router.delete('/partners/:id', adminGuard(async (req, res) => {
   try {
@@ -527,15 +637,12 @@ router.delete('/partners/:id', adminGuard(async (req, res) => {
 
     const collection = getPartnersCollection();
     const result = await collection.deleteOne({ _id: new ObjectId(id) });
-
     if (result.deletedCount === 0) return res.status(404).json({ success: false, error: 'Parceiro não encontrado' });
-
     res.json({ success: true, message: 'Parceiro removido' });
   } catch (err) {
-    console.error('[API] Erro ao remover parceiro:', err);
     res.status(500).json({ success: false, error: 'Erro ao remover parceiro' });
   }
-});
+}));
 
 // ====================== EXPORT ======================
 export { router as apiRoutes };
