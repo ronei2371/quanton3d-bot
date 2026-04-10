@@ -644,5 +644,56 @@ router.delete('/partners/:id', adminGuard(async (req, res) => {
   }
 }));
 
+// ====================== REGISTRO DE USUÁRIO ======================
+router.post("/register-user", async (req, res) => {
+  try {
+    const { name, phone, email, howDidYouHear, sessionId } = req.body || {};
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+
+    const col = getConversasCollection() || getCollection("conversas");
+    if (col && sessionId) {
+      await col.updateOne(
+        { sessionId },
+        {
+          $set: {
+            userName: name || "",
+            userPhone: phone || "",
+            userEmail: email || "",
+            howDidYouHear: howDidYouHear || "",
+            updatedAt: new Date()
+          }
+        },
+        { upsert: true }
+      );
+    }
+
+    // Salva também na coleção de usuários
+    const usersCol = getCollection("users");
+    if (usersCol) {
+      await usersCol.updateOne(
+        { $or: [{ phone: phone }, { email: email }].filter(Boolean) },
+        {
+          $set: {
+            name: name || "",
+            phone: phone || "",
+            email: email || "",
+            howDidYouHear: howDidYouHear || "",
+            updatedAt: new Date()
+          },
+          $setOnInsert: { createdAt: new Date() }
+        },
+        { upsert: true }
+      );
+    }
+
+    res.json({ success: true, message: "Usuário registrado com sucesso!" });
+  } catch (err) {
+    console.error("[API] Erro ao registrar usuário:", err);
+    res.status(500).json({ success: false, error: "Erro ao registrar usuário" });
+  }
+});
+
 // ====================== EXPORT ======================
 export { router as apiRoutes };
