@@ -69,6 +69,7 @@ app.get('/health/metrics', (_req, res) => {
 })
 
 app.use('/auth', authRoutes)
+app.use('/api/auth', authRoutes)
 
 app.get('/api/resins', (req, res, next) => { req.url = '/resins'; apiRoutes(req, res, next) })
 app.get('/api/params/resins', (req, res, next) => { req.url = '/params/resins'; apiRoutes(req, res, next) })
