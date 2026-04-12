@@ -92,6 +92,79 @@ router.get('/metrics', adminGuard(async (req, res) => {
   }
 }));
 
+
+
+// ====================== CONTATO PÚBLICO ======================
+router.post('/contact', async (req, res) => {
+  try {
+    const { name, phone, email, message } = req.body || {};
+    if (!name || !email || !message) {
+      return res.status(400).json({ success: false, error: 'Nome, e-mail e mensagem são obrigatórios' });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) return res.status(503).json({ success: false, error: 'Banco de dados indisponível' });
+
+    const collection = getCollection('messages') || getCollection('contacts');
+    if (!collection) return res.status(503).json({ success: false, error: 'Coleção de mensagens indisponível' });
+
+    const doc = {
+      name: normalizeString(name),
+      phone: normalizeString(phone),
+      email: normalizeString(email).toLowerCase(),
+      message: normalizeString(message),
+      status: 'pending',
+      source: 'site-contact',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await collection.insertOne(doc);
+    res.status(201).json({ success: true, id: result.insertedId.toString() });
+  } catch (err) {
+    console.error('[API] Erro ao salvar contato público:', err);
+    res.status(500).json({ success: false, error: 'Erro ao salvar contato' });
+  }
+});
+
+// ====================== FORMULAÇÃO CUSTOMIZADA PÚBLICA ======================
+router.post('/custom-request', async (req, res) => {
+  try {
+    const { name, phone, email, caracteristica, cor, complementos } = req.body || {};
+    if (!name || !phone || !email || !caracteristica || !cor) {
+      return res.status(400).json({ success: false, error: 'Preencha todos os campos obrigatórios' });
+    }
+
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) return res.status(503).json({ success: false, error: 'Banco de dados indisponível' });
+
+    const collection = getCollection('custom_requests') || getOrdersCollectionSafe();
+    if (!collection) return res.status(503).json({ success: false, error: 'Coleção de formulações indisponível' });
+
+    const doc = {
+      name: normalizeString(name),
+      phone: normalizeString(phone),
+      email: normalizeString(email).toLowerCase(),
+      desiredFeature: normalizeString(caracteristica),
+      caracteristica: normalizeString(caracteristica),
+      color: normalizeString(cor),
+      cor: normalizeString(cor),
+      details: normalizeString(complementos),
+      complementos: normalizeString(complementos),
+      status: 'pending',
+      source: 'site-custom-request',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await collection.insertOne(doc);
+    res.status(201).json({ success: true, id: result.insertedId.toString() });
+  } catch (err) {
+    console.error('[API] Erro ao salvar formulação customizada:', err);
+    res.status(500).json({ success: false, error: 'Erro ao salvar formulação customizada' });
+  }
+});
+
 // ====================== MENSAGENS ======================
 router.get('/contact', adminGuard(async (req, res) => {
   try {
