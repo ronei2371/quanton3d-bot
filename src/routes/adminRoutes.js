@@ -4,7 +4,6 @@ import fsPromises from "fs/promises";
 import jwt from "jsonwebtoken";
 import path from "path";
 import mongoose from "mongoose";
-import { ObjectId } from "mongodb";
 import { fileURLToPath } from "url";
 import {
   addDocument,
@@ -14,7 +13,6 @@ import {
   getCollection,
   getDocumentsCollection,
   getPrintParametersCollection,
-  getOrdersCollection,
   isConnected
 } from "../../db.js";
 
@@ -32,9 +30,6 @@ const ensureMongoReady = async () => {
     return false;
   }
 };
-
-const parseMongoId = (id) => (ObjectId.isValid(id) ? new ObjectId(id) : id);
-const getOrdersCollectionSafe = () => getOrdersCollection() || getCollection("pedidos") || getCollection("custom_requests") || getCollection("formulacoes");
 
 function requireAdmin(adminSecret, adminJwtSecret) {
   return (req, res, next) => {
@@ -497,52 +492,99 @@ function buildAdminRoutes(adminConfig = {}) {
   });
 
   // ===== CLIENTES =====
-  router.get("/clients", adminGuard, async (_req, res) => {
+  router.get('/clients', adminGuard, async (_req, res) => {
     try {
-      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
+      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: 'MongoDB não configurado' });
       const mongoReady = await ensureMongoReady();
-      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
+      if (!mongoReady) return res.status(503).json({ success: false, error: 'MongoDB não conectado' });
 
-      const collection = getCollection("users");
-      if (!collection) return res.status(503).json({ success: false, error: "MongoDB indisponível" });
+      const usersCollection = getCollection('users');
+      const conversasCollection = getCollection('conversas');
+      if (!usersCollection && !conversasCollection) {
+        return res.status(503).json({ success: false, error: 'MongoDB indisponível' });
+      }
 
       const [usersClients, conversasClients] = await Promise.all([
-        collection.find({}).sort({ createdAt: -1 }).limit(200).toArray(),
-        (getCollection("conversas") || collection)
-          .find({
-            $or: [
-              { userName: { $exists: true, $ne: null, $ne: "" } },
-              { userPhone: { $exists: true, $ne: null, $ne: "" } },
-              { userEmail: { $exists: true, $ne: null, $ne: "" } }
-            ]
-          })
-          .sort({ updatedAt: -1, createdAt: -1 })
-          .limit(200)
-          .toArray()
+        usersCollection ? usersCollection.find({}).sort({ createdAt: -1 }).limit(300).toArray() : Promise.resolve([]),
+        conversasCollection
+          ? conversasCollection
+              .find({
+                $or: [
+                  { userName: { $exists: true, $ne: null, $ne: '' } },
+                  { userPhone: { $exists: true, $ne: null, $ne: '' } },
+                  { userEmail: { $exists: true, $ne: null, $ne: '' } },
+                  { howDidYouHear: { $exists: true, $ne: null, $ne: '' } }
+                ]
+              })
+              .sort({ updatedAt: -1, createdAt: -1 })
+              .limit(300)
+              .toArray()
+          : Promise.resolve([])
       ]);
+
+      const normalizeOrigin = (value) => {
+        const raw = String(value || '').trim();
+        const normalized = raw.toLowerCase();
+        if (!normalized) return 'Outros';
+        if (normalized.includes('insta')) return 'Instagram';
+        if (normalized.includes('you')) return 'YouTube';
+        if (normalized.includes('google')) return 'Google';
+        if (normalized.includes('indica')) return 'Indicação';
+        if (normalized.includes('cliente')) return 'Já sou cliente';
+        if (normalized.includes('mercado livre') || normalized.includes('shopee') || normalized.includes('marketplace')) return 'Marketplace';
+        return raw;
+      };
 
       const dedupe = new Map();
       const putClient = (client, source) => {
-        const email = String(client.email || client.contactEmail || client.userEmail || "").trim().toLowerCase();
-        const phone = String(client.phone || client.contactPhone || client.userPhone || "").trim();
-        const name = String(client.name || client.fullName || client.companyName || client.userName || "").trim().toLowerCase();
-        const key = email || phone || name || client._id?.toString?.();
+        const email = String(client.email || client.contactEmail || client.userEmail || '').trim().toLowerCase();
+        const phone = String(client.phone || client.contactPhone || client.userPhone || '').trim();
+        const name = String(client.name || client.fullName || client.companyName || client.userName || '').trim();
+        const key = email || phone || name.toLowerCase() || client._id?.toString?.();
         if (!key) return;
-        if (!dedupe.has(key)) {
-          dedupe.set(key, {
-            id: client._id?.toString?.() || key,
-            name: client.name || client.fullName || client.companyName || client.userName || "Cliente",
-            email: client.email || client.contactEmail || client.userEmail || null,
-            phone: client.phone || client.contactPhone || client.userPhone || null,
-            createdAt: client.createdAt || client.created || client.updatedAt || null,
-            source
-          });
+
+        const candidate = {
+          id: client._id?.toString?.() || key,
+          name: name || 'Cliente',
+          email: email || null,
+          phone: phone || null,
+          createdAt: client.createdAt || client.created || client.updatedAt || null,
+          updatedAt: client.updatedAt || null,
+          source,
+          sourceLabel: source === 'users' ? 'Cadastro do site' : 'Conversa / chatbot',
+          origin: normalizeOrigin(client.howDidYouHear || client.origin || client.source || client.how_found),
+          howDidYouHear: client.howDidYouHear || client.origin || client.source || client.how_found || null
+        };
+
+        const existing = dedupe.get(key);
+        if (!existing) {
+          dedupe.set(key, candidate);
+          return;
         }
+
+        const existingDate = new Date(existing.createdAt || 0).getTime();
+        const candidateDate = new Date(candidate.createdAt || 0).getTime();
+        const merged = {
+          ...existing,
+          ...candidate,
+          id: existing.id || candidate.id,
+          name: existing.name !== 'Cliente' ? existing.name : candidate.name,
+          email: existing.email || candidate.email,
+          phone: existing.phone || candidate.phone,
+          howDidYouHear: existing.howDidYouHear || candidate.howDidYouHear,
+          origin: existing.origin !== 'Outros' ? existing.origin : candidate.origin,
+          createdAt: candidateDate > existingDate ? candidate.createdAt : existing.createdAt,
+          updatedAt: candidate.updatedAt || existing.updatedAt,
+          source: existing.source || candidate.source,
+          sourceLabel: existing.sourceLabel || candidate.sourceLabel
+        };
+        dedupe.set(key, merged);
       };
 
-      usersClients.forEach((client) => putClient(client, "users"));
-      conversasClients.forEach((client) => putClient(client, "conversas"));
+      usersClients.forEach((client) => putClient(client, 'users'));
+      conversasClients.forEach((client) => putClient(client, 'conversas'));
       const clients = Array.from(dedupe.values()).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
       res.json({
         success: true,
         clients,
@@ -597,50 +639,14 @@ function buildAdminRoutes(adminConfig = {}) {
       res.json({
         success: true,
         messages: messages.map((msg) => ({
-          _id: msg._id?.toString(),
           id: msg._id?.toString(),
           name: msg.name || msg.nome,
           email: msg.email,
           phone: msg.phone || msg.telefone,
           message: msg.message || msg.mensagem,
-          resolved: Boolean(msg.resolved),
-          status: msg.status || 'pending',
-          origin: msg.origin || msg.howDidYouHear || msg.source || '',
-          howDidYouHear: msg.howDidYouHear || msg.origin || msg.source || '',
-          createdAt: msg.createdAt || msg.data || msg.updatedAt || null,
-          updatedAt: msg.updatedAt || null
+          date: msg.createdAt || msg.data
         }))
       });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  router.put("/contact/:id", adminGuard, async (req, res) => {
-    try {
-      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB off" });
-      const mongoReady = await ensureMongoReady();
-      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-
-      const collection = getCollection("contacts") || getCollection("messages");
-      if (!collection) return res.status(404).json({ success: false, error: "Coleção de contatos indisponível" });
-
-      const { id } = req.params;
-      const resolved = Boolean(req.body?.resolved);
-      const filter = ObjectId.isValid(id)
-        ? { _id: new ObjectId(id) }
-        : { $or: [{ _id: id }, { id }] };
-
-      const result = await collection.findOneAndUpdate(
-        filter,
-        { $set: { resolved, status: resolved ? 'resolved' : 'pending', updatedAt: new Date() } },
-        { returnDocument: 'after' }
-      );
-
-      const updated = result?.value || result;
-      if (!updated) return res.status(404).json({ success: false, error: 'Mensagem não encontrada' });
-
-      res.json({ success: true, message: 'Status atualizado', contact: updated });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -653,22 +659,19 @@ function buildAdminRoutes(adminConfig = {}) {
       const mongoReady = await ensureMongoReady();
       if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
 
-      const collection = getCollection("custom_requests") || getCollection("formulacoes") || getOrdersCollectionSafe();
+      const collection = getCollection("custom_requests") || getCollection("formulacoes");
       if (!collection) return res.json({ success: true, formulations: [] });
 
       const requests = await collection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
       res.json({
         success: true,
         formulations: requests.map((r) => ({
-          _id: r._id?.toString(),
           id: r._id?.toString(),
           name: r.name || r.nome,
           email: r.email,
-          phone: r.phone || r.telefone,
-          desiredFeature: r.desiredFeature || r.caracteristica || r.description || r.message,
-          details: r.details || r.description || '',
-          status: r.status || 'pending',
-          createdAt: r.createdAt || r.date || null
+          description: r.description || r.caracteristica || r.message,
+          status: r.status || "Pendente",
+          date: r.createdAt
         }))
       });
     } catch (err) {
@@ -676,158 +679,6 @@ function buildAdminRoutes(adminConfig = {}) {
     }
   });
 
-  // ===== PEDIDOS (compatibilidade com painel atual) =====
-  router.get("/orders", adminGuard, async (_req, res) => {
-    try {
-      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB off" });
-      const mongoReady = await ensureMongoReady();
-      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-
-      const collection = getOrdersCollectionSafe();
-      if (!collection) return res.json({ success: true, orders: [] });
-
-      const orders = await collection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
-      res.json({
-        success: true,
-        orders: orders.map((order) => ({
-          _id: order._id?.toString(),
-          id: order._id?.toString(),
-          customerName: order.customerName || order.name || order.nome || 'Cliente',
-          name: order.name || order.nome || 'Cliente',
-          email: order.email || '',
-          phone: order.phone || order.telefone || '',
-          notes: order.notes || order.details || order.description || order.caracteristica || '',
-          items: Array.isArray(order.items) ? order.items : [],
-          status: order.status || 'pending',
-          createdAt: order.createdAt || order.date || null
-        }))
-      });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  router.put("/orders/:id", adminGuard, async (req, res) => {
-    try {
-      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB off" });
-      const mongoReady = await ensureMongoReady();
-      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-
-      const collection = getOrdersCollectionSafe();
-      if (!collection) return res.status(404).json({ success: false, error: 'Coleção de pedidos indisponível' });
-
-      const { id } = req.params;
-      const status = String(req.body?.status || '').trim();
-      if (!status) return res.status(400).json({ success: false, error: 'Status é obrigatório' });
-
-      const filter = ObjectId.isValid(id)
-        ? { _id: new ObjectId(id) }
-        : { $or: [{ _id: id }, { id }] };
-
-      const result = await collection.findOneAndUpdate(
-        filter,
-        { $set: { status, updatedAt: new Date() } },
-        { returnDocument: 'after' }
-      );
-
-      const updated = result?.value || result;
-      if (!updated) return res.status(404).json({ success: false, error: 'Pedido não encontrado' });
-
-      res.json({ success: true, order: updated });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  // ===== DOCUMENTOS / CONHECIMENTO (compatibilidade com painel atual) =====
-  router.get("/knowledge", adminGuard, async (_req, res) => {
-    try {
-      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      const mongoReady = await ensureMongoReady();
-      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-
-      const collection = getDocumentsCollection();
-      const documents = await collection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
-      res.json({ success: true, documents });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  router.post("/knowledge", adminGuard, async (req, res) => {
-    try {
-      if (!shouldInitRAG()) return res.status(503).json({ success: false, error: "OPENAI_API_KEY ou MongoDB indisponível" });
-      const mongoReady = await ensureMongoReady();
-      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-
-      const title = String(req.body?.title || '').trim();
-      const content = String(req.body?.content || '').trim();
-      const tags = Array.isArray(req.body?.tags) ? req.body.tags : [];
-      const source = String(req.body?.source || 'admin-panel').trim();
-
-      if (!title || !content) return res.status(400).json({ success: false, error: 'Título e conteúdo são obrigatórios' });
-
-      const result = await addDocument(title, content, source, tags);
-      res.status(201).json({ success: true, documentId: result.documentId });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  router.put("/knowledge/:id", adminGuard, async (req, res) => {
-    try {
-      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      const mongoReady = await ensureMongoReady();
-      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-
-      const { id } = req.params;
-      const title = String(req.body?.title || '').trim();
-      const content = String(req.body?.content || '').trim();
-      const tags = Array.isArray(req.body?.tags) ? req.body.tags : [];
-      const source = String(req.body?.source || 'admin-panel').trim();
-
-      if (!title || !content) return res.status(400).json({ success: false, error: 'Título e conteúdo são obrigatórios' });
-
-      const collection = getDocumentsCollection();
-      const filter = ObjectId.isValid(id)
-        ? { _id: new ObjectId(id) }
-        : { $or: [{ _id: id }, { legacyId: id }, { id }] };
-
-      const result = await collection.findOneAndUpdate(
-        filter,
-        { $set: { title, content, tags, source, updatedAt: new Date() } },
-        { returnDocument: 'after' }
-      );
-
-      const updated = result?.value || result;
-      if (!updated) return res.status(404).json({ success: false, error: 'Documento não encontrado' });
-
-      res.json({ success: true, document: updated, warning: 'Conteúdo atualizado. Se necessário, reindexe o RAG depois das edições maiores.' });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  router.delete("/knowledge/:id", adminGuard, async (req, res) => {
-    try {
-      if (!shouldInitMongo()) return res.status(503).json({ success: false, error: "MongoDB não configurado" });
-      const mongoReady = await ensureMongoReady();
-      if (!mongoReady) return res.status(503).json({ success: false, error: "MongoDB não conectado" });
-
-      const { id } = req.params;
-      const collection = getDocumentsCollection();
-      const filter = ObjectId.isValid(id)
-        ? { _id: new ObjectId(id) }
-        : { $or: [{ _id: id }, { legacyId: id }, { id }] };
-
-      const result = await collection.deleteOne(filter);
-      if (!result?.deletedCount) return res.status(404).json({ success: false, error: 'Documento não encontrado' });
-
-      res.json({ success: true, message: 'Documento removido com sucesso' });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
   return router;
 }
 

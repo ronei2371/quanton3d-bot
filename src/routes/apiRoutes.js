@@ -185,13 +185,45 @@ router.get('/conversas', adminGuard(async (req, res) => {
 }));
 
 // ====================== GALERIA ======================
-router.post("/gallery", upload.any(), async (req, res) => {
-  try {
-    const { name, resin, printer, image, images, imageUrl, note, contact } = req.body;
-    const sanitizedResin = resin ? resin.trim() : null;
+const parseBooleanField = (value, fallback = true) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'sim', 'yes', 'on'].includes(normalized)) return true;
+    if (['false', '0', 'nao', 'não', 'no', 'off'].includes(normalized)) return false;
+  }
+  return fallback;
+};
 
-    if (!sanitizedResin || !printer) {
-      return res.status(400).json({ success: false, error: "Resina e impressora são obrigatórias" });
+const mapGalleryEntry = (item = {}) => ({
+  id: item._id?.toString?.() || item.id || null,
+  name: item.name || 'Cliente',
+  contact: item.contact || null,
+  resin: item.resin || null,
+  printer: item.printer || null,
+  note: item.note || item.notes || null,
+  status: item.status || 'pending',
+  allowPublic: item.allowPublic !== false,
+  approvedAt: item.approvedAt || null,
+  createdAt: item.createdAt || null,
+  updatedAt: item.updatedAt || null,
+  imageUrl: item.imageUrl || (Array.isArray(item.images) ? item.images[0] : null) || null,
+  settings: {
+    layerHeight: item.settings?.layerHeight || item.layerHeight || null,
+    exposureNormal: item.settings?.exposureNormal || item.exposureNormal || null,
+    exposureBase: item.settings?.exposureBase || item.baseExposure || null,
+    baseLayers: item.settings?.baseLayers || item.baseLayers || null,
+  }
+});
+
+router.post('/gallery', upload.any(), async (req, res) => {
+  try {
+    const { name, resin, printer, image, images, imageUrl, note, notes, contact, layerHeight, exposureNormal, exposureBase, baseLayers, allowPublic } = req.body || {};
+    const sanitizedResin = resin ? String(resin).trim() : '';
+    const sanitizedPrinter = printer ? String(printer).trim() : '';
+
+    if (!sanitizedResin && !sanitizedPrinter) {
+      return res.status(400).json({ success: false, error: 'Resina e/ou impressora são obrigatórias' });
     }
 
     const finalImages = [];
@@ -201,93 +233,146 @@ router.post("/gallery", upload.any(), async (req, res) => {
     else if (imageUrl) finalImages.push(imageUrl);
 
     if (finalImages.length === 0 && Array.isArray(req.files) && req.files.length > 0) {
-      req.files.forEach(file => {
+      req.files.forEach((file) => {
         if (file?.buffer) {
-          const mimeType = file.mimetype || "image/jpeg";
-          const base64 = file.buffer.toString("base64");
+          const mimeType = file.mimetype || 'image/jpeg';
+          const base64 = file.buffer.toString('base64');
           finalImages.push(`data:${mimeType};base64,${base64}`);
         }
       });
     }
 
     if (finalImages.length === 0) {
-      return res.status(400).json({ success: false, error: "Envie ao menos uma imagem" });
+      return res.status(400).json({ success: false, error: 'Envie ao menos uma imagem' });
     }
 
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) return res.status(503).json({ success: false, error: 'Banco de dados indisponível' });
 
-    const galleryCollection = getCollection("gallery");
+    const galleryCollection = getCollection('gallery');
+    if (!galleryCollection) return res.status(503).json({ success: false, error: 'Coleção gallery indisponível' });
 
+    const now = new Date();
     const newEntry = {
-      name: name?.trim() || null,
+      name: name?.trim() || 'Cliente',
+      contact: contact?.trim() || '',
       resin: sanitizedResin,
-      printer: printer.trim(),
+      printer: sanitizedPrinter,
+      imageUrl: finalImages[0],
       images: finalImages,
-      note: note?.trim() || null,
-      contact: contact?.trim() || null,
-      status: "pending",
-      createdAt: new Date(),
-      updatedAt: new Date()
+      note: note?.trim() || notes?.trim() || '',
+      settings: {
+        layerHeight: layerHeight?.trim?.() || layerHeight || '',
+        exposureNormal: exposureNormal?.trim?.() || exposureNormal || '',
+        exposureBase: exposureBase?.trim?.() || exposureBase || '',
+        baseLayers: baseLayers?.trim?.() || baseLayers || ''
+      },
+      allowPublic: parseBooleanField(allowPublic, true),
+      status: 'pending',
+      createdAt: now,
+      updatedAt: now
     };
 
     const result = await galleryCollection.insertOne(newEntry);
 
     res.json({
       success: true,
-      message: "Fotos enviadas com sucesso!",
-      id: result.insertedId.toString()
+      message: 'Fotos enviadas com sucesso!',
+      id: result.insertedId.toString(),
+      entry: mapGalleryEntry({ ...newEntry, _id: result.insertedId })
     });
   } catch (err) {
-    console.error("[API] Erro ao enviar fotos:", err);
-    res.status(500).json({ success: false, error: "Erro ao enviar fotos" });
+    console.error('[API] Erro ao enviar fotos:', err);
+    res.status(500).json({ success: false, error: 'Erro ao enviar fotos' });
   }
 });
 
 router.get('/gallery', async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) return res.status(503).json({ success: false, error: 'Banco de dados indisponível' });
 
-    const collection = getCollection("gallery");
-    if (!collection) return res.json({ success: true, gallery: [] });
+    const collection = getCollection('gallery');
+    if (!collection) return res.json({ success: true, gallery: [], images: [] });
 
-    const items = await collection.find({}).sort({ createdAt: -1 }).limit(100).toArray();
+    const limit = Math.min(parseInt(req.query.limit, 10) || 50, 100);
+    const query = { status: 'approved', allowPublic: { $ne: false } };
+    const items = await collection.find(query).sort({ approvedAt: -1, createdAt: -1 }).limit(limit).toArray();
+    const entries = items.map(mapGalleryEntry);
 
-    res.json({
-      success: true,
-      gallery: items.map(item => ({
-        id: item._id?.toString(),
-        name: item.name,
-        resin: item.resin,
-        printer: item.printer,
-        images: item.images || [],
-        note: item.note,
-        status: item.status || "pending",
-        createdAt: item.createdAt
-      }))
-    });
+    res.json({ success: true, gallery: entries, images: entries, total: entries.length });
   } catch (err) {
-    console.error("[API] Erro ao listar galeria:", err);
-    res.status(500).json({ success: false, error: "Erro ao listar galeria" });
+    console.error('[API] Erro ao listar galeria pública:', err);
+    res.status(500).json({ success: false, error: 'Erro ao listar galeria pública' });
   }
 });
 
 router.get('/gallery/all', adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) return res.status(503).json({ success: false, error: 'Banco de dados indisponível' });
 
-    const collection = getCollection("gallery");
+    const collection = getCollection('gallery');
     if (!collection) return res.json({ success: true, images: [], entries: [] });
 
-    const limit = parseInt(req.query.limit) || 100;
-    const entries = await collection.find({}).sort({ createdAt: -1 }).limit(limit).toArray();
+    const limit = Math.min(parseInt(req.query.limit, 10) || 60, 100);
+    const status = req.query.status ? String(req.query.status).trim().toLowerCase() : '';
+    const query = status ? { status } : {};
+    const entries = await collection.find(query).sort({ status: 1, createdAt: -1 }).limit(limit).toArray();
+    const mapped = entries.map(mapGalleryEntry);
 
-    res.json({ success: true, images: entries, entries, total: entries.length });
+    res.json({ success: true, images: mapped, entries: mapped, total: mapped.length });
   } catch (err) {
-    console.error("[API] Erro ao listar galeria completa:", err);
-    res.status(500).json({ success: false, error: "Erro ao listar galeria" });
+    console.error('[API] Erro ao listar galeria completa:', err);
+    res.status(500).json({ success: false, error: 'Erro ao listar galeria completa' });
+  }
+}));
+
+router.put('/gallery/:id/approve', adminGuard(async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) return res.status(503).json({ success: false, error: 'Banco de dados indisponível' });
+
+    const collection = getCollection('gallery');
+    const { id } = req.params;
+    const safeId = ObjectId.isValid(id) ? new ObjectId(id) : id;
+    const updates = {
+      status: 'approved',
+      approvedAt: new Date(),
+      updatedAt: new Date()
+    };
+    if (req.body && Object.prototype.hasOwnProperty.call(req.body, 'allowPublic')) {
+      updates.allowPublic = parseBooleanField(req.body.allowPublic, true);
+    }
+
+    const result = await collection.findOneAndUpdate(
+      { _id: safeId },
+      { $set: updates },
+      { returnDocument: 'after' }
+    );
+
+    if (!result.value) return res.status(404).json({ success: false, error: 'Registro não encontrado' });
+    res.json({ success: true, entry: mapGalleryEntry(result.value) });
+  } catch (err) {
+    console.error('[API] Erro ao aprovar item da galeria:', err);
+    res.status(500).json({ success: false, error: 'Erro ao aprovar item da galeria' });
+  }
+}));
+
+router.delete('/gallery/:id', adminGuard(async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) return res.status(503).json({ success: false, error: 'Banco de dados indisponível' });
+
+    const collection = getCollection('gallery');
+    const { id } = req.params;
+    const safeId = ObjectId.isValid(id) ? new ObjectId(id) : id;
+    const result = await collection.deleteOne({ _id: safeId });
+    if (result.deletedCount === 0) return res.status(404).json({ success: false, error: 'Registro não encontrado' });
+    res.json({ success: true, deletedId: id });
+  } catch (err) {
+    console.error('[API] Erro ao deletar item da galeria:', err);
+    res.status(500).json({ success: false, error: 'Erro ao deletar item da galeria' });
   }
 }));
 
