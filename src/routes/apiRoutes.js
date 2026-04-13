@@ -293,7 +293,7 @@ router.post("/custom-request", async (req, res) => {
     console.error("[API] Erro ao salvar formulação customizada:", err);
     res.status(500).json({ success: false, error: "Erro ao salvar formulação customizada" });
   }
-}));
+});
 
 // ====================== MENSAGENS ======================
 router.get("/contact", adminGuard(async (_req, res) => {
