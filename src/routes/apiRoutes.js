@@ -1049,7 +1049,7 @@ router.delete("/partners/:id", adminGuard(async (req, res) => {
     console.error("[API] Erro ao remover parceiro:", err);
     res.status(500).json({ success: false, error: "Erro ao remover parceiro" });
   }
-}));
+});
 
 // ====================== REGISTRO DE USUÁRIO ======================
 router.post("/register-user", async (req, res) => {
@@ -1132,7 +1132,7 @@ router.post("/register-user", async (req, res) => {
     console.error("[API] Erro ao registrar usuário:", err);
     res.status(500).json({ success: false, error: "Erro ao registrar usuário" });
   }
-}));
+});
 
 // ====================== SUGESTÕES ======================
 router.get("/suggestions", adminGuard(async (_req, res) => {
