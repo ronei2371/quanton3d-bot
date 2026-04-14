@@ -1049,7 +1049,7 @@ router.delete("/partners/:id", adminGuard(async (req, res) => {
     console.error("[API] Erro ao remover parceiro:", err);
     res.status(500).json({ success: false, error: "Erro ao remover parceiro" });
   }
-});
+}));
 
 // ====================== REGISTRO DE USUÁRIO ======================
 router.post("/register-user", async (req, res) => {
@@ -1135,89 +1135,29 @@ router.post("/register-user", async (req, res) => {
 });
 
 // ====================== SUGESTÕES ======================
-// ====================== REGISTRO DE USUÁRIO ======================
-router.post("/register-user", async (req, res) => {
+router.get("/suggestions", adminGuard(async (_req, res) => {
   try {
-    const { name, phone, email, howDidYouHear, source, origin, sessionId } = req.body || {};
-
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
-    }
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
 
-    const normalizedName = normalizeString(name);
-    const normalizedPhone = normalizeString(phone);
-    const normalizedEmail = normalizeString(email).toLowerCase();
-    const originRaw = normalizeString(howDidYouHear || source || origin);
-    const originKey = normalizeOrigin(originRaw);
-    const originLabel = originLabelFromKey(originKey);
+    const collection = getSugestoesCollection() || getCollection("sugestoes");
+    if (!collection) return res.json({ success: true, suggestions: [] });
 
-    if (!normalizedName && !normalizedPhone && !normalizedEmail) {
-      return res.status(400).json({ success: false, error: "Informe pelo menos nome, telefone ou e-mail" });
-    }
-
-    const now = new Date();
-
-    const col = getConversasCollection() || getCollection("conversas");
-    if (col && sessionId) {
-      await col.updateOne(
-        { sessionId },
-        {
-          $set: {
-            userName: normalizedName,
-            userPhone: normalizedPhone,
-            userEmail: normalizedEmail,
-            howDidYouHear: originLabel,
-            source: originKey,
-            updatedAt: now
-          }
-        },
-        { upsert: true }
-      );
-    }
-
-    const usersCol = getCollection("users");
-    if (usersCol) {
-      const uniqueKeys = [];
-      if (normalizedPhone) uniqueKeys.push({ phone: normalizedPhone });
-      if (normalizedEmail) uniqueKeys.push({ email: normalizedEmail });
-      const filter = uniqueKeys.length ? { $or: uniqueKeys } : { name: normalizedName };
-
-      await usersCol.updateOne(
-        filter,
-        {
-          $set: {
-            name: normalizedName,
-            phone: normalizedPhone,
-            email: normalizedEmail,
-            howDidYouHear: originLabel,
-            source: originKey,
-            origin: originKey,
-            blocked: false,
-            updatedAt: now,
-            lastSeenAt: now
-          },
-          $setOnInsert: { createdAt: now }
-        },
-        { upsert: true }
-      );
-    }
-
+    const docs = await collection.find({}).sort({ createdAt: -1 }).limit(200).toArray();
     res.json({
       success: true,
-      message: "Usuário registrado com sucesso!",
-      profile: {
-        name: normalizedName,
-        phone: normalizedPhone,
-        email: normalizedEmail,
-        howDidYouHear: originLabel,
-        origin: originKey
-      }
+      suggestions: docs.map((item) => ({
+        id: item._id?.toString(),
+        text: item.text || item.suggestion || item.message || "",
+        status: item.status || "pending",
+        createdAt: item.createdAt
+      }))
     });
   } catch (err) {
-    console.error("[API] Erro ao registrar usuário:", err);
-    res.status(500).json({ success: false, error: "Erro ao registrar usuário" });
+    console.error("[API] Erro ao listar sugestões:", err);
+    res.status(500).json({ success: false, error: "Erro ao listar sugestões" });
   }
-});
+}));
+
 // ====================== EXPORT ======================
 export { router as apiRoutes };
