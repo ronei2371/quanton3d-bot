@@ -1135,29 +1135,89 @@ router.post("/register-user", async (req, res) => {
 });
 
 // ====================== SUGESTÕES ======================
-router.get("/suggestions", adminGuard(async (_req, res) => {
+// ====================== REGISTRO DE USUÁRIO ======================
+router.post("/register-user", async (req, res) => {
   try {
+    const { name, phone, email, howDidYouHear, source, origin, sessionId } = req.body || {};
+
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
-    const collection = getSugestoesCollection() || getCollection("sugestoes");
-    if (!collection) return res.json({ success: true, suggestions: [] });
+    const normalizedName = normalizeString(name);
+    const normalizedPhone = normalizeString(phone);
+    const normalizedEmail = normalizeString(email).toLowerCase();
+    const originRaw = normalizeString(howDidYouHear || source || origin);
+    const originKey = normalizeOrigin(originRaw);
+    const originLabel = originLabelFromKey(originKey);
 
-    const docs = await collection.find({}).sort({ createdAt: -1 }).limit(200).toArray();
+    if (!normalizedName && !normalizedPhone && !normalizedEmail) {
+      return res.status(400).json({ success: false, error: "Informe pelo menos nome, telefone ou e-mail" });
+    }
+
+    const now = new Date();
+
+    const col = getConversasCollection() || getCollection("conversas");
+    if (col && sessionId) {
+      await col.updateOne(
+        { sessionId },
+        {
+          $set: {
+            userName: normalizedName,
+            userPhone: normalizedPhone,
+            userEmail: normalizedEmail,
+            howDidYouHear: originLabel,
+            source: originKey,
+            updatedAt: now
+          }
+        },
+        { upsert: true }
+      );
+    }
+
+    const usersCol = getCollection("users");
+    if (usersCol) {
+      const uniqueKeys = [];
+      if (normalizedPhone) uniqueKeys.push({ phone: normalizedPhone });
+      if (normalizedEmail) uniqueKeys.push({ email: normalizedEmail });
+      const filter = uniqueKeys.length ? { $or: uniqueKeys } : { name: normalizedName };
+
+      await usersCol.updateOne(
+        filter,
+        {
+          $set: {
+            name: normalizedName,
+            phone: normalizedPhone,
+            email: normalizedEmail,
+            howDidYouHear: originLabel,
+            source: originKey,
+            origin: originKey,
+            blocked: false,
+            updatedAt: now,
+            lastSeenAt: now
+          },
+          $setOnInsert: { createdAt: now }
+        },
+        { upsert: true }
+      );
+    }
+
     res.json({
       success: true,
-      suggestions: docs.map((item) => ({
-        id: item._id?.toString(),
-        text: item.text || item.suggestion || item.message || "",
-        status: item.status || "pending",
-        createdAt: item.createdAt
-      }))
+      message: "Usuário registrado com sucesso!",
+      profile: {
+        name: normalizedName,
+        phone: normalizedPhone,
+        email: normalizedEmail,
+        howDidYouHear: originLabel,
+        origin: originKey
+      }
     });
   } catch (err) {
-    console.error("[API] Erro ao listar sugestões:", err);
-    res.status(500).json({ success: false, error: "Erro ao listar sugestões" });
+    console.error("[API] Erro ao registrar usuário:", err);
+    res.status(500).json({ success: false, error: "Erro ao registrar usuário" });
   }
-}));
-
+});
 // ====================== EXPORT ======================
 export { router as apiRoutes };
