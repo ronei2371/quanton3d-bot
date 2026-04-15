@@ -152,7 +152,7 @@ const mapGalleryListEntry = (item = {}) => ({
   approvedAt: item.approvedAt || null,
   createdAt: item.createdAt || null,
   updatedAt: item.updatedAt || null,
-  hasImage: Boolean(item.imageUrl || (Array.isArray(item.images) && item.images.length)),
+  hasImage: item.hasImage === true ? true : Boolean(item.imageUrl || (Array.isArray(item.images) && item.images.length)),
   settings: {
     layerHeight: item.settings?.layerHeight || item.layerHeight || null,
     exposureNormal: item.settings?.exposureNormal || item.exposureNormal || null,
@@ -411,6 +411,37 @@ router.get("/formulations", adminGuard(async (_req, res) => {
   } catch (err) {
     console.error("[API] Erro ao listar formulações:", err);
     res.status(500).json({ success: false, error: "Erro ao listar formulações" });
+  }
+}));
+
+router.put("/formulations/:id", adminGuard(async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+
+    const collection = getCollection("custom_requests") || getOrdersCollectionSafe();
+    if (!collection) return res.status(503).json({ success: false, error: "Coleção de formulações indisponível" });
+
+    const { id } = req.params;
+    const nextStatus = String(req.body?.status || 'pending').trim().toLowerCase();
+    const allowed = ['pending', 'in_progress', 'resolved', 'completed'];
+    const finalStatus = allowed.includes(nextStatus) ? nextStatus : 'pending';
+
+    const result = await collection.findOneAndUpdate(
+      { _id: safeObjectId(id) },
+      { $set: { status: finalStatus, updatedAt: new Date() } },
+      { returnDocument: 'after' }
+    );
+
+    if (!result.value) return res.status(404).json({ success: false, error: "Formulação não encontrada" });
+
+    res.json({ success: true, formulation: {
+      id: result.value._id?.toString(),
+      status: result.value.status || finalStatus
+    }});
+  } catch (err) {
+    console.error("[API] Erro ao atualizar formulação:", err);
+    res.status(500).json({ success: false, error: "Erro ao atualizar formulação" });
   }
 }));
 
@@ -688,11 +719,39 @@ router.get("/gallery/all", adminGuard(async (req, res) => {
     if (!collection) return res.json({ success: true, images: [], entries: [] });
 
     const lite = parseBooleanField(req.query.lite, false);
-    const limit = Math.min(parseInt(req.query.limit, 10) || (lite ? 12 : 60), lite ? 50 : 200);
+    const limit = Math.min(parseInt(req.query.limit, 10) || (lite ? 8 : 40), lite ? 20 : 120);
     const status = req.query.status ? String(req.query.status).trim().toLowerCase() : "";
     const query = status ? { status } : {};
-    const entries = await collection.find(query).sort({ status: 1, createdAt: -1 }).limit(limit).toArray();
-    const mapped = entries.map(lite ? mapGalleryListEntry : mapGalleryEntry);
+
+    const projection = lite
+      ? {
+          name: 1,
+          userName: 1,
+          contact: 1,
+          contactCommercial: 1,
+          resin: 1,
+          printer: 1,
+          note: 1,
+          notes: 1,
+          status: 1,
+          allowPublic: 1,
+          allowCommercialContact: 1,
+          approvedAt: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          settings: 1
+        }
+      : {};
+
+    const entries = await collection
+      .find(query, lite ? { projection } : {})
+      .sort({ status: 1, createdAt: -1 })
+      .limit(limit)
+      .toArray();
+
+    const mapped = lite
+      ? entries.map((item) => mapGalleryListEntry({ ...item, hasImage: true }))
+      : entries.map(mapGalleryEntry);
 
     res.json({ success: true, images: mapped, entries: mapped, total: mapped.length, lite });
   } catch (err) {
