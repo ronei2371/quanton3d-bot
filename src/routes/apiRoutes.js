@@ -57,6 +57,7 @@ const buildPrinterFilter = (printerId) => {
 
 const getPartnersCollection = () => getCollection("partners");
 const getOrdersCollectionSafe = () => getOrdersCollection() || getCollection("pedidos") || getCollection("custom_requests");
+const getContactEntriesCollection = () => getCollection("contact_entries");
 
 const ORIGIN_CATEGORIES = [
   { key: "instagram", label: "Instagram" },
@@ -107,6 +108,58 @@ const mapUserEntry = (doc = {}) => {
     lastSeenAt: doc.lastSeenAt || doc.updatedAt || null
   };
 };
+
+
+
+const mapContactEntry = (doc = {}) => {
+  const originRaw =
+    doc.howDidYouHear ||
+    doc.source ||
+    doc.origin ||
+    doc.howDidYouKnow ||
+    doc.channel ||
+    "";
+
+  const originKey = normalizeOrigin(originRaw);
+
+  return {
+    id: doc._id?.toString?.() || doc.id || null,
+    userId: doc.userId?.toString?.() || doc.userId || null,
+    name: doc.name || doc.userName || "",
+    phone: doc.phone || doc.userPhone || "",
+    email: doc.email || doc.userEmail || "",
+    howDidYouHear: doc.howDidYouHear || originLabelFromKey(originKey),
+    origin: originKey,
+    originLabel: originLabelFromKey(originKey),
+    createdAt: doc.createdAt || null,
+    updatedAt: doc.updatedAt || null,
+    sessionId: doc.sessionId || null
+  };
+};
+
+const mapGalleryListEntry = (item = {}) => ({
+  id: item._id?.toString?.() || item.id || null,
+  _id: item._id?.toString?.() || item.id || null,
+  name: item.name || "Cliente",
+  contact: item.contact || null,
+  contactCommercial: item.contactCommercial || null,
+  resin: item.resin || null,
+  printer: item.printer || null,
+  note: item.note || item.notes || null,
+  status: item.status || "pending",
+  allowPublic: item.allowPublic !== false,
+  allowCommercialContact: item.allowCommercialContact === true,
+  approvedAt: item.approvedAt || null,
+  createdAt: item.createdAt || null,
+  updatedAt: item.updatedAt || null,
+  hasImage: Boolean(item.imageUrl || (Array.isArray(item.images) && item.images.length)),
+  settings: {
+    layerHeight: item.settings?.layerHeight || item.layerHeight || null,
+    exposureNormal: item.settings?.exposureNormal || item.exposureNormal || null,
+    exposureBase: item.settings?.exposureBase || item.baseExposure || null,
+    baseLayers: item.settings?.baseLayers || item.baseLayers || null
+  }
+});
 
 const buildDateRangeFilter = (date, startDate, endDate, field = "createdAt") => {
   const range = {};
@@ -185,14 +238,16 @@ router.get("/metrics", adminGuard(async (_req, res) => {
     const conversas = getConversasCollection();
     const gallery = getCollection("gallery");
     const users = getCollection("users");
+    const contactEntries = getContactEntriesCollection();
 
-    const [resins, printers, totalMessages, totalConversas, totalGallery, allUsers] = await Promise.all([
+    const [resins, printers, totalMessages, totalConversas, totalGallery, allUsers, allEntries] = await Promise.all([
       parametros ? parametros.distinct("resinName") : Promise.resolve([]),
       parametros ? parametros.distinct("printer") : Promise.resolve([]),
       messages ? messages.countDocuments() : Promise.resolve(0),
       conversas ? conversas.countDocuments() : Promise.resolve(0),
       gallery ? gallery.countDocuments({ status: "approved" }) : Promise.resolve(0),
-      users ? users.find({}).toArray() : Promise.resolve([])
+      users ? users.find({}).toArray() : Promise.resolve([]),
+      contactEntries ? contactEntries.find({}).toArray() : Promise.resolve([])
     ]);
 
     const originCounts = ORIGIN_CATEGORIES.reduce((acc, item) => {
@@ -200,8 +255,10 @@ router.get("/metrics", adminGuard(async (_req, res) => {
       return acc;
     }, {});
 
-    allUsers.forEach((user) => {
-      const key = normalizeOrigin(user.howDidYouHear || user.source || user.origin || "");
+    const sourceForSummary = allEntries.length ? allEntries : allUsers;
+
+    sourceForSummary.forEach((item) => {
+      const key = normalizeOrigin(item.howDidYouHear || item.source || item.origin || "");
       originCounts[key] = (originCounts[key] || 0) + 1;
     });
 
@@ -215,6 +272,7 @@ router.get("/metrics", adminGuard(async (_req, res) => {
         totalGalleryApproved: totalGallery,
         totalAtendimentos: totalMessages + totalConversas,
         totalRegisteredUsers: allUsers.length,
+        totalContactEntries: allEntries.length,
         origins: originCounts
       }
     });
@@ -394,12 +452,19 @@ router.get("/contacts", adminGuard(async (req, res) => {
     if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
 
     const usersCol = getCollection("users");
-    if (!usersCol) {
+    const entriesCol = getContactEntriesCollection();
+    const emptySummary = Object.fromEntries(ORIGIN_CATEGORIES.map((item) => [item.key, 0]));
+
+    if (!usersCol && !entriesCol) {
       return res.json({
         success: true,
         contacts: [],
         items: [],
-        summary: Object.fromEntries(ORIGIN_CATEGORIES.map((item) => [item.key, 0]))
+        entries: [],
+        logs: [],
+        summary: emptySummary,
+        total: 0,
+        totalEntries: 0
       });
     }
 
@@ -416,26 +481,39 @@ router.get("/contacts", adminGuard(async (req, res) => {
       queryParts.push({ blocked: { $ne: true } });
     }
 
-    const query = queryParts.length ? { $and: queryParts } : {};
+    const usersQuery = queryParts.length ? { $and: queryParts } : {};
+    const entriesQuery = searchFilter || Object.keys(dateFilter).length
+      ? { $and: [searchFilter || {}, dateFilter || {}].filter((item) => Object.keys(item).length) }
+      : {};
 
-    const docs = await usersCol.find(query).sort({ createdAt: -1, updatedAt: -1 }).limit(500).toArray();
-    const contacts = docs.map(mapUserEntry);
+    const [userDocs, entryDocs] = await Promise.all([
+      usersCol ? usersCol.find(usersQuery).sort({ createdAt: -1, updatedAt: -1 }).limit(500).toArray() : Promise.resolve([]),
+      entriesCol ? entriesCol.find(entriesQuery).sort({ createdAt: -1 }).limit(1000).toArray() : Promise.resolve([])
+    ]);
+
+    const contacts = userDocs.map(mapUserEntry);
+    const entries = entryDocs.map(mapContactEntry);
 
     const summary = ORIGIN_CATEGORIES.reduce((acc, item) => {
       acc[item.key] = 0;
       return acc;
     }, {});
 
-    contacts.forEach((item) => {
-      summary[item.origin] = (summary[item.origin] || 0) + 1;
+    const sourceForSummary = entries.length ? entries : contacts;
+    sourceForSummary.forEach((item) => {
+      const key = normalizeOrigin(item.howDidYouHear || item.source || item.origin || "");
+      summary[key] = (summary[key] || 0) + 1;
     });
 
     res.json({
       success: true,
       contacts,
       items: contacts,
+      entries,
+      logs: entries,
       summary,
-      total: contacts.length
+      total: contacts.length,
+      totalEntries: entries.length
     });
   } catch (err) {
     console.error("[API] Erro ao listar clientes cadastrados:", err);
@@ -609,16 +687,35 @@ router.get("/gallery/all", adminGuard(async (req, res) => {
     const collection = getCollection("gallery");
     if (!collection) return res.json({ success: true, images: [], entries: [] });
 
-    const limit = Math.min(parseInt(req.query.limit, 10) || 60, 200);
+    const lite = parseBooleanField(req.query.lite, false);
+    const limit = Math.min(parseInt(req.query.limit, 10) || (lite ? 12 : 60), lite ? 50 : 200);
     const status = req.query.status ? String(req.query.status).trim().toLowerCase() : "";
     const query = status ? { status } : {};
     const entries = await collection.find(query).sort({ status: 1, createdAt: -1 }).limit(limit).toArray();
-    const mapped = entries.map(mapGalleryEntry);
+    const mapped = entries.map(lite ? mapGalleryListEntry : mapGalleryEntry);
 
-    res.json({ success: true, images: mapped, entries: mapped, total: mapped.length });
+    res.json({ success: true, images: mapped, entries: mapped, total: mapped.length, lite });
   } catch (err) {
     console.error("[API] Erro ao listar galeria completa:", err);
     res.status(500).json({ success: false, error: "Erro ao listar galeria completa" });
+  }
+}));
+
+router.get("/gallery/:id", adminGuard(async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+
+    const collection = getCollection("gallery");
+    if (!collection) return res.status(503).json({ success: false, error: "Coleção gallery indisponível" });
+
+    const doc = await collection.findOne({ _id: safeObjectId(req.params.id) });
+    if (!doc) return res.status(404).json({ success: false, error: "Registro não encontrado" });
+
+    res.json({ success: true, entry: mapGalleryEntry(doc) });
+  } catch (err) {
+    console.error("[API] Erro ao carregar item da galeria:", err);
+    res.status(500).json({ success: false, error: "Erro ao carregar item da galeria" });
   }
 }));
 
@@ -1091,13 +1188,20 @@ router.post("/register-user", async (req, res) => {
     }
 
     const usersCol = getCollection("users");
+    let savedUserId = null;
+
     if (usersCol) {
       const uniqueKeys = [];
       if (normalizedPhone) uniqueKeys.push({ phone: normalizedPhone });
       if (normalizedEmail) uniqueKeys.push({ email: normalizedEmail });
       const filter = uniqueKeys.length ? { $or: uniqueKeys } : { name: normalizedName };
 
-      await usersCol.updateOne(
+      const existingUser = await usersCol.findOne(filter);
+      if (existingUser?._id) {
+        savedUserId = existingUser._id;
+      }
+
+      const result = await usersCol.findOneAndUpdate(
         filter,
         {
           $set: {
@@ -1113,8 +1217,31 @@ router.post("/register-user", async (req, res) => {
           },
           $setOnInsert: { createdAt: now }
         },
-        { upsert: true }
+        { upsert: true, returnDocument: "after" }
       );
+
+      if (result?.value?._id) {
+        savedUserId = result.value._id;
+      }
+    }
+
+    const entriesCol = getContactEntriesCollection();
+    let entryId = null;
+    if (entriesCol) {
+      const entryDoc = {
+        userId: savedUserId || null,
+        sessionId: normalizeString(sessionId),
+        name: normalizedName,
+        phone: normalizedPhone,
+        email: normalizedEmail,
+        howDidYouHear: originLabel,
+        source: originKey,
+        origin: originKey,
+        createdAt: now,
+        updatedAt: now
+      };
+      const entryResult = await entriesCol.insertOne(entryDoc);
+      entryId = entryResult.insertedId?.toString?.() || null;
     }
 
     res.json({
@@ -1126,7 +1253,8 @@ router.post("/register-user", async (req, res) => {
         email: normalizedEmail,
         howDidYouHear: originLabel,
         origin: originKey
-      }
+      },
+      entryId
     });
   } catch (err) {
     console.error("[API] Erro ao registrar usuário:", err);
