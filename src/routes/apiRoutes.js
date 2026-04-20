@@ -1,4 +1,3 @@
-
 import express from "express";
 import multer from "multer";
 import jwt from "jsonwebtoken";
@@ -13,7 +12,6 @@ import {
 } from "../../db.js";
 
 import { ensureMongoReady } from "./common.js";
-import { addDocument } from "../../rag-search.js";
 
 const router = express.Router();
 const upload = multer();
@@ -31,7 +29,12 @@ const isAdminRequest = (req) => {
       return false;
     }
   }
-  const legacy = req.headers["x-admin-secret"] || req.query?.auth || req.body?.auth;
+
+  const legacy =
+    req.headers["x-admin-secret"] ||
+    req.query?.auth ||
+    req.body?.auth;
+
   return legacy && legacy === ADMIN_SECRET;
 };
 
@@ -42,8 +45,13 @@ const adminGuard = (handler) => async (req, res) => {
   return handler(req, res);
 };
 
-const normalizeString = (value, fallback = "") => (typeof value === "string" ? value.trim() : fallback);
-const safeObjectId = (value) => (ObjectId.isValid(value) ? new ObjectId(value) : value);
+const normalizeString = (value, fallback = "") =>
+  typeof value === "string" ? value.trim() : fallback;
+
+const safeObjectId = (value) =>
+  ObjectId.isValid(value) ? new ObjectId(value) : value;
+
+const unwrapUpdatedDoc = (result) => result?.value || result || null;
 
 const buildResinFilter = (resinId) => {
   if (!resinId) return null;
@@ -56,7 +64,11 @@ const buildPrinterFilter = (printerId) => {
 };
 
 const getPartnersCollection = () => getCollection("partners");
-const getOrdersCollectionSafe = () => getOrdersCollection() || getCollection("pedidos") || getCollection("custom_requests");
+const getOrdersCollectionSafe = () =>
+  getOrdersCollection() ||
+  getCollection("pedidos") ||
+  getCollection("custom_requests");
+
 const getContactEntriesCollection = () => getCollection("contact_entries");
 
 const ORIGIN_CATEGORIES = [
@@ -71,17 +83,34 @@ const ORIGIN_CATEGORIES = [
 
 const normalizeOrigin = (value) => {
   const raw = normalizeString(value).toLowerCase();
+
   if (!raw) return "outros";
   if (raw.includes("instagram")) return "instagram";
   if (raw.includes("youtube")) return "youtube";
   if (raw.includes("google") || raw.includes("pesquisa") || raw.includes("busca")) return "google";
   if (raw.includes("indica")) return "indicacao";
-  if (raw.includes("mercado livre") || raw.includes("mercadolivre") || raw.includes("shopee") || raw.includes("marketplace")) return "marketplace";
-  if (raw.includes("já sou cliente") || raw.includes("ja sou cliente") || raw.includes("sou cliente") || raw.includes("cliente antigo")) return "cliente";
+  if (
+    raw.includes("mercado livre") ||
+    raw.includes("mercadolivre") ||
+    raw.includes("shopee") ||
+    raw.includes("marketplace")
+  ) {
+    return "marketplace";
+  }
+  if (
+    raw.includes("já sou cliente") ||
+    raw.includes("ja sou cliente") ||
+    raw.includes("sou cliente") ||
+    raw.includes("cliente antigo")
+  ) {
+    return "cliente";
+  }
+
   return "outros";
 };
 
-const originLabelFromKey = (key) => ORIGIN_CATEGORIES.find((item) => item.key === key)?.label || "Outros";
+const originLabelFromKey = (key) =>
+  ORIGIN_CATEGORIES.find((item) => item.key === key)?.label || "Outros";
 
 const mapUserEntry = (doc = {}) => {
   const originRaw =
@@ -109,8 +138,6 @@ const mapUserEntry = (doc = {}) => {
   };
 };
 
-
-
 const mapContactEntry = (doc = {}) => {
   const originRaw =
     doc.howDidYouHear ||
@@ -137,6 +164,32 @@ const mapContactEntry = (doc = {}) => {
   };
 };
 
+const mapFormulationEntry = (f = {}) => ({
+  id: f._id?.toString?.() || f.id || null,
+  name: f.name || "",
+  phone: f.phone || "",
+  email: f.email || "",
+  desiredFeature: f.desiredFeature || f.caracteristica || "",
+  color: f.color || f.cor || "",
+  details: f.details || f.complementos || "",
+  status: f.status || "pending",
+  createdAt: f.createdAt || null,
+  updatedAt: f.updatedAt || null
+});
+
+const mapOrderEntry = (o = {}) => ({
+  id: o._id?.toString?.() || o.id || null,
+  name: o.name || o.customerName || "",
+  phone: o.phone || o.customerPhone || "",
+  email: o.email || o.customerEmail || "",
+  desiredFeature: o.desiredFeature || o.caracteristica || o.details || "",
+  color: o.color || o.cor || "",
+  details: o.details || o.complementos || "",
+  status: o.status || "pending",
+  createdAt: o.createdAt || null,
+  updatedAt: o.updatedAt || null
+});
+
 const mapGalleryListEntry = (item = {}) => ({
   id: item._id?.toString?.() || item.id || null,
   _id: item._id?.toString?.() || item.id || null,
@@ -152,7 +205,10 @@ const mapGalleryListEntry = (item = {}) => ({
   approvedAt: item.approvedAt || null,
   createdAt: item.createdAt || null,
   updatedAt: item.updatedAt || null,
-  hasImage: item.hasImage === true ? true : Boolean(item.imageUrl || (Array.isArray(item.images) && item.images.length)),
+  hasImage:
+    item.hasImage === true
+      ? true
+      : Boolean(item.imageUrl || (Array.isArray(item.images) && item.images.length)),
   settings: {
     layerHeight: item.settings?.layerHeight || item.layerHeight || null,
     exposureNormal: item.settings?.exposureNormal || item.exposureNormal || null,
@@ -163,6 +219,7 @@ const mapGalleryListEntry = (item = {}) => ({
 
 const buildDateRangeFilter = (date, startDate, endDate, field = "createdAt") => {
   const range = {};
+
   if (date) {
     const start = new Date(`${date}T00:00:00.000Z`);
     const end = new Date(`${date}T23:59:59.999Z`);
@@ -231,7 +288,9 @@ const mapGalleryEntry = (item = {}) => ({
 router.get("/metrics", adminGuard(async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const parametros = getCollection("parametros");
     const messages = getCollection("messages");
@@ -240,7 +299,15 @@ router.get("/metrics", adminGuard(async (_req, res) => {
     const users = getCollection("users");
     const contactEntries = getContactEntriesCollection();
 
-    const [resins, printers, totalMessages, totalConversas, totalGallery, allUsers, allEntries] = await Promise.all([
+    const [
+      resins,
+      printers,
+      totalMessages,
+      totalConversas,
+      totalGallery,
+      allUsers,
+      allEntries
+    ] = await Promise.all([
       parametros ? parametros.distinct("resinName") : Promise.resolve([]),
       parametros ? parametros.distinct("printer") : Promise.resolve([]),
       messages ? messages.countDocuments() : Promise.resolve(0),
@@ -287,14 +354,24 @@ router.post("/contact", async (req, res) => {
   try {
     const { name, phone, email, message } = req.body || {};
     if (!name || !email || !message) {
-      return res.status(400).json({ success: false, error: "Nome, e-mail e mensagem são obrigatórios" });
+      return res.status(400).json({
+        success: false,
+        error: "Nome, e-mail e mensagem são obrigatórios"
+      });
     }
 
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getCollection("messages") || getCollection("contacts");
-    if (!collection) return res.status(503).json({ success: false, error: "Coleção de mensagens indisponível" });
+    if (!collection) {
+      return res.status(503).json({
+        success: false,
+        error: "Coleção de mensagens indisponível"
+      });
+    }
 
     const doc = {
       name: normalizeString(name),
@@ -308,7 +385,11 @@ router.post("/contact", async (req, res) => {
     };
 
     const result = await collection.insertOne(doc);
-    res.status(201).json({ success: true, id: result.insertedId.toString() });
+
+    res.status(201).json({
+      success: true,
+      id: result.insertedId.toString()
+    });
   } catch (err) {
     console.error("[API] Erro ao salvar contato público:", err);
     res.status(500).json({ success: false, error: "Erro ao salvar contato" });
@@ -319,15 +400,26 @@ router.post("/contact", async (req, res) => {
 router.post("/custom-request", async (req, res) => {
   try {
     const { name, phone, email, caracteristica, cor, complementos } = req.body || {};
+
     if (!name || !phone || !email || !caracteristica || !cor) {
-      return res.status(400).json({ success: false, error: "Preencha todos os campos obrigatórios" });
+      return res.status(400).json({
+        success: false,
+        error: "Preencha todos os campos obrigatórios"
+      });
     }
 
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getCollection("custom_requests") || getOrdersCollectionSafe();
-    if (!collection) return res.status(503).json({ success: false, error: "Coleção de formulações indisponível" });
+    if (!collection) {
+      return res.status(503).json({
+        success: false,
+        error: "Coleção de formulações indisponível"
+      });
+    }
 
     const doc = {
       name: normalizeString(name),
@@ -346,10 +438,17 @@ router.post("/custom-request", async (req, res) => {
     };
 
     const result = await collection.insertOne(doc);
-    res.status(201).json({ success: true, id: result.insertedId.toString() });
+
+    res.status(201).json({
+      success: true,
+      id: result.insertedId.toString()
+    });
   } catch (err) {
     console.error("[API] Erro ao salvar formulação customizada:", err);
-    res.status(500).json({ success: false, error: "Erro ao salvar formulação customizada" });
+    res.status(500).json({
+      success: false,
+      error: "Erro ao salvar formulação customizada"
+    });
   }
 });
 
@@ -357,10 +456,14 @@ router.post("/custom-request", async (req, res) => {
 router.get("/contact", adminGuard(async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getCollection("messages") || getCollection("contacts");
-    if (!collection) return res.json({ success: true, messages: [] });
+    if (!collection) {
+      return res.json({ success: true, messages: [] });
+    }
 
     const messages = await collection.find({}).sort({ createdAt: -1 }).limit(200).toArray();
 
@@ -383,30 +486,134 @@ router.get("/contact", adminGuard(async (_req, res) => {
   }
 }));
 
+// ====================== ORDERS ======================
+router.get("/orders", adminGuard(async (_req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
+
+    const collection = getOrdersCollectionSafe();
+    if (!collection) {
+      return res.json({ success: true, orders: [] });
+    }
+
+    const orders = await collection.find({}).sort({ createdAt: -1 }).limit(150).toArray();
+
+    res.json({
+      success: true,
+      orders: orders.map(mapOrderEntry)
+    });
+  } catch (err) {
+    console.error("[API] Erro ao listar pedidos:", err);
+    res.status(500).json({ success: false, error: "Erro ao listar pedidos" });
+  }
+}));
+
+router.put("/orders/:id", adminGuard(async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({
+        success: false,
+        error: "Banco de dados indisponível"
+      });
+    }
+
+    const collection = getOrdersCollectionSafe();
+    if (!collection) {
+      return res.status(503).json({
+        success: false,
+        error: "Coleção de pedidos indisponível"
+      });
+    }
+
+    const { id } = req.params;
+    const nextStatus = String(req.body?.status || "pending").trim().toLowerCase();
+    const allowed = ["pending", "in_progress", "resolved", "completed"];
+    const finalStatus = allowed.includes(nextStatus) ? nextStatus : "pending";
+
+    const updateData = {
+      $set: {
+        status: finalStatus,
+        updatedAt: new Date()
+      }
+    };
+
+    let updatedDoc = null;
+
+    if (ObjectId.isValid(id)) {
+      updatedDoc = unwrapUpdatedDoc(
+        await collection.findOneAndUpdate(
+          { _id: new ObjectId(id) },
+          updateData,
+          { returnDocument: "after" }
+        )
+      );
+    }
+
+    if (!updatedDoc) {
+      updatedDoc = unwrapUpdatedDoc(
+        await collection.findOneAndUpdate(
+          { _id: id },
+          updateData,
+          { returnDocument: "after" }
+        )
+      );
+    }
+
+    if (!updatedDoc) {
+      updatedDoc = unwrapUpdatedDoc(
+        await collection.findOneAndUpdate(
+          { id: id },
+          updateData,
+          { returnDocument: "after" }
+        )
+      );
+    }
+
+    if (!updatedDoc) {
+      return res.status(404).json({
+        success: false,
+        error: "Pedido não encontrado"
+      });
+    }
+
+    return res.json({
+      success: true,
+      order: {
+        id: updatedDoc._id?.toString?.() || updatedDoc.id || id,
+        status: updatedDoc.status || finalStatus
+      }
+    });
+  } catch (err) {
+    console.error("[API] Erro ao atualizar pedido:", err);
+    return res.status(500).json({
+      success: false,
+      error: "Erro ao atualizar pedido"
+    });
+  }
+}));
+
 // ====================== FORMULAÇÕES ======================
 router.get("/formulations", adminGuard(async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getCollection("custom_requests") || getOrdersCollectionSafe();
-    if (!collection) return res.json({ success: true, formulations: [] });
+    if (!collection) {
+      return res.json({ success: true, formulations: [] });
+    }
 
     const formulations = await collection.find({}).sort({ createdAt: -1 }).limit(150).toArray();
 
     res.json({
       success: true,
-      formulations: formulations.map((f) => ({
-        id: f._id?.toString(),
-        name: f.name,
-        phone: f.phone,
-        email: f.email,
-        desiredFeature: f.desiredFeature || f.caracteristica,
-        color: f.color || f.cor,
-        details: f.details || f.complementos,
-        status: f.status || "pending",
-        createdAt: f.createdAt
-      }))
+      formulations: formulations.map(mapFormulationEntry)
     });
   } catch (err) {
     console.error("[API] Erro ao listar formulações:", err);
@@ -417,31 +624,85 @@ router.get("/formulations", adminGuard(async (_req, res) => {
 router.put("/formulations/:id", adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({
+        success: false,
+        error: "Banco de dados indisponível"
+      });
+    }
 
     const collection = getCollection("custom_requests") || getOrdersCollectionSafe();
-    if (!collection) return res.status(503).json({ success: false, error: "Coleção de formulações indisponível" });
+    if (!collection) {
+      return res.status(503).json({
+        success: false,
+        error: "Coleção de formulações indisponível"
+      });
+    }
 
     const { id } = req.params;
-    const nextStatus = String(req.body?.status || 'pending').trim().toLowerCase();
-    const allowed = ['pending', 'in_progress', 'resolved', 'completed'];
-    const finalStatus = allowed.includes(nextStatus) ? nextStatus : 'pending';
+    const nextStatus = String(req.body?.status || "pending").trim().toLowerCase();
+    const allowed = ["pending", "in_progress", "resolved", "completed"];
+    const finalStatus = allowed.includes(nextStatus) ? nextStatus : "pending";
 
-    const result = await collection.findOneAndUpdate(
-      { _id: safeObjectId(id) },
-      { $set: { status: finalStatus, updatedAt: new Date() } },
-      { returnDocument: 'after' }
-    );
+    const updateData = {
+      $set: {
+        status: finalStatus,
+        updatedAt: new Date()
+      }
+    };
 
-    if (!result.value) return res.status(404).json({ success: false, error: "Formulação não encontrada" });
+    let updatedDoc = null;
 
-    res.json({ success: true, formulation: {
-      id: result.value._id?.toString(),
-      status: result.value.status || finalStatus
-    }});
+    if (ObjectId.isValid(id)) {
+      updatedDoc = unwrapUpdatedDoc(
+        await collection.findOneAndUpdate(
+          { _id: new ObjectId(id) },
+          updateData,
+          { returnDocument: "after" }
+        )
+      );
+    }
+
+    if (!updatedDoc) {
+      updatedDoc = unwrapUpdatedDoc(
+        await collection.findOneAndUpdate(
+          { _id: id },
+          updateData,
+          { returnDocument: "after" }
+        )
+      );
+    }
+
+    if (!updatedDoc) {
+      updatedDoc = unwrapUpdatedDoc(
+        await collection.findOneAndUpdate(
+          { id: id },
+          updateData,
+          { returnDocument: "after" }
+        )
+      );
+    }
+
+    if (!updatedDoc) {
+      return res.status(404).json({
+        success: false,
+        error: "Formulação não encontrada"
+      });
+    }
+
+    return res.json({
+      success: true,
+      formulation: {
+        id: updatedDoc._id?.toString?.() || updatedDoc.id || id,
+        status: updatedDoc.status || finalStatus
+      }
+    });
   } catch (err) {
     console.error("[API] Erro ao atualizar formulação:", err);
-    res.status(500).json({ success: false, error: "Erro ao atualizar formulação" });
+    return res.status(500).json({
+      success: false,
+      error: "Erro ao atualizar formulação"
+    });
   }
 }));
 
@@ -449,10 +710,14 @@ router.put("/formulations/:id", adminGuard(async (req, res) => {
 router.get("/conversas", adminGuard(async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getConversasCollection();
-    if (!collection) return res.json({ success: true, conversas: [] });
+    if (!collection) {
+      return res.json({ success: true, conversas: [] });
+    }
 
     const conversas = await collection.find({}).sort({ updatedAt: -1 }).limit(100).toArray();
 
@@ -480,11 +745,15 @@ router.get("/conversas", adminGuard(async (_req, res) => {
 router.get("/contacts", adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const usersCol = getCollection("users");
     const entriesCol = getContactEntriesCollection();
-    const emptySummary = Object.fromEntries(ORIGIN_CATEGORIES.map((item) => [item.key, 0]));
+    const emptySummary = Object.fromEntries(
+      ORIGIN_CATEGORIES.map((item) => [item.key, 0])
+    );
 
     if (!usersCol && !entriesCol) {
       return res.json({
@@ -499,10 +768,24 @@ router.get("/contacts", adminGuard(async (req, res) => {
       });
     }
 
-    const { search = "", date = "", startDate = "", endDate = "", includeBlocked = "true" } = req.query || {};
+    const {
+      search = "",
+      date = "",
+      startDate = "",
+      endDate = "",
+      includeBlocked = "true"
+    } = req.query || {};
+
     const queryParts = [];
 
-    const searchFilter = buildSearchFilter(search, ["name", "phone", "email", "howDidYouHear", "source", "origin"]);
+    const searchFilter = buildSearchFilter(search, [
+      "name",
+      "phone",
+      "email",
+      "howDidYouHear",
+      "source",
+      "origin"
+    ]);
     if (searchFilter) queryParts.push(searchFilter);
 
     const dateFilter = buildDateRangeFilter(date, startDate, endDate, "createdAt");
@@ -513,13 +796,22 @@ router.get("/contacts", adminGuard(async (req, res) => {
     }
 
     const usersQuery = queryParts.length ? { $and: queryParts } : {};
-    const entriesQuery = searchFilter || Object.keys(dateFilter).length
-      ? { $and: [searchFilter || {}, dateFilter || {}].filter((item) => Object.keys(item).length) }
-      : {};
+    const entriesQuery =
+      searchFilter || Object.keys(dateFilter).length
+        ? {
+            $and: [searchFilter || {}, dateFilter || {}].filter(
+              (item) => Object.keys(item).length
+            )
+          }
+        : {};
 
     const [userDocs, entryDocs] = await Promise.all([
-      usersCol ? usersCol.find(usersQuery).sort({ createdAt: -1, updatedAt: -1 }).limit(500).toArray() : Promise.resolve([]),
-      entriesCol ? entriesCol.find(entriesQuery).sort({ createdAt: -1 }).limit(1000).toArray() : Promise.resolve([])
+      usersCol
+        ? usersCol.find(usersQuery).sort({ createdAt: -1, updatedAt: -1 }).limit(500).toArray()
+        : Promise.resolve([]),
+      entriesCol
+        ? entriesCol.find(entriesQuery).sort({ createdAt: -1 }).limit(1000).toArray()
+        : Promise.resolve([])
     ]);
 
     const contacts = userDocs.map(mapUserEntry);
@@ -531,6 +823,7 @@ router.get("/contacts", adminGuard(async (req, res) => {
     }, {});
 
     const sourceForSummary = entries.length ? entries : contacts;
+
     sourceForSummary.forEach((item) => {
       const key = normalizeOrigin(item.howDidYouHear || item.source || item.origin || "");
       summary[key] = (summary[key] || 0) + 1;
@@ -548,30 +841,50 @@ router.get("/contacts", adminGuard(async (req, res) => {
     });
   } catch (err) {
     console.error("[API] Erro ao listar clientes cadastrados:", err);
-    res.status(500).json({ success: false, error: "Erro ao listar clientes cadastrados" });
+    res.status(500).json({
+      success: false,
+      error: "Erro ao listar clientes cadastrados"
+    });
   }
 }));
 
 router.patch("/contacts/:id/block", adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const usersCol = getCollection("users");
-    if (!usersCol) return res.status(503).json({ success: false, error: "Coleção de usuários indisponível" });
+    if (!usersCol) {
+      return res.status(503).json({
+        success: false,
+        error: "Coleção de usuários indisponível"
+      });
+    }
 
     const { id } = req.params;
     const blocked = parseBooleanField(req.body?.blocked, true);
 
-    const result = await usersCol.findOneAndUpdate(
-      { _id: safeObjectId(id) },
-      { $set: { blocked, updatedAt: new Date() } },
-      { returnDocument: "after" }
+    const updated = unwrapUpdatedDoc(
+      await usersCol.findOneAndUpdate(
+        { _id: safeObjectId(id) },
+        { $set: { blocked, updatedAt: new Date() } },
+        { returnDocument: "after" }
+      )
     );
 
-    if (!result.value) return res.status(404).json({ success: false, error: "Cadastro não encontrado" });
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        error: "Cadastro não encontrado"
+      });
+    }
 
-    res.json({ success: true, contact: mapUserEntry(result.value) });
+    res.json({
+      success: true,
+      contact: mapUserEntry(updated)
+    });
   } catch (err) {
     console.error("[API] Erro ao bloquear contato:", err);
     res.status(500).json({ success: false, error: "Erro ao bloquear contato" });
@@ -581,15 +894,27 @@ router.patch("/contacts/:id/block", adminGuard(async (req, res) => {
 router.delete("/contacts/:id", adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const usersCol = getCollection("users");
-    if (!usersCol) return res.status(503).json({ success: false, error: "Coleção de usuários indisponível" });
+    if (!usersCol) {
+      return res.status(503).json({
+        success: false,
+        error: "Coleção de usuários indisponível"
+      });
+    }
 
     const { id } = req.params;
     const result = await usersCol.deleteOne({ _id: safeObjectId(id) });
 
-    if (result.deletedCount === 0) return res.status(404).json({ success: false, error: "Cadastro não encontrado" });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Cadastro não encontrado"
+      });
+    }
 
     res.json({ success: true, deletedId: id });
   } catch (err) {
@@ -624,7 +949,10 @@ router.post("/gallery", upload.any(), async (req, res) => {
     const sanitizedPrinter = printer ? String(printer).trim() : "";
 
     if (!sanitizedResin && !sanitizedPrinter) {
-      return res.status(400).json({ success: false, error: "Resina e/ou impressora são obrigatórias" });
+      return res.status(400).json({
+        success: false,
+        error: "Resina e/ou impressora são obrigatórias"
+      });
     }
 
     const finalImages = [];
@@ -644,16 +972,27 @@ router.post("/gallery", upload.any(), async (req, res) => {
     }
 
     if (finalImages.length === 0) {
-      return res.status(400).json({ success: false, error: "Envie ao menos uma imagem" });
+      return res.status(400).json({
+        success: false,
+        error: "Envie ao menos uma imagem"
+      });
     }
 
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const galleryCollection = getCollection("gallery");
-    if (!galleryCollection) return res.status(503).json({ success: false, error: "Coleção gallery indisponível" });
+    if (!galleryCollection) {
+      return res.status(503).json({
+        success: false,
+        error: "Coleção gallery indisponível"
+      });
+    }
 
     const now = new Date();
+
     const newEntry = {
       name: normalizeString(name, "Cliente"),
       contact: normalizeString(contact),
@@ -693,30 +1032,52 @@ router.post("/gallery", upload.any(), async (req, res) => {
 router.get("/gallery", async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getCollection("gallery");
-    if (!collection) return res.json({ success: true, gallery: [], images: [] });
+    if (!collection) {
+      return res.json({ success: true, gallery: [], images: [] });
+    }
 
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 100);
     const query = { status: "approved", allowPublic: { $ne: false } };
-    const items = await collection.find(query).sort({ approvedAt: -1, createdAt: -1 }).limit(limit).toArray();
+
+    const items = await collection
+      .find(query)
+      .sort({ approvedAt: -1, createdAt: -1 })
+      .limit(limit)
+      .toArray();
+
     const entries = items.map(mapGalleryEntry);
 
-    res.json({ success: true, gallery: entries, images: entries, total: entries.length });
+    res.json({
+      success: true,
+      gallery: entries,
+      images: entries,
+      total: entries.length
+    });
   } catch (err) {
     console.error("[API] Erro ao listar galeria pública:", err);
-    res.status(500).json({ success: false, error: "Erro ao listar galeria pública" });
+    res.status(500).json({
+      success: false,
+      error: "Erro ao listar galeria pública"
+    });
   }
 });
 
 router.get("/gallery/all", adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getCollection("gallery");
-    if (!collection) return res.json({ success: true, images: [], entries: [] });
+    if (!collection) {
+      return res.json({ success: true, images: [], entries: [] });
+    }
 
     const lite = parseBooleanField(req.query.lite, false);
     const limit = Math.min(parseInt(req.query.limit, 10) || (lite ? 8 : 40), lite ? 20 : 120);
@@ -739,7 +1100,9 @@ router.get("/gallery/all", adminGuard(async (req, res) => {
           approvedAt: 1,
           createdAt: 1,
           updatedAt: 1,
-          settings: 1
+          settings: 1,
+          imageUrl: 1,
+          images: 1
         }
       : {};
 
@@ -753,38 +1116,73 @@ router.get("/gallery/all", adminGuard(async (req, res) => {
       ? entries.map((item) => mapGalleryListEntry({ ...item, hasImage: true }))
       : entries.map(mapGalleryEntry);
 
-    res.json({ success: true, images: mapped, entries: mapped, total: mapped.length, lite });
+    res.json({
+      success: true,
+      images: mapped,
+      entries: mapped,
+      total: mapped.length,
+      lite
+    });
   } catch (err) {
     console.error("[API] Erro ao listar galeria completa:", err);
-    res.status(500).json({ success: false, error: "Erro ao listar galeria completa" });
+    res.status(500).json({
+      success: false,
+      error: "Erro ao listar galeria completa"
+    });
   }
 }));
 
 router.get("/gallery/:id", adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getCollection("gallery");
-    if (!collection) return res.status(503).json({ success: false, error: "Coleção gallery indisponível" });
+    if (!collection) {
+      return res.status(503).json({
+        success: false,
+        error: "Coleção gallery indisponível"
+      });
+    }
 
     const doc = await collection.findOne({ _id: safeObjectId(req.params.id) });
-    if (!doc) return res.status(404).json({ success: false, error: "Registro não encontrado" });
 
-    res.json({ success: true, entry: mapGalleryEntry(doc) });
+    if (!doc) {
+      return res.status(404).json({
+        success: false,
+        error: "Registro não encontrado"
+      });
+    }
+
+    res.json({
+      success: true,
+      entry: mapGalleryEntry(doc)
+    });
   } catch (err) {
     console.error("[API] Erro ao carregar item da galeria:", err);
-    res.status(500).json({ success: false, error: "Erro ao carregar item da galeria" });
+    res.status(500).json({
+      success: false,
+      error: "Erro ao carregar item da galeria"
+    });
   }
 }));
 
 router.put("/gallery/:id/approve", adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getCollection("gallery");
-    if (!collection) return res.status(503).json({ success: false, error: "Coleção gallery indisponível" });
+    if (!collection) {
+      return res.status(503).json({
+        success: false,
+        error: "Coleção gallery indisponível"
+      });
+    }
 
     const { id } = req.params;
     const updates = {
@@ -792,42 +1190,78 @@ router.put("/gallery/:id/approve", adminGuard(async (req, res) => {
       approvedAt: new Date(),
       updatedAt: new Date()
     };
+
     if (req.body && Object.prototype.hasOwnProperty.call(req.body, "allowPublic")) {
       updates.allowPublic = parseBooleanField(req.body.allowPublic, true);
     }
+
     if (req.body && Object.prototype.hasOwnProperty.call(req.body, "allowCommercialContact")) {
-      updates.allowCommercialContact = parseBooleanField(req.body.allowCommercialContact, false);
+      updates.allowCommercialContact = parseBooleanField(
+        req.body.allowCommercialContact,
+        false
+      );
     }
 
-    const result = await collection.findOneAndUpdate(
-      { _id: safeObjectId(id) },
-      { $set: updates },
-      { returnDocument: "after" }
+    const updated = unwrapUpdatedDoc(
+      await collection.findOneAndUpdate(
+        { _id: safeObjectId(id) },
+        { $set: updates },
+        { returnDocument: "after" }
+      )
     );
 
-    if (!result.value) return res.status(404).json({ success: false, error: "Registro não encontrado" });
-    res.json({ success: true, entry: mapGalleryEntry(result.value) });
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        error: "Registro não encontrado"
+      });
+    }
+
+    res.json({
+      success: true,
+      entry: mapGalleryEntry(updated)
+    });
   } catch (err) {
     console.error("[API] Erro ao aprovar item da galeria:", err);
-    res.status(500).json({ success: false, error: "Erro ao aprovar item da galeria" });
+    res.status(500).json({
+      success: false,
+      error: "Erro ao aprovar item da galeria"
+    });
   }
 }));
 
 router.delete("/gallery/:id", adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getCollection("gallery");
-    if (!collection) return res.status(503).json({ success: false, error: "Coleção gallery indisponível" });
+    if (!collection) {
+      return res.status(503).json({
+        success: false,
+        error: "Coleção gallery indisponível"
+      });
+    }
 
     const { id } = req.params;
     const result = await collection.deleteOne({ _id: safeObjectId(id) });
-    if (result.deletedCount === 0) return res.status(404).json({ success: false, error: "Registro não encontrado" });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Registro não encontrado"
+      });
+    }
+
     res.json({ success: true, deletedId: id });
   } catch (err) {
     console.error("[API] Erro ao deletar item da galeria:", err);
-    res.status(500).json({ success: false, error: "Erro ao deletar item da galeria" });
+    res.status(500).json({
+      success: false,
+      error: "Erro ao deletar item da galeria"
+    });
   }
 }));
 
@@ -835,38 +1269,133 @@ router.delete("/gallery/:id", adminGuard(async (req, res) => {
 router.get("/visual-knowledge", async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
-    const collection = getVisualKnowledgeCollection() || getCollection("gallery");
-    if (!collection) return res.json({ success: true, items: [] });
+    const collection =
+      getVisualKnowledgeCollection() ||
+      getCollection("visual_knowledge") ||
+      getCollection("gallery");
+
+    if (!collection) {
+      return res.json({ success: true, items: [], documents: [] });
+    }
 
     const items = await collection.find({}).sort({ updatedAt: -1 }).limit(100).toArray();
 
+    const mapped = items.map((item) => ({
+      id: item._id?.toString?.() || item.id || null,
+      _id: item._id?.toString?.() || item.id || null,
+      title: item.title || item.name || "",
+      imageUrl: item.imageUrl || (item.images ? item.images[0] : null),
+      resin: item.resin || "",
+      printer: item.printer || "",
+      note: item.note || "",
+      defectType: item.defectType || "",
+      diagnosis: item.diagnosis || "",
+      solution: item.solution || "",
+      status: item.status || "pending",
+      createdAt: item.createdAt || null,
+      updatedAt: item.updatedAt || null
+    }));
+
     res.json({
       success: true,
-      items: items.map((item) => ({
-        id: item._id?.toString(),
-        title: item.title || item.name,
-        imageUrl: item.imageUrl || (item.images ? item.images[0] : null),
-        resin: item.resin,
-        printer: item.printer,
-        note: item.note,
-        status: item.status || "pending"
-      }))
+      items: mapped,
+      documents: mapped
     });
   } catch (err) {
     console.error("[API] Erro ao listar visual knowledge:", err);
-    res.status(500).json({ success: false, error: "Erro ao listar visual knowledge" });
+    res.status(500).json({
+      success: false,
+      error: "Erro ao listar visual knowledge"
+    });
   }
 });
+
+router.post("/visual-knowledge", adminGuard(async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
+
+    const collection =
+      getVisualKnowledgeCollection() ||
+      getCollection("visual_knowledge") ||
+      getCollection("gallery");
+
+    if (!collection) {
+      return res.status(503).json({
+        success: false,
+        error: "Coleção de visual knowledge indisponível"
+      });
+    }
+
+    const {
+      imageUrl,
+      defectType,
+      diagnosis,
+      solution,
+      resin,
+      printer,
+      note
+    } = req.body || {};
+
+    if (!imageUrl && !defectType && !diagnosis && !solution) {
+      return res.status(400).json({
+        success: false,
+        error: "Preencha os dados obrigatórios"
+      });
+    }
+
+    const doc = {
+      title: defectType || "Treinamento visual",
+      imageUrl: normalizeString(imageUrl),
+      defectType: normalizeString(defectType),
+      diagnosis: normalizeString(diagnosis),
+      solution: normalizeString(solution),
+      resin: normalizeString(resin),
+      printer: normalizeString(printer),
+      note: normalizeString(note),
+      status: "approved",
+      approved: true,
+      approvedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await collection.insertOne(doc);
+
+    res.status(201).json({
+      success: true,
+      item: {
+        ...doc,
+        id: result.insertedId.toString(),
+        _id: result.insertedId.toString()
+      }
+    });
+  } catch (err) {
+    console.error("[API] Erro ao adicionar visual knowledge:", err);
+    res.status(500).json({
+      success: false,
+      error: "Erro ao adicionar visual knowledge"
+    });
+  }
+}));
 
 router.get("/visual-knowledge/pending", adminGuard(async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getCollection("gallery");
-    if (!collection) return res.json({ success: true, pending: [] });
+    if (!collection) {
+      return res.json({ success: true, pending: [] });
+    }
 
     const pending = await collection
       .find({ $or: [{ approved: false }, { status: "pending" }] })
@@ -902,23 +1431,95 @@ router.put("/visual-knowledge/:id/approve", adminGuard(async (req, res) => {
     const { defectType, diagnosis, solution } = req.body || {};
 
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getCollection("gallery");
-    if (!collection) return res.status(503).json({ success: false, error: "Coleção gallery indisponível" });
+    if (!collection) {
+      return res.status(503).json({
+        success: false,
+        error: "Coleção gallery indisponível"
+      });
+    }
 
-    const result = await collection.findOneAndUpdate(
-      { _id: safeObjectId(id) },
-      { $set: { status: "approved", approved: true, defectType, diagnosis, solution, approvedAt: new Date(), updatedAt: new Date() } },
-      { returnDocument: "after" }
+    const updated = unwrapUpdatedDoc(
+      await collection.findOneAndUpdate(
+        { _id: safeObjectId(id) },
+        {
+          $set: {
+            status: "approved",
+            approved: true,
+            defectType,
+            diagnosis,
+            solution,
+            approvedAt: new Date(),
+            updatedAt: new Date()
+          }
+        },
+        { returnDocument: "after" }
+      )
     );
 
-    if (!result || !result.value) return res.status(404).json({ success: false, error: "Item não encontrado" });
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        error: "Item não encontrado"
+      });
+    }
 
-    res.json({ success: true, item: result.value });
+    res.json({
+      success: true,
+      item: updated
+    });
   } catch (err) {
     console.error("[API] Erro ao aprovar item:", err);
-    res.status(500).json({ success: false, error: "Erro ao aprovar item" });
+    res.status(500).json({
+      success: false,
+      error: "Erro ao aprovar item"
+    });
+  }
+}));
+
+router.delete("/visual-knowledge/:id", adminGuard(async (req, res) => {
+  try {
+    const mongoReady = await ensureMongoReady();
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
+
+    const collection =
+      getVisualKnowledgeCollection() ||
+      getCollection("visual_knowledge") ||
+      getCollection("gallery");
+
+    if (!collection) {
+      return res.status(503).json({
+        success: false,
+        error: "Coleção de visual knowledge indisponível"
+      });
+    }
+
+    const { id } = req.params;
+    const result = await collection.deleteOne({ _id: safeObjectId(id) });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Item não encontrado"
+      });
+    }
+
+    res.json({
+      success: true,
+      deletedId: id
+    });
+  } catch (err) {
+    console.error("[API] Erro ao deletar visual knowledge:", err);
+    res.status(500).json({
+      success: false,
+      error: "Erro ao deletar visual knowledge"
+    });
   }
 }));
 
@@ -926,22 +1527,37 @@ router.put("/visual-knowledge/:id/approve", adminGuard(async (req, res) => {
 router.get("/params/resins", async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getCollection("parametros");
-    if (!collection) return res.json({ success: true, resins: [] });
+    if (!collection) {
+      return res.json({ success: true, resins: [] });
+    }
 
-    const stats = await collection.aggregate([
-      {
-        $group: {
-          _id: { $ifNull: ["$resinId", { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }] },
-          name: { $first: { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] } },
-          profiles: { $sum: 1 }
-        }
-      },
-      { $match: { name: { $ne: null } } },
-      { $sort: { name: 1 } }
-    ]).toArray();
+    const stats = await collection
+      .aggregate([
+        {
+          $group: {
+            _id: {
+              $ifNull: [
+                "$resinId",
+                { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }
+              ]
+            },
+            name: {
+              $first: {
+                $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }]
+              }
+            },
+            profiles: { $sum: 1 }
+          }
+        },
+        { $match: { name: { $ne: null } } },
+        { $sort: { name: 1 } }
+      ])
+      .toArray();
 
     res.json({
       success: true,
@@ -962,22 +1578,37 @@ router.get("/params/resins", async (_req, res) => {
 router.get("/resins", async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getCollection("parametros");
-    if (!collection) return res.json({ success: true, resins: [] });
+    if (!collection) {
+      return res.json({ success: true, resins: [] });
+    }
 
-    const stats = await collection.aggregate([
-      {
-        $group: {
-          _id: { $ifNull: ["$resinId", { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }] },
-          name: { $first: { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] } },
-          profiles: { $sum: 1 }
-        }
-      },
-      { $match: { name: { $ne: null } } },
-      { $sort: { name: 1 } }
-    ]).toArray();
+    const stats = await collection
+      .aggregate([
+        {
+          $group: {
+            _id: {
+              $ifNull: [
+                "$resinId",
+                { $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }] }
+              ]
+            },
+            name: {
+              $first: {
+                $ifNull: ["$resinName", { $ifNull: ["$resin", "$name"] }]
+              }
+            },
+            profiles: { $sum: 1 }
+          }
+        },
+        { $match: { name: { $ne: null } } },
+        { $sort: { name: 1 } }
+      ])
+      .toArray();
 
     res.json({
       success: true,
@@ -995,28 +1626,43 @@ router.get("/resins", async (_req, res) => {
 router.get("/params/printers", async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const { resinId } = req.query;
     const filter = resinId ? buildResinFilter(resinId) : {};
 
     const collection = getCollection("parametros");
-    if (!collection) return res.json({ success: true, printers: [] });
+    if (!collection) {
+      return res.json({ success: true, printers: [] });
+    }
 
-    const printers = await collection.aggregate([
-      { $match: filter || {} },
-      {
-        $group: {
-          _id: { $ifNull: ["$printerId", { $ifNull: ["$printerName", { $ifNull: ["$printer", "$model"] }] }] },
-          name: { $first: { $ifNull: ["$printerName", { $ifNull: ["$printer", "$model"] }] } },
-          brand: { $first: "$brand" },
-          model: { $first: { $ifNull: ["$model", "$printer"] } },
-          profiles: { $sum: 1 }
-        }
-      },
-      { $match: { name: { $ne: null } } },
-      { $sort: { name: 1 } }
-    ]).toArray();
+    const printers = await collection
+      .aggregate([
+        { $match: filter || {} },
+        {
+          $group: {
+            _id: {
+              $ifNull: [
+                "$printerId",
+                { $ifNull: ["$printerName", { $ifNull: ["$printer", "$model"] }] }
+              ]
+            },
+            name: {
+              $first: {
+                $ifNull: ["$printerName", { $ifNull: ["$printer", "$model"] }]
+              }
+            },
+            brand: { $first: "$brand" },
+            model: { $first: { $ifNull: ["$model", "$printer"] } },
+            profiles: { $sum: 1 }
+          }
+        },
+        { $match: { name: { $ne: null } } },
+        { $sort: { name: 1 } }
+      ])
+      .toArray();
 
     res.json({
       success: true,
@@ -1037,22 +1683,37 @@ router.get("/params/printers", async (req, res) => {
 router.get("/printers", async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getCollection("parametros");
-    if (!collection) return res.json({ success: true, printers: [] });
+    if (!collection) {
+      return res.json({ success: true, printers: [] });
+    }
 
-    const printers = await collection.aggregate([
-      {
-        $group: {
-          _id: { $ifNull: ["$printerId", { $ifNull: ["$printerName", { $ifNull: ["$printer", "$model"] }] }] },
-          name: { $first: { $ifNull: ["$printerName", { $ifNull: ["$printer", "$model"] }] } },
-          profiles: { $sum: 1 }
-        }
-      },
-      { $match: { name: { $ne: null } } },
-      { $sort: { name: 1 } }
-    ]).toArray();
+    const printers = await collection
+      .aggregate([
+        {
+          $group: {
+            _id: {
+              $ifNull: [
+                "$printerId",
+                { $ifNull: ["$printerName", { $ifNull: ["$printer", "$model"] }] }
+              ]
+            },
+            name: {
+              $first: {
+                $ifNull: ["$printerName", { $ifNull: ["$printer", "$model"] }]
+              }
+            },
+            profiles: { $sum: 1 }
+          }
+        },
+        { $match: { name: { $ne: null } } },
+        { $sort: { name: 1 } }
+      ])
+      .toArray();
 
     res.json({
       success: true,
@@ -1070,15 +1731,20 @@ router.get("/printers", async (_req, res) => {
 router.get("/params/profiles", async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const { resinId, printerId } = req.query;
     const filter = {};
+
     if (resinId) Object.assign(filter, buildResinFilter(resinId));
     if (printerId) Object.assign(filter, buildPrinterFilter(printerId));
 
     const collection = getCollection("parametros");
-    if (!collection) return res.json({ success: true, profiles: [] });
+    if (!collection) {
+      return res.json({ success: true, profiles: [] });
+    }
 
     const profiles = await collection.find(filter).sort({ updatedAt: -1 }).limit(100).toArray();
 
@@ -1105,14 +1771,27 @@ router.get("/params/profiles", async (req, res) => {
 router.get("/params/stats", async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getCollection("parametros");
-    if (!collection) return res.json({ success: true, totalResins: 0, totalPrinters: 0, activeProfiles: 0 });
+    if (!collection) {
+      return res.json({
+        success: true,
+        totalResins: 0,
+        totalPrinters: 0,
+        activeProfiles: 0
+      });
+    }
 
     const [resinsData, printersData, total] = await Promise.all([
-      collection.aggregate([{ $group: { _id: { $ifNull: ["$resinName", "$resin"] } } }]).toArray(),
-      collection.aggregate([{ $group: { _id: { $ifNull: ["$printerName", "$printer"] } } }]).toArray(),
+      collection
+        .aggregate([{ $group: { _id: { $ifNull: ["$resinName", "$resin"] } } }])
+        .toArray(),
+      collection
+        .aggregate([{ $group: { _id: { $ifNull: ["$printerName", "$printer"] } } }])
+        .toArray(),
       collection.countDocuments()
     ]);
 
@@ -1132,12 +1811,20 @@ router.get("/params/stats", async (_req, res) => {
 router.get("/partners", async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getPartnersCollection();
-    if (!collection) return res.json({ success: true, partners: [] });
+    if (!collection) {
+      return res.json({ success: true, partners: [] });
+    }
 
-    const partners = await collection.find({ active: { $ne: false } }).sort({ order: 1, createdAt: -1 }).toArray();
+    const partners = await collection
+      .find({ active: { $ne: false } })
+      .sort({ order: 1, createdAt: -1 })
+      .toArray();
+
     res.json({ success: true, partners });
   } catch (err) {
     console.error("[API] Erro ao listar parceiros:", err);
@@ -1148,10 +1835,17 @@ router.get("/partners", async (_req, res) => {
 router.post("/partners", adminGuard(async (req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getPartnersCollection();
-    if (!collection) return res.status(503).json({ success: false, error: "Coleção de parceiros indisponível" });
+    if (!collection) {
+      return res.status(503).json({
+        success: false,
+        error: "Coleção de parceiros indisponível"
+      });
+    }
 
     const doc = {
       ...req.body,
@@ -1159,8 +1853,13 @@ router.post("/partners", adminGuard(async (req, res) => {
       createdAt: new Date(),
       updatedAt: new Date()
     };
+
     const result = await collection.insertOne(doc);
-    res.status(201).json({ success: true, partner: { ...doc, _id: result.insertedId } });
+
+    res.status(201).json({
+      success: true,
+      partner: { ...doc, _id: result.insertedId }
+    });
   } catch (err) {
     console.error("[API] Erro ao criar parceiro:", err);
     res.status(500).json({ success: false, error: "Erro ao criar parceiro" });
@@ -1170,19 +1869,39 @@ router.post("/partners", adminGuard(async (req, res) => {
 router.put("/partners/:id", adminGuard(async (req, res) => {
   try {
     const { id } = req.params;
+
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getPartnersCollection();
-    if (!collection) return res.status(503).json({ success: false, error: "Coleção de parceiros indisponível" });
+    if (!collection) {
+      return res.status(503).json({
+        success: false,
+        error: "Coleção de parceiros indisponível"
+      });
+    }
 
-    const result = await collection.findOneAndUpdate(
-      { _id: safeObjectId(id) },
-      { $set: { ...req.body, updatedAt: new Date() } },
-      { returnDocument: "after" }
+    const updated = unwrapUpdatedDoc(
+      await collection.findOneAndUpdate(
+        { _id: safeObjectId(id) },
+        { $set: { ...req.body, updatedAt: new Date() } },
+        { returnDocument: "after" }
+      )
     );
-    if (!result.value) return res.status(404).json({ success: false, error: "Parceiro não encontrado" });
-    res.json({ success: true, partner: result.value });
+
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        error: "Parceiro não encontrado"
+      });
+    }
+
+    res.json({
+      success: true,
+      partner: updated
+    });
   } catch (err) {
     console.error("[API] Erro ao atualizar parceiro:", err);
     res.status(500).json({ success: false, error: "Erro ao atualizar parceiro" });
@@ -1192,14 +1911,29 @@ router.put("/partners/:id", adminGuard(async (req, res) => {
 router.delete("/partners/:id", adminGuard(async (req, res) => {
   try {
     const { id } = req.params;
+
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getPartnersCollection();
-    if (!collection) return res.status(503).json({ success: false, error: "Coleção de parceiros indisponível" });
+    if (!collection) {
+      return res.status(503).json({
+        success: false,
+        error: "Coleção de parceiros indisponível"
+      });
+    }
 
     const result = await collection.deleteOne({ _id: safeObjectId(id) });
-    if (result.deletedCount === 0) return res.status(404).json({ success: false, error: "Parceiro não encontrado" });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Parceiro não encontrado"
+      });
+    }
+
     res.json({ success: true, message: "Parceiro removido" });
   } catch (err) {
     console.error("[API] Erro ao remover parceiro:", err);
@@ -1213,7 +1947,9 @@ router.post("/register-user", async (req, res) => {
     const { name, phone, email, howDidYouHear, source, origin, sessionId } = req.body || {};
 
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const normalizedName = normalizeString(name);
     const normalizedPhone = normalizeString(phone);
@@ -1223,7 +1959,10 @@ router.post("/register-user", async (req, res) => {
     const originLabel = originLabelFromKey(originKey);
 
     if (!normalizedName && !normalizedPhone && !normalizedEmail) {
-      return res.status(400).json({ success: false, error: "Informe pelo menos nome, telefone ou e-mail" });
+      return res.status(400).json({
+        success: false,
+        error: "Informe pelo menos nome, telefone ou e-mail"
+      });
     }
 
     const now = new Date();
@@ -1253,6 +1992,7 @@ router.post("/register-user", async (req, res) => {
       const uniqueKeys = [];
       if (normalizedPhone) uniqueKeys.push({ phone: normalizedPhone });
       if (normalizedEmail) uniqueKeys.push({ email: normalizedEmail });
+
       const filter = uniqueKeys.length ? { $or: uniqueKeys } : { name: normalizedName };
 
       const existingUser = await usersCol.findOne(filter);
@@ -1260,32 +2000,35 @@ router.post("/register-user", async (req, res) => {
         savedUserId = existingUser._id;
       }
 
-      const result = await usersCol.findOneAndUpdate(
-        filter,
-        {
-          $set: {
-            name: normalizedName,
-            phone: normalizedPhone,
-            email: normalizedEmail,
-            howDidYouHear: originLabel,
-            source: originKey,
-            origin: originKey,
-            blocked: false,
-            updatedAt: now,
-            lastSeenAt: now
+      const updated = unwrapUpdatedDoc(
+        await usersCol.findOneAndUpdate(
+          filter,
+          {
+            $set: {
+              name: normalizedName,
+              phone: normalizedPhone,
+              email: normalizedEmail,
+              howDidYouHear: originLabel,
+              source: originKey,
+              origin: originKey,
+              blocked: false,
+              updatedAt: now,
+              lastSeenAt: now
+            },
+            $setOnInsert: { createdAt: now }
           },
-          $setOnInsert: { createdAt: now }
-        },
-        { upsert: true, returnDocument: "after" }
+          { upsert: true, returnDocument: "after" }
+        )
       );
 
-      if (result?.value?._id) {
-        savedUserId = result.value._id;
+      if (updated?._id) {
+        savedUserId = updated._id;
       }
     }
 
     const entriesCol = getContactEntriesCollection();
     let entryId = null;
+
     if (entriesCol) {
       const entryDoc = {
         userId: savedUserId || null,
@@ -1299,6 +2042,7 @@ router.post("/register-user", async (req, res) => {
         createdAt: now,
         updatedAt: now
       };
+
       const entryResult = await entriesCol.insertOne(entryDoc);
       entryId = entryResult.insertedId?.toString?.() || null;
     }
@@ -1325,12 +2069,17 @@ router.post("/register-user", async (req, res) => {
 router.get("/suggestions", adminGuard(async (_req, res) => {
   try {
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    if (!mongoReady) {
+      return res.status(503).json({ success: false, error: "Banco de dados indisponível" });
+    }
 
     const collection = getSugestoesCollection() || getCollection("sugestoes");
-    if (!collection) return res.json({ success: true, suggestions: [] });
+    if (!collection) {
+      return res.json({ success: true, suggestions: [] });
+    }
 
     const docs = await collection.find({}).sort({ createdAt: -1 }).limit(200).toArray();
+
     res.json({
       success: true,
       suggestions: docs.map((item) => ({
