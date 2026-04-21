@@ -1,7 +1,7 @@
 import express from 'express';
 import OpenAI from 'openai';
 import multer from 'multer';
-import { searchKnowledge, formatContext } from '../../rag-search.js';
+import { searchKnowledge, formatContext, searchVisualKnowledge } from '../../rag-search.js';
 import { ensureMongoReady } from './common.js';
 import { getConversasCollection, getVisualKnowledgeCollection } from '../../db.js';
 import { metrics } from '../utils/metrics.js';
@@ -9,7 +9,7 @@ import { metrics } from '../utils/metrics.js';
 const router = express.Router();
 
 const DEFAULT_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini';
-const IMAGE_MODEL = 'gpt-4o';
+const IMAGE_MODEL = process.env.OPENAI_MODEL || 'gpt-4o'; // CORREÇÃO: Usando variável de ambiente
 
 let openaiClient = null;
 const upload = multer({
@@ -72,9 +72,12 @@ function resolveImagePayload(body = {}) {
   return null;
 }
 
-async function buildRagContext({ message, hasImage }) {
+async function buildRagContext({ message, hasImage, visualDescription = null }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
-  const ragQuery = trimmedMessage || (hasImage ? 'diagnostico visual impressao 3d resina defeitos comuns' : '');
+  
+  // CORREÇÃO: Prioriza descrição visual semântica para a busca
+  const ragQuery = visualDescription || trimmedMessage || (hasImage ? 'diagnostico visual impressao 3d resina defeitos comuns' : '');
+  
   let ragResults = [];
   if (ragQuery) {
     try {
@@ -109,7 +112,8 @@ function normalizeForMatch(text = '') {
   return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 }
 
-async function fetchVisualKnowledgeHints({ message = '', customerContext = {}, hasImage = false, limit = 3 }) {
+// CORREÇÃO: fetchVisualKnowledgeHints AGORA USA searchVisualKnowledge SEMÂNTICA REAL
+async function fetchVisualKnowledgeHints({ message = '', customerContext = {}, hasImage = false, limit = 3, visualDescription = null }) {
   try {
     if (!hasImage && (!message || message.length < 10)) {
       return [];
@@ -120,55 +124,17 @@ async function fetchVisualKnowledgeHints({ message = '', customerContext = {}, h
       return [];
     }
 
-    const collection = getVisualKnowledgeCollection();
-    if (!collection) {
-      return [];
-    }
-
-    const docs = await collection
-      .find({ approved: true })
-      .sort({ approvedAt: -1, createdAt: -1 })
-      .limit(80)
-      .toArray();
-
-    if (!docs.length) {
-      return [];
-    }
-
-    const querySource = [message, customerContext?.problemType, customerContext?.resin, customerContext?.printer]
-      .filter(Boolean)
-      .join(' ');
-    const normalizedQuery = normalizeForMatch(querySource);
-    const keywords = normalizedQuery.split(' ').filter((token) => token.length >= 4);
-
-    if (!keywords.length) {
-      return docs.slice(0, limit);
-    }
-
-    const scored = docs
-      .map((doc) => {
-        const docText = normalizeForMatch([
-          doc.defectType,
-          doc.diagnosis,
-          doc.solution,
-          doc.description,
-          doc.notes
-        ].filter(Boolean).join(' '));
-        const hits = keywords.reduce((sum, kw) => (docText.includes(kw) ? sum + 1 : sum), 0);
-        return { doc, score: hits };
-      })
-      .filter((item) => item.score > 0);
-
-    if (!scored.length) {
-      return docs.slice(0, limit);
-    }
-
-    return scored
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit)
-      .map((item) => item.doc);
+    // INTEGRAÇÃO REAL: Chama o novo motor semântico do rag-search.js
+    const results = await searchVisualKnowledge(null, visualDescription || message);
+    
+    return results.slice(0, limit).map(r => ({
+      defectType: r.problema,
+      diagnosis: r.descricao,
+      solution: r.acoes,
+      causes: r.causas // Campo agora alinhado
+    }));
   } catch (error) {
-    console.warn('[CHAT] Falha ao obter conhecimento visual:', error.message);
+    console.warn('[CHAT] Falha ao obter conhecimento visual semântico:', error.message);
     return [];
   }
 }
@@ -190,10 +156,12 @@ function buildVisualContextSection(entries = []) {
     const defect = sanitizeSnippet(entry?.defectType || entry?.title);
     const diagnosis = sanitizeSnippet(entry?.diagnosis || entry?.description);
     const solution = sanitizeSnippet(entry?.solution || entry?.solucao);
+    const causes = sanitizeSnippet(entry?.causes);
     const block = [
       `Caso ${index + 1}:`,
       defect ? `Defeito: ${defect}` : null,
       diagnosis ? `Diagnóstico: ${diagnosis}` : null,
+      causes ? `Causas: ${causes}` : null,
       solution ? `Solução aplicada: ${solution}` : null
     ]
       .filter(Boolean)
@@ -307,6 +275,119 @@ function trimConversationHistory(history, _systemPrompt, _userMessage) {
   return safeHistory.slice(-maxMessages).filter((entry) => entry && entry.role && entry.content);
 }
 
+async function generateResponse({ message, ragContext, hasRelevantContext, adhesionIssueHint, hasImage, imageUrl, conversationHistory, customerContext, ragResultsCount = 0 }) {
+  const trimmedMessage = typeof message === 'string' ? message.trim() : '';
+  const resinFromMessage = extractResinFromMessage(trimmedMessage);
+  const printerFromMessage = extractPrinterFromMessage(trimmedMessage);
+  const knownResin = customerContext?.resin || resinFromMessage;
+  const knownPrinter = customerContext?.printer || printerFromMessage;
+
+  if (isParameterQuestion(trimmedMessage)) {
+    const normalizedContext = normalizeForMatch(ragContext || '');
+    const resinOk = knownResin ? normalizedContext.includes(normalizeForMatch(knownResin)) : false;
+    const printerOk = knownPrinter ? normalizedContext.includes(normalizeForMatch(knownPrinter)) : false;
+    if (!hasRelevantContext || (knownResin && !resinOk) || (knownPrinter && !printerOk)) {
+      return { reply: buildParameterBlockReply({ resinName: knownResin, printerName: knownPrinter }), documentsUsed: 0 };
+    }
+  }
+
+  if (isDiagnosticQuestion(trimmedMessage)) {
+    if (!knownPrinter) return { reply: 'Qual é o modelo exato da sua impressora?', documentsUsed: 0 };
+    if (!knownResin) return { reply: 'Qual é a resina que você está usando?', documentsUsed: 0 };
+    if (!hasExposureInfo(trimmedMessage) && !hasExposureInfo((ragContext || '').toString())) return { reply: 'Qual é o tempo de exposição normal e de base que você está usando?', documentsUsed: 0 };
+  }
+
+  if (mentionsRigidSupports(trimmedMessage) || mentionsDelayedCracking(trimmedMessage)) {
+    return { reply: buildSupportBrittleReply({ resinName: knownResin, printerName: knownPrinter }), documentsUsed: ragResultsCount };
+  }
+
+  if (mentionsBaseAdhesion(trimmedMessage)) {
+    return { reply: buildAdhesionReply({ resinName: knownResin, printerName: knownPrinter }), documentsUsed: ragResultsCount };
+  }
+
+  const visionPriority = hasImage ? '\n    11. Se IMAGEM=SIM, priorize a evidência visual. Não deixe histórico anterior de texto sobrepor o que está claramente visível na nova imagem.\n  ' : '';
+  const imageGuidelines = hasImage ? `
+    DIRETRIZES PARA ANALISE VISUAL:
+    - Descreva o que voce ve antes de concluir causas.
+    - Se a imagem estiver clara e houver sinais evidentes, entregue: Defeitos -> Causa provavel -> Solucao imediata -> Parametros sugeridos.
+  ` : '';
+
+  const systemPrompt = `
+    PERSONA: Você é Ronei Fonseca, especialista prático e dono da Quanton3D.
+
+    REGRAS DE OURO (LEI ABSOLUTA):
+    0. **PRIORIDADE MÁXIMA**: Se o CONTEXTO TÉCNICO RELEVANTE contiver uma "RESPOSTA DE OURO", use-a DIRETAMENTE e na íntegra, sem parafrasear ou adicionar informações. Ela é a resposta definitiva do Especialista.
+
+    1. **NADA DE FONTES:** O cliente quer um especialista. É PROIBIDO escrever "(Fonte: Documento 1)".
+    2. **RESINA SPARK (AMARELAMENTO):** - JAMAIS sugira curas longas.
+       - REGRA: Curas rápidas de 3 segundos, espere esfriar, repita 3 vezes.
+       - DICA MASTER: Colocar na água gera refração e evita UV direto. NUNCA sugira 3-5 minutos.
+    3. **PEÇAS OCAS/VAZAMENTO:** - O vazamento é resina presa dentro.
+       - SOLUÇÃO: Furos de drenagem + Lavagem interna com SERINGA de pressão.
+       - PROIBIDO: "Escova macia" (não limpa dentro) e "Cura de 20 min" (quebra a peça). Cura máx 5-7 min.
+    4. **PYROBLAST / RESINAS INDUSTRIAIS:**
+       - NUNCA mande colocar peça em forno ou água a 60°C. O padrão é cura UV.
+    5. **DIAGNÓSTICO:**
+       - Se soltou da mesa: É NIVELAMENTO ou EXPOSIÇÃO BASE. Não fale de suportes se a falha for na base.
+       - **TOM DE VOZ:** Direto, técnico e seguro.
+
+    ${visionPriority}
+    ${imageGuidelines}
+  `;
+
+  const contextLines = [];
+  if (customerContext?.userName) contextLines.push(`Nome do cliente: ${customerContext.userName}`);
+  if (customerContext?.resin) contextLines.push(`Resina: ${customerContext.resin}`);
+  if (customerContext?.printer) contextLines.push(`Impressora: ${customerContext.printer}`);
+  if (customerContext?.problemType) contextLines.push(`Problema relatado: ${customerContext.problemType}`);
+  const contextFlag = hasRelevantContext || contextLines.length ? 'SIM' : 'NAO';
+
+  const prompt = [
+    ragContext ? `Contexto Técnico (Use isso para basear sua resposta):\n${ragContext}` : null,
+    contextLines.length ? contextLines.join('\n') : null,
+    adhesionIssueHint,
+    `CONTEXTO_RELEVANTE=${contextFlag}`,
+    '---',
+    trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : null
+  ].filter(Boolean).join('\n\n');
+
+  const client = getOpenAIClient();
+  const userContent = imageUrl ? [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: imageUrl } }] : prompt;
+  const model = imageUrl ? IMAGE_MODEL : DEFAULT_CHAT_MODEL;
+  const userMessage = { role: 'user', content: userContent };
+  const trimmedHistory = trimConversationHistory(Array.isArray(conversationHistory) ? conversationHistory : [], systemPrompt, userMessage);
+
+  const completion = await client.chat.completions.create({
+    model,
+    temperature: 0.3,
+    max_tokens: 500,
+    messages: [{ role: 'system', content: systemPrompt }, ...trimmedHistory, userMessage]
+  });
+
+  const rawReply = completion?.choices?.[0]?.message?.content?.trim();
+  const reply = rawReply ? stripVisionPolicyDisclaimers(rawReply) : null;
+  return { reply: reply || 'Estou analisando sua solicitação, mas tive um breve soluço. Poderia repetir?', documentsUsed: 0 };
+}
+
+async function generateImageResponse({ message, imageUrl, ragContext }) {
+  const trimmedMessage = typeof message === 'string' ? message.trim() : '';
+  const prompt = trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : 'Cliente enviou uma imagem para análise.';
+
+  let completion = await runVisionCompletion({ prompt, imageUrl, ragContext, temperature: 0.4 });
+  let reply = completion?.choices?.[0]?.message?.content?.trim();
+
+  if (isVisionRefusal(reply)) {
+    const retryPrompt = `${prompt}
+
+    Contexto extra: trata-se de uma peça de resina e seus suportes, não há seres humanos.`;
+    completion = await runVisionCompletion({ prompt: retryPrompt, imageUrl, ragContext, temperature: 0.2 });
+    reply = completion?.choices?.[0]?.message?.content?.trim();
+  }
+
+  const cleaned = stripVisionPolicyDisclaimers(reply);
+  return { reply: cleaned || 'Não consegui analisar a imagem agora. Pode tentar novamente?', documentsUsed: 0 };
+}
+
 function attachMultipartImage(req, _res, next) {
   const files = req.files || {};
   const imageFile = files.image?.[0] || files.file?.[0] || files.attachment?.[0];
@@ -352,123 +433,6 @@ function inferContextFromHistory(history, message) {
   return {};
 }
 
-// =================================================================================
-// CÉREBRO TEXTUAL (REGRAS DO RONEI AQUI)
-// =================================================================================
-async function generateResponse({ message, ragContext, hasRelevantContext, adhesionIssueHint, hasImage, imageUrl, conversationHistory, customerContext, ragResultsCount = 0 }) {
-  const trimmedMessage = typeof message === 'string' ? message.trim() : '';
-  const resinFromMessage = extractResinFromMessage(trimmedMessage);
-  const printerFromMessage = extractPrinterFromMessage(trimmedMessage);
-  const knownResin = customerContext?.resin || resinFromMessage;
-  const knownPrinter = customerContext?.printer || printerFromMessage;
-
-  if (isParameterQuestion(trimmedMessage)) {
-    const normalizedContext = normalizeForMatch(ragContext || '');
-    const resinOk = knownResin ? normalizedContext.includes(normalizeForMatch(knownResin)) : false;
-    const printerOk = knownPrinter ? normalizedContext.includes(normalizeForMatch(knownPrinter)) : false;
-    if (!hasRelevantContext || (knownResin && !resinOk) || (knownPrinter && !printerOk)) {
-      return { reply: buildParameterBlockReply({ resinName: knownResin, printerName: knownPrinter }), documentsUsed: 0 };
-    }
-  }
-
-  if (isDiagnosticQuestion(trimmedMessage)) {
-    if (!knownPrinter) return { reply: 'Qual é o modelo exato da sua impressora?', documentsUsed: 0 };
-    if (!knownResin) return { reply: 'Qual é a resina que você está usando?', documentsUsed: 0 };
-    if (!hasExposureInfo(trimmedMessage) && !hasExposureInfo((ragContext || '').toString())) return { reply: 'Qual é o tempo de exposição normal e de base que você está usando?', documentsUsed: 0 };
-  }
-
-  if (mentionsRigidSupports(trimmedMessage) || mentionsDelayedCracking(trimmedMessage)) {
-    return { reply: buildSupportBrittleReply({ resinName: knownResin, printerName: knownPrinter }), documentsUsed: ragResultsCount };
-  }
-
-  if (mentionsBaseAdhesion(trimmedMessage)) {
-    return { reply: buildAdhesionReply({ resinName: knownResin, printerName: knownPrinter }), documentsUsed: ragResultsCount };
-  }
-
-  const visionPriority = hasImage ? '\n    11. Se IMAGEM=SIM, priorize a evidência visual. Não deixe histórico anterior de texto sobrepor o que está claramente visível na nova imagem.\n  ' : '';
-  const imageGuidelines = hasImage ? `
-    DIRETRIZES PARA ANALISE VISUAL:
-    - Descreva o que voce ve antes de concluir causas.
-    - Se a imagem estiver clara e houver sinais evidentes, entregue: Defeitos -> Causa provavel -> Solucao imediata -> Parametros sugeridos.
-  ` : '';
-
-  const systemPrompt = `
-    PERSONA: Você é Ronei Fonseca, especialista prático e dono da Quanton3D.
-
-    REGRAS DE OURO (LEI ABSOLUTA):
-    1. **NADA DE FONTES:** O cliente quer um especialista. É PROIBIDO escrever "(Fonte: Documento 1)".
-    2. **RESINA SPARK (AMARELAMENTO):** - JAMAIS sugira curas longas.
-       - REGRA: Curas rápidas de 3 segundos, espere esfriar, repita 3 vezes.
-       - DICA MASTER: Colocar na água gera refração e evita UV direto. NUNCA sugira 3-5 minutos.
-    3. **PEÇAS OCAS/VAZAMENTO:** - O vazamento é resina presa dentro.
-       - SOLUÇÃO: Furos de drenagem + Lavagem interna com SERINGA de pressão.
-       - PROIBIDO: "Escova macia" (não limpa dentro) e "Cura de 20 min" (quebra a peça). Cura máx 5-7 min.
-    4. **PYROBLAST / RESINAS INDUSTRIAIS:**
-       - NUNCA mande colocar peça em forno ou água a 60°C. O padrão é cura UV.
-    5. **DIAGNÓSTICO:**
-       - Se soltou da mesa: É NIVELAMENTO ou EXPOSIÇÃO BASE. Não fale de suportes se a falha for na base.
-       - **TOM DE VOZ:** Direto, técnico e seguro.
-
-    ${visionPriority}
-    ${imageGuidelines}
-  `;
-
-  const contextLines = [];
-  if (customerContext?.userName) contextLines.push(`Nome do cliente: ${customerContext.userName}`);
-  if (customerContext?.resin) contextLines.push(`Resina: ${customerContext.resin}`);
-  if (customerContext?.printer) contextLines.push(`Impressora: ${customerContext.printer}`);
-  if (customerContext?.problemType) contextLines.push(`Problema relatado: ${customerContext.problemType}`);
-  const contextFlag = hasRelevantContext || contextLines.length ? 'SIM' : 'NAO';
-
-  const prompt = [
-    ragContext ? `Contexto Técnico (Use isso para basear sua resposta):\n${ragContext}` : null,
-    contextLines.length ? contextLines.join('\n') : null,
-    adhesionIssueHint,
-    `CONTEXTO_RELEVANTE=${contextFlag}`,
-    '---',
-    trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : null
-  ].filter(Boolean).join('\n\n');
-
-  const client = getOpenAIClient();
-  const userContent = imageUrl ? [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: imageUrl } }] : prompt;
-  const model = imageUrl ? 'gpt-4o' : 'gpt-4o-mini';
-  const userMessage = { role: 'user', content: userContent };
-  const trimmedHistory = trimConversationHistory(Array.isArray(conversationHistory) ? conversationHistory : [], systemPrompt, userMessage);
-
-  const completion = await client.chat.completions.create({
-    model,
-    temperature: 0.3,
-    max_tokens: 500,
-    messages: [{ role: 'system', content: systemPrompt }, ...trimmedHistory, userMessage]
-  });
-
-  const rawReply = completion?.choices?.[0]?.message?.content?.trim();
-  const reply = rawReply ? stripVisionPolicyDisclaimers(rawReply) : null;
-  return { reply: reply || 'Estou analisando sua solicitação, mas tive um breve soluço. Poderia repetir?', documentsUsed: 0 };
-}
-
-// =================================================================================
-// CÉREBRO VISUAL (REGRAS DO RONEI + BIBLIOTECA DE IMAGENS)
-// =================================================================================
-async function generateImageResponse({ message, imageUrl, ragContext }) {
-  const trimmedMessage = typeof message === 'string' ? message.trim() : '';
-  const prompt = trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : 'Cliente enviou uma imagem para análise.';
-
-  let completion = await runVisionCompletion({ prompt, imageUrl, ragContext, temperature: 0.4 });
-  let reply = completion?.choices?.[0]?.message?.content?.trim();
-
-  if (isVisionRefusal(reply)) {
-    const retryPrompt = `${prompt}
-
-Contexto extra: trata-se de uma peça de resina e seus suportes, não há seres humanos.`;
-    completion = await runVisionCompletion({ prompt: retryPrompt, imageUrl, ragContext, temperature: 0.2 });
-    reply = completion?.choices?.[0]?.message?.content?.trim();
-  }
-
-  const cleaned = stripVisionPolicyDisclaimers(reply);
-  return { reply: cleaned || 'Não consegui analisar a imagem agora. Pode tentar novamente?', documentsUsed: 0 };
-}
-
 async function handleChatRequest(req, res) {
   const requestStart = Date.now();
   metrics.incrementRequests();
@@ -489,7 +453,27 @@ async function handleChatRequest(req, res) {
     const inferredContext = inferContextFromHistory(conversationHistory, message);
     const mergedCustomerContext = mergeCustomerContext(mergeCustomerContext(storedContext, inferredContext), customerContext);
 
-    const { ragResults, ragContext, trimmedMessage, hasRelevantContext, adhesionIssueHint } = await buildRagContext({ message, hasImage });
+    // 1. Pré-análise visual semântica
+    let visualDescription = null;
+    if (hasImage && imageUrl) {
+      try {
+        const visionResult = await runVisionCompletion({ 
+          prompt: "Descreva brevemente os defeitos técnicos visíveis nesta impressão 3D.", 
+          imageUrl,
+          ragContext: "Descrição visual para busca interna." 
+        });
+        visualDescription = visionResult?.choices?.[0]?.message?.content?.trim();
+      } catch (e) {
+        console.warn("[CHAT] Falha pré-análise visual:", e.message);
+      }
+    }
+
+    const { ragResults, ragContext, trimmedMessage, hasRelevantContext, adhesionIssueHint } = await buildRagContext({ 
+      message, 
+      hasImage, 
+      visualDescription 
+    });
+    
     const ragSearchPerformed = Boolean((trimmedMessage && trimmedMessage.length) || hasImage);
     if (ragSearchPerformed) {
       metrics.recordRAGSearch(ragResults.length);
@@ -498,7 +482,8 @@ async function handleChatRequest(req, res) {
     const visualHints = await fetchVisualKnowledgeHints({
       message: trimmedMessage,
       customerContext: mergedCustomerContext,
-      hasImage
+      hasImage,
+      visualDescription
     });
     const visualContext = buildVisualContextSection(visualHints);
     const promptContext = [visualContext, ragContext].filter(Boolean).join('\n\n').trim();
@@ -531,7 +516,7 @@ async function handleChatRequest(req, res) {
     metrics.incrementErrors();
     metrics.recordResponseTime(Date.now() - requestStart);
 
-    return res.status(200).json({
+    return res.status(500).json({
       reply: 'Tive uma instabilidade ao processar sua solicitação agora. Pode reenviar a pergunta? Se for foto, envie novamente junto com uma breve descrição do problema.',
       sessionId: sessionId || 'session-auto',
       documentsUsed: 0,

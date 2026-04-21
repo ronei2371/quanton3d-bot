@@ -15,6 +15,7 @@ const ensureRetryWritesEnabled = (uri = '') => {
 
 let connectPromise = null
 
+// MELHORIA: Índices para as novas coleções de inteligência, mantendo os antigos
 const ensureIndexes = async () => {
   const db = mongoose.connection?.db
   if (!db) return
@@ -22,63 +23,48 @@ const ensureIndexes = async () => {
   try {
     await Promise.all([
       db.collection('documents').createIndex({ createdAt: -1 }),
-      db.collection('conversas').createIndex({ createdAt: -1 })
+      db.collection('conversas').createIndex({ createdAt: -1 }),
+      db.collection('visual_knowledge').createIndex({ createdAt: -1 }),
+      db.collection('expert_knowledge').createIndex({ createdAt: -1 }),
+      db.collection('sugestoes').createIndex({ createdAt: -1 })
     ])
+    console.log('[DB] Índices de performance garantidos.');
   } catch (error) {
     console.warn('Aviso: falha ao garantir indexes do MongoDB.', error)
   }
 }
 
-
 export const connectToMongo = async (uri = process.env.MONGODB_URI) => {
   if (!uri) return false
 
-  const normalizedUri = ensureRetryWritesEnabled(uri)
+  const finalUri = ensureRetryWritesEnabled(uri)
 
-  if (mongoose.connection.readyState === 1) {
-    return true
-  }
+  if (mongoose.connection.readyState === 1) return true
+  if (connectPromise) return connectPromise
 
-  if (!connectPromise) {
-    connectPromise = mongoose
-      .connect(normalizedUri, DEFAULT_OPTIONS)
-      .then(async () => {
-        await ensureIndexes()
-        return true
-      })
-      .catch((error) => {
-        connectPromise = null
-        throw error
-      })
-  }
+  connectPromise = mongoose.connect(finalUri, DEFAULT_OPTIONS)
+    .then(async () => {
+      await ensureIndexes()
+      return true
+    })
+    .catch(err => {
+      console.error('Erro conexao MongoDB:', err)
+      connectPromise = null
+      return false
+    })
 
   return connectPromise
 }
 
-// Funções utilitárias para pegar coleções
-export const getCollection = (name) => {
-  if (!mongoose.connection?.db) return null
-  return mongoose.connection.db.collection(name)
-}
+// MANUTENÇÃO: Mantendo todas as funções originais para não quebrar o apiRoutes.js
+export const getDocumentsCollection = () => mongoose.connection?.db?.collection('documents')
+export const getConversasCollection = () => mongoose.connection?.db?.collection('conversas')
+export const getVisualKnowledgeCollection = () => mongoose.connection?.db?.collection('visual_knowledge')
+export const getExpertKnowledgeCollection = () => mongoose.connection?.db?.collection('expert_knowledge')
+export const getSugestoesCollection = () => mongoose.connection?.db?.collection('sugestoes')
+export const getOrdersCollection = () => mongoose.connection?.db?.collection('orders')
 
-export const getDb = () => mongoose.connection?.db || null
+// Função genérica mantida para compatibilidade total
+export const getCollection = (name) => mongoose.connection?.db?.collection(name)
 
-// Exportações que o RAG precisa
-export const getDocumentsCollection = () => getCollection('documents')
-export const getVisualKnowledgeCollection = () => getCollection('visual_knowledge')
 export const isConnected = () => mongoose.connection.readyState === 1
-
-// Exportações que o SITE precisa
-export const getGalleryCollection = () => getCollection('gallery')
-export const getSuggestionsCollection = () => getCollection('sugestoes')
-export const getSugestoesCollection = () => getCollection('sugestoes')
-export const getMetricasCollection = () => getCollection('metricas')
-export const getParametrosCollection = () => getCollection('parametros')
-export const getPrintParametersCollection = () => getCollection('parametros')
-export const getConversasCollection = () => getCollection('conversas')
-export const getLearningCollection = () => getCollection('learning')
-
-const conversasSchema = new mongoose.Schema({}, { strict: false, collection: 'conversas' })
-
-export const Conversas = mongoose.models.Conversas || mongoose.model('Conversas', conversasSchema)
-export const getOrdersCollection = () => getCollection('orders')

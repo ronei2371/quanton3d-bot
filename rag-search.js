@@ -6,7 +6,8 @@ import fs from 'fs';
 import path from 'path';
 import OpenAI from 'openai';
 import winston from 'winston';
-import { getDocumentsCollection, getVisualKnowledgeCollection, isConnected } from './db.js';
+import { ObjectId } from 'mongodb'; // Import no topo para organização
+import { getDocumentsCollection, getVisualKnowledgeCollection, getExpertKnowledgeCollection, isConnected } from './db.js';
 import { rerankDocuments } from './scripts/rag-reranker.js';
 
 // Modelo de embeddings unificado (mesmo para salvar e buscar)
@@ -163,6 +164,38 @@ export async function searchKnowledge(query, topK = 5) {
     // 1. Gerar embedding da pergunta
     const queryEmbedding = await generateEmbedding(query);
 
+    // 1.1. Buscar em expert_knowledge (respostas de ouro) primeiro
+    const expertKnowledgeCollection = getExpertKnowledgeCollection();
+    if (expertKnowledgeCollection) {
+      const expertAnswers = await expertKnowledgeCollection.find({}).toArray();
+      let bestExpertMatch = null;
+      let highestExpertSimilarity = 0;
+
+      for (const expertAnswer of expertAnswers) {
+        if (!expertAnswer.embedding) continue;
+        const similarity = cosineSimilarity(queryEmbedding, expertAnswer.embedding);
+
+        if (similarity > highestExpertSimilarity) {
+          highestExpertSimilarity = similarity;
+          bestExpertMatch = expertAnswer;
+        }
+      }
+
+      // Definir um limiar mais alto para respostas de ouro
+      const EXPERT_KNOWLEDGE_THRESHOLD = 0.85; 
+      if (bestExpertMatch && highestExpertSimilarity >= EXPERT_KNOWLEDGE_THRESHOLD) {
+        logRAG(`[EXPERT] Resposta de ouro encontrada com ${(highestExpertSimilarity * 100).toFixed(1)}% de similaridade.`, 'INFO');
+        return [{
+          id: bestExpertMatch._id.toString(),
+          title: bestExpertMatch.question,
+          content: bestExpertMatch.answer,
+          tags: bestExpertMatch.tags || [],
+          similarity: highestExpertSimilarity,
+          source: 'expert_knowledge'
+        }];
+      }
+    }
+
     // 2. Buscar documentos com embeddings (preferindo índice vetorial quando configurado)
     const collection = getDocumentsCollection();
     let documents = [];
@@ -279,14 +312,15 @@ export async function searchKnowledge(query, topK = 5) {
       const scored = termFrequencies.map(({ doc, tf, normalizedContent }) => {
         let score = 0;
         keywords.forEach((kw) => {
-          const df = termFrequencies.filter((t) => t.normalizedContent.includes(kw)).length || 1;
-          const idf = Math.log(docCount / df);
+          const docsWithTerm = termFrequencies.filter(d => d.normalizedContent.includes(kw)).length;
+          // CORREÇÃO: Blindagem contra divisão por zero
+          const idf = docsWithTerm > 0 ? Math.log(docCount / docsWithTerm) : 0;
           score += (tf[kw] || 0) * idf;
         });
         return { ...doc, similarity: score ? Math.min(1, score / keywords.length) : 0 };
       });
 
-      const textResults = scored.filter((doc) => doc.similarity > 0).sort((a, b) => b.similarity - a.similarity).slice(0, 3);
+      const textResults = scored.filter((doc) => doc.similarity > 0).sort((a, b) => b.similarity - a.similarity).slice(0, topK);
 
       if (textResults.length > 0) {
         logRAG(`Busca por texto encontrou ${textResults.length} documentos`, 'INFO');
@@ -297,611 +331,198 @@ export async function searchKnowledge(query, topK = 5) {
     }
 
     // 6. Re-ranking inteligente com GPT-4o (usa rag-reranker.js)
-    let finalResults = relevantResults;
-    if (relevantResults.length > 1) {
-      try {
-        logRAG(
-          `[RE-RANKING] Aplicando reordenacao inteligente em ${relevantResults.length} documentos`,
-          'INFO'
-        );
-        finalResults = await rerankDocuments(query, relevantResults);
-      } catch (err) {
-        logRAG(
-          `[RE-RANKING] Falha ao reranquear documentos: ${err.message}. Usando ordem original por similaridade.`,
-          'WARN'
-        );
-        finalResults = relevantResults;
-      }
-    }
-
-    const topResults = finalResults.slice(0, topK);
-
-    logRAG(
-      `Encontrados ${topResults.length} documentos relevantes (melhor: ${(topResults[0]?.similarity * 100).toFixed(1)}%)`,
-      'INFO'
-    );
-
-    return topResults;
+    return rerankDocuments(relevantResults.slice(0, topK), query);
   } catch (err) {
-    logRAG(`Erro na busca: ${err.message}`, 'ERROR');
+    logRAG(`Erro na busca de conhecimento: ${err.message}`, 'ERROR');
     throw err;
   }
 }
 
-// Formatar contexto para o GPT
-export function formatContext(results) {
-  if (!results || results.length === 0) {
-    // Nenhum documento relevante encontrado - instruir o bot a ser honesto
-    return '\n\n[AVISO DE SEGURANCA]\nNao foi encontrado conhecimento interno com relevancia suficiente para responder.\n\nREGRAS:\n- Nao invente parametros, precos, prazos ou garantias.\n- Se a pergunta for sobre produtos, valores ou configuracoes especificas de resina/impressora, responda: "Nao encontrei essa informacao no meu banco de dados interno. Posso acionar um atendente humano para te ajudar com precisao."\n- Para duvidas tecnicas gerais, responda de forma conservadora e convide para compartilhar mais detalhes ou encaminhar ao suporte humano.\n\n';
+export function formatContext(documents, visualContext = null) {
+  let context = '';
+
+  if (visualContext && visualContext.length > 0) {
+    context += '### Contexto Visual (Analise de Imagem)\n';
+    visualContext.forEach((item, index) => {
+      context += `**Problema ${index + 1}:** ${item.problema}\n`;
+      context += `**Descricao:** ${item.descricao}\n`;
+      context += `**Causas:** ${item.causas}\n`;
+      context += `**Acoes Recomendadas:** ${item.acoes}\n\n`;
+    });
   }
 
-  let context = '\n\n CONHECIMENTO TECNICO RELEVANTE:\n\n';
+  if (documents && documents.length > 0) {
+    context += '### Conhecimento Relevante\n';
+    documents.forEach((doc, index) => {
+      // Priorizar e destacar respostas de expert_knowledge
+      if (doc.source === 'expert_knowledge') {
+        context += `**RESPOSTA DO ESPECIALISTA (Ronei):**\n`;
+        context += `**Pergunta:** ${doc.title}\n`;
+        context += `**Resposta:** ${doc.content}\n\n`;
+      } else {
+        context += `**Documento ${index + 1}:** ${doc.title}\n`;
+        context += `${doc.content}\n\n`;
+      }
+    });
+  }
 
-  results.forEach((result, index) => {
-    context += `[Documento ${index + 1}] (Relevancia: ${(result.similarity * 100).toFixed(1)}%)\n`;
-    context += `${result.content}\n\n`;
-  });
-
-  context += '---\n\n';
-  context += 'Use EXCLUSIVAMENTE o conhecimento acima para responder. ';
-  context += 'NAO invente informacoes que nao estejam no contexto.\n\n';
+  if (!context) {
+    return 'Nenhum conhecimento relevante encontrado.';
+  }
 
   return context;
 }
 
-// Limpar toda a coleção de conhecimento (usado antes de importações em lote)
-export async function clearKnowledgeCollection() {
+export async function searchVisualKnowledge(imageUrl, visualDescription = null) {
   if (!isConnected()) {
-    throw new Error('MongoDB nao conectado');
+    throw new Error('MongoDB nao conectado. Conecte primeiro usando connectToMongo()');
   }
 
   try {
-    const collection = getDocumentsCollection();
-    const result = await collection.deleteMany({});
-    documentsCount = 0;
+    logRAG(`Buscando conhecimento visual semântico...`, 'INFO');
 
-    logRAG(`Colecao de conhecimento limpa antes de importacao (removidos ${result.deletedCount} documentos)`, 'WARN');
-
-    return { success: true, deleted: result.deletedCount };
-  } catch (err) {
-    logRAG(`Erro ao limpar colecao de conhecimento: ${err.message}`, 'ERROR');
-    throw err;
-  }
-}
-
-// Adicionar novo documento ao RAG (usado na aprovacao de sugestoes)
-export async function addDocument(title, content, source = 'suggestion', tags = [], options = {}) {
-  if (!isConnected()) {
-    throw new Error('MongoDB nao conectado');
-  }
-
-  try {
-    logRAG(`Adicionando documento: ${title}`, 'INFO');
-    
-    // 🔍 LOG DETALHADO - Inicio
-    console.log(`📝 [ADD-DOC] Titulo: ${title}`);
-    console.log(`📝 [ADD-DOC] Tamanho do conteudo: ${content.length} caracteres`);
-    console.log(`📝 [ADD-DOC] Source: ${source}`);
-    const normalizedTags = Array.isArray(tags)
-      ? tags.map(t => String(t).trim()).filter(Boolean)
-      : [];
-    console.log(`📝 [ADD-DOC] Tags: ${normalizedTags.join(', ') || 'nenhuma'}`);
-
-    const providedEmbedding = Array.isArray(options.embedding) && options.embedding.length > 0
-      ? options.embedding.map(value => Number(value)).filter(value => Number.isFinite(value))
-      : null;
-
-    if (providedEmbedding && providedEmbedding.length !== options.embedding.length) {
-      console.warn('⚠️ [ADD-DOC] Embedding informado contém valores inválidos e foi normalizado.');
-    }
-
-    if (providedEmbedding && providedEmbedding.length !== EMBEDDING_DIMENSIONS) {
-      throw new Error(`Embedding inválido: esperado ${EMBEDDING_DIMENSIONS} dimensões, recebido ${providedEmbedding.length}`);
-    }
-
-    // Gerar ou reaproveitar embedding do conteudo
-    let embedding;
-    if (providedEmbedding && providedEmbedding.length > 0) {
-      embedding = providedEmbedding;
-      console.log(`🔄 [ADD-DOC] Usando embedding fornecido (${embedding.length} dimensoes)`);
-    } else {
-      console.log(`🔄 [ADD-DOC] Gerando embedding...`);
-      embedding = await generateEmbedding(content);
-      console.log(`✅ [ADD-DOC] Embedding gerado! Dimensao: ${embedding.length}`);
-    }
-
-    if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_DIMENSIONS) {
-      throw new Error(`Embedding gerado com tamanho inesperado: ${embedding?.length}`);
-    }
-
-    // Inserir no MongoDB
-    const collection = getDocumentsCollection();
-    console.log(`💾 [ADD-DOC] Salvando no MongoDB...`);
-
-    const now = new Date();
-    const baseDocument = {
-      title,
-      content,
-      source,
-      tags: normalizedTags,
-      embedding,
-      embeddingModel: EMBEDDING_MODEL,
-      createdAt: now,
-      updatedAt: now,
-      ...(options.legacyId ? { legacyId: options.legacyId } : {})
-    };
-
-    const sanitizedDocument = { ...baseDocument };
-    delete sanitizedDocument.createdAt;
-    delete sanitizedDocument.updatedAt;
-
-    let documentId = null;
-    let inserted = false;
-
-    if (options.upsert && options.legacyId) {
-      const existing = await collection.findOne({ legacyId: options.legacyId }, { projection: { _id: 1, createdAt: 1 } });
-      const createdAtValue = existing?.createdAt || baseDocument.createdAt;
-      const result = await collection.updateOne(
-        { legacyId: options.legacyId },
-        {
-          $set: { ...sanitizedDocument, updatedAt: baseDocument.updatedAt },
-          $setOnInsert: { createdAt: createdAtValue }
-        },
-        { upsert: true }
-      );
-
-      documentId = existing?._id || result.upsertedId || options.legacyId;
-      inserted = Boolean(result.upsertedId);
-    } else {
-      const result = await collection.insertOne(baseDocument);
-      documentId = result.insertedId;
-      inserted = true;
-    }
-
-    if (inserted) {
-      documentsCount++;
-    }
-
-    console.log(`✅ [ADD-DOC] Documento salvo! ID: ${documentId}`);
-    logRAG(`Documento adicionado com sucesso: ${documentId}`, 'INFO');
-
-    return {
-      success: true,
-      documentId,
-      title
-    };
-  } catch (err) {
-    console.error(`❌ [ADD-DOC] ERRO ao adicionar documento:`, err);
-    console.error(`❌ [ADD-DOC] Stack trace:`, err.stack);
-    logRAG(`Erro ao adicionar documento: ${err.message}`, 'ERROR');
-    throw err;
-  }
-}
-
-// Listar todos os documentos de conhecimento (para admin)
-export async function listDocuments() {
-  if (!isConnected()) {
-    throw new Error('MongoDB nao conectado');
-  }
-
-  try {
-    const collection = getDocumentsCollection();
-    const documents = await collection.find(
-      {},
-      { projection: { _id: 1, title: 1, content: 1, source: 1, tags: 1, createdAt: 1 } }
-    ).sort({ createdAt: -1 }).toArray();
-
-    return documents;
-  } catch (err) {
-    logRAG(`Erro ao listar documentos: ${err.message}`, 'ERROR');
-    throw err;
-  }
-}
-
-// Deletar documento de conhecimento
-export async function deleteDocument(id) {
-  if (!isConnected()) {
-    throw new Error('MongoDB nao conectado');
-  }
-
-  try {
-    const collection = getDocumentsCollection();
-    const { ObjectId } = await import('mongodb');
-    const result = await collection.deleteOne({ _id: new ObjectId(id) });
-    
-    if (result.deletedCount > 0) {
-      documentsCount--;
-      logRAG(`Documento deletado: ${id}`, 'INFO');
-    }
-    return { success: result.deletedCount > 0 };
-  } catch (err) {
-    logRAG(`Erro ao deletar documento: ${err.message}`, 'ERROR');
-    throw err;
-  }
-}
-
-// Atualizar documento de conhecimento
-export async function updateDocument(id, title, content) {
-  if (!isConnected()) {
-    throw new Error('MongoDB nao conectado');
-  }
-
-  try {
-    const collection = getDocumentsCollection();
-    const { ObjectId } = await import('mongodb');
-    
-    // Gerar novo embedding para o conteudo atualizado
-    const embedding = await generateEmbedding(content);
-    
-    const result = await collection.updateOne(
-      { _id: new ObjectId(id) },
-      { 
-        $set: { 
-          title, 
-          content, 
-          embedding,
-          updatedAt: new Date() 
-        } 
-      }
-    );
-    
-    if (result.modifiedCount > 0) {
-      logRAG(`Documento atualizado: ${id}`, 'INFO');
-    }
-    return { success: result.modifiedCount > 0 };
-  } catch (err) {
-    logRAG(`Erro ao atualizar documento: ${err.message}`, 'ERROR');
-    throw err;
-  }
-}
-
-// Verificar integridade do RAG
-export async function checkRAGIntegrity() {
-  if (!isConnected()) {
-    return { isValid: false, reason: 'mongodb_not_connected' };
-  }
-
-  try {
-    const collection = getDocumentsCollection();
-    const totalDocs = await collection.countDocuments();
-    const docsWithEmbedding = await collection.countDocuments({ 
-      embedding: { $exists: true, $ne: [] } 
-    });
-
-    const isValid = totalDocs > 0 && docsWithEmbedding === totalDocs;
-
-    return {
-      isValid,
-      totalDocuments: totalDocs,
-      documentsWithEmbedding: docsWithEmbedding,
-      embeddingModel: EMBEDDING_MODEL,
-      reason: !isValid ? 'missing_embeddings' : null
-    };
-  } catch (err) {
-    return { isValid: false, reason: 'verification_error', error: err.message };
-  }
-}
-
-async function loadLocalKnowledgeDocuments(limit = KB_AUTO_IMPORT_LIMIT) {
-  if (!KB_INDEX_PATH || !fs.existsSync(KB_INDEX_PATH)) {
-    logRAG(`Arquivo kb_index.json não encontrado em ${KB_INDEX_PATH}`, 'WARN');
-    return [];
-  }
-
-  try {
-    const raw = await fs.promises.readFile(KB_INDEX_PATH, 'utf-8');
-    const parsed = JSON.parse(raw);
-    const docs = Array.isArray(parsed?.documents)
-      ? parsed.documents
-      : Array.isArray(parsed)
-        ? parsed
-        : [];
-
-    if (!docs.length) {
-      logRAG('kb_index.json não contém documentos utilizáveis', 'WARN');
+    const visualKnowledgeCollection = getVisualKnowledgeCollection();
+    if (!visualKnowledgeCollection) {
+      logRAG('Colecao visual_knowledge nao encontrada.', 'WARN');
       return [];
     }
 
-    return typeof limit === 'number' && limit > 0 ? docs.slice(0, limit) : docs;
+    // 1. Gerar embedding para a busca visual
+    // Se tivermos uma descrição visual (feita pelo GPT-4o), usamos ela para busca semântica real
+    const searchQuery = visualDescription || "diagnostico visual impressao 3d resina defeitos comuns";
+    const queryEmbedding = await generateEmbedding(searchQuery);
+
+    // 2. Buscar por similaridade de cosseno na coleção visual_knowledge
+    const visualDocs = await visualKnowledgeCollection.find({
+      embedding: { $exists: true, $ne: [] }
+    }).toArray();
+
+    if (visualDocs.length === 0) {
+      logRAG('Nenhum documento com embedding encontrado na colecao visual_knowledge', 'WARN');
+      return [];
+    }
+
+    const results = visualDocs.map(doc => ({
+      ...doc,
+      similarity: cosineSimilarity(queryEmbedding, doc.embedding)
+    }));
+
+    // 3. Ordenar e retornar os mais similares (Busca Semântica Real)
+    results.sort((a, b) => b.similarity - a.similarity);
+    const topResults = results.slice(0, 5);
+
+    logRAG(`Busca visual semântica retornou ${topResults.length} casos similares baseados em: "${searchQuery.substring(0, 30)}..."`, 'INFO');
+
+    return topResults.map(doc => {
+      // CORREÇÃO: Alinhamento total com visionDescription salvo no addVisualKnowledge
+      const vDesc = doc.visionDescription || {};
+      return {
+        problema: doc.defectType || vDesc.problema || 'Problema visual detectado',
+        descricao: doc.diagnosis || vDesc.descricao || 'Descricao nao disponivel',
+        causas: vDesc.causas || doc.causes || 'Causas nao disponiveis',
+        acoes: doc.solution || vDesc.acoes || 'Acoes nao disponiveis',
+        similarity: doc.similarity
+      };
+    });
+
   } catch (err) {
-    logRAG(`Falha ao ler kb_index.json: ${err.message}`, 'ERROR');
+    logRAG(`Erro na busca de conhecimento visual: ${err.message}`, 'ERROR');
     return [];
   }
 }
 
-export async function bootstrapKnowledgeFromFile(options = {}) {
-  if (!isConnected()) {
-    logRAG('MongoDB não conectado; bootstrap do RAG ignorado.', 'WARN');
-    return { success: false, reason: 'mongodb_not_connected' };
-  }
-
-  if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'dummy-key') {
-    logRAG('OPENAI_API_KEY ausente; não é possível gerar embeddings automaticamente.', 'WARN');
-    return { success: false, reason: 'missing_openai_key' };
-  }
-
-  const integrity = await checkRAGIntegrity();
-  if (!options.force && integrity.isValid && integrity.totalDocuments > 0) {
-    logRAG('Base de conhecimento já está íntegra. Bootstrap ignorado.', 'INFO');
-    return { success: true, skipped: true, inserted: 0 };
-  }
-
-  const documents = await loadLocalKnowledgeDocuments();
-  if (!documents.length) {
-    return { success: false, reason: 'kb_file_missing_or_empty' };
-  }
-
-  logRAG(`Iniciando bootstrap automático do RAG com ${documents.length} documentos.`, 'INFO');
-
-  let inserted = 0;
-  let errors = 0;
-
-  for (const doc of documents) {
-    const title = doc.title || doc.id || 'Documento sem título';
-    const content = doc.content || '';
-    if (!content.trim()) {
-      logRAG(`Documento "${title}" ignorado por não ter conteúdo.`, 'WARN');
-      continue;
-    }
-
-    const tags = Array.isArray(doc.tags)
-      ? doc.tags
-      : doc.source
-        ? [doc.source]
-        : [];
-
-    const optionsPayload = {
-      upsert: true,
-      legacyId: doc.id,
-      embedding: Array.isArray(doc.embedding) && doc.embedding.length === EMBEDDING_DIMENSIONS
-        ? doc.embedding
-        : undefined
-    };
-
-    try {
-      await addDocument(title, content, doc.source || 'kb-index', tags, optionsPayload);
-      inserted += 1;
-      await new Promise(resolve => setTimeout(resolve, 150));
-    } catch (err) {
-      errors += 1;
-      logRAG(`Falha ao importar "${title}": ${err.message}`, 'ERROR');
-    }
-  }
-
-  if (errors > 0) {
-    logRAG(`Bootstrap concluído com ${errors} erros.`, 'WARN');
-  } else {
-    logRAG('Bootstrap do RAG concluído com sucesso.', 'INFO');
-  }
-
-  return { success: errors === 0, inserted, errors };
-}
-
-// Obter informacoes do RAG
-export function getRAGInfo() {
-  return {
-    isInitialized: isConnected(),
-    documentsCount,
-    lastInitialization,
-    embeddingModel: EMBEDDING_MODEL,
-    embeddingDimensions: EMBEDDING_DIMENSIONS,
-    storage: 'MongoDB'
-  };
-}
-
-// ============================================================
-// VISUAL RAG - Busca por similaridade de imagens via texto
-// ============================================================
-
-// Limiar de similaridade para Visual RAG
-// Ajustado de 0.7 para 0.5 para melhor deteccao de problemas visuais
-// Threshold mais baixo para busca visual (imagens sao mais subjetivas que texto)
-// 0.35 = 35% de similaridade minima
-const VISUAL_MIN_RELEVANCE_THRESHOLD = 0.35;
-
-// Adicionar exemplo visual ao banco de conhecimento
 export async function addVisualKnowledge(imageUrl, defectType, diagnosis, solution, visionDescription) {
   if (!isConnected()) {
-    throw new Error('MongoDB nao conectado');
+    throw new Error('MongoDB nao conectado. Conecte primeiro usando connectToMongo()');
   }
 
   try {
-    logRAG(`Adicionando conhecimento visual: ${defectType}`, 'INFO');
+    const visualKnowledgeCollection = getVisualKnowledgeCollection();
+    if (!visualKnowledgeCollection) {
+      throw new Error('Colecao visual_knowledge nao encontrada.');
+    }
 
-    // Montar texto canonico para embedding (combina descricao visual + diagnostico + solucao)
-    const textForEmbedding = `Problema: ${defectType}
-Descricao: ${visionDescription.descricao || ''}
-Causas: ${visionDescription.causas || ''}
-Acoes: ${visionDescription.acoes || ''}
-Diagnostico: ${diagnosis}
-Solucao: ${solution}`;
+    // Gerar embedding para a descricao visual
+    const textToEmbed = `${defectType}. ${diagnosis}. ${solution}. ${JSON.stringify(visionDescription)}`;
+    const embedding = await generateEmbedding(textToEmbed);
 
-    // Gerar embedding do texto
-    const embedding = await generateEmbedding(textForEmbedding);
-
-    // Inserir no MongoDB
-    const collection = getVisualKnowledgeCollection();
-    const result = await collection.insertOne({
+    const newKnowledge = {
       imageUrl,
       defectType,
       diagnosis,
       solution,
       visionDescription,
-      textForEmbedding,
       embedding,
-      embeddingModel: EMBEDDING_MODEL,
       createdAt: new Date(),
       updatedAt: new Date()
-    });
-
-    logRAG(`Conhecimento visual adicionado: ${result.insertedId}`, 'INFO');
-
-    return {
-      success: true,
-      documentId: result.insertedId,
-      defectType
     };
+
+    await visualKnowledgeCollection.insertOne(newKnowledge);
+    logRAG(`Conhecimento visual adicionado para: ${defectType}`, 'INFO');
   } catch (err) {
     logRAG(`Erro ao adicionar conhecimento visual: ${err.message}`, 'ERROR');
     throw err;
   }
 }
 
-// Buscar conhecimento visual similar
-export async function searchVisualKnowledge(visionDescription, topK = 3) {
+export async function addExpertKnowledge(question, answer, tags, category, priority) {
   if (!isConnected()) {
-    throw new Error('MongoDB nao conectado');
+    throw new Error('MongoDB nao conectado. Conecte primeiro usando connectToMongo()');
   }
 
   try {
-    // Montar texto de consulta a partir da descricao da imagem do cliente
-    const queryText = `Problema: ${visionDescription.problema || ''}
-Descricao: ${visionDescription.descricao || ''}
-Causas: ${visionDescription.causas || ''}
-Acoes: ${visionDescription.acoes || ''}`;
-
-    logRAG(`Buscando conhecimento visual para: "${queryText.substring(0, 50)}..."`, 'INFO');
-
-    // Gerar embedding da consulta
-    const queryEmbedding = await generateEmbedding(queryText);
-
-    // Buscar apenas documentos visuais aprovados com embeddings
-    const collection = getVisualKnowledgeCollection();
-    const documents = await collection.find(
-      { 
-        embedding: { $exists: true, $ne: [] },
-        $or: [{ status: 'approved' }, { status: { $exists: false } }]
-      },
-      { projection: { _id: 1, imageUrl: 1, defectType: 1, diagnosis: 1, solution: 1, visionDescription: 1, embedding: 1 } }
-    ).toArray();
-
-    if (documents.length === 0) {
-      logRAG('Nenhum conhecimento visual encontrado no banco (verifique se tem documentos com embedding e status correto)', 'WARN');
-      return [];
+    const expertKnowledgeCollection = getExpertKnowledgeCollection();
+    if (!expertKnowledgeCollection) {
+      throw new Error('Colecao expert_knowledge nao encontrada.');
     }
 
-    logRAG(`[VISUAL-RAG] Encontrados ${documents.length} documentos visuais no banco`, 'INFO');
+    // Gerar embedding para a pergunta
+    const embedding = await generateEmbedding(question);
 
-    // Calcular similaridade com cada documento
-    const results = documents.map(doc => ({
-      id: doc._id.toString(),
-      imageUrl: doc.imageUrl,
-      defectType: doc.defectType,
-      diagnosis: doc.diagnosis,
-      solution: doc.solution,
-      visionDescription: doc.visionDescription,
-      similarity: cosineSimilarity(queryEmbedding, doc.embedding)
-    }));
+    const newExpertKnowledge = {
+      question,
+      answer,
+      tags,
+      category,
+      priority,
+      embedding,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
 
-    // Ordenar por similaridade (maior primeiro)
-    results.sort((a, b) => b.similarity - a.similarity);
+    await expertKnowledgeCollection.insertOne(newExpertKnowledge);
+    logRAG(`Conhecimento de especialista adicionado para: ${question}`, 'INFO');
+  } catch (err) {
+    logRAG(`Erro ao adicionar conhecimento de especialista: ${err.message}`, 'ERROR');
+    throw err;
+  }
+}
 
-    // Log detalhado dos top 3 resultados para diagnostico
-    logRAG(
-      `[VISUAL-RAG] Top 3 similaridades: ${results
-        .slice(0, 3)
-        .map(r => `${r.defectType}=${(r.similarity * 100).toFixed(1)}%`)
-        .join(', ')}`,
-      'INFO'
+export async function updateExpertKnowledgeEmbedding(id, embedding) {
+  if (!isConnected()) {
+    throw new Error('MongoDB nao conectado. Conecte primeiro usando connectToMongo()');
+  }
+
+  try {
+    const expertKnowledgeCollection = getExpertKnowledgeCollection();
+    if (!expertKnowledgeCollection) {
+      throw new Error('Colecao expert_knowledge nao encontrada.');
+    }
+
+    const result = await expertKnowledgeCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { embedding: embedding, updatedAt: new Date() } }
     );
 
-    // Filtrar por limiar de relevancia
-    const relevantResults = results.filter(r => r.similarity >= VISUAL_MIN_RELEVANCE_THRESHOLD);
-    const topResults = relevantResults.slice(0, topK);
-
-    if (topResults.length === 0) {
-      logRAG(
-        `[VISUAL-RAG] Nenhum match >= ${VISUAL_MIN_RELEVANCE_THRESHOLD * 100}% (melhor: ${(results[0]?.similarity * 100 || 0).toFixed(1)}% - ${results[0]?.defectType || 'N/A'})`,
-        'WARN'
-      );
-    } else {
-      logRAG(
-        `[VISUAL-RAG] Match encontrado! ${topResults.length} resultados (melhor: ${(topResults[0]?.similarity * 100).toFixed(1)}% - ${topResults[0]?.defectType})`,
-        'INFO'
-      );
+    if (result.matchedCount === 0) {
+      logRAG(`Nenhum documento expert_knowledge encontrado com o ID: ${id}`, 'WARN');
+      return false;
     }
 
-    return topResults;
+    logRAG(`Embedding atualizado para expert_knowledge ID: ${id}`, 'INFO');
+    return true;
   } catch (err) {
-    logRAG(`Erro na busca visual: ${err.message}`, 'ERROR');
+    logRAG(`Erro ao atualizar embedding para expert_knowledge ID: ${id}: ${err.message}`, 'ERROR');
     throw err;
   }
 }
-
-// Formatar resposta do Visual RAG
-export function formatVisualResponse(visualMatch) {
-  if (!visualMatch) {
-    return null;
-  }
-
-  return `**Analise Visual (baseada em exemplos do banco Quanton3D):**
-
-**Problema identificado:** ${visualMatch.defectType}
-(Similaridade: ${(visualMatch.similarity * 100).toFixed(0)}%)
-
-**Diagnostico tecnico:**
-${visualMatch.diagnosis}
-
-**Solucao recomendada:**
-${visualMatch.solution}`;
-}
-
-// Listar todos os conhecimentos visuais aprovados (para admin)
-export async function listVisualKnowledge() {
-  if (!isConnected()) {
-    throw new Error('MongoDB nao conectado');
-  }
-
-  try {
-    const collection = getVisualKnowledgeCollection();
-    // Filtrar apenas documentos aprovados ou sem status (compatibilidade com antigos)
-    const documents = await collection.find(
-      { $or: [{ status: 'approved' }, { status: { $exists: false } }] },
-      { projection: { _id: 1, imageUrl: 1, defectType: 1, diagnosis: 1, solution: 1, createdAt: 1, status: 1 } }
-    ).sort({ createdAt: -1 }).toArray();
-
-    return documents;
-  } catch (err) {
-    logRAG(`Erro ao listar conhecimento visual: ${err.message}`, 'ERROR');
-    throw err;
-  }
-}
-
-// Deletar conhecimento visual
-export async function deleteVisualKnowledge(id) {
-  if (!isConnected()) {
-    throw new Error('MongoDB nao conectado');
-  }
-
-  try {
-    const collection = getVisualKnowledgeCollection();
-    const { ObjectId } = await import('mongodb');
-    const result = await collection.deleteOne({ _id: new ObjectId(id) });
-    
-    logRAG(`Conhecimento visual deletado: ${id}`, 'INFO');
-    return { success: result.deletedCount > 0 };
-  } catch (err) {
-    logRAG(`Erro ao deletar conhecimento visual: ${err.message}`, 'ERROR');
-    throw err;
-  }
-}
-
-export default {
-  initializeRAG,
-  searchKnowledge,
-  formatContext,
-  addDocument,
-  listDocuments,
-  deleteDocument,
-  updateDocument,
-  checkRAGIntegrity,
-  bootstrapKnowledgeFromFile,
-  getRAGInfo,
-  generateEmbedding,
-  // Visual RAG
-  addVisualKnowledge,
-  searchVisualKnowledge,
-  formatVisualResponse,
-  listVisualKnowledge,
-  deleteVisualKnowledge
-};
