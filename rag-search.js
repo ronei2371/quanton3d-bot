@@ -399,6 +399,10 @@ export async function addVisualKnowledge(imageUrl, visionDescription) {
     throw err;
   }
 }
+// Função de compatibilidade para o sistema de sugestões
+export const addDocument = async (content, metadata) => {
+  return await addVisualKnowledge(content, metadata);
+};
 
 /**
  * Adiciona conhecimento de especialista (Respostas de Ouro)
