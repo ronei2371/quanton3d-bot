@@ -1,5 +1,6 @@
 import { connectToMongo, isConnected } from "../../db.js";
-import { getRAGInfo } from "../../rag-search.js";
+import { getRAGInfo } from "../rag-search.js";
+
 
 /**
  * Garante que o MongoDB está pronto
