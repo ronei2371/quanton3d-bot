@@ -50,7 +50,7 @@ export const getContactsCollection = () => getCollection('contacts');
 export const getCustomRequestsCollection = () => getCollection('custom_requests');
 
 // ====================================================================
-// COLLECTIONS DO RAG (necessárias para rag-search.js e adminRoutes.js)
+// COLLECTIONS DO RAG
 // ====================================================================
 export const getDocumentsCollection = () => getCollection('documents');
 export const getVisualKnowledgeCollection = () => getCollection('visual_knowledge');
@@ -62,11 +62,6 @@ export const getPrintParametersCollection = () => getCollection('print_parameter
 // ====================================================================
 const conversasSchema = new mongoose.Schema({}, { strict: false, collection: 'conversas' });
 export const Conversas = mongoose.models.Conversas || mongoose.model('Conversas', conversasSchema);
-
-export const getDocumentsCollection = () => getCollection('documents');
-export const getVisualKnowledgeCollection = () => getCollection('visual_knowledge');
-export const getExpertKnowledgeCollection = () => getCollection('expert_knowledge');
-export const getPrintParametersCollection = () => getCollection('print_parameters');
 
 export default {
   connectToMongo,
