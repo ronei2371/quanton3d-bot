@@ -48,6 +48,7 @@ export const getMetricasCollection = () => getCollection('metricas');
 export const getParametrosCollection = () => getCollection('parametros');
 export const getContactsCollection = () => getCollection('contacts');
 export const getCustomRequestsCollection = () => getCollection('custom_requests');
+export const getConversasCollection = () => getCollection('conversas');
 
 // ====================================================================
 // COLLECTIONS DO RAG
@@ -73,6 +74,7 @@ export default {
   getParametrosCollection,
   getContactsCollection,
   getCustomRequestsCollection,
+  getConversasCollection,
   getDocumentsCollection,
   getVisualKnowledgeCollection,
   getExpertKnowledgeCollection,
