@@ -399,84 +399,46 @@ export async function addVisualKnowledge(imageUrl, visionDescription) {
     throw err;
   }
 }
-// Função de compatibilidade para o sistema de sugestões
-export const addDocument = async (content, metadata) => {
-  return await addVisualKnowledge(content, metadata);
+// ====================================================================
+// FUNÇÕES DE COMPATIBILIDADE (PONTE ENTRE O NOVO E O ANTIGO)
+// ====================================================================
+
+// Ponte para o sistema de sugestões e admin (aceita os formatos antigos)
+export const addDocument = async (title, content, source = 'manual', tags = []) => {
+  try {
+    // Se for uma sugestão, usamos o conteúdo completo
+    const textToProcess = content || title;
+    const metadata = { source, tags, originalTitle: title };
+    
+    // Chama a nova função de conhecimento visual
+    const resultId = await addVisualKnowledge(textToProcess, metadata);
+    return { success: true, documentId: resultId };
+  } catch (err) {
+    logRAG(`Erro na ponte addDocument: ${err.message}`, 'ERROR');
+    throw err;
+  }
 };
 
-/**
- * Adiciona conhecimento de especialista (Respostas de Ouro)
- */
-export async function addExpertKnowledge(question, answer, tags = [], category = 'geral', priority = 1) {
-  if (!isConnected()) {
-    throw new Error('MongoDB nao conectado. Conecte primeiro usando connectToMongo()');
-  }
-
-  try {
-    const expertKnowledgeCollection = getExpertKnowledgeCollection();
-    if (!expertKnowledgeCollection) {
-      throw new Error('Colecao expert_knowledge nao encontrada.');
-    }
-
-    const embedding = await generateEmbedding(question);
-
-    const newExpertKnowledge = {
-      question,
-      answer,
-      tags,
-      category,
-      priority,
-      embedding,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    const result = await expertKnowledgeCollection.insertOne(newExpertKnowledge);
-    logRAG(`Novo conhecimento de especialista adicionado: "${question}" (ID: ${result.insertedId})`, 'INFO');
-    return result.insertedId;
-  } catch (err) {
-    logRAG(`Erro ao adicionar conhecimento de especialista: ${err.message}`, 'ERROR');
-    throw err;
-  }
-}
-
-/**
- * Atualiza o embedding de um conhecimento de especialista existente
- */
-export async function updateExpertKnowledgeEmbedding(id, embedding) {
-  if (!isConnected()) {
-    throw new Error('MongoDB nao conectado. Conecte primeiro usando connectToMongo()');
-  }
-
-  try {
-    const expertKnowledgeCollection = getExpertKnowledgeCollection();
-    if (!expertKnowledgeCollection) {
-      throw new Error('Colecao expert_knowledge nao encontrada.');
-    }
-
-    const result = await expertKnowledgeCollection.updateOne(
-      { _id: new ObjectId(id) },
-      { $set: { embedding: embedding, updatedAt: new Date() } }
-    );
-
-    if (result.matchedCount === 0) {
-      logRAG(`Nenhum documento expert_knowledge encontrado com o ID: ${id}`, 'WARN');
-      return false;
-    }
-
-    logRAG(`Embedding atualizado para expert_knowledge ID: ${id}`, 'INFO');
-    return true;
-  } catch (err) {
-    logRAG(`Erro ao atualizar embedding para expert_knowledge ID: ${id}: ${err.message}`, 'ERROR');
-    throw err;
-  }
-}
-// Função auxiliar para fornecer informações sobre o status do RAG
+// Informações completas para o Painel Administrativo
 export const getRAGInfo = () => {
   return {
     status: 'active',
-    model: EMBEDDING_MODEL,
-    dimensions: EMBEDDING_DIMENSIONS,
-    provider: 'OpenAI'
+    isInitialized: lastInitialization !== null,
+    documentsCount: documentsCount || 0,
+    lastInitialization,
+    embeddingModel: EMBEDDING_MODEL,
+    embeddingDimensions: EMBEDDING_DIMENSIONS,
+    provider: 'OpenAI',
+    storage: 'MongoDB'
   };
+};
+
+// Função de integridade para o painel de status
+export const checkRAGIntegrity = async () => {
+  try {
+    const count = await getDocumentsCollection().countDocuments({ embedding: { $exists: true } });
+    return { isValid: true, totalDocuments: count, documentsWithEmbedding: count };
+  } catch (err) {
+    return { isValid: false, reason: err.message };
+  }
 };
