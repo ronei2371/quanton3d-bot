@@ -567,3 +567,47 @@ export const checkRAGIntegrity = async () => {
     return { isValid: false, reason: err.message };
   }
 };
+
+// Bootstrap da base de conhecimento a partir do kb_index.json
+export const bootstrapKnowledgeFromFile = async () => {
+  try {
+    if (!fs.existsSync(KB_INDEX_PATH)) {
+      logRAG(`kb_index.json não encontrado em: ${KB_INDEX_PATH}`, 'WARN');
+      return { inserted: 0, errors: 0 };
+    }
+
+    const raw = fs.readFileSync(KB_INDEX_PATH, 'utf-8');
+    const parsed = JSON.parse(raw);
+    const docs = Array.isArray(parsed) ? parsed
+      : Array.isArray(parsed?.documents) ? parsed.documents
+      : Array.isArray(parsed?.data) ? parsed.data
+      : Object.values(parsed || {}).find(Array.isArray) || [];
+
+    if (docs.length === 0) {
+      logRAG('kb_index.json sem documentos válidos para bootstrap', 'WARN');
+      return { inserted: 0, errors: 0 };
+    }
+
+    const limit = KB_AUTO_IMPORT_LIMIT ? docs.slice(0, KB_AUTO_IMPORT_LIMIT) : docs;
+    let inserted = 0, errors = 0;
+
+    for (const item of limit) {
+      const title = String(item.title || '').trim();
+      const content = String(item.content || '').trim();
+      if (!title || !content) { errors++; continue; }
+      try {
+        await addDocument(title, content, item.source || 'bootstrap', item.tags || []);
+        inserted++;
+      } catch (err) {
+        logRAG(`Erro bootstrap doc "${title}": ${err.message}`, 'ERROR');
+        errors++;
+      }
+    }
+
+    logRAG(`Bootstrap concluído: ${inserted} inseridos, ${errors} erros`, 'INFO');
+    return { inserted, errors };
+  } catch (err) {
+    logRAG(`Erro fatal no bootstrap: ${err.message}`, 'ERROR');
+    return { inserted: 0, errors: 1 };
+  }
+};
