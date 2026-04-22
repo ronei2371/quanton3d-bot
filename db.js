@@ -69,3 +69,5 @@ export const getCollection = (name) => mongoose.connection?.db?.collection(name)
 
 export const isConnected = () => mongoose.connection.readyState === 1
 export const getDb = () => mongoose.connection?.db;
+export const getSuggestionsCollection = () => mongoose.connection?.db?.collection('suggestions');
+export const getMetricasCollection = () => mongoose.connection?.db?.collection('metricas');
