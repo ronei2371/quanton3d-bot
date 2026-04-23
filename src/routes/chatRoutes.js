@@ -9,16 +9,14 @@ import { metrics } from '../utils/metrics.js';
 const router = express.Router();
 
 const DEFAULT_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini';
-const IMAGE_MODEL = process.env.OPENAI_MODEL || 'gpt-4o'; // CORREÇÃO: Usando variável de ambiente
+const IMAGE_MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
 
 let openaiClient = null;
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 4 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype?.startsWith('image/')) {
-      return cb(null, true);
-    }
+    if (file.mimetype?.startsWith('image/')) return cb(null, true);
     const error = new Error('Apenas imagens são permitidas.');
     error.status = 400;
     error.code = 'LIMIT_FILE_TYPE';
@@ -27,25 +25,17 @@ const upload = multer({
 });
 
 function getOpenAIClient() {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY não configurada');
-  }
-  if (!openaiClient) {
-    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  }
+  if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY não configurada');
+  if (!openaiClient) openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   return openaiClient;
 }
 
-// Rota de teste
 router.get('/ping', (req, res) => {
   res.json({ status: 'ok', message: 'Chat route working' });
 });
 
 function hasImagePayload(body = {}) {
-  return Boolean(
-    body.imageUrl || body.image || body.imageBase64 || body.imageData ||
-    body.attachment || body.selectedImage || body.imageFile
-  );
+  return Boolean(body.imageUrl || body.image || body.imageBase64 || body.imageData || body.attachment || body.selectedImage || body.imageFile);
 }
 
 function resolveImagePayload(body = {}) {
@@ -55,7 +45,6 @@ function resolveImagePayload(body = {}) {
   }
   const raw = body.image || body.imageBase64 || body.imageData || body.attachment || body.selectedImage || body.imageFile;
   if (!raw) return null;
-
   if (typeof raw === 'string') {
     return raw.startsWith('data:') ? { type: 'data', value: raw } : { type: 'data', value: `data:image/jpeg;base64,${raw}` };
   }
@@ -72,25 +61,31 @@ function resolveImagePayload(body = {}) {
   return null;
 }
 
+// ====================================================================
+// BUG 1 CORRIGIDO — formatContext recebia resultado não-array do RAG
+// ====================================================================
 async function buildRagContext({ message, hasImage, visualDescription = null }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
-  
-  // CORREÇÃO: Prioriza descrição visual semântica para a busca
   const ragQuery = visualDescription || trimmedMessage || (hasImage ? 'diagnostico visual impressao 3d resina defeitos comuns' : '');
-  
+
   let ragResults = [];
   if (ragQuery) {
     try {
-      ragResults = await searchKnowledge(ragQuery);
+      const results = await searchKnowledge(ragQuery);
+      // CORREÇÃO: garante que ragResults sempre é array
+      ragResults = Array.isArray(results) ? results : [];
     } catch (error) {
       console.warn('[CHAT] RAG indisponível (seguindo sem contexto):', error.message);
+      ragResults = [];
     }
   }
+
   const ragContext = formatContext(ragResults);
   const hasRelevantContext = ragResults.length > 0;
   const adhesionIssueHint = /dificil|difícil|duro|presa|grudada|grudado/i.test(trimmedMessage) && /mesa|plate|plataforma|base/i.test(trimmedMessage)
-    ? 'Nota de triagem: cliente relata peça muito presa na plataforma; evite sugerir AUMENTAR exposição base sem dados. Considere sobre-adesão e peça parâmetros antes de recomendar ajustes.'
+    ? 'Nota de triagem: cliente relata peça muito presa na plataforma; evite sugerir AUMENTAR exposição base sem dados.'
     : null;
+
   return { ragResults, ragContext, trimmedMessage, hasRelevantContext, adhesionIssueHint };
 }
 
@@ -112,29 +107,20 @@ function normalizeForMatch(text = '') {
   return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 }
 
-// CORREÇÃO: fetchVisualKnowledgeHints AGORA USA searchVisualKnowledge SEMÂNTICA REAL
 async function fetchVisualKnowledgeHints({ message = '', customerContext = {}, hasImage = false, limit = 3, visualDescription = null }) {
   try {
-    if (!hasImage && (!message || message.length < 10)) {
-      return [];
-    }
-
+    if (!hasImage && (!message || message.length < 10)) return [];
     const mongoReady = await ensureMongoReady();
-    if (!mongoReady) {
-      return [];
-    }
-
-    // INTEGRAÇÃO REAL: Chama o novo motor semântico do rag-search.js
+    if (!mongoReady) return [];
     const results = await searchVisualKnowledge(null, visualDescription || message);
-    
-    return results.slice(0, limit).map(r => ({
+    return (Array.isArray(results) ? results : []).slice(0, limit).map(r => ({
       defectType: r.problema,
       diagnosis: r.descricao,
       solution: r.acoes,
-      causes: r.causas // Campo agora alinhado
+      causes: r.causas
     }));
   } catch (error) {
-    console.warn('[CHAT] Falha ao obter conhecimento visual semântico:', error.message);
+    console.warn('[CHAT] Falha ao obter conhecimento visual:', error.message);
     return [];
   }
 }
@@ -147,31 +133,16 @@ function sanitizeSnippet(value, limit = 420) {
 }
 
 function buildVisualContextSection(entries = []) {
-  if (!Array.isArray(entries) || !entries.length) {
-    return '';
-  }
-
+  if (!Array.isArray(entries) || !entries.length) return '';
   const lines = ['GALERIA QUANTON3D (casos visuais reais aprovados):'];
   entries.forEach((entry, index) => {
     const defect = sanitizeSnippet(entry?.defectType || entry?.title);
     const diagnosis = sanitizeSnippet(entry?.diagnosis || entry?.description);
     const solution = sanitizeSnippet(entry?.solution || entry?.solucao);
     const causes = sanitizeSnippet(entry?.causes);
-    const block = [
-      `Caso ${index + 1}:`,
-      defect ? `Defeito: ${defect}` : null,
-      diagnosis ? `Diagnóstico: ${diagnosis}` : null,
-      causes ? `Causas: ${causes}` : null,
-      solution ? `Solução aplicada: ${solution}` : null
-    ]
-      .filter(Boolean)
-      .join('\n');
-
-    if (block) {
-      lines.push(block);
-    }
+    const block = [`Caso ${index + 1}:`, defect ? `Defeito: ${defect}` : null, diagnosis ? `Diagnóstico: ${diagnosis}` : null, causes ? `Causas: ${causes}` : null, solution ? `Solução aplicada: ${solution}` : null].filter(Boolean).join('\n');
+    if (block) lines.push(block);
   });
-
   lines.push('Use esses casos aprovados como referência prática quando fizer diagnósticos.');
   return lines.join('\n\n');
 }
@@ -208,12 +179,9 @@ function mentionsDelayedCracking(message = '') {
   if (!message) return false;
   return /(racha|fissura|trinca|quebra)/i.test(message) && /(depois|ap[oó]s|dias|passados|alguns dias)/i.test(message);
 }
-
 function mentionsBaseAdhesion(message = '') {
   if (!message) return false;
-  const stuckTerms = /(presa|grudada|colada|dif[íi]cil de tirar|n[ãa]o solta|dura de tirar|muito preso)/i;
-  const baseTerms = /(base|plataforma|mesa|plate)/i;
-  return stuckTerms.test(message) && baseTerms.test(message);
+  return /(presa|grudada|colada|dif[íi]cil de tirar|n[ãa]o solta|dura de tirar|muito preso)/i.test(message) && /(base|plataforma|mesa|plate)/i.test(message);
 }
 
 function buildParameterBlockReply({ resinName, printerName }) {
@@ -227,10 +195,10 @@ function buildSupportBrittleReply({ resinName, printerName }) {
   const printerInfo = printerName ? `na ${printerName}` : 'na sua impressora';
   return [
     `Suportes extremamente rígidos e peças rachando após alguns dias indicam excesso de energia e pós-cura agressiva ${resinInfo} ${printerInfo}.`,
-    '1. **Parâmetros de impressão**: reduza a exposição normal em 5‑10% e ative “rest before lift” de 0,5‑1 s. Nas camadas base mantenha 6‑8 camadas com 18‑22 s em vez de exposições longas que cristalizam a resina.',
-    '2. **Estrutura de suportes**: use suportes light/medium e distribua os topos. Ajuste o diâmetro para 0,25‑0,30 mm e inclua drenagem para aliviar tensões.',
-    '3. **Pós-cura**: lave, seque e faça ciclos curtos de 3 s de UV + 30 s de descanso, repetindo 3‑4 vezes. Pós-curas contínuas longas deixam a peça vítrea e quebradiça.',
-    '4. **Estocagem**: deixe as peças descansarem 12‑24 h em local ventilado antes de exposição ao sol/calor para liberar solventes e evitar fissuras tardias.'
+    '1. **Parâmetros de impressão**: reduza a exposição normal em 5‑10% e ative "rest before lift" de 0,5‑1 s.',
+    '2. **Estrutura de suportes**: use suportes light/medium, diâmetro 0,25‑0,30 mm e inclua drenagem.',
+    '3. **Pós-cura**: ciclos curtos de 3 s de UV + 30 s de descanso, repetindo 3‑4 vezes.',
+    '4. **Estocagem**: deixe as peças descansarem 12‑24 h em local ventilado antes de exposição ao sol/calor.'
   ].join('\n\n');
 }
 
@@ -238,12 +206,12 @@ function buildAdhesionReply({ resinName, printerName }) {
   const resinInfo = resinName ? ` com a resina ${resinName}` : '';
   const printerInfo = printerName ? ` na ${printerName}` : '';
   return [
-    `Sua peça ficou soldada à plataforma${resinInfo}${printerInfo}. Ajuste o processo para aliviar a aderência sem perder fixação:`,
-    '1. **Nivelamento e superfície**: refaça o nivelamento com uma folha nova e deixe a base levemente fosca (lixa 400) para quebrar o brilho. Sempre limpe com IPA antes de imprimir.',
-    '2. **Exposição das camadas base**: reduza 10‑15% do tempo atual e mantenha 4‑6 camadas base. Valores acima de 50‑60 s deixam a peça “soldada”.',
-    '3. **Lift e peel**: aumente *lift height* para 8‑10 mm e use *rest before lift* de 0,5 s. Isso diminui o vácuo e a força de separação.',
-    '4. **Filme de liberação**: aplique uma camada fina de spray PTFE ou cola bastão distribuída de forma uniforme. Isso cria um filme entre a peça e a mesa.',
-    '5. **Remoção**: antes de usar a espátula, aqueça levemente a plataforma (água morna ou ar quente a ~45 °C) para dilatar a resina e facilitar a retirada.'
+    `Sua peça ficou soldada à plataforma${resinInfo}${printerInfo}. Ajuste o processo:`,
+    '1. **Nivelamento e superfície**: refaça o nivelamento com folha nova e base levemente fosca (lixa 400).',
+    '2. **Exposição das camadas base**: reduza 10‑15% do tempo atual, mantenha 4‑6 camadas base.',
+    '3. **Lift e peel**: aumente lift height para 8‑10 mm e use rest before lift de 0,5 s.',
+    '4. **Filme de liberação**: aplique spray PTFE ou cola bastão de forma uniforme.',
+    '5. **Remoção**: aqueça levemente a plataforma (~45 °C) antes de usar a espátula.'
   ].join('\n\n');
 }
 
@@ -254,10 +222,8 @@ function isVisionRefusal(text = '') {
 
 async function runVisionCompletion({ prompt, imageUrl, ragContext = '', temperature = 0.4 }) {
   const client = getOpenAIClient();
-  const safeContext = typeof ragContext === 'string' && ragContext.trim().length
-    ? ragContext.trim()
-    : 'Sem contexto técnico disponível.';
-  const systemContent = `Você é o Especialista Técnico Sênior da Quanton3D. Sua regra de ouro: NUNCA dê respostas genéricas, longas ou listas de possibilidades da internet. Seja cirúrgico, curto e direto. Aponte APENAS o erro exato que você vê na imagem e a solução baseada OBRIGATORIAMENTE no contexto técnico fornecido abaixo. Se o contexto fornecer parâmetros de resina (AgiSyn, etc), use-os. CONTEXTO TÉCNICO QUANTON3D: ${safeContext}`;
+  const safeContext = typeof ragContext === 'string' && ragContext.trim().length ? ragContext.trim() : 'Sem contexto técnico disponível.';
+  const systemContent = `Você é o Especialista Técnico Sênior da Quanton3D. Seja cirúrgico, curto e direto. Aponte APENAS o erro exato que você vê na imagem e a solução baseada OBRIGATORIAMENTE no contexto técnico fornecido. CONTEXTO TÉCNICO QUANTON3D: ${safeContext}`;
   return client.chat.completions.create({
     model: IMAGE_MODEL,
     temperature,
@@ -269,10 +235,9 @@ async function runVisionCompletion({ prompt, imageUrl, ragContext = '', temperat
   });
 }
 
-function trimConversationHistory(history, _systemPrompt, _userMessage) {
+function trimConversationHistory(history) {
   const maxMessages = 8;
-  const safeHistory = Array.isArray(history) ? history : [];
-  return safeHistory.slice(-maxMessages).filter((entry) => entry && entry.role && entry.content);
+  return (Array.isArray(history) ? history : []).slice(-maxMessages).filter(e => e && e.role && e.content);
 }
 
 async function generateResponse({ message, ragContext, hasRelevantContext, adhesionIssueHint, hasImage, imageUrl, conversationHistory, customerContext, ragResultsCount = 0 }) {
@@ -305,32 +270,19 @@ async function generateResponse({ message, ragContext, hasRelevantContext, adhes
     return { reply: buildAdhesionReply({ resinName: knownResin, printerName: knownPrinter }), documentsUsed: ragResultsCount };
   }
 
-  const visionPriority = hasImage ? '\n    11. Se IMAGEM=SIM, priorize a evidência visual. Não deixe histórico anterior de texto sobrepor o que está claramente visível na nova imagem.\n  ' : '';
-  const imageGuidelines = hasImage ? `
-    DIRETRIZES PARA ANALISE VISUAL:
-    - Descreva o que voce ve antes de concluir causas.
-    - Se a imagem estiver clara e houver sinais evidentes, entregue: Defeitos -> Causa provavel -> Solucao imediata -> Parametros sugeridos.
-  ` : '';
+  const visionPriority = hasImage ? '\n    11. Se IMAGEM=SIM, priorize a evidência visual.\n  ' : '';
+  const imageGuidelines = hasImage ? `DIRETRIZES PARA ANALISE VISUAL: Descreva o que voce ve antes de concluir causas. Se a imagem estiver clara, entregue: Defeitos -> Causa provavel -> Solucao imediata -> Parametros sugeridos.` : '';
 
   const systemPrompt = `
     PERSONA: Você é Ronei Fonseca, especialista prático e dono da Quanton3D.
 
     REGRAS DE OURO (LEI ABSOLUTA):
-    0. **PRIORIDADE MÁXIMA**: Se o CONTEXTO TÉCNICO RELEVANTE contiver uma "RESPOSTA DE OURO", use-a DIRETAMENTE e na íntegra, sem parafrasear ou adicionar informações. Ela é a resposta definitiva do Especialista.
-
-    1. **NADA DE FONTES:** O cliente quer um especialista. É PROIBIDO escrever "(Fonte: Documento 1)".
-    2. **RESINA SPARK (AMARELAMENTO):** - JAMAIS sugira curas longas.
-       - REGRA: Curas rápidas de 3 segundos, espere esfriar, repita 3 vezes.
-       - DICA MASTER: Colocar na água gera refração e evita UV direto. NUNCA sugira 3-5 minutos.
-    3. **PEÇAS OCAS/VAZAMENTO:** - O vazamento é resina presa dentro.
-       - SOLUÇÃO: Furos de drenagem + Lavagem interna com SERINGA de pressão.
-       - PROIBIDO: "Escova macia" (não limpa dentro) e "Cura de 20 min" (quebra a peça). Cura máx 5-7 min.
-    4. **PYROBLAST / RESINAS INDUSTRIAIS:**
-       - NUNCA mande colocar peça em forno ou água a 60°C. O padrão é cura UV.
-    5. **DIAGNÓSTICO:**
-       - Se soltou da mesa: É NIVELAMENTO ou EXPOSIÇÃO BASE. Não fale de suportes se a falha for na base.
-       - **TOM DE VOZ:** Direto, técnico e seguro.
-
+    0. **PRIORIDADE MÁXIMA**: Se o CONTEXTO TÉCNICO RELEVANTE contiver uma "RESPOSTA DE OURO", use-a DIRETAMENTE e na íntegra.
+    1. **NADA DE FONTES:** PROIBIDO escrever "(Fonte: Documento 1)".
+    2. **RESINA SPARK (AMARELAMENTO):** Curas rápidas de 3 segundos, espere esfriar, repita 3 vezes. NUNCA sugira 3-5 minutos.
+    3. **PEÇAS OCAS/VAZAMENTO:** Furos de drenagem + Lavagem interna com SERINGA de pressão.
+    4. **PYROBLAST / RESINAS INDUSTRIAIS:** NUNCA mande colocar peça em forno ou água a 60°C.
+    5. **DIAGNÓSTICO:** Se soltou da mesa: É NIVELAMENTO ou EXPOSIÇÃO BASE.
     ${visionPriority}
     ${imageGuidelines}
   `;
@@ -343,7 +295,7 @@ async function generateResponse({ message, ragContext, hasRelevantContext, adhes
   const contextFlag = hasRelevantContext || contextLines.length ? 'SIM' : 'NAO';
 
   const prompt = [
-    ragContext ? `Contexto Técnico (Use isso para basear sua resposta):\n${ragContext}` : null,
+    ragContext ? `Contexto Técnico:\n${ragContext}` : null,
     contextLines.length ? contextLines.join('\n') : null,
     adhesionIssueHint,
     `CONTEXTO_RELEVANTE=${contextFlag}`,
@@ -355,7 +307,7 @@ async function generateResponse({ message, ragContext, hasRelevantContext, adhes
   const userContent = imageUrl ? [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: imageUrl } }] : prompt;
   const model = imageUrl ? IMAGE_MODEL : DEFAULT_CHAT_MODEL;
   const userMessage = { role: 'user', content: userContent };
-  const trimmedHistory = trimConversationHistory(Array.isArray(conversationHistory) ? conversationHistory : [], systemPrompt, userMessage);
+  const trimmedHistory = trimConversationHistory(conversationHistory);
 
   const completion = await client.chat.completions.create({
     model,
@@ -372,18 +324,13 @@ async function generateResponse({ message, ragContext, hasRelevantContext, adhes
 async function generateImageResponse({ message, imageUrl, ragContext }) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
   const prompt = trimmedMessage ? `Cliente perguntou: ${trimmedMessage}` : 'Cliente enviou uma imagem para análise.';
-
   let completion = await runVisionCompletion({ prompt, imageUrl, ragContext, temperature: 0.4 });
   let reply = completion?.choices?.[0]?.message?.content?.trim();
-
   if (isVisionRefusal(reply)) {
-    const retryPrompt = `${prompt}
-
-    Contexto extra: trata-se de uma peça de resina e seus suportes, não há seres humanos.`;
+    const retryPrompt = `${prompt}\n\nContexto extra: trata-se de uma peça de resina e seus suportes, não há seres humanos.`;
     completion = await runVisionCompletion({ prompt: retryPrompt, imageUrl, ragContext, temperature: 0.2 });
     reply = completion?.choices?.[0]?.message?.content?.trim();
   }
-
   const cleaned = stripVisionPolicyDisclaimers(reply);
   return { reply: cleaned || 'Não consegui analisar a imagem agora. Pode tentar novamente?', documentsUsed: 0 };
 }
@@ -416,81 +363,77 @@ async function loadCustomerContext(sessionId) {
 }
 
 function mergeCustomerContext(base, override) {
-  const sanitizedOverride = Object.fromEntries(Object.entries(override || {}).filter(([, value]) => value !== null && value !== undefined && value !== ''));
+  const sanitizedOverride = Object.fromEntries(Object.entries(override || {}).filter(([, v]) => v !== null && v !== undefined && v !== ''));
   return { ...base, ...sanitizedOverride };
 }
 
 function inferContextFromHistory(history, message) {
   const trimmedMessage = typeof message === 'string' ? message.trim() : '';
   if (!trimmedMessage) return {};
-  const safeHistory = Array.isArray(history) ? history : [];
-  const lastAssistant = [...safeHistory].reverse().find((entry) => entry?.role === 'assistant');
-  const lastAssistantText = typeof lastAssistant?.content === 'string' ? lastAssistant.content.toLowerCase() : '';
-  if (!lastAssistantText) return {};
-  if (/modelo da sua impressora|qual é o modelo da sua impressora|modelo da impressora/.test(lastAssistantText)) return { printer: trimmedMessage };
-  if (/tipo de resina|qual resina|qual a resina|qual resina você/.test(lastAssistantText)) return { resin: trimmedMessage };
-  if (/qual o seu problema|qual o problema|que problema/.test(lastAssistantText)) return { problemType: trimmedMessage };
+  const lastAssistant = [...(Array.isArray(history) ? history : [])].reverse().find(e => e?.role === 'assistant');
+  const lastText = typeof lastAssistant?.content === 'string' ? lastAssistant.content.toLowerCase() : '';
+  if (!lastText) return {};
+  if (/modelo da sua impressora|qual é o modelo da sua impressora/.test(lastText)) return { printer: trimmedMessage };
+  if (/tipo de resina|qual resina|qual a resina/.test(lastText)) return { resin: trimmedMessage };
+  if (/qual o seu problema|qual o problema/.test(lastText)) return { problemType: trimmedMessage };
   return {};
 }
 
+// ====================================================================
+// BUG 2 CORRIGIDO — sessionId estava fora do escopo no catch
+// ====================================================================
 async function handleChatRequest(req, res) {
   const requestStart = Date.now();
   metrics.incrementRequests();
+
+  // CORREÇÃO: sessionId declarado no topo da função para estar disponível no catch
+  const { message, sessionId = 'session-auto' } = req.body ?? {};
+
   try {
-    const { message, sessionId } = req.body ?? {};
     const hasImage = hasImagePayload(req.body);
     const imagePayload = resolveImagePayload(req.body);
     const imageUrl = imagePayload?.value || null;
 
     if (hasImage && !imageUrl) {
-      return res.status(400).json({
-        error: 'Imagem inválida para análise. Envie data URL/base64, URL pública ou multipart em /api/ask-with-image.'
-      });
+      return res.status(400).json({ error: 'Imagem inválida para análise.' });
     }
+
     const conversationHistory = req.body?.conversationHistory || [];
     const customerContext = req.body?.customerContext || {};
     const storedContext = await loadCustomerContext(sessionId);
     const inferredContext = inferContextFromHistory(conversationHistory, message);
     const mergedCustomerContext = mergeCustomerContext(mergeCustomerContext(storedContext, inferredContext), customerContext);
 
-    // 1. Pré-análise visual semântica
+    // Pré-análise visual semântica
     let visualDescription = null;
     if (hasImage && imageUrl) {
       try {
-        const visionResult = await runVisionCompletion({ 
-          prompt: "Descreva brevemente os defeitos técnicos visíveis nesta impressão 3D.", 
+        const visionResult = await runVisionCompletion({
+          prompt: 'Descreva brevemente os defeitos técnicos visíveis nesta impressão 3D.',
           imageUrl,
-          ragContext: "Descrição visual para busca interna." 
+          ragContext: 'Descrição visual para busca interna.'
         });
         visualDescription = visionResult?.choices?.[0]?.message?.content?.trim();
       } catch (e) {
-        console.warn("[CHAT] Falha pré-análise visual:", e.message);
+        console.warn('[CHAT] Falha pré-análise visual:', e.message);
       }
     }
 
-    const { ragResults, ragContext, trimmedMessage, hasRelevantContext, adhesionIssueHint } = await buildRagContext({ 
-      message, 
-      hasImage, 
-      visualDescription 
-    });
-    
-    const ragSearchPerformed = Boolean((trimmedMessage && trimmedMessage.length) || hasImage);
-    if (ragSearchPerformed) {
+    const { ragResults, ragContext, trimmedMessage, hasRelevantContext, adhesionIssueHint } = await buildRagContext({ message, hasImage, visualDescription });
+
+    if (trimmedMessage || hasImage) {
       metrics.recordRAGSearch(ragResults.length);
     }
 
-    const visualHints = await fetchVisualKnowledgeHints({
-      message: trimmedMessage,
-      customerContext: mergedCustomerContext,
-      hasImage,
-      visualDescription
-    });
+    const visualHints = await fetchVisualKnowledgeHints({ message: trimmedMessage, customerContext: mergedCustomerContext, hasImage, visualDescription });
     const visualContext = buildVisualContextSection(visualHints);
     const promptContext = [visualContext, ragContext].filter(Boolean).join('\n\n').trim();
 
     console.log(`[CHAT] Msg: ${trimmedMessage.substring(0, 50)}...`);
 
-    if (!trimmedMessage && !hasImage) return res.json({ reply: 'Olá! Sou a IA da Quanton3D. Como posso ajudar com suas impressões hoje?', sessionId: sessionId || 'new' });
+    if (!trimmedMessage && !hasImage) {
+      return res.json({ reply: 'Olá! Sou a IA da Quanton3D. Como posso ajudar com suas impressões hoje?', sessionId });
+    }
 
     const response = imageUrl
       ? await generateImageResponse({ message: trimmedMessage, imageUrl, ragContext: promptContext })
@@ -506,19 +449,18 @@ async function handleChatRequest(req, res) {
           ragResultsCount: ragResults.length
         });
 
-    const docCountBase = typeof response.documentsUsed === 'number' ? response.documentsUsed : ragResults.length;
-    const documentsUsed = docCountBase + (visualHints?.length || 0);
+    const documentsUsed = (typeof response.documentsUsed === 'number' ? response.documentsUsed : ragResults.length) + (visualHints?.length || 0);
 
-    res.json({ reply: sanitizeChatText(response.reply), sessionId: sessionId || 'session-auto', documentsUsed });
+    res.json({ reply: sanitizeChatText(response.reply), sessionId, documentsUsed });
     metrics.recordResponseTime(Date.now() - requestStart);
+
   } catch (error) {
     console.error('Erro Chat:', error);
     metrics.incrementErrors();
     metrics.recordResponseTime(Date.now() - requestStart);
-
     return res.status(500).json({
-      reply: 'Tive uma instabilidade ao processar sua solicitação agora. Pode reenviar a pergunta? Se for foto, envie novamente junto com uma breve descrição do problema.',
-      sessionId: sessionId || 'session-auto',
+      reply: 'Tive uma instabilidade ao processar sua solicitação. Pode reenviar a pergunta?',
+      sessionId,
       documentsUsed: 0,
       degraded: true,
       error: 'Erro no processamento da IA.'
@@ -528,7 +470,12 @@ async function handleChatRequest(req, res) {
 
 router.post('/ask', handleChatRequest);
 router.post('/chat', handleChatRequest);
-router.post('/ask-with-image', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'file', maxCount: 1 }, { name: 'attachment', maxCount: 1 }]), attachMultipartImage, handleChatRequest);
+router.post('/ask-with-image',
+  upload.fields([{ name: 'image', maxCount: 1 }, { name: 'file', maxCount: 1 }, { name: 'attachment', maxCount: 1 }]),
+  attachMultipartImage,
+  handleChatRequest
+);
+
 router.use((err, _req, res, next) => {
   if (!err) return next();
   if (err.code === 'LIMIT_FILE_TYPE') return res.status(400).json({ error: err.message });
