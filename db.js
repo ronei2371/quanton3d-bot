@@ -51,6 +51,7 @@ export const getContactsCollection = () => getCollection('contacts');
 export const getCustomRequestsCollection = () => getCollection('custom_requests');
 export const getConversasCollection = () => getCollection('conversas');
 export const getOrdersCollection = () => getCollection('pedidos');
+export const getDb = () => mongoose.connection?.db || null;
 
 // ====================================================================
 // COLLECTIONS DO RAG
@@ -79,6 +80,7 @@ export default {
   getCustomRequestsCollection,
   getConversasCollection,
   getOrdersCollection,
+  getDb,
   getDocumentsCollection,
   getVisualKnowledgeCollection,
   getExpertKnowledgeCollection,
