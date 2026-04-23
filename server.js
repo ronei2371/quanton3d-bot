@@ -22,30 +22,44 @@ const MONGODB_URI = process.env.MONGODB_URI || ''
 
 const allowedOrigins = [
   'https://quanton3dia.onrender.com',
-  'http://localhost:5173',
   'https://quanton3d-bot-v2.onrender.com',
+  'http://localhost:5173',
   'http://localhost:3000',
   'http://localhost:10000'
 ]
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true)
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true)
-      } else {
-        console.log(`⚠️ Origem bloqueada: ${origin}`)
-        callback(null, true)
-      }
-    },
-    credentials: true,
-  })
-)
+// ====================== CORS COMPLETO ======================
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Permite requisições sem origin (ex: mobile, curl, Render health checks)
+    if (!origin) return callback(null, true)
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true)
+    }
+    console.log(`⚠️ Origem bloqueada pelo CORS: ${origin}`)
+    return callback(new Error(`Origem não permitida: ${origin}`), false)
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'x-admin-secret',
+    'admin-secret',
+    'x-requested-with'
+  ],
+  optionsSuccessStatus: 204
+}
+
+app.use(cors(corsOptions))
+
+// Responde preflight OPTIONS em todas as rotas
+app.options('*', cors(corsOptions))
 
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
+// ====================== HEALTH ======================
 app.get('/health', async (_req, res) => {
   try {
     const dbStatus = isConnected?.() ? 'connected' : 'disconnected'
@@ -68,6 +82,7 @@ app.get('/health/metrics', (_req, res) => {
   })
 })
 
+// ====================== ROTAS ======================
 app.use('/auth', authRoutes)
 app.use('/api/auth', authRoutes)
 
@@ -97,6 +112,7 @@ app.use('/api', adminRoutes)
 app.use('/api', chatRoutes)
 app.use('/chat', chatRoutes)
 
+// ====================== FRONTEND ======================
 const distPath = path.join(__dirname, 'dist')
 const adminPanelPath = path.join(__dirname, 'public', 'params-panel.html')
 app.use(express.static(distPath))
@@ -116,6 +132,7 @@ app.get('*', (req, res) => {
   })
 })
 
+// ====================== INICIALIZAÇÃO ======================
 const startServer = async () => {
   try {
     console.log('\n🚀 INICIANDO QUANTON3D BOT...\n')
