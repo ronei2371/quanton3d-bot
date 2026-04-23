@@ -1,9 +1,9 @@
 import express from 'express';
 import OpenAI from 'openai';
 import multer from 'multer';
-import { searchKnowledge, formatContext, searchVisualKnowledge } from '../../rag-search.js';
+import { searchKnowledge, formatContext, searchVisualKnowledge } from '../rag-search.js';
 import { ensureMongoReady } from './common.js';
-import { getConversasCollection, getVisualKnowledgeCollection } from '../../db.js';
+import { getConversasCollection, getVisualKnowledgeCollection } from '../db.js';
 import { metrics } from '../utils/metrics.js';
 
 const router = express.Router();
